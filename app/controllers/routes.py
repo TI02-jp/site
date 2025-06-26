@@ -133,9 +133,11 @@ def excluir_empresa(id):
 @login_required
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
-    form = EmpresaForm(obj=empresa)
-    if form.validate_on_submit():
-        form.populate_obj(empresa)
+    if request.method == 'POST':
+        empresa.NomeEmpresa = request.form.get('nome')
+        cnpj_limpo = re.sub(r'\D', '', request.form.get('cnpj', ''))
+        empresa.CNPJ = cnpj_limpo
+        empresa.DataAbertura = request.form.get('data_abertura')
         try:
             db.session.commit()
             flash('Empresa atualizada com sucesso!', 'success')
@@ -143,7 +145,7 @@ def editar_empresa(id):
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
-    return render_template('empresas/editar_empresa.html', form=form, empresa=empresa)
+    return render_template('empresas/editar_empresa.html', empresa=empresa)
 
 @app.route('/relatorios')
 @login_required
