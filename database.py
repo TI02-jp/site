@@ -22,11 +22,28 @@ class DatabaseManager:
     def connect(self):
         """Estabelece conexão com o banco de dados"""
         try:
+            host = os.getenv('DB_HOST')
+            database = os.getenv('DB_NAME')
+            user = os.getenv('DB_USER')
+            password = os.getenv('DB_PASSWORD')
+
+            missing = [k for k, v in {
+                'DB_HOST': host,
+                'DB_NAME': database,
+                'DB_USER': user,
+                'DB_PASSWORD': password
+            }.items() if not v]
+
+            if missing:
+                raise EnvironmentError(
+                    f"Missing required environment variables: {', '.join(missing)}"
+                )
+
             self.connection = mysql.connector.connect(
-                host=os.getenv('DB_HOST', 'localhost'),
-                database=os.getenv('DB_NAME', 'cadastro_empresas'),
-                user=os.getenv('DB_USER', 'root'),
-                password=os.getenv('DB_PASSWORD', 'ti02@2025'),
+                host=host,
+                database=database,
+                user=user,
+                password=password,
                 autocommit=False
             )
             self.cursor = self.connection.cursor(dictionary=True)
