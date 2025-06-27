@@ -153,4 +153,5 @@ class DepartamentoPessoalForm(DepartamentoForm):
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
     particularidades = TextAreaField('Particularidades')
+    particularidades_imagens = MultipleFileField('Imagens')
 
