@@ -90,6 +90,11 @@ class Departamento(db.Model):
     controle_relatorios = db.Column(JsonString(255))
     observacao_controle_relatorios = db.Column(db.String(200))
     contatos = db.Column(JsonString(255))
+    data_envio = db.Column(db.String(100))
+    registro_funcionarios = db.Column(db.String(200))
+    ponto_eletronico = db.Column(db.String(200))
+    pagamento_funcionario = db.Column(db.String(200))
+
     particularidades_texto = db.Column(db.Text)
     particularidades_imagens = db.Column(JsonString(255))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -135,3 +135,11 @@ class DepartamentoContabilForm(DepartamentoForm):
     observacao_controle_relatorios = StringField('Observação Relatórios')
     particularidades = TextAreaField('Particularidades')
     particularidades_imagens = MultipleFileField('Imagens')
+
+class DepartamentoPessoalForm(DepartamentoForm):
+    data_envio = StringField('Data de Envio')
+    registro_funcionarios = StringField('Registro de Funcionários')
+    ponto_eletronico = StringField('Ponto Eletrônico')
+    pagamento_funcionario = StringField('Pagamento de Funcionário')
+    particularidades = TextAreaField('Particularidades')
+    particularidades_imagens = MultipleFileField('Imagens')

@@ -4,7 +4,14 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
-from app.forms import EmpresaForm, EditUserForm, DepartamentoForm, DepartamentoFiscalForm, DepartamentoContabilForm
+from app.forms import (
+    EmpresaForm,
+    EditUserForm,
+    DepartamentoForm,
+    DepartamentoFiscalForm,
+    DepartamentoContabilForm,
+    DepartamentoPessoalForm,
+)
 from datetime import datetime
 import re
 
@@ -242,8 +249,29 @@ def cadastrar_departamento_contabil(empresa_id):
 @app.route('/empresa/<int:empresa_id>/departamentos/pessoal', methods=['GET', 'POST'])
 @login_required
 def cadastrar_departamento_pessoal(empresa_id):
-    return _cadastrar_departamento(empresa_id, 'Departamento Pessoal')
-
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
+    form = DepartamentoPessoalForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.data_envio = form.data_envio.data
+        departamento.registro_funcionarios = form.registro_funcionarios.data
+        departamento.ponto_eletronico = form.ponto_eletronico.data
+        departamento.pagamento_funcionario = form.pagamento_funcionario.data
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Pessoal cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento pessoal: {e}', 'danger')
+    return render_template('departamentos/cadastrar_pessoal.html', form=form, empresa=empresa, tipo_nome='Departamento Pessoal', departamento=departamento)
 
 @app.route('/empresa/<int:empresa_id>/departamentos/administrativo', methods=['GET', 'POST'])
 @login_required
