@@ -67,3 +67,18 @@ class Empresa(db.Model):
 
     def __repr__(self):
         return f"<Empresa {self.NomeEmpresa}>"
+
+
+class Departamento(db.Model):
+    __tablename__ = 'departamentos'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)
+    responsavel = db.Column(db.String(100))
+    descricao = db.Column(db.String(200))
+
+    empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
+
+    def __repr__(self):
+        return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"

@@ -3,8 +3,8 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa
-from app.forms import EmpresaForm, EditUserForm
+from app.models.tables import User, Empresa, Departamento
+from app.forms import EmpresaForm, EditUserForm, DepartamentoForm
 from datetime import datetime
 import re
 
@@ -146,6 +146,51 @@ def editar_empresa(id):
             db.session.rollback()
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
     return render_template('empresas/editar_empresa.html', empresa=empresa)
+
+
+def _cadastrar_departamento(empresa_id, tipo_nome):
+    form = DepartamentoForm()
+    if form.validate_on_submit():
+        departamento = Departamento(
+            empresa_id=empresa_id,
+            tipo=tipo_nome,
+            responsavel=form.responsavel.data,
+            descricao=form.descricao.data
+        )
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash(f'{tipo_nome} cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar {tipo_nome.lower()}: {e}', 'danger')
+    empresa = Empresa.query.get_or_404(empresa_id)
+    return render_template('departamentos/cadastrar.html', form=form, empresa=empresa, tipo_nome=tipo_nome)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/fiscal', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_fiscal(empresa_id):
+    return _cadastrar_departamento(empresa_id, 'Departamento Fiscal')
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/contabil', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_contabil(empresa_id):
+    return _cadastrar_departamento(empresa_id, 'Departamento Contábil')
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/pessoal', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_pessoal(empresa_id):
+    return _cadastrar_departamento(empresa_id, 'Departamento Pessoal')
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/administrativo', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_administrativo(empresa_id):
+    return _cadastrar_departamento(empresa_id, 'Departamento Administrativo')
 
 @app.route('/relatorios')
 @login_required

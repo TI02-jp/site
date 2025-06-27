@@ -42,3 +42,9 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+
+
+class DepartamentoForm(FlaskForm):
+    responsavel = StringField('Responsável', validators=[DataRequired()])
+    descricao = StringField('Descrição')
+    submit = SubmitField('Cadastrar')
