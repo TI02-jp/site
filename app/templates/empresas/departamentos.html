@@ -5,6 +5,8 @@
 {% block content %}
 <div class="container mt-4" style="max-width: 1000px;">
     <h2 class="mb-4 text-center text-primary fw-semibold">Departamentos - {{ empresa.NomeEmpresa }}</h2>
+
+    <!-- Departamento Fiscal -->
     <div class="border p-4 mb-5" id="fiscal">
         <h3 class="h5 mb-4">Departamento Fiscal</h3>
         <form method="POST" enctype="multipart/form-data">
@@ -12,257 +14,263 @@
             <input type="hidden" name="form_type" value="fiscal">
             <div class="row g-3">
                 <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ fiscal_form.responsavel.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ fiscal_form.descricao.label(class="form-label") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ fiscal_form.formas_importacao.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.responsavel(class="form-control", placeholder="Responsável") }}
+                        {{ fiscal_form.responsavel.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.descricao(class="form-control", placeholder="Descrição") }}
+                        {{ fiscal_form.descricao.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ fiscal_form.formas_importacao.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in fiscal_form.formas_importacao.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}[]" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in fiscal_form.formas_importacao.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}[]" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link") }}
-                            {{ fiscal_form.link_prefeitura.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}
-                            {{ fiscal_form.usuario_prefeitura.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha") }}
-                            {{ fiscal_form.senha_prefeitura.label(class="form-label") }}
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">{{ fiscal_form.forma_movimento.label.text }}</label>
-                            {{ fiscal_form.forma_movimento(class="form-select") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ fiscal_form.envio_digital.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link") }}
+                        {{ fiscal_form.link_prefeitura.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}
+                        {{ fiscal_form.usuario_prefeitura.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha") }}
+                        {{ fiscal_form.senha_prefeitura.label(class="form-label") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">{{ fiscal_form.forma_movimento.label.text }}</label>
+                        {{ fiscal_form.forma_movimento(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ fiscal_form.envio_digital.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in fiscal_form.envio_digital.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}[]" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in fiscal_form.envio_digital.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}[]" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in fiscal_form.envio_digital_fisico.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in fiscal_form.envio_digital_fisico.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
                         </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação") }}
-                            {{ fiscal_form.observacao_movimento.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}
-                            {{ fiscal_form.contato_nome.label(class="form-label") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ fiscal_form.contato_meios.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação") }}
+                        {{ fiscal_form.observacao_movimento.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}
+                        {{ fiscal_form.contato_nome.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ fiscal_form.contato_meios.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in fiscal_form.contato_meios.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}[]" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in fiscal_form.contato_meios.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}[]" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            {{ fiscal_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
-                            {{ fiscal_form.particularidades.label(class="form-label mt-2") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ fiscal_form.particularidades_imagens(class="form-control", multiple=True) }}
-                            {{ fiscal_form.particularidades_imagens.label(class="form-label mt-2") }}
                         </div>
                     </div>
+                    <div class="mb-3">
+                        {{ fiscal_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
+                        {{ fiscal_form.particularidades.label(class="form-label mt-2") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ fiscal_form.particularidades_imagens(class="form-control", multiple=True) }}
+                        {{ fiscal_form.particularidades_imagens.label(class="form-label mt-2") }}
+                    </div>
                 </div>
-                <div class="d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-primary px-5">Salvar</button>
-                </div>
-            </form>
-            {% if fiscal and fiscal.updated_at %}
-            <p class="text-muted mt-2 text-end">Última atualização: {{ fiscal.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
-            {% endif %}
-        </div>
-        <div class="border p-4 mb-5" id="contabil">
-            <h3 class="h5 mb-4">Departamento Contábil</h3>
-            <form method="POST" enctype="multipart/form-data">
-                {{ contabil_form.hidden_tag() }}
-                <input type="hidden" name="form_type" value="contabil">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ contabil_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ contabil_form.responsavel.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ contabil_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ contabil_form.descricao.label(class="form-label") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ contabil_form.metodo_importacao.label.text }}</label>
-                            {{ contabil_form.metodo_importacao(class="form-select") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ contabil_form.forma_movimento.label.text }}</label>
-                            {{ contabil_form.forma_movimento(class="form-select") }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ contabil_form.envio_digital.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary px-5">Salvar</button>
+            </div>
+        </form>
+        {% if fiscal and fiscal.updated_at %}
+        <p class="text-muted mt-2 text-end">Última atualização: {{ fiscal.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Departamento Contábil -->
+    <div class="border p-4 mb-5" id="contabil">
+        <h3 class="h5 mb-4">Departamento Contábil</h3>
+        <form method="POST" enctype="multipart/form-data">
+            {{ contabil_form.hidden_tag() }}
+            <input type="hidden" name="form_type" value="contabil">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ contabil_form.responsavel(class="form-control", placeholder="Responsável") }}
+                        {{ contabil_form.responsavel.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ contabil_form.descricao(class="form-control", placeholder="Descrição") }}
+                        {{ contabil_form.descricao.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ contabil_form.metodo_importacao.label.text }}</label>
+                        {{ contabil_form.metodo_importacao(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ contabil_form.forma_movimento.label.text }}</label>
+                        {{ contabil_form.forma_movimento(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ contabil_form.envio_digital.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in contabil_form.envio_digital.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}[]" value="{{ value }}" id="ced-{{ loop.index }}" {% if value in contabil_form.envio_digital.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}[]" value="{{ value }}" id="ced-{{ loop.index }}" {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="ced-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ contabil_form.envio_digital_fisico.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ contabil_form.envio_digital_fisico.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in contabil_form.envio_digital_fisico.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="cedf-{{ loop.index }}" {% if value in contabil_form.envio_digital_fisico.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="cedf-{{ loop.index }}" {% if value in (contabil_form.envio_digital_fisico.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="cedf-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação") }}
-                            {{ contabil_form.observacao_movimento.label(class="form-label") }}
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">{{ contabil_form.controle_relatorios.label.text }}</label>
-                            <div class="d-flex flex-wrap gap-3">
+                    <div class="form-floating mb-3">
+                        {{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação") }}
+                        {{ contabil_form.observacao_movimento.label(class="form-label") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">{{ contabil_form.controle_relatorios.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
                             {% for value, label in contabil_form.controle_relatorios.choices %}
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in contabil_form.controle_relatorios.data %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}>
                                     <label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
-                            </div>
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação") }}
-                            {{ contabil_form.observacao_controle_relatorios.label(class="form-label") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ contabil_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
-                            {{ contabil_form.particularidades.label(class="form-label mt-2") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ contabil_form.particularidades_imagens(class="form-control", multiple=True) }}
-                            {{ contabil_form.particularidades_imagens.label(class="form-label mt-2") }}
                         </div>
                     </div>
-                </div>
-                <div class="d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-primary px-5">Salvar</button>
-                </div>
-            </form>
-            {% if contabil and contabil.updated_at %}
-            <p class="text-muted mt-2 text-end">Última atualização: {{ contabil.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
-            {% endif %}
-        </div>
-        <div class="border p-4 mb-5" id="pessoal">
-            <h3 class="h5 mb-4">Departamento Pessoal</h3>
-            <form method="POST" enctype="multipart/form-data">
-                {{ pessoal_form.hidden_tag() }}
-                <input type="hidden" name="form_type" value="pessoal">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ pessoal_form.responsavel.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ pessoal_form.descricao.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
-                            {{ pessoal_form.data_envio.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
-                            {{ pessoal_form.registro_funcionarios.label(class="form-label") }}
-                        </div>
+                    <div class="form-floating mb-3">
+                        {{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação") }}
+                        {{ contabil_form.observacao_controle_relatorios.label(class="form-label") }}
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
-                            {{ pessoal_form.ponto_eletronico.label(class="form-label") }}
-                        </div>
-                        <div class="form-floating mb-3">
-                            {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
-                            {{ pessoal_form.pagamento_funcionario.label(class="form-label") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ pessoal_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
-                            {{ pessoal_form.particularidades.label(class="form-label mt-2") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ pessoal_form.particularidades_imagens(class="form-control", multiple=True) }}
-                            {{ pessoal_form.particularidades_imagens.label(class="form-label mt-2") }}
-                        </div>
+                    <div class="mb-3">
+                        {{ contabil_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
+                        {{ contabil_form.particularidades.label(class="form-label mt-2") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ contabil_form.particularidades_imagens(class="form-control", multiple=True) }}
+                        {{ contabil_form.particularidades_imagens.label(class="form-label mt-2") }}
                     </div>
                 </div>
-                <div class="d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-primary px-5">Salvar</button>
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary px-5">Salvar</button>
+            </div>
+        </form>
+        {% if contabil and contabil.updated_at %}
+        <p class="text-muted mt-2 text-end">Última atualização: {{ contabil.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Departamento Pessoal -->
+    <div class="border p-4 mb-5" id="pessoal">
+        <h3 class="h5 mb-4">Departamento Pessoal</h3>
+        <form method="POST" enctype="multipart/form-data">
+            {{ pessoal_form.hidden_tag() }}
+            <input type="hidden" name="form_type" value="pessoal">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.responsavel(class="form-control", placeholder="Responsável") }}
+                        {{ pessoal_form.responsavel.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.descricao(class="form-control", placeholder="Descrição") }}
+                        {{ pessoal_form.descricao.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
+                        {{ pessoal_form.data_envio.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
+                        {{ pessoal_form.registro_funcionarios.label(class="form-label") }}
+                    </div>
                 </div>
-            </form>
-            {% if pessoal and pessoal.updated_at %}
-            <p class="text-muted mt-2 text-end">Última atualização: {{ pessoal.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
-            {% endif %}
-        </div>
-        <div class="border p-4 mb-5" id="adm">
-            <h3 class="h5 mb-4">Departamento Administrativo</h3>
-            <form method="POST">
-                {{ administrativo_form.hidden_tag() }}
-                <input type="hidden" name="form_type" value="administrativo">
-                <div class="form-floating mb-3">
-                    {{ administrativo_form.responsavel(class="form-control", placeholder="Responsável") }}
-                    {{ administrativo_form.responsavel.label(class="form-label") }}
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
+                        {{ pessoal_form.ponto_eletronico.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
+                        {{ pessoal_form.pagamento_funcionario.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ pessoal_form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
+                        {{ pessoal_form.particularidades.label(class="form-label mt-2") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ pessoal_form.particularidades_imagens(class="form-control", multiple=True) }}
+                        {{ pessoal_form.particularidades_imagens.label(class="form-label mt-2") }}
+                    </div>
                 </div>
-                <div class="form-floating mb-3">
-                    {{ administrativo_form.descricao(class="form-control", placeholder="Descrição") }}
-                    {{ administrativo_form.descricao.label(class="form-label") }}
-                </div>
-                <div class="d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-primary px-5">Salvar</button>
-                </div>
-            </form>
-            {% if administrativo and administrativo.updated_at %}
-            <p class="text-muted mt-2 text-end">Última atualização: {{ administrativo.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
-            {% endif %}
-        </div>
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary px-5">Salvar</button>
+            </div>
+        </form>
+        {% if pessoal and pessoal.updated_at %}
+        <p class="text-muted mt-2 text-end">Última atualização: {{ pessoal.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Departamento Administrativo -->
+    <div class="border p-4 mb-5" id="adm">
+        <h3 class="h5 mb-4">Departamento Administrativo</h3>
+        <form method="POST">
+            {{ administrativo_form.hidden_tag() }}
+            <input type="hidden" name="form_type" value="administrativo">
+            <div class="form-floating mb-3">
+                {{ administrativo_form.responsavel(class="form-control", placeholder="Responsável") }}
+                {{ administrativo_form.responsavel.label(class="form-label") }}
+            </div>
+            <div class="form-floating mb-3">
+                {{ administrativo_form.descricao(class="form-control", placeholder="Descrição") }}
+                {{ administrativo_form.descricao.label(class="form-label") }}
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary px-5">Salvar</button>
+            </div>
+        </form>
+        {% if administrativo and administrativo.updated_at %}
+        <p class="text-muted mt-2 text-end">Última atualização: {{ administrativo.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
