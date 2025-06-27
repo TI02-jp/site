@@ -3,8 +3,15 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa
-from app.forms import EmpresaForm, EditUserForm
+from app.models.tables import User, Empresa, Departamento
+from app.forms import (
+    EmpresaForm,
+    EditUserForm,
+    DepartamentoForm,
+    DepartamentoFiscalForm,
+    DepartamentoContabilForm,
+    DepartamentoPessoalForm,
+)
 from datetime import datetime
 import re
 
@@ -89,7 +96,7 @@ def cadastrar_empresa():
             db.session.add(nova_empresa)
             db.session.commit()
             flash('Empresa cadastrada com sucesso!', 'success')
-            return redirect(url_for('listar_empresas'))
+            return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
 
         except Exception as e:
             db.session.rollback()
@@ -146,6 +153,232 @@ def editar_empresa(id):
             db.session.rollback()
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
     return render_template('empresas/editar_empresa.html', empresa=empresa)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
+@login_required
+def gerenciar_departamentos(empresa_id):
+    empresa = Empresa.query.get_or_404(empresa_id)
+
+    fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
+    contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
+    pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
+    administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
+
+    fiscal_form = DepartamentoFiscalForm(obj=fiscal)
+    contabil_form = DepartamentoContabilForm(obj=contabil)
+    pessoal_form = DepartamentoPessoalForm(obj=pessoal)
+    administrativo_form = DepartamentoForm(obj=administrativo)
+
+    submitted = request.form.get('form_type')
+
+    if submitted == 'fiscal' and fiscal_form.validate_on_submit():
+        if not fiscal:
+            fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
+        fiscal.responsavel = fiscal_form.responsavel.data
+        fiscal.descricao = fiscal_form.descricao.data
+        fiscal.formas_importacao = fiscal_form.formas_importacao.data
+        fiscal.link_prefeitura = fiscal_form.link_prefeitura.data
+        fiscal.usuario_prefeitura = fiscal_form.usuario_prefeitura.data
+        fiscal.senha_prefeitura = fiscal_form.senha_prefeitura.data
+        fiscal.forma_movimento = fiscal_form.forma_movimento.data
+        fiscal.envio_digital = fiscal_form.envio_digital.data
+        fiscal.envio_digital_fisico = fiscal_form.envio_digital_fisico.data
+        fiscal.observacao_movimento = fiscal_form.observacao_movimento.data
+        fiscal.contatos = {
+            'nome': fiscal_form.contato_nome.data,
+            'meios': fiscal_form.contato_meios.data,
+        }
+        fiscal.particularidades_texto = fiscal_form.particularidades.data
+        fiscal.particularidades_imagens = [f.filename for f in fiscal_form.particularidades_imagens.data if f]
+        db.session.add(fiscal)
+        db.session.commit()
+        flash('Departamento Fiscal salvo!', 'success')
+        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+
+    if submitted == 'contabil' and contabil_form.validate_on_submit():
+        if not contabil:
+            contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+        contabil.responsavel = contabil_form.responsavel.data
+        contabil.descricao = contabil_form.descricao.data
+        contabil.metodo_importacao = contabil_form.metodo_importacao.data
+        contabil.observacao_importacao = contabil_form.observacao_importacao.data
+        contabil.forma_movimento = contabil_form.forma_movimento.data
+        contabil.envio_digital = contabil_form.envio_digital.data
+        contabil.envio_digital_fisico = contabil_form.envio_digital_fisico.data
+        contabil.observacao_movimento = contabil_form.observacao_movimento.data
+        contabil.controle_relatorios = contabil_form.controle_relatorios.data
+        contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
+        contabil.particularidades_texto = contabil_form.particularidades.data
+        contabil.particularidades_imagens = [f.filename for f in contabil_form.particularidades_imagens.data if f]
+        db.session.add(contabil)
+        db.session.commit()
+        flash('Departamento Contábil salvo!', 'success')
+        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+
+    if submitted == 'pessoal' and pessoal_form.validate_on_submit():
+        if not pessoal:
+            pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+        pessoal.responsavel = pessoal_form.responsavel.data
+        pessoal.descricao = pessoal_form.descricao.data
+        pessoal.data_envio = pessoal_form.data_envio.data
+        pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
+        pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
+        pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
+        pessoal.particularidades_texto = pessoal_form.particularidades.data
+        pessoal.particularidades_imagens = [f.filename for f in pessoal_form.particularidades_imagens.data if f]
+        db.session.add(pessoal)
+        db.session.commit()
+        flash('Departamento Pessoal salvo!', 'success')
+        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+
+    if submitted == 'administrativo' and administrativo_form.validate_on_submit():
+        if not administrativo:
+            administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
+        administrativo.responsavel = administrativo_form.responsavel.data
+        administrativo.descricao = administrativo_form.descricao.data
+        db.session.add(administrativo)
+        db.session.commit()
+        flash('Departamento Administrativo salvo!', 'success')
+        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+
+    return render_template(
+        'empresas/departamentos.html',
+        empresa=empresa,
+        fiscal_form=fiscal_form,
+        contabil_form=contabil_form,
+        pessoal_form=pessoal_form,
+        administrativo_form=administrativo_form,
+        fiscal=fiscal,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo,
+    )
+
+
+def _cadastrar_departamento(empresa_id, tipo_nome):
+    form = DepartamentoForm()
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo=tipo_nome).first()
+    if departamento:
+        form.responsavel.data = departamento.responsavel
+        form.descricao.data = departamento.descricao
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo=tipo_nome)
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash(f'{tipo_nome} cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar {tipo_nome.lower()}: {e}', 'danger')
+    empresa = Empresa.query.get_or_404(empresa_id)
+    return render_template('departamentos/cadastrar.html', form=form, empresa=empresa, tipo_nome=tipo_nome, departamento=departamento)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/fiscal', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_fiscal(empresa_id):
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
+    form = DepartamentoFiscalForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.formas_importacao = form.formas_importacao.data
+        departamento.link_prefeitura = form.link_prefeitura.data
+        departamento.usuario_prefeitura = form.usuario_prefeitura.data
+        departamento.senha_prefeitura = form.senha_prefeitura.data
+        departamento.forma_movimento = form.forma_movimento.data
+        departamento.envio_digital = form.envio_digital.data
+        departamento.envio_digital_fisico = form.envio_digital_fisico.data
+        departamento.observacao_movimento = form.observacao_movimento.data
+        departamento.contatos = {
+            'nome': form.contato_nome.data,
+            'meios': form.contato_meios.data
+        }
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Fiscal cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento fiscal: {e}', 'danger')
+    return render_template('departamentos/cadastrar_fiscal.html', form=form, empresa=empresa, tipo_nome='Departamento Fiscal', departamento=departamento)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/contabil', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_contabil(empresa_id):
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
+    form = DepartamentoContabilForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.metodo_importacao = form.metodo_importacao.data
+        departamento.observacao_importacao = form.observacao_importacao.data
+        departamento.forma_movimento = form.forma_movimento.data
+        departamento.envio_digital = form.envio_digital.data
+        departamento.envio_digital_fisico = form.envio_digital_fisico.data
+        departamento.observacao_movimento = form.observacao_movimento.data
+        departamento.controle_relatorios = form.controle_relatorios.data
+        departamento.observacao_controle_relatorios = form.observacao_controle_relatorios.data
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Contábil cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento contábil: {e}', 'danger')
+    return render_template('departamentos/cadastrar_contabil.html', form=form, empresa=empresa, tipo_nome='Departamento Contábil', departamento=departamento)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/pessoal', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_pessoal(empresa_id):
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
+    form = DepartamentoPessoalForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.data_envio = form.data_envio.data
+        departamento.registro_funcionarios = form.registro_funcionarios.data
+        departamento.ponto_eletronico = form.ponto_eletronico.data
+        departamento.pagamento_funcionario = form.pagamento_funcionario.data
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Pessoal cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento pessoal: {e}', 'danger')
+    return render_template('departamentos/cadastrar_pessoal.html', form=form, empresa=empresa, tipo_nome='Departamento Pessoal', departamento=departamento)
+
+
+@app.route('/empresa/<int:empresa_id>/departamentos/administrativo', methods=['GET', 'POST'])
+@login_required
+def cadastrar_departamento_administrativo(empresa_id):
+    return _cadastrar_departamento(empresa_id, 'Departamento Administrativo')
 
 @app.route('/relatorios')
 @login_required
