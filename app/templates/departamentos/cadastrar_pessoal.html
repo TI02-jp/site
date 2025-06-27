@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Departamento Pessoal{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+    <div class="card shadow-lg p-4">
+        <h2 class="mb-4 text-center text-primary fw-semibold">{{ tipo_nome }} - {{ empresa.NomeEmpresa }}</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ form.responsavel(class="form-control", placeholder="Responsável") }}
+                        {{ form.responsavel.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.descricao(class="form-control", placeholder="Descrição") }}
+                        {{ form.descricao.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.data_envio(class="form-control", placeholder="Data de Envio") }}
+                        {{ form.data_envio.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
+                        {{ form.registro_funcionarios.label(class="form-label") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
+                        {{ form.ponto_eletronico.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
+                        {{ form.pagamento_funcionario.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
+                        {{ form.particularidades.label(class="form-label mt-2") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.particularidades_imagens(class="form-control", multiple=True) }}
+                        {{ form.particularidades_imagens.label(class="form-label mt-2") }}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mt-4">
+                <button type="submit" class="btn btn-primary px-5 rounded-pill">Salvar</button>
+            </div>
+        </form>
+        {% if departamento and departamento.updated_at %}
+        <p class="text-muted mt-3 text-end">Última atualização: {{ departamento.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
