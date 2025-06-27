@@ -273,7 +273,6 @@ def cadastrar_departamento_pessoal(empresa_id):
             flash(f'Erro ao cadastrar departamento pessoal: {e}', 'danger')
     return render_template('departamentos/cadastrar_pessoal.html', form=form, empresa=empresa, tipo_nome='Departamento Pessoal', departamento=departamento)
 
-
 @app.route('/empresa/<int:empresa_id>/departamentos/administrativo', methods=['GET', 'POST'])
 @login_required
 def cadastrar_departamento_administrativo(empresa_id):

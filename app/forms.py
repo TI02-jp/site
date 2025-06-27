@@ -136,7 +136,6 @@ class DepartamentoContabilForm(DepartamentoForm):
     particularidades = TextAreaField('Particularidades')
     particularidades_imagens = MultipleFileField('Imagens')
 
-
 class DepartamentoPessoalForm(DepartamentoForm):
     data_envio = StringField('Data de Envio')
     registro_funcionarios = StringField('Registro de Funcionários')
