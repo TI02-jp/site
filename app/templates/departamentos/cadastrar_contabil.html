@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Departamento Contábil{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+    <div class="card shadow-lg p-4">
+        <h2 class="mb-4 text-center text-primary fw-semibold">{{ tipo_nome }} - {{ empresa.NomeEmpresa }}</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                        {{ form.responsavel(class="form-control", placeholder="Responsável") }}
+                        {{ form.responsavel.label(class="form-label") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.descricao(class="form-control", placeholder="Descrição") }}
+                        {{ form.descricao.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.metodo_importacao.label.text }}</label>
+                        {{ form.metodo_importacao(class="form-select") }}
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.observacao_importacao(class="form-control", placeholder="Observação") }}
+                        {{ form.observacao_importacao.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.forma_movimento.label.text }}</label>
+                        {{ form.forma_movimento(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.envio_digital.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
+                        {% for value, label in form.envio_digital.choices %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}[]" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in form.envio_digital.data %}checked{% endif %}>
+                                <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.envio_digital_fisico.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
+                        {% for value, label in form.envio_digital_fisico.choices %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}[]" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in form.envio_digital_fisico.data %}checked{% endif %}>
+                                <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.observacao_movimento(class="form-control", placeholder="Observação") }}
+                        {{ form.observacao_movimento.label(class="form-label") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.controle_relatorios.label.text }}</label>
+                        <div class="d-flex flex-wrap gap-3">
+                        {% for value, label in form.controle_relatorios.choices %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="{{ form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in form.controle_relatorios.data %}checked{% endif %}>
+                                <label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        {{ form.observacao_controle_relatorios(class="form-control", placeholder="Observação") }}
+                        {{ form.observacao_controle_relatorios.label(class="form-label") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.particularidades(class="form-control", rows=3, placeholder="Particularidades") }}
+                        {{ form.particularidades.label(class="form-label mt-2") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.particularidades_imagens(class="form-control", multiple=True) }}
+                        {{ form.particularidades_imagens.label(class="form-label mt-2") }}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mt-4">
+                <button type="submit" class="btn btn-primary px-5 rounded-pill">Salvar</button>
+            </div>
+        </form>
+        {% if departamento and departamento.updated_at %}
+        <p class="text-muted mt-3 text-end">Última atualização: {{ departamento.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
