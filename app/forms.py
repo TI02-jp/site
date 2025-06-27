@@ -114,7 +114,6 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('importado', 'Importado'),
         ('digitado', 'Digitado')
     ])
-    observacao_importacao = StringField('Observação Importação')
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
         ('digital', 'Digital'),
         ('fisico', 'Físico'),
@@ -153,4 +152,5 @@ class DepartamentoPessoalForm(DepartamentoForm):
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
     particularidades = TextAreaField('Particularidades')
+    particularidades_imagens = MultipleFileField('Imagens')
 

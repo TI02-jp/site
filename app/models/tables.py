@@ -86,7 +86,6 @@ class Departamento(db.Model):
     envio_digital_fisico = db.Column(JsonString(200))
     observacao_movimento = db.Column(db.String(200))
     metodo_importacao = db.Column(db.String(20))
-    observacao_importacao = db.Column(db.String(200))
     controle_relatorios = db.Column(JsonString(255))
     observacao_controle_relatorios = db.Column(db.String(200))
     contatos = db.Column(JsonString(255))
