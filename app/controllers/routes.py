@@ -203,7 +203,6 @@ def gerenciar_departamentos(empresa_id):
         contabil.responsavel = contabil_form.responsavel.data
         contabil.descricao = contabil_form.descricao.data
         contabil.metodo_importacao = contabil_form.metodo_importacao.data
-        contabil.observacao_importacao = contabil_form.observacao_importacao.data
         contabil.forma_movimento = contabil_form.forma_movimento.data
         contabil.envio_digital = contabil_form.envio_digital.data
         contabil.envio_digital_fisico = contabil_form.envio_digital_fisico.data
