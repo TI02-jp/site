@@ -42,6 +42,8 @@ def login():
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
@@ -254,10 +256,6 @@ def gerenciar_departamentos(empresa_id):
         administrativo=administrativo,
     )
 
-@app.route('/empresa/<int:empresa_id>/departamentos/administrativo', methods=['GET', 'POST'])
-@login_required
-def cadastrar_departamento_administrativo(empresa_id):
-    return _cadastrar_departamento(empresa_id, 'Departamento Administrativo')
 
 @app.route('/relatorios')
 @login_required
