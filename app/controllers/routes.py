@@ -4,7 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
-from app.forms import EmpresaForm, EditUserForm, DepartamentoForm
+from app.forms import EmpresaForm, EditUserForm, DepartamentoForm, DepartamentoFiscalForm
 from datetime import datetime
 import re
 
@@ -150,13 +150,15 @@ def editar_empresa(id):
 
 def _cadastrar_departamento(empresa_id, tipo_nome):
     form = DepartamentoForm()
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo=tipo_nome).first()
+    if departamento:
+        form.responsavel.data = departamento.responsavel
+        form.descricao.data = departamento.descricao
     if form.validate_on_submit():
-        departamento = Departamento(
-            empresa_id=empresa_id,
-            tipo=tipo_nome,
-            responsavel=form.responsavel.data,
-            descricao=form.descricao.data
-        )
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo=tipo_nome)
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
         try:
             db.session.add(departamento)
             db.session.commit()
@@ -166,13 +168,43 @@ def _cadastrar_departamento(empresa_id, tipo_nome):
             db.session.rollback()
             flash(f'Erro ao cadastrar {tipo_nome.lower()}: {e}', 'danger')
     empresa = Empresa.query.get_or_404(empresa_id)
-    return render_template('departamentos/cadastrar.html', form=form, empresa=empresa, tipo_nome=tipo_nome)
+    return render_template('departamentos/cadastrar.html', form=form, empresa=empresa, tipo_nome=tipo_nome, departamento=departamento)
 
 
 @app.route('/empresa/<int:empresa_id>/departamentos/fiscal', methods=['GET', 'POST'])
 @login_required
 def cadastrar_departamento_fiscal(empresa_id):
-    return _cadastrar_departamento(empresa_id, 'Departamento Fiscal')
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
+    form = DepartamentoFiscalForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.formas_importacao = form.formas_importacao.data
+        departamento.link_prefeitura = form.link_prefeitura.data
+        departamento.usuario_prefeitura = form.usuario_prefeitura.data
+        departamento.senha_prefeitura = form.senha_prefeitura.data
+        departamento.forma_movimento = form.forma_movimento.data
+        departamento.envio_digital = form.envio_digital.data
+        departamento.envio_digital_fisico = form.envio_digital_fisico.data
+        departamento.observacao_movimento = form.observacao_movimento.data
+        departamento.contatos = {
+            'nome': form.contato_nome.data,
+            'meios': form.contato_meios.data
+        }
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Fiscal cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento fiscal: {e}', 'danger')
+    return render_template('departamentos/cadastrar_fiscal.html', form=form, empresa=empresa, tipo_nome='Departamento Fiscal', departamento=departamento)
 
 
 @app.route('/empresa/<int:empresa_id>/departamentos/contabil', methods=['GET', 'POST'])

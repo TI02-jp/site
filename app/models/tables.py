@@ -2,7 +2,7 @@ import json
 from sqlalchemy.types import TypeDecorator, String
 from app import db
 from enum import Enum
-from datetime import date
+from datetime import date, datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -77,8 +77,21 @@ class Departamento(db.Model):
     tipo = db.Column(db.String(50), nullable=False)
     responsavel = db.Column(db.String(100))
     descricao = db.Column(db.String(200))
+    formas_importacao = db.Column(JsonString(255))
+    link_prefeitura = db.Column(db.String(200))
+    usuario_prefeitura = db.Column(db.String(100))
+    senha_prefeitura = db.Column(db.String(100))
+    forma_movimento = db.Column(db.String(20))
+    envio_digital = db.Column(JsonString(200))
+    envio_digital_fisico = db.Column(JsonString(200))
+    observacao_movimento = db.Column(db.String(200))
+    contatos = db.Column(JsonString(255))
+    particularidades_texto = db.Column(db.Text)
+    particularidades_imagens = db.Column(JsonString(255))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
+
