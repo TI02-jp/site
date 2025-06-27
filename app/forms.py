@@ -96,3 +96,42 @@ class DepartamentoFiscalForm(DepartamentoForm):
     ])
     particularidades = TextAreaField('Particularidades')
     particularidades_imagens = MultipleFileField('Imagens')
+
+
+class DepartamentoContabilForm(DepartamentoForm):
+    metodo_importacao = SelectField('Forma de Importação', choices=[
+        ('importado', 'Importado'),
+        ('digitado', 'Digitado')
+    ])
+    observacao_importacao = StringField('Observação Importação')
+    forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
+        ('digital', 'Digital'),
+        ('fisico', 'Físico'),
+        ('ambos', 'Digital e Físico')
+    ])
+    envio_digital = SelectMultipleField('Envio Digital', choices=[
+        ('email', 'Email'),
+        ('whatsapp', 'Whatsapp'),
+        ('skype', 'Skype'),
+        ('acessorias', 'Acessórias')
+    ])
+    envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
+        ('email', 'Email'),
+        ('whatsapp', 'Whatsapp'),
+        ('skype', 'Skype'),
+        ('acessorias', 'Acessórias'),
+        ('malote', 'Malote')
+    ])
+    observacao_movimento = StringField('Observação Movimento')
+    controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
+        ('forn_cli_cota_unica', 'Fornecedor e clientes cota unica'),
+        ('saldo_final_mes', 'Relatório com saldo final do mês'),
+        ('adiantamentos', 'Relatório de adiantamentos'),
+        ('contas_pagas', 'Relatório de contas pagas'),
+        ('contas_recebidas', 'Relatório de contas recebidas'),
+        ('adiantamentos2', 'Relatório de adiantamentos'),
+        ('conferir_aplicacao', 'Conferir aplicação')
+    ])
+    observacao_controle_relatorios = StringField('Observação Relatórios')
+    particularidades = TextAreaField('Particularidades')
+    particularidades_imagens = MultipleFileField('Imagens')

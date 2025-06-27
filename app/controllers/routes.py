@@ -4,7 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
-from app.forms import EmpresaForm, EditUserForm, DepartamentoForm, DepartamentoFiscalForm
+from app.forms import EmpresaForm, EditUserForm, DepartamentoForm, DepartamentoFiscalForm, DepartamentoContabilForm
 from datetime import datetime
 import re
 
@@ -210,7 +210,33 @@ def cadastrar_departamento_fiscal(empresa_id):
 @app.route('/empresa/<int:empresa_id>/departamentos/contabil', methods=['GET', 'POST'])
 @login_required
 def cadastrar_departamento_contabil(empresa_id):
-    return _cadastrar_departamento(empresa_id, 'Departamento Contábil')
+    empresa = Empresa.query.get_or_404(empresa_id)
+    departamento = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
+    form = DepartamentoContabilForm(obj=departamento)
+    if form.validate_on_submit():
+        if not departamento:
+            departamento = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+        departamento.responsavel = form.responsavel.data
+        departamento.descricao = form.descricao.data
+        departamento.metodo_importacao = form.metodo_importacao.data
+        departamento.observacao_importacao = form.observacao_importacao.data
+        departamento.forma_movimento = form.forma_movimento.data
+        departamento.envio_digital = form.envio_digital.data
+        departamento.envio_digital_fisico = form.envio_digital_fisico.data
+        departamento.observacao_movimento = form.observacao_movimento.data
+        departamento.controle_relatorios = form.controle_relatorios.data
+        departamento.observacao_controle_relatorios = form.observacao_controle_relatorios.data
+        departamento.particularidades_texto = form.particularidades.data
+        departamento.particularidades_imagens = [f.filename for f in form.particularidades_imagens.data if f]
+        try:
+            db.session.add(departamento)
+            db.session.commit()
+            flash('Departamento Contábil cadastrado com sucesso!', 'success')
+            return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar departamento contábil: {e}', 'danger')
+    return render_template('departamentos/cadastrar_contabil.html', form=form, empresa=empresa, tipo_nome='Departamento Contábil', departamento=departamento)
 
 
 @app.route('/empresa/<int:empresa_id>/departamentos/pessoal', methods=['GET', 'POST'])
