@@ -56,7 +56,6 @@ class EditUserForm(FlaskForm):
 
 
 class DepartamentoForm(FlaskForm):
-    form_type = HiddenField('Tipo')
     responsavel = StringField('Responsável', validators=[DataRequired()])
     descricao = StringField('Descrição')
     submit = SubmitField('Cadastrar')
@@ -148,11 +147,10 @@ class DepartamentoContabilForm(DepartamentoForm):
     particularidades = TextAreaField('Particularidades')
     particularidades_imagens = MultipleFileField('Imagens')
 
-
 class DepartamentoPessoalForm(DepartamentoForm):
     data_envio = StringField('Data de Envio')
     registro_funcionarios = StringField('Registro de Funcionários')
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
     particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField('Imagens')
+
