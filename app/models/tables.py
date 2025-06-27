@@ -94,7 +94,6 @@ class Departamento(db.Model):
     registro_funcionarios = db.Column(db.String(200))
     ponto_eletronico = db.Column(db.String(200))
     pagamento_funcionario = db.Column(db.String(200))
-
     particularidades_texto = db.Column(db.Text)
     particularidades_imagens = db.Column(JsonString(255))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

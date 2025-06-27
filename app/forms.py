@@ -1,5 +1,16 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, RadioField, SubmitField, DateField, SelectMultipleField, SelectField, TextAreaField, PasswordField, MultipleFileField
+from wtforms import (
+    StringField,
+    RadioField,
+    SubmitField,
+    DateField,
+    SelectMultipleField,
+    SelectField,
+    TextAreaField,
+    PasswordField,
+    MultipleFileField,
+    HiddenField,
+)
 from wtforms.validators import DataRequired, Email
 
 class EmpresaForm(FlaskForm):
@@ -142,4 +153,4 @@ class DepartamentoPessoalForm(DepartamentoForm):
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
     particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField('Imagens')
+
