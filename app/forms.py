@@ -77,7 +77,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
     ])
     link_prefeitura = StringField('Link Prefeitura')
     usuario_prefeitura = StringField('Usuário Prefeitura')
-    senha_prefeitura = PasswordField('Senha Prefeitura')
+    senha_prefeitura = StringField('Senha Prefeitura')
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
         ('digital', 'Digital'),
         ('fisico', 'Físico'),

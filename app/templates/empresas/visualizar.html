@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Empresa{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1000px;">
+    <h2 class="mb-4 text-center text-primary fw-semibold">{{ empresa.NomeEmpresa }}</h2>
+
+    <div class="border p-4 mb-5">
+        <h3 class="h5 mb-3">Dados da Empresa</h3>
+        <table class="table table-bordered">
+            <tr><th>Código</th><td>{{ empresa.CodigoEmpresa }}</td></tr>
+            <tr><th>Nome</th><td>{{ empresa.NomeEmpresa }}</td></tr>
+            <tr><th>CNPJ</th><td>{{ empresa.CNPJ }}</td></tr>
+            <tr><th>Data de Abertura</th><td>{{ empresa.DataAbertura }}</td></tr>
+            <tr><th>Sócio Administrador</th><td>{{ empresa.SocioAdministrador }}</td></tr>
+            <tr><th>Tributação</th><td>{{ empresa.Tributacao }}</td></tr>
+            <tr><th>Regime de Lançamento</th><td>{{ empresa.RegimeLancamento }}</td></tr>
+            <tr><th>Atividade Principal</th><td>{{ empresa.AtividadePrincipal }}</td></tr>
+            <tr><th>Sistemas/Consultorias</th><td>{{ empresa.SistemasConsultorias }}</td></tr>
+            <tr><th>Sistema Utilizado</th><td>{{ empresa.SistemaUtilizado }}</td></tr>
+        </table>
+    </div>
+
+    {% if departamentos.get('Departamento Fiscal') %}
+    {% set fiscal = departamentos['Departamento Fiscal'] %}
+    <div class="border p-4 mb-5">
+        <h3 class="h5 mb-3">Departamento Fiscal</h3>
+        <table class="table table-bordered">
+            <tr><th>Responsável</th><td>{{ fiscal.responsavel }}</td></tr>
+            <tr><th>Descrição</th><td>{{ fiscal.descricao }}</td></tr>
+            <tr><th>Formas de Importação</th><td>{{ fiscal.formas_importacao }}</td></tr>
+            <tr><th>Link Prefeitura</th><td>{{ fiscal.link_prefeitura }}</td></tr>
+            <tr><th>Usuário Prefeitura</th><td>{{ fiscal.usuario_prefeitura }}</td></tr>
+            <tr><th>Senha Prefeitura</th><td>{{ fiscal.senha_prefeitura }}</td></tr>
+            <tr><th>Forma Movimento</th><td>{{ fiscal.forma_movimento }}</td></tr>
+            <tr><th>Envio Digital</th><td>{{ fiscal.envio_digital }}</td></tr>
+            <tr><th>Envio Digital/Físico</th><td>{{ fiscal.envio_digital_fisico }}</td></tr>
+            <tr><th>Observação Movimento</th><td>{{ fiscal.observacao_movimento }}</td></tr>
+            <tr><th>Contato Nome</th><td>{{ fiscal.contatos.nome if fiscal.contatos }}</td></tr>
+            <tr><th>Contato Meios</th><td>{{ fiscal.contatos.meios if fiscal.contatos }}</td></tr>
+            <tr><th>Particularidades</th><td>{{ fiscal.particularidades_texto }}</td></tr>
+            <tr><th>Imagens</th><td>{{ fiscal.particularidades_imagens }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if departamentos.get('Departamento Contábil') %}
+    {% set contabil = departamentos['Departamento Contábil'] %}
+    <div class="border p-4 mb-5">
+        <h3 class="h5 mb-3">Departamento Contábil</h3>
+        <table class="table table-bordered">
+            <tr><th>Responsável</th><td>{{ contabil.responsavel }}</td></tr>
+            <tr><th>Descrição</th><td>{{ contabil.descricao }}</td></tr>
+            <tr><th>Método de Importação</th><td>{{ contabil.metodo_importacao }}</td></tr>
+            <tr><th>Forma Movimento</th><td>{{ contabil.forma_movimento }}</td></tr>
+            <tr><th>Envio Digital</th><td>{{ contabil.envio_digital }}</td></tr>
+            <tr><th>Envio Digital/Físico</th><td>{{ contabil.envio_digital_fisico }}</td></tr>
+            <tr><th>Observação Movimento</th><td>{{ contabil.observacao_movimento }}</td></tr>
+            <tr><th>Controle Relatórios</th><td>{{ contabil.controle_relatorios }}</td></tr>
+            <tr><th>Observação Relatórios</th><td>{{ contabil.observacao_controle_relatorios }}</td></tr>
+            <tr><th>Particularidades</th><td>{{ contabil.particularidades_texto }}</td></tr>
+            <tr><th>Imagens</th><td>{{ contabil.particularidades_imagens }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if departamentos.get('Departamento Pessoal') %}
+    {% set pessoal = departamentos['Departamento Pessoal'] %}
+    <div class="border p-4 mb-5">
+        <h3 class="h5 mb-3">Departamento Pessoal</h3>
+        <table class="table table-bordered">
+            <tr><th>Responsável</th><td>{{ pessoal.responsavel }}</td></tr>
+            <tr><th>Descrição</th><td>{{ pessoal.descricao }}</td></tr>
+            <tr><th>Data de Envio</th><td>{{ pessoal.data_envio }}</td></tr>
+            <tr><th>Registro de Funcionários</th><td>{{ pessoal.registro_funcionarios }}</td></tr>
+            <tr><th>Ponto Eletrônico</th><td>{{ pessoal.ponto_eletronico }}</td></tr>
+            <tr><th>Pagamento Funcionário</th><td>{{ pessoal.pagamento_funcionario }}</td></tr>
+            <tr><th>Particularidades</th><td>{{ pessoal.particularidades_texto }}</td></tr>
+            <tr><th>Imagens</th><td>{{ pessoal.particularidades_imagens }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if departamentos.get('Departamento Administrativo') %}
+    {% set adm = departamentos['Departamento Administrativo'] %}
+    <div class="border p-4 mb-5">
+        <h3 class="h5 mb-3">Departamento Administrativo</h3>
+        <table class="table table-bordered">
+            <tr><th>Responsável</th><td>{{ adm.responsavel }}</td></tr>
+            <tr><th>Descrição</th><td>{{ adm.descricao }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="text-center">
+        <a href="{{ url_for('listar_empresas') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+</div>
+{% endblock %}

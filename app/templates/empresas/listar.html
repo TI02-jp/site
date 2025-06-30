@@ -28,6 +28,9 @@
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-sm btn-secondary" title="Departamentos">
                             <i class="bi bi-folder"></i>
                         </a>
+                        <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}" class="btn btn-sm btn-info" title="Visualizar">
+                            <i class="bi bi-eye"></i>
+                        </a>
                         <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-sm btn-primary" title="Editar empresa">
                             <i class="bi bi-pencil"></i>
                         </a>
