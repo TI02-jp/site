@@ -156,6 +156,15 @@ def editar_empresa(id):
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
     return render_template('empresas/editar_empresa.html', empresa=empresa)
 
+
+@app.route('/empresa/visualizar/<int:id>')
+@login_required
+def visualizar_empresa(id):
+    empresa = Empresa.query.get_or_404(id)
+    departamentos = Departamento.query.filter_by(empresa_id=id).all()
+    dept_by_tipo = {d.tipo: d for d in departamentos}
+    return render_template('empresas/visualizar.html', empresa=empresa, departamentos=dept_by_tipo)
+
 @app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
 @login_required
 def gerenciar_departamentos(empresa_id):
