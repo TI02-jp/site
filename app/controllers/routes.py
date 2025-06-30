@@ -142,19 +142,122 @@ def excluir_empresa(id):
 @login_required
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
-    if request.method == 'POST':
-        empresa.NomeEmpresa = request.form.get('nome')
-        cnpj_limpo = re.sub(r'\D', '', request.form.get('cnpj', ''))
+
+    fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
+    contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
+    pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
+    administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+
+    empresa_form = EmpresaForm(obj=empresa)
+    fiscal_form = DepartamentoFiscalForm(obj=fiscal)
+    contabil_form = DepartamentoContabilForm(obj=contabil)
+    pessoal_form = DepartamentoPessoalForm(obj=pessoal)
+    administrativo_form = DepartamentoForm(obj=administrativo)
+
+    submitted = request.form.get('form_type')
+
+    if submitted == 'empresa' and empresa_form.validate_on_submit():
+        cnpj_limpo = re.sub(r'\D', '', empresa_form.cnpj.data or '')
+        empresa.CodigoEmpresa = empresa_form.codigo_empresa.data
+        empresa.NomeEmpresa = empresa_form.nome_empresa.data
         empresa.CNPJ = cnpj_limpo
-        empresa.DataAbertura = request.form.get('data_abertura')
+        empresa.DataAbertura = empresa_form.data_abertura.data
+        empresa.SocioAdministrador = empresa_form.socio_administrador.data
+        empresa.Tributacao = empresa_form.tributacao.data
+        empresa.RegimeLancamento = empresa_form.regime_lancamento.data
+        empresa.AtividadePrincipal = empresa_form.atividade_principal.data
+        empresa.SistemasConsultorias = ",".join(empresa_form.sistemas_consultorias.data) if empresa_form.sistemas_consultorias.data else ""
+        empresa.SistemaUtilizado = empresa_form.sistema_utilizado.data
         try:
             db.session.commit()
             flash('Empresa atualizada com sucesso!', 'success')
-            return redirect(url_for('listar_empresas'))
+            return redirect(url_for('editar_empresa', id=id))
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
-    return render_template('empresas/editar_empresa.html', empresa=empresa)
+
+    if submitted == 'fiscal' and fiscal_form.validate_on_submit():
+        if not fiscal:
+            fiscal = Departamento(empresa_id=id, tipo='Departamento Fiscal')
+        fiscal.responsavel = fiscal_form.responsavel.data
+        fiscal.descricao = fiscal_form.descricao.data
+        fiscal.formas_importacao = fiscal_form.formas_importacao.data
+        fiscal.link_prefeitura = fiscal_form.link_prefeitura.data
+        fiscal.usuario_prefeitura = fiscal_form.usuario_prefeitura.data
+        fiscal.senha_prefeitura = fiscal_form.senha_prefeitura.data
+        fiscal.forma_movimento = fiscal_form.forma_movimento.data
+        fiscal.envio_digital = fiscal_form.envio_digital.data
+        fiscal.envio_digital_fisico = fiscal_form.envio_digital_fisico.data
+        fiscal.observacao_movimento = fiscal_form.observacao_movimento.data
+        fiscal.contatos = {
+            'nome': fiscal_form.contato_nome.data,
+            'meios': fiscal_form.contato_meios.data,
+        }
+        fiscal.particularidades_texto = fiscal_form.particularidades.data
+        fiscal.particularidades_imagens = [f.filename for f in fiscal_form.particularidades_imagens.data if f]
+        db.session.add(fiscal)
+        db.session.commit()
+        flash('Departamento Fiscal salvo!', 'success')
+        return redirect(url_for('editar_empresa', id=id))
+
+    if submitted == 'contabil' and contabil_form.validate_on_submit():
+        if not contabil:
+            contabil = Departamento(empresa_id=id, tipo='Departamento Contábil')
+        contabil.responsavel = contabil_form.responsavel.data
+        contabil.descricao = contabil_form.descricao.data
+        contabil.metodo_importacao = contabil_form.metodo_importacao.data
+        contabil.forma_movimento = contabil_form.forma_movimento.data
+        contabil.envio_digital = contabil_form.envio_digital.data
+        contabil.envio_digital_fisico = contabil_form.envio_digital_fisico.data
+        contabil.observacao_movimento = contabil_form.observacao_movimento.data
+        contabil.controle_relatorios = contabil_form.controle_relatorios.data
+        contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
+        contabil.particularidades_texto = contabil_form.particularidades.data
+        contabil.particularidades_imagens = [f.filename for f in contabil_form.particularidades_imagens.data if f]
+        db.session.add(contabil)
+        db.session.commit()
+        flash('Departamento Contábil salvo!', 'success')
+        return redirect(url_for('editar_empresa', id=id))
+
+    if submitted == 'pessoal' and pessoal_form.validate_on_submit():
+        if not pessoal:
+            pessoal = Departamento(empresa_id=id, tipo='Departamento Pessoal')
+        pessoal.responsavel = pessoal_form.responsavel.data
+        pessoal.descricao = pessoal_form.descricao.data
+        pessoal.data_envio = pessoal_form.data_envio.data
+        pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
+        pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
+        pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
+        pessoal.particularidades_texto = pessoal_form.particularidades.data
+        pessoal.particularidades_imagens = [f.filename for f in pessoal_form.particularidades_imagens.data if f]
+        db.session.add(pessoal)
+        db.session.commit()
+        flash('Departamento Pessoal salvo!', 'success')
+        return redirect(url_for('editar_empresa', id=id))
+
+    if submitted == 'administrativo' and administrativo_form.validate_on_submit():
+        if not administrativo:
+            administrativo = Departamento(empresa_id=id, tipo='Departamento Administrativo')
+        administrativo.responsavel = administrativo_form.responsavel.data
+        administrativo.descricao = administrativo_form.descricao.data
+        db.session.add(administrativo)
+        db.session.commit()
+        flash('Departamento Administrativo salvo!', 'success')
+        return redirect(url_for('editar_empresa', id=id))
+
+    return render_template(
+        'empresas/editar_empresa.html',
+        empresa_form=empresa_form,
+        empresa=empresa,
+        fiscal_form=fiscal_form,
+        contabil_form=contabil_form,
+        pessoal_form=pessoal_form,
+        administrativo_form=administrativo_form,
+        fiscal=fiscal,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo,
+    )
 
 
 @app.route('/empresa/visualizar/<int:id>')
