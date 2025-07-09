@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Length, Email, EqualTo
 
 class LoginForm(FlaskForm):
@@ -26,4 +26,9 @@ class RegistrationForm(FlaskForm):
         DataRequired(),
         EqualTo('password')
     ])
+    role = SelectField('Perfil', choices=[
+        ('user', 'Usuário'),
+        ('admin', 'Administrador')
+    ], validators=[DataRequired()])
+
     submit = SubmitField('Cadastrar')

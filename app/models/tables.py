@@ -6,7 +6,6 @@ from datetime import date, datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# JsonString para salvar listas como JSON em String
 class JsonString(TypeDecorator):
     impl = String
 
@@ -30,6 +29,7 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    ativo = db.Column(db.Boolean, default=True)
 
     role = db.Column(db.String(20), default='user')
 

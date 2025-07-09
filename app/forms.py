@@ -10,6 +10,7 @@ from wtforms import (
     PasswordField,
     MultipleFileField,
     HiddenField,
+    BooleanField
 )
 from wtforms.validators import DataRequired, Email
 
@@ -53,6 +54,7 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+    ativo = BooleanField('Usuário Ativo')
 
 
 class DepartamentoForm(FlaskForm):

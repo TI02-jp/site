@@ -34,6 +34,9 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+            if not user.ativo:
+                flash('Seu usuário está inativo. Contate o administrador.', 'danger')
+                return redirect(url_for('login'))
             login_user(user, remember=form.remember_me.data)
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
@@ -41,10 +44,10 @@ def login():
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/novo_usuario', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def register():
+def novo_usuario():
     form = RegistrationForm()
     if form.validate_on_submit():
         existing_user = User.query.filter(
@@ -52,20 +55,20 @@ def register():
         ).first()
         if existing_user:
             flash('Usuário ou email já cadastrado.', 'warning')
-            return redirect(url_for('register'))
+        else:
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                name=form.name.data,
+                role=form.role.data
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash('Novo usuário cadastrado com sucesso!', 'success')
+            return redirect(url_for('list_users'))
+    return render_template('admin/novo_usuario.html', form=form)
 
-        user = User(
-            username=form.username.data,
-            email=form.email.data,
-            name=form.name.data
-        )
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-
-        flash('Parabéns, você agora é um usuário registrado!', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html', form=form)
 
 @app.route('/dashboard')
 @login_required
@@ -79,7 +82,7 @@ def cadastrar_empresa():
     if form.validate_on_submit():
         print("Formulário validado, tentando cadastrar...")
         try:
-            cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)  # Remove caracteres não numéricos
+            cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
             sistemas_consultorias_str = ",".join(form.sistemas_consultorias.data) if form.sistemas_consultorias.data else ""
 
             nova_empresa = Empresa(
@@ -264,12 +267,10 @@ def gerenciar_departamentos(empresa_id):
         administrativo=administrativo,
     )
 
-
 @app.route('/relatorios')
 @login_required
 @admin_required
 def relatorios():
-    # Aqui pode implementar lógica de relatórios
     return render_template('relatorios.html')
 
 @app.route('/logout')
@@ -288,13 +289,33 @@ def test_connection():
     except Exception as e:
         return f"Erro na conexão: {str(e)}", 500
 
-# Exemplo para listar usuários cadastrados (somente para admins ou dev)
-@app.route('/users')
+@app.route('/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def list_users():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        existing_user = User.query.filter(
+            (User.username == form.username.data) | (User.email == form.email.data)
+        ).first()
+        if existing_user:
+            flash('Usuário ou email já cadastrado.', 'warning')
+        else:
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                name=form.name.data,
+                role=form.role.data  # se você adicionou esse campo no RegistrationForm
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash('Novo usuário cadastrado com sucesso!', 'success')
+        return redirect(url_for('list_users'))
+
     users = User.query.all()
-    return render_template('list_users.html', users=users)
+    return render_template('list_users.html', users=users, form=form)
+
 
 @app.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -302,30 +323,15 @@ def list_users():
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     form = EditUserForm(obj=user)
+
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.name = form.name.data
         user.role = form.role.data
-        try:
-            db.session.commit()
-            flash('Usuário atualizado com sucesso!', 'success')
-            return redirect(url_for('list_users'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao atualizar usuário: {e}', 'danger')
-    return render_template('edit_user.html', form=form)
-
-@app.route('/user/delete/<int:user_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    try:
-        db.session.delete(user)
+        user.ativo = form.ativo.data
         db.session.commit()
-        flash('Usuário excluído com sucesso!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Erro ao excluir usuário: {e}', 'danger')
-    return redirect(url_for('list_users'))
+        flash('Usuário atualizado com sucesso!', 'success')
+        return redirect(url_for('list_users'))
+
+    return render_template('edit_user.html', form=form)
