@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import MultipleFileField, FileAllowed, FileField
 from wtforms import (
     StringField,
     RadioField,
@@ -18,7 +19,6 @@ class EmpresaForm(FlaskForm):
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
     cnpj = StringField('CNPJ', validators=[DataRequired()])
-    # Mantém formato ISO para compatibilidade com input type=date
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
     socio_administrador = StringField('Sócio Administrador', validators=[DataRequired()])
 
@@ -58,7 +58,7 @@ class EditUserForm(FlaskForm):
 
 
 class DepartamentoForm(FlaskForm):
-    responsavel = StringField('Responsável', validators=[DataRequired()])
+    responsavel = StringField('Responsável')
     descricao = StringField('Descrição')
     submit = SubmitField('Cadastrar')
 
@@ -108,8 +108,9 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('acessorias', 'Acessórias')
     ])
     particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField('Imagens')
-
+    particularidades_imagens = MultipleFileField(
+        'Imagens das Particularidades',
+        validators=[FileAllowed(['jpg', 'jpeg', 'png'], 'Apenas imagens são permitidas!')])
 
 class DepartamentoContabilForm(DepartamentoForm):
     metodo_importacao = SelectField('Forma de Importação', choices=[
@@ -146,7 +147,6 @@ class DepartamentoContabilForm(DepartamentoForm):
     ])
     observacao_controle_relatorios = StringField('Observação Relatórios')
     particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField('Imagens')
 
 class DepartamentoPessoalForm(DepartamentoForm):
     data_envio = StringField('Data de Envio')
@@ -154,5 +154,3 @@ class DepartamentoPessoalForm(DepartamentoForm):
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
     particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField('Imagens')
-

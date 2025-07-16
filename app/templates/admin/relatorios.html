@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho da Página -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-bar-chart-line me-3"></i>Relatórios
+                    </h1>
+                    <p class="text-muted mb-0">Visualize e exporte dados do sistema</p>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">
+                        <i class="bi bi-calendar3 me-1"></i>
+                        Última atualização: Hoje
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Relatórios -->
+    <div class="row g-4 mb-5">
+        <!-- Relatório de Empresas -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-building-fill me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório de Empresas</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Visualize informações completas das empresas cadastradas, incluindo dados fiscais, contábeis e de departamentos.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-primary-subtle text-primary">
+                            <i class="bi bi-check-circle me-1"></i>Disponível
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Dados cadastrais completos</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Informações de departamentos</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Exportação para Excel/PDF</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('listar_empresas') }}" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório Fiscal -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-success text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-receipt-cutoff me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório Fiscal</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Análise detalhada dos dados fiscais, obrigações tributárias e configurações de envio digital das empresas.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-clock me-1"></i>Em desenvolvimento
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Obrigações fiscais por empresa</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Cronograma de entregas</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Status de conformidade</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button class="btn btn-success w-100 disabled" disabled>
+                        <i class="bi bi-tools me-2"></i>Em Breve
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório Contábil -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-info text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calculator me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório Contábil</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Consolidação dos dados contábeis, métodos de importação e controle de relatórios das empresas cadastradas.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-clock me-1"></i>Em desenvolvimento
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Balancetes consolidados</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Métodos de importação</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Controle de entregas</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button class="btn btn-info w-100 disabled" disabled>
+                        <i class="bi bi-tools me-2"></i>Em Breve
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório de Departamento Pessoal -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-purple text-white border-0" style="background-color: #6f42c1 !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-people-fill me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório Pessoal</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Controle de funcionários, folha de pagamento, ponto eletrônico e registros do departamento pessoal.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-clock me-1"></i>Em desenvolvimento
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Folha de pagamento</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Controle de ponto</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Cadastro de funcionários</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button class="btn w-100 disabled" disabled style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
+                        <i class="bi bi-tools me-2"></i>Em Breve
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório de Usuários -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-dark text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-gear me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório de Usuários</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Gestão de usuários do sistema, permissões, atividades e controle de acesso às funcionalidades.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-primary-subtle text-primary">
+                            <i class="bi bi-check-circle me-1"></i>Disponível
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Lista de usuários ativos</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Perfis e permissões</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Histórico de acessos</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('list_users') }}" class="btn btn-dark w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboards Gerenciais -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-gradient text-white border-0" style="background: linear-gradient(45deg, #ff6b6b, #ffa726) !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-graph-up me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Dashboard Gerencial</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Visão executiva com gráficos, indicadores e métricas consolidadas para tomada de decisão.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-clock me-1"></i>Em desenvolvimento
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>KPIs do sistema</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Gráficos interativos</li>
+                        <li><i class="bi bi-hourglass me-2 text-warning"></i>Métricas em tempo real</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button class="btn w-100 disabled" disabled style="background: linear-gradient(45deg, #ff6b6b, #ffa726); border: none; color: white;">
+                        <i class="bi bi-tools me-2"></i>Em Breve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Ajuda -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-light border-start border-4 border-primary">
+                <h6 class="alert-heading">
+                    <i class="bi bi-info-circle me-2"></i>Sobre os Relatórios
+                </h6>
+                <p class="mb-2">Os relatórios disponíveis oferecem diferentes visões dos dados cadastrados no sistema:</p>
+                <ul class="mb-0 small">
+                    <li><strong>Empresas:</strong> Acesse informações completas das empresas e seus departamentos</li>
+                    <li><strong>Usuários:</strong> Gerencie usuários do sistema e suas permissões</li>
+                    <li><strong>Novos relatórios:</strong> Funcionalidades em desenvolvimento serão liberadas em breve</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Adiciona interatividade aos cards
+    document.querySelectorAll('.card-hover').forEach(function(card) {
+        card.addEventListener('click', function() {
+            const link = this.querySelector('a:not(.disabled)');
+            if (link) {
+                window.location.href = link.href;
+            }
+        });
+    });
+    
+    // Tooltip para botões desabilitados
+    const disabledBtns = document.querySelectorAll('.btn.disabled');
+    disabledBtns.forEach(function(btn) {
+        btn.setAttribute('data-bs-toggle', 'tooltip');
+        btn.setAttribute('data-bs-placement', 'top');
+        btn.setAttribute('title', 'Esta funcionalidade está em desenvolvimento');
+    });
+    
+    // Inicializa tooltips
+    if (typeof bootstrap !== 'undefined') {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

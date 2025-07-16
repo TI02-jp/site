@@ -30,7 +30,6 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
-
     role = db.Column(db.String(20), default='user')
 
     def set_password(self, password):
@@ -94,7 +93,6 @@ class Departamento(db.Model):
     ponto_eletronico = db.Column(db.String(200))
     pagamento_funcionario = db.Column(db.String(200))
     particularidades_texto = db.Column(db.Text)
-    particularidades_imagens = db.Column(JsonString(255))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))

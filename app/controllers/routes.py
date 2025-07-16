@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, abort
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -14,6 +14,40 @@ from app.forms import (
 )
 from datetime import datetime
 import re
+import os
+from werkzeug.utils import secure_filename
+from uuid import uuid4
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload_image', methods=['POST'])
+@login_required
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Nenhuma imagem enviada'}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({'error': 'Nome de arquivo vazio'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid4().hex}_{filename}"
+        
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        file_path = os.path.join(upload_folder, unique_name)
+        file.save(file_path)
+
+        file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+
+        return jsonify({'image_url': file_url})
+
+    return jsonify({'error': 'Arquivo inválido'}), 400
 
 def admin_required(f):
     @wraps(f)
@@ -43,32 +77,6 @@ def login():
         else:
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
-
-@app.route('/novo_usuario', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def novo_usuario():
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        existing_user = User.query.filter(
-            (User.username == form.username.data) | (User.email == form.email.data)
-        ).first()
-        if existing_user:
-            flash('Usuário ou email já cadastrado.', 'warning')
-        else:
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                name=form.name.data,
-                role=form.role.data
-            )
-            user.set_password(form.password.data)
-            db.session.add(user)
-            db.session.commit()
-            flash('Novo usuário cadastrado com sucesso!', 'success')
-            return redirect(url_for('list_users'))
-    return render_template('admin/novo_usuario.html', form=form)
-
 
 @app.route('/dashboard')
 @login_required
@@ -117,7 +125,6 @@ def cadastrar_empresa():
 def listar_empresas():
     empresas = Empresa.query.all()
 
-    # Converte DataAbertura para datetime se necessário
     for empresa in empresas:
         if empresa.DataAbertura and isinstance(empresa.DataAbertura, str):
             try:
@@ -196,8 +203,7 @@ def editar_empresa(id):
             'nome': fiscal_form.contato_nome.data,
             'meios': fiscal_form.contato_meios.data,
         }
-        fiscal.particularidades_texto = fiscal_form.particularidades.data
-        fiscal.particularidades_imagens = [f.filename for f in fiscal_form.particularidades_imagens.data if f]
+        fiscal.particularidades = fiscal_form.particularidades.data
         db.session.add(fiscal)
         db.session.commit()
         flash('Departamento Fiscal salvo!', 'success')
@@ -215,8 +221,7 @@ def editar_empresa(id):
         contabil.observacao_movimento = contabil_form.observacao_movimento.data
         contabil.controle_relatorios = contabil_form.controle_relatorios.data
         contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
-        contabil.particularidades_texto = contabil_form.particularidades.data
-        contabil.particularidades_imagens = [f.filename for f in contabil_form.particularidades_imagens.data if f]
+        contabil.particularidades = contabil_form.particularidades.data
         db.session.add(contabil)
         db.session.commit()
         flash('Departamento Contábil salvo!', 'success')
@@ -231,8 +236,7 @@ def editar_empresa(id):
         pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
         pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
         pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
-        pessoal.particularidades_texto = pessoal_form.particularidades.data
-        pessoal.particularidades_imagens = [f.filename for f in pessoal_form.particularidades_imagens.data if f]
+        pessoal.particularidades = pessoal_form.particularidades.data
         db.session.add(pessoal)
         db.session.commit()
         flash('Departamento Pessoal salvo!', 'success')
@@ -261,7 +265,6 @@ def editar_empresa(id):
         pessoal=pessoal,
         administrativo=administrativo,
     )
-
 
 @app.route('/empresa/visualizar/<int:id>')
 @login_required
@@ -374,15 +377,14 @@ def gerenciar_departamentos(empresa_id):
 @login_required
 @admin_required
 def relatorios():
-    return render_template('relatorios.html')
+    return render_template('admin/relatorios.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('home'))
 
-# Rota para teste da conexão com banco
 @app.route('/test_connection')
 def test_connection():
     try:
@@ -408,7 +410,7 @@ def list_users():
                 username=form.username.data,
                 email=form.email.data,
                 name=form.name.data,
-                role=form.role.data  # se você adicionou esse campo no RegistrationForm
+                role=form.role.data
             )
             user.set_password(form.password.data)
             db.session.add(user)
@@ -419,6 +421,30 @@ def list_users():
     users = User.query.all()
     return render_template('list_users.html', users=users, form=form)
 
+@app.route('/novo_usuario', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def novo_usuario():
+    form = RegistrationForm()
+    if form.validate_on_submit():           
+        existing_user = User.query.filter(
+            (User.username == form.username.data) | (User.email == form.email.data)
+        ).first()
+        if existing_user:
+            flash('Usuário ou email já cadastrado.', 'warning')
+        else:
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                name=form.name.data,
+                role=form.role.data
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash('Novo usuário cadastrado com sucesso!', 'success')
+            return redirect(url_for('list_users'))
+    return render_template('admin/novo_usuario.html', form=form)
 
 @app.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required

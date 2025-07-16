@@ -3,106 +3,371 @@
 {% block title %}Cadastrar Empresa{% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 900px;">
-    <div class="card shadow-lg p-5 border-0 rounded-4">
-        <h2 class="mb-4 text-center text-primary fw-semibold">Cadastro de Empresa</h2>
+<div class="container mt-4" style="max-width: 1000px;">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white py-3">
+            <h2 class="mb-0 text-center fw-semibold">
+                <i class="bi bi-building-add me-2"></i>Cadastro de Nova Empresa
+            </h2>
+        </div>
+        
+        <div class="card-body p-4">
+            <!-- Mensagens Flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-        <form method="POST" action="{{ url_for('cadastrar_empresa') }}" novalidate>
-            {{ form.hidden_tag() }}
+            <form method="POST" action="{{ url_for('cadastrar_empresa') }}" novalidate>
+                {{ form.hidden_tag() }}
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        {{ form.codigo_empresa(class="form-control", placeholder="Código da empresa") }}
-                        {{ form.codigo_empresa.label(class="form-label") }}
-                    </div>
-                    <div class="form-floating mt-3">
-                        {{ form.nome_empresa(class="form-control", placeholder="Nome da empresa") }}
-                        {{ form.nome_empresa.label(class="form-label") }}
-                    </div>
-                    <div class="form-floating mt-3">
-                        {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00") }}
-                        {{ form.cnpj.label(class="form-label") }}
-                    </div>
-                    <div class="mt-3">
-                        <label for="data_abertura" class="form-label">{{ form.data_abertura.label.text }}</label>
-                        {{ form.data_abertura(class="form-control", id="data_abertura", type="date") }}
+                <!-- Seção 1: Informações Básicas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Informações Básicas da Empresa
+                        </h5>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        {{ form.socio_administrador(class="form-control", placeholder="Sócio administrador") }}
-                        {{ form.socio_administrador.label(class="form-label") }}
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.codigo_empresa(class="form-control", placeholder="Código da empresa") }}
+                            {{ form.codigo_empresa.label(class="form-label") }}
+                        </div>
+                        {% for error in form.codigo_empresa.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
                     </div>
 
-                    <div class="mt-4">
-                        <label class="form-label">{{ form.tributacao.label.text }}</label>
-                        <div class="d-flex flex-column gap-2">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.nome_empresa(class="form-control", placeholder="Nome da empresa") }}
+                            {{ form.nome_empresa.label(class="form-label") }}
+                        </div>
+                        {% for error in form.nome_empresa.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00") }}
+                            {{ form.cnpj.label(class="form-label") }}
+                        </div>
+                        {% for error in form.cnpj.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="data_abertura" class="form-label fw-semibold">{{ form.data_abertura.label.text }}</label>
+                        {{ form.data_abertura(class="form-control", id="data_abertura", type="date") }}
+                        {% for error in form.data_abertura.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Seção 2: Informações Empresariais -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-briefcase me-2"></i>Informações Empresariais
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.socio_administrador(class="form-control", placeholder="Sócio administrador") }}
+                            {{ form.socio_administrador.label(class="form-label") }}
+                        </div>
+                        {% for error in form.socio_administrador.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.atividade_principal(class="form-control", placeholder="Atividade principal") }}
+                            {{ form.atividade_principal.label(class="form-label") }}
+                        </div>
+                        {% for error in form.atividade_principal.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Seção 3: Configurações Fiscais -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-calculator me-2"></i>Configurações Fiscais
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.tributacao.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
                             {% for value, label in form.tributacao.choices %}
-                                <div class="form-check">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="tributacao" value="{{ value }}" id="tributacao-{{ loop.index }}" {% if form.tributacao.data == value %}checked{% endif %}>
                                     <label class="form-check-label" for="tributacao-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
                         </div>
+                        {% for error in form.tributacao.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
                     </div>
 
-                    <div class="mt-3">
-                        <label class="form-label">{{ form.regime_lancamento.label.text }}</label>
-                        <div class="d-flex flex-column gap-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.regime_lancamento.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
                             {% for value, label in form.regime_lancamento.choices %}
-                                <div class="form-check">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if form.regime_lancamento.data == value %}checked{% endif %}>
                                     <label class="form-check-label" for="regime-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
                         </div>
-                    </div>
-
-                    <div class="form-floating mt-3">
-                        {{ form.atividade_principal(class="form-control", placeholder="Atividade principal") }}
-                        {{ form.atividade_principal.label(class="form-label") }}
+                        {% for error in form.regime_lancamento.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
-            </div>
 
-            <div class="mt-4">
-                <label class="form-label">{{ form.sistemas_consultorias.label.text }}</label>
-                <div class="d-flex flex-wrap gap-3">
-                    {% for value, label in form.sistemas_consultorias.choices %}
-                        <div class="form-check form-check-inline">
-                            <input 
-                                class="form-check-input" 
-                                type="checkbox" 
-                                name="{{ form.sistemas_consultorias.name }}[]" 
-                                value="{{ value }}" 
-                                id="sistema-{{ loop.index }}"
-                                {% if value in form.sistemas_consultorias.data %}checked{% endif %}
-                            >
-                            <label class="form-check-label" for="sistema-{{ loop.index }}">{{ label }}</label>
+                <!-- Seção 4: Sistemas e Consultorias -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-gear me-2"></i>Sistemas e Consultorias
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">{{ form.sistemas_consultorias.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in form.sistemas_consultorias.choices %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input 
+                                            class="form-check-input" 
+                                            type="checkbox" 
+                                            name="{{ form.sistemas_consultorias.name }}[]" 
+                                            value="{{ value }}" 
+                                            id="sistema-{{ loop.index }}"
+                                            {% if value in form.sistemas_consultorias.data %}checked{% endif %}
+                                        >
+                                        <label class="form-check-label" for="sistema-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                    {% endfor %}
+                        {% for error in form.sistemas_consultorias.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-floating mt-4">
-                {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado") }}
-                {{ form.sistema_utilizado.label(class="form-label") }}
-            </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="form-floating">
+                            {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado", placeholder="Sistema atualmente utilizado") }}
+                            {{ form.sistema_utilizado.label(class="form-label") }}
+                        </div>
+                        {% for error in form.sistema_utilizado.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
 
-            <div class="d-flex justify-content-center mt-5">
-                <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm">
-                    <i class="bi bi-check-circle me-2"></i>Cadastrar
-                </button>
-            </div>
-        </form>
+                <!-- Seção de Informações -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="alert alert-light border-start border-4 border-primary">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-lightbulb me-2"></i>Dicas para preenchimento:
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li><strong>Código da Empresa:</strong> Código interno único para identificação</li>
+                                <li><strong>CNPJ:</strong> Será formatado automaticamente durante a digitação</li>
+                                <li><strong>Tributação:</strong> Selecione o regime tributário da empresa</li>
+                                <li><strong>Sistemas:</strong> Marque todos os sistemas/consultorias que a empresa utiliza</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top">
+                            <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-5">
+                                <i class="bi bi-building-add me-2"></i>Cadastrar Empresa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
+{% block scripts %}
 <script>
-    $(document).ready(function() {
-        $('#cnpj').mask('00.000.000/0000-00');
+document.addEventListener("DOMContentLoaded", function () {
+    // Máscara para CNPJ
+    const cnpjField = document.querySelector('#cnpj');
+    if (cnpjField) {
+        cnpjField.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            e.target.value = value;
+        });
+    }
+
+    // Validação em tempo real dos campos obrigatórios
+    const requiredFields = ['codigo_empresa', 'nome_empresa', 'cnpj'];
+    requiredFields.forEach(fieldId => {
+        const field = document.querySelector(`#${fieldId}`);
+        if (field) {
+            field.addEventListener('blur', function() {
+                if (this.value.trim() !== '') {
+                    this.classList.add('is-valid');
+                    this.classList.remove('is-invalid');
+                } else {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                }
+            });
+        }
     });
+
+    // Validação específica do CNPJ
+    if (cnpjField) {
+        cnpjField.addEventListener('blur', function() {
+            const cnpj = this.value.replace(/\D/g, '');
+            if (cnpj.length === 14) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else if (cnpj.length > 0) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
+    }
+
+    // Feedback visual para radio buttons
+    document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const container = this.closest('.border.rounded.p-3.bg-light');
+            if (container) {
+                container.style.borderColor = '#0558c5';
+                container.style.backgroundColor = '#e7f3ff';
+                
+                // Reset outros containers do mesmo grupo
+                const groupName = this.name;
+                document.querySelectorAll(`input[name="${groupName}"]`).forEach(function(otherRadio) {
+                    if (otherRadio !== radio) {
+                        const otherContainer = otherRadio.closest('.border.rounded.p-3.bg-light');
+                        if (otherContainer) {
+                            otherContainer.style.borderColor = '';
+                            otherContainer.style.backgroundColor = '';
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Feedback visual para checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                this.closest('.form-check').style.fontWeight = '600';
+                this.closest('.form-check').style.color = '#0558c5';
+            } else {
+                this.closest('.form-check').style.fontWeight = 'normal';
+                this.closest('.form-check').style.color = '';
+            }
+        });
+        
+        // Aplica estilo inicial para checkboxes já marcados
+        if (checkbox.checked) {
+            checkbox.closest('.form-check').style.fontWeight = '600';
+            checkbox.closest('.form-check').style.color = '#0558c5';
+        }
+    });
+
+    // Validação do formulário antes do submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const codigoEmpresa = document.querySelector('#codigo_empresa').value.trim();
+        const nomeEmpresa = document.querySelector('#nome_empresa').value.trim();
+        const cnpj = document.querySelector('#cnpj').value.replace(/\D/g, '');
+
+        if (!codigoEmpresa || !nomeEmpresa || cnpj.length !== 14) {
+            e.preventDefault();
+            alert('Por favor, preencha todos os campos obrigatórios corretamente.');
+            return false;
+        }
+    });
+
+    // Auto-dismiss alerts
+    const alerts = document.querySelectorAll('.alert-dismissible');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            if (alert && bootstrap.Alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 5000);
+    });
+});
 </script>
+{% endblock %}
 {% endblock %}
