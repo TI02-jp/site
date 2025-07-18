@@ -13,6 +13,7 @@
         
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="form_type" value="fiscal">
                 {{ form.hidden_tag() }}
                 
                 <!-- Seção 1: Informações Básicas -->

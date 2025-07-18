@@ -13,7 +13,7 @@ from wtforms import (
     HiddenField,
     BooleanField
 )
-from wtforms.validators import DataRequired, Email
+from wtforms.validators import DataRequired, Email, Optional
 
 class EmpresaForm(FlaskForm):
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
@@ -58,10 +58,8 @@ class EditUserForm(FlaskForm):
 
 
 class DepartamentoForm(FlaskForm):
-    responsavel = StringField('Responsável')
-    descricao = StringField('Descrição')
-    submit = SubmitField('Cadastrar')
-
+    responsavel = StringField('Responsável', validators=[DataRequired()])
+    descricao = StringField('Descrição', validators=[DataRequired()])
 
 class DepartamentoFiscalForm(DepartamentoForm):
     formas_importacao = SelectMultipleField('Formas de Importação', choices=[

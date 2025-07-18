@@ -93,8 +93,7 @@ class Departamento(db.Model):
     ponto_eletronico = db.Column(db.String(200))
     pagamento_funcionario = db.Column(db.String(200))
     particularidades_texto = db.Column(db.Text)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    updated_at = db.Column(db.DateTime, default=datetime, onupdate=datetime)
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
     def __repr__(self):

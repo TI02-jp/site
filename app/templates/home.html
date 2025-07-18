@@ -3,95 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página Inicial</title>
+    <title>Página Inicial - Sistema JP Contábil</title>
     
-    <!-- Bootstrap (para layout e botões) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons (opcional) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     
-    <!-- CSS personalizado -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     
     <style>
+        /* Estes estilos seriam idealmente movidos para styles.css */
         body {
-            background: #f0f2f5;
-            font-family: 'Segoe UI', sans-serif;
-            color: #333;
-            margin: 0;
-            padding: 0;
+            background-color: #f0f2f5; /* Cor de fundo da página */
+            font-family: 'Inter', sans-serif; /* Consistente com base.html */
+            color: #333; /* Cor padrão do texto */
         }
 
-        header {
-            background-color: #0d6efd;
-            padding: 30px 0;
-            color: white;
-            text-align: center;
+        .header-bg-primary { /* Classe personalizada para o header, se não quiser usar bg-primary direto */
+            background-color: #0d6efd; /* Cor azul do Bootstrap primary */
         }
 
-        .intro {
+        /* Seções de conteúdo para espaçamento e centralização */
+        .intro-section {
             padding: 40px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            text-align: center;
-            margin: 40px auto;
             max-width: 700px;
+            margin: 40px auto; /* Centraliza a div */
         }
 
-        .intro h2 {
-            font-size: 2rem;
-            margin-bottom: 15px;
+        /* Footer com margem superior */
+        .app-footer {
+            margin-top: 60px;
         }
 
-        .actions {
-            text-align: center;
-            margin-top: 30px;
-        }
-
-        .action-btn {
-            display: inline-block;
-            margin: 10px;
-        }
-
-        .btn {
+        /* Estilo para botões de ação na página inicial */
+        .action-btn .btn {
             padding: 12px 25px;
             font-size: 1.1rem;
-            border-radius: 30px;
-        }
-
-        footer {
-            margin-top: 60px;
-            text-align: center;
-            padding: 15px;
-            background-color: #f8f9fa;
-            color: #6c757d;
+            border-radius: 30px; /* Botões arredondados */
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1><i class="bi bi-building"></i> Procedimentos das Empresas</h1>
+    <header class="py-5 text-white text-center header-bg-primary"> {# Ajustado para usar classes Bootstrap e a custom #}
+        <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>Procedimentos das Empresas</h1> {# display-4 para título grande #}
     </header>
     
     <main>
-        <section class="intro">
-            <h2>Sobre o Sistema</h2>
-            <p>
-                Este sistema é dedicado ao uso interno da JP Contábil. Ele centraliza os <strong>procedimentos operacionais</strong>
-                que antes estavam dispersos no Google Drive.
-            </p>
-            <div class="actions">
-                <div class="action-btn">
-                    <a href="{{ url_for('login') }}" class="btn btn-primary shadow">Entrar</a>
+        <section class="intro card shadow-sm intro-section"> {# Usando card, shadow, e a classe custom intro-section #}
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Sobre o Sistema</h2> {# card-title, text-center, mb-4 #}
+                <p class="card-text text-center lead"> {# card-text, text-center, lead para texto maior #}
+                    Este sistema é dedicado ao uso interno da JP Contábil. Ele centraliza os <strong>procedimentos operacionais</strong>
+                    que antes estavam dispersos no Google Drive.
+                </p>
+                <div class="actions text-center mt-4"> {# text-center para centralizar, mt-4 para margem #}
+                    <div class="action-btn d-inline-block mx-2"> {# d-inline-block e mx-2 para espaçamento #}
+                        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg shadow">Entrar</a> {# btn-lg para botão maior #}
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2025 - JP Contabil. Todos os direitos reservados.</p>
+    <footer class="bg-light text-muted text-center py-3 app-footer"> {# bg-light, text-muted, text-center, py-3 #}
+        <p class="mb-0">&copy; {{ now().year }} - JP Contabil. Todos os direitos reservados.</p> {# mb-0 para remover margem #}
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% set now = now() %} {# Garante que 'now' esteja disponível se não for passado pelo Flask #}
 </body>
 </html>

@@ -8,26 +8,45 @@
     <p class="lead">Escolha uma das opções abaixo para gerenciar o sistema:</p>
 </div>
 
+{# Bloco de Mensagens Flash (Movido para aqui para visibilidade) #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages-container mb-4"> {# Adiciona margem inferior #}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
 <div class="row g-4 text-center">
     <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-custom w-100 py-4 shadow-sm">
+        {# Usando btn-primary para ação de "adicionar" #}
+        <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary w-100 py-4 shadow-sm">
             <i class="bi bi-plus-circle me-2"></i> Cadastrar Empresa
         </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('listar_empresas') }}" class="btn btn-custom w-100 py-4 shadow-sm">
+        {# Usando btn-info ou btn-secondary para "visualizar" #}
+        <a href="{{ url_for('listar_empresas') }}" class="btn btn-info text-white w-100 py-4 shadow-sm">
             <i class="bi bi-building me-2"></i> Visualizar Empresas
         </a>
     </div>
     {% if current_user.role == 'admin' %}
     <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('relatorios') }}" class="btn btn-custom w-100 py-4 shadow-sm">
-            <i class="bi bi-bar-chart me-2"></i> Relatórios
+        {# Usando btn-success para "relatórios" (ação de análise) #}
+        <a href="{{ url_for('relatorios') }}" class="btn btn-success w-100 py-4 shadow-sm">
+            <i class="bi bi-bar-chart-fill me-2"></i> Relatórios
         </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <a href="{{ url_for('list_users') }}" class="btn btn-custom w-100 py-4 shadow-sm">
-            <i class="bi bi-people me-2"></i> Ver Usuários
+        {# Usando btn-dark ou btn-secondary para "gerenciar usuários" #}
+        <a href="{{ url_for('list_users') }}" class="btn btn-dark w-100 py-4 shadow-sm">
+            <i class="bi bi-people-fill me-2"></i> Ver Usuários
         </a>
     </div>
     {% endif %}

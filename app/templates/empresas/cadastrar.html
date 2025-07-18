@@ -12,23 +12,23 @@
         </div>
         
         <div class="card-body p-4">
-            <!-- Mensagens Flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                            <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                        </div>
-                    {% endfor %}
+                    <div class="flash-messages-container mb-4"> {# Adiciona margem inferior #}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endwith %}
 
             <form method="POST" action="{{ url_for('cadastrar_empresa') }}" novalidate>
                 {{ form.hidden_tag() }}
 
-                <!-- Seção 1: Informações Básicas -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -40,54 +40,70 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ form.codigo_empresa(class="form-control", placeholder="Código da empresa") }}
+                            {{ form.codigo_empresa(class="form-control", placeholder="Código da empresa", **{'aria-describedby': 'codigoEmpresaHelp'}) }}
                             {{ form.codigo_empresa.label(class="form-label") }}
                         </div>
-                        {% for error in form.codigo_empresa.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {# Exibe erros de validação do lado do servidor #}
+                        {% if form.codigo_empresa.errors %}
+                            {% for error in form.codigo_empresa.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                             <div id="codigoEmpresaHelp" class="form-text">O código interno da empresa.</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ form.nome_empresa(class="form-control", placeholder="Nome da empresa") }}
+                            {{ form.nome_empresa(class="form-control", placeholder="Nome da empresa", **{'aria-describedby': 'nomeEmpresaHelp'}) }}
                             {{ form.nome_empresa.label(class="form-label") }}
                         </div>
-                        {% for error in form.nome_empresa.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.nome_empresa.errors %}
+                            {% for error in form.nome_empresa.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="nomeEmpresaHelp" class="form-text">Nome fantasia ou razão social da empresa.</div>
+                        {% endif %}
                     </div>
                 </div>
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00") }}
+                            {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00", **{'aria-describedby': 'cnpjHelp'}) }}
                             {{ form.cnpj.label(class="form-label") }}
                         </div>
-                        {% for error in form.cnpj.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.cnpj.errors %}
+                            {% for error in form.cnpj.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                             <div id="cnpjHelp" class="form-text">O CNPJ será formatado automaticamente.</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         <label for="data_abertura" class="form-label fw-semibold">{{ form.data_abertura.label.text }}</label>
-                        {{ form.data_abertura(class="form-control", id="data_abertura", type="date") }}
-                        {% for error in form.data_abertura.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {{ form.data_abertura(class="form-control", id="data_abertura", type="date", **{'aria-describedby': 'dataAberturaHelp'}) }}
+                        {% if form.data_abertura.errors %}
+                            {% for error in form.data_abertura.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="dataAberturaHelp" class="form-text">Data de abertura da empresa.</div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Seção 2: Informações Empresariais -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -99,30 +115,37 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ form.socio_administrador(class="form-control", placeholder="Sócio administrador") }}
+                            {{ form.socio_administrador(class="form-control", placeholder="Sócio administrador", **{'aria-describedby': 'socioHelp'}) }}
                             {{ form.socio_administrador.label(class="form-label") }}
                         </div>
-                        {% for error in form.socio_administrador.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.socio_administrador.errors %}
+                            {% for error in form.socio_administrador.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="socioHelp" class="form-text">Nome do sócio administrador.</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ form.atividade_principal(class="form-control", placeholder="Atividade principal") }}
+                            {{ form.atividade_principal(class="form-control", placeholder="Atividade principal", **{'aria-describedby': 'atividadeHelp'}) }}
                             {{ form.atividade_principal.label(class="form-label") }}
                         </div>
-                        {% for error in form.atividade_principal.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.atividade_principal.errors %}
+                            {% for error in form.atividade_principal.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="atividadeHelp" class="form-text">Descrição da atividade principal.</div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Seção 3: Configurações Fiscais -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -134,7 +157,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.tributacao.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tributacao">
                             {% for value, label in form.tributacao.choices %}
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="tributacao" value="{{ value }}" id="tributacao-{{ loop.index }}" {% if form.tributacao.data == value %}checked{% endif %}>
@@ -142,16 +165,18 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        {% for error in form.tributacao.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.tributacao.errors %}
+                            {% for error in form.tributacao.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.regime_lancamento.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="regime_lancamento">
                             {% for value, label in form.regime_lancamento.choices %}
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if form.regime_lancamento.data == value %}checked{% endif %}>
@@ -159,15 +184,16 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        {% for error in form.regime_lancamento.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.regime_lancamento.errors %}
+                            {% for error in form.regime_lancamento.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Seção 4: Sistemas e Consultorias -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -179,7 +205,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <label class="form-label fw-semibold">{{ form.sistemas_consultorias.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light checkbox-group-container">
                             <div class="row">
                                 {% for value, label in form.sistemas_consultorias.choices %}
                                 <div class="col-md-4 mb-2">
@@ -187,7 +213,7 @@
                                         <input 
                                             class="form-check-input" 
                                             type="checkbox" 
-                                            name="{{ form.sistemas_consultorias.name }}[]" 
+                                            name="{{ form.sistemas_consultorias.name }}" {# Removido "[]" para o Flask Forms lidar com MultiCheckboxField #}
                                             value="{{ value }}" 
                                             id="sistema-{{ loop.index }}"
                                             {% if value in form.sistemas_consultorias.data %}checked{% endif %}
@@ -198,34 +224,39 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        {% for error in form.sistemas_consultorias.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.sistemas_consultorias.errors %}
+                            {% for error in form.sistemas_consultorias.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div class="form-floating">
-                            {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado", placeholder="Sistema atualmente utilizado") }}
+                            {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado", placeholder="Sistema atualmente utilizado", **{'aria-describedby': 'sistemaUtilizadoHelp'}) }}
                             {{ form.sistema_utilizado.label(class="form-label") }}
                         </div>
-                        {% for error in form.sistema_utilizado.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if form.sistema_utilizado.errors %}
+                            {% for error in form.sistema_utilizado.errors %}
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="sistemaUtilizadoHelp" class="form-text">Qual sistema a empresa utiliza para gestão (ex: Omie, ContaAzul, ERP próprio).</div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Seção de Informações -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="alert alert-light border-start border-4 border-primary">
                             <h6 class="alert-heading">
-                                <i class="bi bi-lightbulb me-2"></i>Dicas para preenchimento:
+                                <i class="bi bi-lightbulb-fill me-2"></i>Dicas para preenchimento:
                             </h6>
                             <ul class="mb-0 small">
                                 <li><strong>Código da Empresa:</strong> Código interno único para identificação</li>
@@ -237,14 +268,13 @@
                     </div>
                 </div>
 
-                <!-- Botões de Ação -->
                 <div class="row">
                     <div class="col-12">
                         <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top">
                             <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
                                 <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary px-5">
+                            <button type="submit" class="btn btn-primary px-5" id="submit-button">
                                 <i class="bi bi-building-add me-2"></i>Cadastrar Empresa
                             </button>
                         </div>
@@ -258,107 +288,8 @@
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Máscara para CNPJ
-    const cnpjField = document.querySelector('#cnpj');
-    if (cnpjField) {
-        cnpjField.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-            value = value.replace(/(\d{4})(\d)/, '$1-$2');
-            e.target.value = value;
-        });
-    }
-
-    // Validação em tempo real dos campos obrigatórios
-    const requiredFields = ['codigo_empresa', 'nome_empresa', 'cnpj'];
-    requiredFields.forEach(fieldId => {
-        const field = document.querySelector(`#${fieldId}`);
-        if (field) {
-            field.addEventListener('blur', function() {
-                if (this.value.trim() !== '') {
-                    this.classList.add('is-valid');
-                    this.classList.remove('is-invalid');
-                } else {
-                    this.classList.add('is-invalid');
-                    this.classList.remove('is-valid');
-                }
-            });
-        }
-    });
-
-    // Validação específica do CNPJ
-    if (cnpjField) {
-        cnpjField.addEventListener('blur', function() {
-            const cnpj = this.value.replace(/\D/g, '');
-            if (cnpj.length === 14) {
-                this.classList.add('is-valid');
-                this.classList.remove('is-invalid');
-            } else if (cnpj.length > 0) {
-                this.classList.add('is-invalid');
-                this.classList.remove('is-valid');
-            }
-        });
-    }
-
-    // Feedback visual para radio buttons
-    document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const container = this.closest('.border.rounded.p-3.bg-light');
-            if (container) {
-                container.style.borderColor = '#0558c5';
-                container.style.backgroundColor = '#e7f3ff';
-                
-                // Reset outros containers do mesmo grupo
-                const groupName = this.name;
-                document.querySelectorAll(`input[name="${groupName}"]`).forEach(function(otherRadio) {
-                    if (otherRadio !== radio) {
-                        const otherContainer = otherRadio.closest('.border.rounded.p-3.bg-light');
-                        if (otherContainer) {
-                            otherContainer.style.borderColor = '';
-                            otherContainer.style.backgroundColor = '';
-                        }
-                    }
-                });
-            }
-        });
-    });
-
-    // Feedback visual para checkboxes
-    document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                this.closest('.form-check').style.fontWeight = '600';
-                this.closest('.form-check').style.color = '#0558c5';
-            } else {
-                this.closest('.form-check').style.fontWeight = 'normal';
-                this.closest('.form-check').style.color = '';
-            }
-        });
-        
-        // Aplica estilo inicial para checkboxes já marcados
-        if (checkbox.checked) {
-            checkbox.closest('.form-check').style.fontWeight = '600';
-            checkbox.closest('.form-check').style.color = '#0558c5';
-        }
-    });
-
-    // Validação do formulário antes do submit
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const codigoEmpresa = document.querySelector('#codigo_empresa').value.trim();
-        const nomeEmpresa = document.querySelector('#nome_empresa').value.trim();
-        const cnpj = document.querySelector('#cnpj').value.replace(/\D/g, '');
-
-        if (!codigoEmpresa || !nomeEmpresa || cnpj.length !== 14) {
-            e.preventDefault();
-            alert('Por favor, preencha todos os campos obrigatórios corretamente.');
-            return false;
-        }
-    });
-
     // Auto-dismiss alerts
-    const alerts = document.querySelectorAll('.alert-dismissible');
+    const alerts = document.querySelectorAll('.flash-messages-container .alert-dismissible');
     alerts.forEach(function(alert) {
         setTimeout(function() {
             if (alert && bootstrap.Alert) {
@@ -367,6 +298,205 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }, 5000);
     });
+
+    // Máscara para CNPJ
+    const cnpjField = document.querySelector('#cnpj');
+    if (cnpjField) {
+        cnpjField.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+            if (value.length > 14) { // Limita a 14 dígitos para evitar máscara incorreta com excesso
+                value = value.substring(0, 14);
+            }
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            e.target.value = value;
+            // Trigger validation on input as well
+            validateField(e.target);
+        });
+
+        // Pre-fill CNPJ with mask if data exists (for edit scenarios)
+        if (cnpjField.value) {
+            let initialValue = cnpjField.value.replace(/\D/g, '');
+            initialValue = initialValue.replace(/^(\d{2})(\d)/, '$1.$2');
+            initialValue = initialValue.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            initialValue = initialValue.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            initialValue = initialValue.replace(/(\d{4})(\d)/, '$1-$2');
+            cnpjField.value = initialValue;
+            validateField(cnpjField); // Validate on load if pre-filled
+        }
+    }
+
+    // Função genérica de validação de campo para Bootstrap
+    function validateField(field) {
+        const value = field.value.trim();
+        const parentDiv = field.closest('.form-floating') || field.parentElement; // Para inputs não-floating
+        
+        // Remove mensagens de erro existentes que não são do Flask
+        let feedbackDiv = parentDiv.querySelector('.invalid-feedback.js-validation-feedback');
+        if (feedbackDiv) {
+            feedbackDiv.remove();
+        }
+
+        // Adiciona ou remove classes de validação Bootstrap
+        if (value !== '') {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            // Adiciona feedback visual para campos vazios
+            feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
+            feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>Este campo é obrigatório.';
+            parentDiv.appendChild(feedbackDiv);
+        }
+
+        // Validação específica para CNPJ (comprimento)
+        if (field.id === 'cnpj') {
+            const cleanCnpj = value.replace(/\D/g, '');
+            if (cleanCnpj.length === 14) {
+                field.classList.add('is-valid');
+                field.classList.remove('is-invalid');
+                if (feedbackDiv) feedbackDiv.remove(); // Remove feedback se CNPJ válido
+            } else if (cleanCnpj.length > 0 && cleanCnpj.length < 14) {
+                field.classList.add('is-invalid');
+                field.classList.remove('is-valid');
+                if (feedbackDiv) feedbackDiv.remove(); // Remove feedback padrão antes de adicionar o específico
+                feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
+                feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>CNPJ inválido (deve ter 14 dígitos).';
+                parentDiv.appendChild(feedbackDiv);
+            }
+        }
+    }
+
+    // Aplica validação em tempo real aos campos
+    const fieldsToValidate = document.querySelectorAll('#codigo_empresa, #nome_empresa, #cnpj, #data_abertura, #socio_administrador, #atividade_principal, #sistema_utilizado');
+    fieldsToValidate.forEach(field => {
+        field.addEventListener('blur', () => validateField(field));
+        field.addEventListener('input', () => validateField(field)); // Validate on input for immediate feedback
+        // Run initial validation on page load if field has content (e.g., in edit mode)
+        if (field.value.trim() !== '') {
+            validateField(field);
+        }
+    });
+
+    // Feedback visual para radio buttons
+    document.querySelectorAll('.radio-group-container input[type="radio"]').forEach(function(radio) {
+        // Função para atualizar o estilo do container
+        const updateRadioContainerStyle = (r) => {
+            const container = r.closest('.radio-group-container');
+            if (container) {
+                // Remove estilos de todos os rádios no mesmo grupo primeiro
+                document.querySelectorAll(`input[name="${r.name}"]`).forEach(otherRadio => {
+                    const otherContainer = otherRadio.closest('.radio-group-container');
+                    if (otherContainer) {
+                        otherContainer.classList.remove('border-primary');
+                        otherContainer.classList.remove('bg-info-subtle');
+                        otherContainer.classList.remove('text-primary');
+                    }
+                });
+
+                // Adiciona estilo ao container do rádio selecionado
+                if (r.checked) {
+                    container.classList.add('border-primary');
+                    container.classList.add('bg-info-subtle');
+                    container.classList.add('text-primary');
+                }
+            }
+        };
+
+        // Adiciona listener de mudança
+        radio.addEventListener('change', () => updateRadioContainerStyle(radio));
+        
+        // Aplica estilo inicial se já estiver selecionado
+        if (radio.checked) {
+            updateRadioContainerStyle(radio);
+        }
+    });
+
+
+    // Feedback visual para checkboxes
+    document.querySelectorAll('.checkbox-group-container input[type="checkbox"]').forEach(function(checkbox) {
+        // Aplica estilo inicial e em mudança
+        const updateCheckboxStyle = (chk) => {
+            const formCheckDiv = chk.closest('.form-check');
+            if (formCheckDiv) {
+                if (chk.checked) {
+                    formCheckDiv.classList.add('text-primary', 'fw-semibold');
+                } else {
+                    formCheckDiv.classList.remove('text-primary', 'fw-semibold');
+                }
+            }
+        };
+        checkbox.addEventListener('change', () => updateCheckboxStyle(checkbox));
+        updateCheckboxStyle(checkbox); // Chamada inicial para preencher o estado
+    });
+
+    // Submissão do formulário com feedback de carregamento
+    const form = document.querySelector('form');
+    const submitButton = document.querySelector('#submit-button');
+
+    if (form && submitButton) {
+        form.addEventListener('submit', function(e) {
+            // Re-valida todos os campos ao tentar submeter
+            let formIsValid = true;
+            fieldsToValidate.forEach(field => {
+                validateField(field);
+                if (field.classList.contains('is-invalid')) {
+                    formIsValid = false;
+                }
+            });
+
+            // Validação de grupos de rádio (se houver campos obrigatórios tipo rádio)
+            // Exemplo para 'tributacao' e 'regime_lancamento'
+            ['tributacao', 'regime_lancamento'].forEach(radioGroupName => {
+                const radios = document.querySelectorAll(`input[name="${radioGroupName}"]`);
+                const isAnyRadioChecked = Array.from(radios).some(radio => radio.checked);
+                const radioGroupContainer = document.querySelector(`.radio-group-container[data-field-name="${radioGroupName}"]`);
+
+                // Remove feedback existente antes de adicionar um novo
+                let feedbackDiv = radioGroupContainer ? radioGroupContainer.parentElement.querySelector('.invalid-feedback.js-validation-feedback') : null;
+                if (feedbackDiv) {
+                    feedbackDiv.remove();
+                }
+
+                if (!isAnyRadioChecked) {
+                    formIsValid = false;
+                    if (radioGroupContainer) {
+                        radioGroupContainer.classList.add('border-danger'); // Adiciona borda vermelha ao grupo
+                        // Adiciona mensagem de erro abaixo do grupo
+                        feedbackDiv = document.createElement('div');
+                        feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
+                        feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>Selecione uma opção.';
+                        radioGroupContainer.parentElement.appendChild(feedbackDiv);
+                    }
+                } else {
+                    if (radioGroupContainer) {
+                        radioGroupContainer.classList.remove('border-danger'); // Remove borda vermelha
+                    }
+                }
+            });
+
+            if (!formIsValid) {
+                e.preventDefault(); // Impede a submissão se houver erros
+                alert('Por favor, corrija os erros no formulário antes de continuar.'); // Alerta genérico
+                // Foca no primeiro campo inválido
+                const firstInvalidField = document.querySelector('.is-invalid');
+                if (firstInvalidField) {
+                    firstInvalidField.focus();
+                }
+                return false;
+            }
+
+            // Se o formulário for válido, mostra o spinner e desabilita o botão
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Carregando...';
+            submitButton.disabled = true;
+            submitButton.classList.add('disabled'); // Adiciona classe disabled para estilo visual
+        });
+    }
 });
 </script>
 {% endblock %}
