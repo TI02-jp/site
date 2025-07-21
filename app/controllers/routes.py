@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, Flask
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -18,6 +18,8 @@ import os
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -25,12 +27,17 @@ def allowed_file(filename):
 @app.route('/upload_image', methods=['POST'])
 @login_required
 def upload_image():
+    print("--- Rota /upload_image foi chamada! ---") # 1. Verifica se a rota foi acessada
+
     if 'image' not in request.files:
+        print("ERRO: 'image' não está no request.files.")
         return jsonify({'error': 'Nenhuma imagem enviada'}), 400
 
     file = request.files['image']
+    print(f"Arquivo recebido: {file.filename}") # 2. Mostra o nome do arquivo
 
     if file.filename == '':
+        print("ERRO: Nome de arquivo vazio.")
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
@@ -38,16 +45,26 @@ def upload_image():
         unique_name = f"{uuid4().hex}_{filename}"
         
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
         
+        # 3. Imprime o caminho completo onde o arquivo deveria ser salvo
         file_path = os.path.join(upload_folder, unique_name)
-        file.save(file_path)
+        print(f"Tentando salvar em: {file_path}")
 
-        file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+        try:
+            os.makedirs(upload_folder, exist_ok=True) # Garante que a pasta existe
+            file.save(file_path)
+            print("SUCESSO: file.save() executado sem erros!") # 4. Confirmação de sucesso
 
-        return jsonify({'image_url': file_url})
+            file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+            return jsonify({'image_url': file_url})
 
-    return jsonify({'error': 'Arquivo inválido'}), 400
+        except Exception as e:
+            # 5. Captura e imprime QUALQUER erro que ocorra durante o save
+            print(f"!!! ERRO AO SALVAR O ARQUIVO: {e} !!!")
+            return jsonify({'error': f'Erro no servidor ao salvar: {e}'}), 500
+
+    print(f"ERRO: Arquivo não permitido. Nome: {file.filename}")
+    return jsonify({'error': 'Arquivo inválido ou não permitido'}), 400
 
 def admin_required(f):
     @wraps(f)
@@ -148,6 +165,8 @@ def excluir_empresa(id):
         flash(f'Erro ao excluir empresa: {e}', 'danger')
     return redirect(url_for('listar_empresas'))
 
+# Substitua a função editar_empresa no routes.py por esta versão corrigida:
+
 @app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_empresa(id):
@@ -188,7 +207,15 @@ def editar_empresa(id):
 
     if submitted == 'fiscal' and fiscal_form.validate_on_submit():
         if not fiscal:
-            fiscal = Departamento(empresa_id=id, tipo='Departamento Fiscal')
+            fiscal = Departamento(
+                empresa_id=id, 
+                tipo='Departamento Fiscal',
+                created_at=datetime.now(),  # Adicione esta linha
+                updated_at=datetime.now()   # Adicione esta linha
+            )
+        else:
+            fiscal.updated_at = datetime.now()  # Adicione esta linha
+            
         fiscal.responsavel = fiscal_form.responsavel.data
         fiscal.descricao = fiscal_form.descricao.data
         fiscal.formas_importacao = fiscal_form.formas_importacao.data
@@ -211,7 +238,15 @@ def editar_empresa(id):
 
     if submitted == 'contabil' and contabil_form.validate_on_submit():
         if not contabil:
-            contabil = Departamento(empresa_id=id, tipo='Departamento Contábil')
+            contabil = Departamento(
+                empresa_id=id, 
+                tipo='Departamento Contábil',
+                created_at=datetime.now(),  # Adicione esta linha
+                updated_at=datetime.now()   # Adicione esta linha
+            )
+        else:
+            contabil.updated_at = datetime.now()  # Adicione esta linha
+            
         contabil.responsavel = contabil_form.responsavel.data
         contabil.descricao = contabil_form.descricao.data
         contabil.metodo_importacao = contabil_form.metodo_importacao.data
@@ -221,7 +256,7 @@ def editar_empresa(id):
         contabil.observacao_movimento = contabil_form.observacao_movimento.data
         contabil.controle_relatorios = contabil_form.controle_relatorios.data
         contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
-        contabil.particularidades = contabil_form.particularidades.data
+        contabil.particularidades_texto = contabil_form.particularidades.data
         db.session.add(contabil)
         db.session.commit()
         flash('Departamento Contábil salvo!', 'success')
@@ -229,14 +264,22 @@ def editar_empresa(id):
 
     if submitted == 'pessoal' and pessoal_form.validate_on_submit():
         if not pessoal:
-            pessoal = Departamento(empresa_id=id, tipo='Departamento Pessoal')
+            pessoal = Departamento(
+                empresa_id=id, 
+                tipo='Departamento Pessoal',
+                created_at=datetime.now(),  # Adicione esta linha
+                updated_at=datetime.now()   # Adicione esta linha
+            )
+        else:
+            pessoal.updated_at = datetime.now()  # Adicione esta linha
+            
         pessoal.responsavel = pessoal_form.responsavel.data
         pessoal.descricao = pessoal_form.descricao.data
         pessoal.data_envio = pessoal_form.data_envio.data
         pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
         pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
         pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
-        pessoal.particularidades = pessoal_form.particularidades.data
+        pessoal.particularidades_texto = pessoal_form.particularidades.data
         db.session.add(pessoal)
         db.session.commit()
         flash('Departamento Pessoal salvo!', 'success')
@@ -244,7 +287,15 @@ def editar_empresa(id):
 
     if submitted == 'administrativo' and administrativo_form.validate_on_submit():
         if not administrativo:
-            administrativo = Departamento(empresa_id=id, tipo='Departamento Administrativo')
+            administrativo = Departamento(
+                empresa_id=id, 
+                tipo='Departamento Administrativo',
+                created_at=datetime.now(),  # Adicione esta linha
+                updated_at=datetime.now()   # Adicione esta linha
+            )
+        else:
+            administrativo.updated_at = datetime.now()  # Adicione esta linha
+            
         administrativo.responsavel = administrativo_form.responsavel.data
         administrativo.descricao = administrativo_form.descricao.data
         db.session.add(administrativo)
@@ -309,7 +360,6 @@ def gerenciar_departamentos(empresa_id):
             'meios': fiscal_form.contato_meios.data,
         }
         fiscal.particularidades_texto = fiscal_form.particularidades.data
-        fiscal.particularidades_imagens = [f.filename for f in fiscal_form.particularidades_imagens.data if f]
         db.session.add(fiscal)
         db.session.commit()
         flash('Departamento Fiscal salvo!', 'success')
@@ -328,7 +378,6 @@ def gerenciar_departamentos(empresa_id):
         contabil.controle_relatorios = contabil_form.controle_relatorios.data
         contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
         contabil.particularidades_texto = contabil_form.particularidades.data
-        contabil.particularidades_imagens = [f.filename for f in contabil_form.particularidades_imagens.data if f]
         db.session.add(contabil)
         db.session.commit()
         flash('Departamento Contábil salvo!', 'success')
@@ -344,7 +393,6 @@ def gerenciar_departamentos(empresa_id):
         pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
         pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
         pessoal.particularidades_texto = pessoal_form.particularidades.data
-        pessoal.particularidades_imagens = [f.filename for f in pessoal_form.particularidades_imagens.data if f]
         db.session.add(pessoal)
         db.session.commit()
         flash('Departamento Pessoal salvo!', 'success')

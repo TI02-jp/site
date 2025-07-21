@@ -4,25 +4,21 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1200px;">
-    <!-- Cabeçalho da Página -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="text-center">
-                <h1 class="text-primary mb-2">
-                    <i class="bi bi-diagram-3 me-3"></i>Departamentos
-                </h1>
+                <h1 class="text-primary mb-2"><i class="bi bi-diagram-3 me-3"></i>Departamentos</h1>
                 <h2 class="h4 text-muted mb-3">{{ empresa.NomeEmpresa }}</h2>
                 <p class="text-muted">Configure os departamentos e suas particularidades</p>
             </div>
         </div>
     </div>
 
-    <!-- Mensagens Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
@@ -30,620 +26,367 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Navegação entre Departamentos -->
-    <div class="row mb-4">
+    <div class="row mb-4 sticky-top" style="top: 10px; z-index: 1000;">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body py-2">
                     <div class="d-flex justify-content-center flex-wrap gap-3">
-                        <a href="#fiscal" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-receipt me-1"></i>Fiscal
-                        </a>
-                        <a href="#contabil" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-calculator me-1"></i>Contábil
-                        </a>
-                        <a href="#pessoal" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-people me-1"></i>Pessoal
-                        </a>
-                        <a href="#administrativo" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-gear me-1"></i>Administrativo
-                        </a>
+                        <a href="#fiscal" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-gear me-1"></i>Administrativo</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Departamento Fiscal -->
     <div class="card shadow-lg mb-5" id="fiscal">
-        <div class="card-header bg-success text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-receipt me-2"></i>Departamento Fiscal
-            </h3>
-        </div>
+        <div class="card-header bg-success text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
                 {{ fiscal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="fiscal">
                 
-                <!-- Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ fiscal_form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ fiscal_form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ fiscal_form.responsavel(class="form-control", placeholder="Responsável") }}{{ fiscal_form.responsavel.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ fiscal_form.descricao(class="form-control", placeholder="Descrição") }}{{ fiscal_form.descricao.label }}</div></div>
                 </div>
 
-                <!-- Configurações de Importação -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-download me-2"></i>Configurações
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in fiscal_form.formas_importacao.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}[]" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}[]" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                        </div></div>
                     </div>
-                    
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
                         {{ fiscal_form.forma_movimento(class="form-select") }}
                     </div>
                 </div>
 
-                <!-- Acesso à Prefeitura -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-building me-2"></i>Acesso à Prefeitura
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-12">
-                        <div class="form-floating">
-                            {{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link da Prefeitura") }}
-                            {{ fiscal_form.link_prefeitura.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}
-                            {{ fiscal_form.usuario_prefeitura.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha", type="password") }}
-                            {{ fiscal_form.senha_prefeitura.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-12"><div class="form-floating">{{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link da Prefeitura") }}{{ fiscal_form.link_prefeitura.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}{{ fiscal_form.usuario_prefeitura.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha", type="password") }}{{ fiscal_form.senha_prefeitura.label }}</div></div>
                 </div>
 
-                <!-- Envio Digital e Contato -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-cloud-upload me-2"></i>Envio Digital e Contato
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio Digital e Contato</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in fiscal_form.envio_digital.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}[]" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in fiscal_form.envio_digital.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}[]" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}><label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                        </div></div>
                         <label class="form-label fw-semibold mt-3">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in fiscal_form.envio_digital_fisico.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in fiscal_form.envio_digital_fisico.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}><label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                        </div></div>
                     </div>
-                    
                     <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}
-                            {{ fiscal_form.contato_nome.label(class="form-label") }}
-                        </div>
-                        
+                        <div class="form-floating mb-3">{{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}{{ fiscal_form.contato_nome.label }}</div>
                         <label class="form-label fw-semibold">{{ fiscal_form.contato_meios.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in fiscal_form.contato_meios.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}[]" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in fiscal_form.contato_meios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}[]" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}><label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                        </div></div>
                     </div>
                 </div>
 
-                <!-- Observações -->
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 100px") }}
-                            {{ fiscal_form.observacao_movimento.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.particularidades(class="form-control", placeholder="Particularidades", style="height: 100px") }}
-                            {{ fiscal_form.particularidades.label(class="form-label") }}
-                        </div>
+                    <div class="col-12"><div class="form-floating">{{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ fiscal_form.observacao_movimento.label }}</div></div>
+                </div>
+                
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div id="editor-fiscal" style="height: 250px;"></div>
+                        {{ fiscal_form.particularidades_texto(id="particularidades-fiscal", type="hidden") }}
+                        <input type="file" id="image-input-fiscal" accept="image/*" style="display: none;">
                     </div>
                 </div>
-
+                
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-success px-5">
-                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal
-                    </button>
+                    <button type="submit" class="btn btn-success px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal</button>
                 </div>
             </form>
-            
-            {% if fiscal and fiscal.updated_at %}
-            <div class="mt-3">
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-clock me-2"></i>
-                    <div>
-                        <strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {% if fiscal and fiscal.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <!-- Departamento Contábil -->
     <div class="card shadow-lg mb-5" id="contabil">
-        <div class="card-header bg-info text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-calculator me-2"></i>Departamento Contábil
-            </h3>
-        </div>
+        <div class="card-header bg-info text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
                 {{ contabil_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="contabil">
                 
-                <!-- Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ contabil_form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ contabil_form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ contabil_form.responsavel(class="form-control", placeholder="Responsável") }}{{ contabil_form.responsavel.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ contabil_form.descricao(class="form-control", placeholder="Descrição") }}{{ contabil_form.descricao.label }}</div></div>
                 </div>
 
-                <!-- Configurações -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-gear me-2"></i>Configurações de Importação
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Configurações</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>
-                        {{ contabil_form.metodo_importacao(class="form-select") }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>
-                        {{ contabil_form.forma_movimento(class="form-select") }}
-                    </div>
+                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
+                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(class="form-select") }}</div>
                 </div>
 
-                <!-- Envio Digital -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in contabil_form.envio_digital.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}[]" value="{{ value }}" id="ced-{{ loop.index }}" {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="ced-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ contabil_form.envio_digital_fisico.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in contabil_form.envio_digital_fisico.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="cedf-{{ loop.index }}" {% if value in (contabil_form.envio_digital_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="cedf-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Controle e Relatórios -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in contabil_form.controle_relatorios.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in contabil_form.controle_relatorios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}><label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                        </div></div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação", style="height: 100px") }}
-                            {{ contabil_form.observacao_controle_relatorios.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação", style="height: 100px") }}{{ contabil_form.observacao_controle_relatorios.label }}</div></div>
                 </div>
 
-                <!-- Observações -->
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 100px") }}
-                            {{ contabil_form.observacao_movimento.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.particularidades(class="form-control", placeholder="Particularidades", style="height: 100px") }}
-                            {{ contabil_form.particularidades.label(class="form-label") }}
-                        </div>
+                    <div class="col-12"><div class="form-floating">{{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ contabil_form.observacao_movimento.label }}</div></div>
+                </div>
+
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                         <div id="editor-contabil" style="height: 250px;"></div>
+                         {{ contabil_form.particularidades_texto(id="particularidades-contabil", type="hidden") }}
+                         <input type="file" id="image-input-contabil" accept="image/*" style="display: none;">
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-info px-5" style="color: #000;">
-                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil
-                    </button>
+                    <button type="submit" class="btn btn-info px-5" style="color: #000;"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil</button>
                 </div>
             </form>
-            
-            {% if contabil and contabil.updated_at %}
-            <div class="mt-3">
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-clock me-2"></i>
-                    <div>
-                        <strong>Última atualização:</strong> {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {% if contabil and contabil.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <!-- Departamento Pessoal -->
     <div class="card shadow-lg mb-5" id="pessoal">
-        <div class="card-header text-white py-3" style="background-color: #6f42c1;">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-people me-2"></i>Departamento Pessoal
-            </h3>
-        </div>
+        <div class="card-header text-white py-3" style="background-color: #6f42c1;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
                 {{ pessoal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="pessoal">
                 
-                <!-- Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ pessoal_form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ pessoal_form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.responsavel(class="form-control", placeholder="Responsável") }}{{ pessoal_form.responsavel.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.descricao(class="form-control", placeholder="Descrição") }}{{ pessoal_form.descricao.label }}</div></div>
                 </div>
 
-                <!-- Configurações -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-calendar-event me-2"></i>Configurações de Envio
-                        </h5>
-                    </div>
-                </div>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Configurações</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
-                            {{ pessoal_form.data_envio.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
-                            {{ pessoal_form.registro_funcionarios.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}{{ pessoal_form.data_envio.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}{{ pessoal_form.registro_funcionarios.label }}</div></div>
                 </div>
-
-                <!-- Controle -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-clock me-2"></i>Controle de Funcionários
-                        </h5>
-                    </div>
-                </div>
-
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
-                            {{ pessoal_form.ponto_eletronico.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
-                            {{ pessoal_form.pagamento_funcionario.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}{{ pessoal_form.ponto_eletronico.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}{{ pessoal_form.pagamento_funcionario.label }}</div></div>
                 </div>
 
-                <!-- Particularidades -->
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
-                        <div class="form-floating">
-                            {{ pessoal_form.particularidades(class="form-control", placeholder="Particularidades", style="height: 100px") }}
-                            {{ pessoal_form.particularidades.label(class="form-label") }}
-                        </div>
+                        <div id="editor-pessoal" style="height: 250px;"></div>
+                        {{ pessoal_form.particularidades_texto(id="particularidades-pessoal", type="hidden") }}
+                        <input type="file" id="image-input-pessoal" accept="image/*" style="display: none;">
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn px-5" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
-                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal
-                    </button>
+                    <button type="submit" class="btn px-5" style="background-color: #6f42c1; border-color: #6f42c1; color: white;"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal</button>
                 </div>
             </form>
-            
-            {% if pessoal and pessoal.updated_at %}
-            <div class="mt-3">
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-clock me-2"></i>
-                    <div>
-                        <strong>Última atualização:</strong> {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {% if pessoal and pessoal.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <!-- Departamento Administrativo -->
     <div class="card shadow-lg mb-5" id="administrativo">
-        <div class="card-header bg-dark text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-gear me-2"></i>Departamento Administrativo
-            </h3>
-        </div>
+        <div class="card-header bg-dark text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
         <div class="card-body p-4">
             <form method="POST">
                 {{ administrativo_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="administrativo">
-                
-                <!-- Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
+                <h5 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ administrativo_form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ administrativo_form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ administrativo_form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ administrativo_form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
+                    <div class="col-md-6"><div class="form-floating">{{ administrativo_form.responsavel(class="form-control", placeholder="Responsável") }}{{ administrativo_form.responsavel.label }}</div></div>
+                    <div class="col-md-6"><div class="form-floating">{{ administrativo_form.descricao(class="form-control", placeholder="Descrição") }}{{ administrativo_form.descricao.label }}</div></div>
                 </div>
-
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dark px-5">
-                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo
-                    </button>
+                    <button type="submit" class="btn btn-dark px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
                 </div>
             </form>
-            
-            {% if administrativo and administrativo.updated_at %}
-            <div class="mt-3">
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-clock me-2"></i>
-                    <div>
-                        <strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {% if administrativo and administrativo.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <!-- Botão de Voltar -->
-    <div class="row">
-        <div class="col-12">
-            <div class="text-center">
-                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
-                    <i class="bi bi-arrow-left me-2"></i>Voltar para Lista de Empresas
-                </a>
-            </div>
-        </div>
+    <div class="row mt-5">
+        <div class="col-12"><div class="text-center"><a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista de Empresas</a></div></div>
     </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Smooth scroll para navegação entre departamentos
+    
+    // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
+    
+    function uploadImage(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', file);
+            fetch('/upload_image', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(result => {
+                if (result.image_url) {
+                    resolve(result.image_url);
+                } else {
+                    reject('Erro no servidor: ' + (result.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => reject('Falha na comunicação com o servidor.'));
+        });
+    }
+
+    function initializeQuill(editorId, hiddenInputId, fileInputId) {
+        const editorSelector = document.querySelector(editorId);
+        if (!editorSelector) return;
+
+        function selectLocalImage() {
+            document.querySelector(fileInputId).click();
+        }
+
+        const quill = new Quill(editorSelector, {
+            theme: 'snow',
+            placeholder: 'Digite as particularidades aqui...',
+            modules: {
+                toolbar: {
+                    container: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ],
+                    handlers: { 'image': selectLocalImage }
+                }
+            }
+        });
+
+        const hiddenInput = document.querySelector(hiddenInputId);
+        if (hiddenInput && hiddenInput.value) {
+            quill.root.innerHTML = hiddenInput.value;
+        }
+
+        const imageInput = document.querySelector(fileInputId);
+        imageInput.addEventListener('change', () => {
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                const range = quill.getSelection(true);
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const base64Image = e.target.result;
+                    quill.insertEmbed(range.index, 'image', base64Image);
+                    quill.setSelection(range.index + 1);
+                    uploadImage(file)
+                    .then(serverUrl => {
+                        const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
+                        if (previewImage) previewImage.src = serverUrl;
+                    })
+                    .catch(error => {
+                        console.error("Erro no upload:", error);
+                        const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
+                        if (previewImage) previewImage.remove();
+                    });
+                };
+                reader.readAsDataURL(file);
+                imageInput.value = "";
+            }
+        });
+
+        editorSelector.closest('form').addEventListener('submit', function() {
+            if (hiddenInput) {
+                hiddenInput.value = quill.root.innerHTML;
+            }
+        });
+    }
+
+    initializeQuill('#editor-fiscal', '#particularidades-fiscal', '#image-input-fiscal');
+    initializeQuill('#editor-contabil', '#particularidades-contabil', '#image-input-contabil');
+    initializeQuill('#editor-pessoal', '#particularidades-pessoal', '#image-input-pessoal');
+    
+    // -- SEUS SCRIPTS DE UI EXISTENTES (integrados) --
+    
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
-            const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
+            const targetElement = document.querySelector(this.getAttribute('href'));
             if (targetElement) {
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80,
+                    behavior: 'smooth'
                 });
             }
         });
     });
 
-    // Feedback visual para checkboxes
-    document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                this.closest('.form-check').style.fontWeight = '600';
-                this.closest('.form-check').style.color = '#0558c5';
-            } else {
-                this.closest('.form-check').style.fontWeight = 'normal';
-                this.closest('.form-check').style.color = '';
-            }
+    document.querySelectorAll('button[type="submit"]').forEach(btn => {
+        btn.closest('form').addEventListener('submit', function() {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+            btn.disabled = true;
         });
-        
-        // Aplica estilo inicial para checkboxes já marcados
-        if (checkbox.checked) {
-            checkbox.closest('.form-check').style.fontWeight = '600';
-            checkbox.closest('.form-check').style.color = '#0558c5';
-        }
     });
 
-    // Toggle para senhas
-    const senhaFields = document.querySelectorAll('input[type="password"]');
-    senhaFields.forEach(function(field) {
+    const sections = document.querySelectorAll('.card[id]');
+    const navButtons = document.querySelectorAll('.btn-outline-primary[href^="#"]');
+    function highlightActiveSection() {
+        let currentSectionId = '';
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 150 && rect.bottom >= 150) {
+                currentSectionId = section.id;
+            }
+        });
+        navButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('href') === '#' + currentSectionId);
+        });
+    }
+    window.addEventListener('scroll', highlightActiveSection);
+    highlightActiveSection();
+
+    // Outros scripts de UI do seu template original
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+        function updateStyle() {
+            const isChecked = checkbox.checked;
+            const formCheck = checkbox.closest('.form-check');
+            if (formCheck) {
+                formCheck.style.fontWeight = isChecked ? '600' : 'normal';
+                formCheck.style.color = isChecked ? '#0558c5' : '';
+            }
+        }
+        checkbox.addEventListener('change', updateStyle);
+        updateStyle(); // Aplica no carregamento
+    });
+
+    document.querySelectorAll('input[type="password"]').forEach(function(field) {
         const container = field.closest('.form-floating');
-        if (container) {
+        if (container && !container.querySelector('.password-toggle')) {
             const toggleBtn = document.createElement('button');
             toggleBtn.type = 'button';
-            toggleBtn.className = 'btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2';
+            toggleBtn.className = 'btn password-toggle position-absolute top-50 end-0 translate-middle-y me-2 border-0';
             toggleBtn.style.zIndex = '10';
             toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
-            
-            container.style.position = 'relative';
             container.appendChild(toggleBtn);
-            
             toggleBtn.addEventListener('click', function() {
                 const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
                 field.setAttribute('type', type);
@@ -653,48 +396,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Destaca botão de navegação ativo
-    function highlightActiveSection() {
-        const sections = document.querySelectorAll('.card[id]');
-        const navButtons = document.querySelectorAll('.btn-outline-primary');
-        
-        sections.forEach(function(section) {
-            const rect = section.getBoundingClientRect();
-            if (rect.top <= 100 && rect.bottom >= 100) {
-                const sectionId = section.getAttribute('id');
-                navButtons.forEach(function(btn) {
-                    btn.classList.remove('active');
-                    if (btn.getAttribute('href') === '#' + sectionId) {
-                        btn.classList.add('active');
-                    }
-                });
-            }
-        });
-    }
-
-    // Monitora scroll para destacar seção ativa
-    window.addEventListener('scroll', highlightActiveSection);
-    highlightActiveSection(); // Executa uma vez no carregamento
-
-    // Auto-dismiss alerts
-    const alerts = document.querySelectorAll('.alert-dismissible');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            if (alert && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            }
-        }, 5000);
-    });
-
-    // Adiciona efeito de loading nos botões de submit
-    document.querySelectorAll('button[type="submit"]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            this.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Salvando...';
-            this.disabled = true;
-        });
-    });
 });
 </script>
-{% endblock %}
 {% endblock %}

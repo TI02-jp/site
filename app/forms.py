@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import MultipleFileField, FileAllowed, FileField
+from flask_wtf.file import FileAllowed
 from wtforms import (
     StringField,
     RadioField,
@@ -9,7 +9,6 @@ from wtforms import (
     SelectField,
     TextAreaField,
     PasswordField,
-    MultipleFileField,
     HiddenField,
     BooleanField
 )
@@ -105,10 +104,12 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('ligacao', 'Ligação Telefônica'),
         ('acessorias', 'Acessórias')
     ])
-    particularidades = TextAreaField('Particularidades')
-    particularidades_imagens = MultipleFileField(
-        'Imagens das Particularidades',
-        validators=[FileAllowed(['jpg', 'jpeg', 'png'], 'Apenas imagens são permitidas!')])
+    
+    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
+    particularidades_texto = TextAreaField('Particularidades')
+    
+    ## ALTERAÇÃO 2: Campo de upload múltiplo removido, pois o editor agora lida com isso. ##
+    # particularidades_imagens = MultipleFileField(...) # Removido
 
 class DepartamentoContabilForm(DepartamentoForm):
     metodo_importacao = SelectField('Forma de Importação', choices=[
@@ -144,11 +145,15 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('conferir_aplicacao', 'Conferir aplicação')
     ])
     observacao_controle_relatorios = StringField('Observação Relatórios')
-    particularidades = TextAreaField('Particularidades')
+    
+    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
+    particularidades_texto = TextAreaField('Particularidades')
 
 class DepartamentoPessoalForm(DepartamentoForm):
     data_envio = StringField('Data de Envio')
     registro_funcionarios = StringField('Registro de Funcionários')
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
-    particularidades = TextAreaField('Particularidades')
+    
+    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
+    particularidades_texto = TextAreaField('Particularidades')

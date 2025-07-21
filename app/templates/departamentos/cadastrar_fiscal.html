@@ -204,7 +204,7 @@
                         {{ form.particularidades(id="particularidades", type="hidden") }}
                         <small class="text-muted">
                             <i class="bi bi-info-circle me-1"></i>
-                            Use o editor para adicionar texto formatado, listas e fazer upload de imagens
+                            Use o editor para adicionar texto formatado, listas e fazer upload de imagens. Você também pode colar imagens com <strong>Ctrl+V</strong>
                         </small>
                     </div>
                 </div>
@@ -241,107 +241,142 @@
 </div>
 
 {% block scripts %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="https://unpkg.com/quill-image-uploader@1.2.3/dist/quill.imageUploader.min.js"></script>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    // Registra o módulo de upload de imagem
-    Quill.register("modules/imageUploader", ImageUploader);
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+    
+    // 1. Sua função de upload (continua a mesma)
+    // Ela envia o arquivo para o backend e retorna a URL da imagem.
+    function uploadImage(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', file);
 
-    // Configuração do editor Quill
+            console.log("Enviando imagem para o servidor...");
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.image_url) {
+                    console.log("Sucesso! URL recebida:", result.image_url);
+                    resolve(result.image_url);
+                } else {
+                    reject('Erro no servidor: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error("Falha grave na requisição fetch:", error);
+                reject('Falha no upload');
+            });
+        });
+    }
+
+    // 2. Função que será chamada pelo botão do Quill
+    // Ela simplesmente "clica" no nosso input de arquivo escondido.
+    function selectLocalImage() {
+        const input = document.getElementById('image-input');
+        input.click(); // Abre a janela de seleção de arquivo
+    }
+
+    // 3. Inicialização do Quill com o botão personalizado
     var quill = new Quill('#editor', {
         theme: 'snow',
-        placeholder: 'Digite ou cole aqui as particularidades com imagens...',
+        placeholder: 'Digite as particularidades. Use o ícone de imagem para fazer upload...',
         modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                ['link', 'image'],
-                ['clean']
-            ],
-            imageUploader: {
-                upload: file => {
-                    return new Promise((resolve, reject) => {
-                        const formData = new FormData();
-                        formData.append('image', file);
-
-                        fetch('/upload_image', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(response => response.json())
-                        .then(result => {
-                            if(result.image_url){
-                                resolve(result.image_url);
-                            } else {
-                                reject('Erro ao carregar a imagem');
-                            }
-                        })
-                        .catch(error => {
-                            reject('Falha no upload');
-                            console.error('Erro upload imagem:', error);
-                        });
-                    });
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['link', 'image'], // Botão de imagem padrão
+                    ['clean']
+                ],
+                handlers: {
+                    // Diz ao Quill para usar nossa função quando o botão de imagem for clicado
+                    'image': selectLocalImage 
                 }
             }
         }
     });
 
-    // Salva conteúdo antes do submit
-    var form = document.querySelector('form');
-    form.onsubmit = function () {
-        document.querySelector('#particularidades').value = quill.root.innerHTML;
-    };
+    // 4. "Ouvinte" para quando um arquivo for escolhido no input escondido
+    const imageInput = document.getElementById('image-input');
+    imageInput.addEventListener('change', () => {
+        if (imageInput.files && imageInput.files[0]) {
+            const file = imageInput.files[0];
+            
+            // Mostra um texto de carregando no editor
+            const range = quill.getSelection(true);
+            quill.insertText(range.index, 'Carregando imagem...', 'italic', true);
 
-    // Melhora a experiência com checkboxes
-    document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                this.closest('.form-check').style.fontWeight = '600';
-            } else {
-                this.closest('.form-check').style.fontWeight = 'normal';
+            // Chama a função de upload
+            uploadImage(file).then(imageUrl => {
+                // Deleta o texto de "Carregando"
+                quill.deleteText(range.index, 'Carregando imagem...'.length);
+                // Insere a imagem no editor
+                quill.insertEmbed(range.index, 'image', imageUrl);
+                quill.setSelection(range.index + 1);
+            }).catch(error => {
+                console.error(error);
+                quill.deleteText(range.index, 'Carregando imagem...'.length);
+                quill.insertText(range.index, '[Erro ao carregar imagem]', 'color', 'red');
+            });
+        }
+    });
+
+    // Pega o conteúdo do editor antes de submeter o formulário
+    document.querySelector('form').onsubmit = function () {
+        document.querySelector('#particularidades_texto').value = quill.root.innerHTML;
+    };
+});
+
+            document.querySelector('form').onsubmit = function () {
+                document.querySelector('#particularidades').value = quill.root.innerHTML;
+            };
+
+            document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    this.closest('.form-check').style.fontWeight = this.checked ? '600' : 'normal';
+                });
+
+                if (checkbox.checked) {
+                    checkbox.closest('.form-check').style.fontWeight = '600';
+                }
+            });
+
+            document.querySelector('form').addEventListener('submit', function (e) {
+                const responsavel = document.querySelector('#responsavel').value.trim();
+                const descricao = document.querySelector('#descricao').value.trim();
+
+                if (!responsavel || !descricao) {
+                    e.preventDefault();
+                    alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
+                }
+            });
+
+            const senhaField = document.querySelector('#senha_prefeitura');
+            if (senhaField) {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2';
+                toggleBtn.style.zIndex = '10';
+                toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+
+                senhaField.parentElement.style.position = 'relative';
+                senhaField.parentElement.appendChild(toggleBtn);
+
+                toggleBtn.addEventListener('click', function () {
+                    const type = senhaField.getAttribute('type') === 'password' ? 'text' : 'password';
+                    senhaField.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('bi-eye');
+                    this.querySelector('i').classList.toggle('bi-eye-slash');
+                });
             }
         });
-        
-        // Aplica estilo inicial para checkboxes já marcados
-        if (checkbox.checked) {
-            checkbox.closest('.form-check').style.fontWeight = '600';
-        }
-    });
-
-    // Validação básica do formulário
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const responsavel = document.querySelector('#responsavel').value.trim();
-        const descricao = document.querySelector('#descricao').value.trim();
-        
-        if (!responsavel || !descricao) {
-            e.preventDefault();
-            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return false;
-        }
-    });
-
-    // Adiciona toggle para mostrar/ocultar senha
-    const senhaField = document.querySelector('#senha_prefeitura');
-    if (senhaField) {
-        const toggleBtn = document.createElement('button');
-        toggleBtn.type = 'button';
-        toggleBtn.className = 'btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2';
-        toggleBtn.style.zIndex = '10';
-        toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
-        
-        senhaField.parentElement.style.position = 'relative';
-        senhaField.parentElement.appendChild(toggleBtn);
-        
-        toggleBtn.addEventListener('click', function() {
-            const type = senhaField.getAttribute('type') === 'password' ? 'text' : 'password';
-            senhaField.setAttribute('type', type);
-            this.querySelector('i').classList.toggle('bi-eye');
-            this.querySelector('i').classList.toggle('bi-eye-slash');
-        });
-    }
-});
-</script>
-{% endblock %}
+    </script>
 {% endblock %}
