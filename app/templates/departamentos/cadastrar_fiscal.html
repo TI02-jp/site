@@ -57,7 +57,7 @@
                                 {% for value, label in form.formas_importacao.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.formas_importacao.name }}[]" value="{{ value }}" id="imp-{{ loop.index }}" {% if value in form.formas_importacao.data %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.formas_importacao.name }}[]" value="{{ value }}" id="imp-{{ loop.index }}" {% if value in (form.formas_importacao.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="imp-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -119,7 +119,7 @@
                                 {% for value, label in form.envio_digital.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}[]" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in form.envio_digital.data %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}[]" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -135,7 +135,7 @@
                                 {% for value, label in form.envio_digital_fisico.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}[]" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in form.envio_digital_fisico.data %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}[]" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -167,7 +167,7 @@
                                 {% for value, label in form.contato_meios.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.contato_meios.name }}[]" value="{{ value }}" id="cm-{{ loop.index }}" {% if value in form.contato_meios.data %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.contato_meios.name }}[]" value="{{ value }}" id="cm-{{ loop.index }}" {% if value in (form.contato_meios.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="cm-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -240,16 +240,97 @@
     </div>
 </div>
 
+<!-- Input escondido para upload de imagens -->
+<input type="file" id="image-input" accept="image/*" style="display: none;">
+
+<!-- CSS adicional para melhorar a aparência -->
+<style>
+.form-check-input:checked {
+    background-color: #0558c5;
+    border-color: #0558c5;
+}
+
+.form-floating > .form-control:focus {
+    border-color: #0558c5;
+    box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
+}
+
+.form-select:focus {
+    border-color: #0558c5;
+    box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
+}
+
+.card-header.bg-primary {
+    background-color: #0558c5 !important;
+}
+
+.text-primary {
+    color: #0558c5 !important;
+}
+
+.btn-primary {
+    background-color: #0558c5;
+    border-color: #0558c5;
+}
+
+.btn-primary:hover {
+    background-color: #043a91;
+    border-color: #043a91;
+}
+
+.border-bottom {
+    border-color: #0558c5 !important;
+    border-width: 2px !important;
+}
+
+#editor {
+    background-color: #fff;
+}
+
+.ql-toolbar {
+    border-top: 1px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
+}
+
+.ql-container {
+    border-bottom: 1px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    border-bottom-left-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+@media (max-width: 768px) {
+    .container {
+        max-width: 100% !important;
+        padding: 0.5rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem 1rem;
+    }
+    
+    .d-flex.justify-content-center.gap-3 {
+        flex-direction: column;
+    }
+    
+    .d-flex.justify-content-center.gap-3 .btn {
+        width: 100%;
+    }
+}
+</style>
+
 {% block scripts %}
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-<script src="https://unpkg.com/quill-image-uploader@1.2.3/dist/quill.imageUploader.min.js"></script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
+<script>
+document.addEventListener("DOMContentLoaded", function () {
     
-    // 1. Sua função de upload (continua a mesma)
-    // Ela envia o arquivo para o backend e retorna a URL da imagem.
+    // Função de upload de imagem
     function uploadImage(file) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
@@ -277,14 +358,13 @@
         });
     }
 
-    // 2. Função que será chamada pelo botão do Quill
-    // Ela simplesmente "clica" no nosso input de arquivo escondido.
+    // Função para selecionar imagem local
     function selectLocalImage() {
         const input = document.getElementById('image-input');
-        input.click(); // Abre a janela de seleção de arquivo
+        input.click();
     }
 
-    // 3. Inicialização do Quill com o botão personalizado
+    // Inicialização do Quill
     var quill = new Quill('#editor', {
         theme: 'snow',
         placeholder: 'Digite as particularidades. Use o ícone de imagem para fazer upload...',
@@ -293,32 +373,27 @@
                 container: [
                     ['bold', 'italic', 'underline'],
                     [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['link', 'image'], // Botão de imagem padrão
+                    ['link', 'image'],
                     ['clean']
                 ],
                 handlers: {
-                    // Diz ao Quill para usar nossa função quando o botão de imagem for clicado
                     'image': selectLocalImage 
                 }
             }
         }
     });
 
-    // 4. "Ouvinte" para quando um arquivo for escolhido no input escondido
+    // Upload de imagem quando arquivo é selecionado
     const imageInput = document.getElementById('image-input');
     imageInput.addEventListener('change', () => {
         if (imageInput.files && imageInput.files[0]) {
             const file = imageInput.files[0];
             
-            // Mostra um texto de carregando no editor
             const range = quill.getSelection(true);
             quill.insertText(range.index, 'Carregando imagem...', 'italic', true);
 
-            // Chama a função de upload
             uploadImage(file).then(imageUrl => {
-                // Deleta o texto de "Carregando"
                 quill.deleteText(range.index, 'Carregando imagem...'.length);
-                // Insere a imagem no editor
                 quill.insertEmbed(range.index, 'image', imageUrl);
                 quill.setSelection(range.index + 1);
             }).catch(error => {
@@ -329,54 +404,127 @@
         }
     });
 
-    // Pega o conteúdo do editor antes de submeter o formulário
-    document.querySelector('form').onsubmit = function () {
-        document.querySelector('#particularidades_texto').value = quill.root.innerHTML;
-    };
-});
+    // Função para coletar checkboxes selecionados
+    function getCheckedValues(name) {
+        const checkboxes = document.querySelectorAll(`input[name="${name}[]"]:checked`);
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
 
-            document.querySelector('form').onsubmit = function () {
-                document.querySelector('#particularidades').value = quill.root.innerHTML;
+    // Função para preparar dados dos contatos
+    function prepareContactData() {
+        const nomeContato = document.querySelector('#contato_nome').value.trim();
+        const meiosContato = getCheckedValues('contato_meios');
+        
+        if (nomeContato || meiosContato.length > 0) {
+            return {
+                nome: nomeContato,
+                meios: meiosContato
             };
+        }
+        return null;
+    }
 
-            document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function (checkbox) {
-                checkbox.addEventListener('change', function () {
-                    this.closest('.form-check').style.fontWeight = this.checked ? '600' : 'normal';
-                });
+    // Submissão do formulário com preparação de dados
+    document.querySelector('form').addEventListener('submit', function (e) {
+        console.log('Preparando dados do departamento fiscal...');
+        
+        // Validação básica
+        const responsavel = document.querySelector('#responsavel').value.trim();
+        const descricao = document.querySelector('#descricao').value.trim();
 
-                if (checkbox.checked) {
-                    checkbox.closest('.form-check').style.fontWeight = '600';
-                }
-            });
+        if (!responsavel || !descricao) {
+            e.preventDefault();
+            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
+            return;
+        }
 
-            document.querySelector('form').addEventListener('submit', function (e) {
-                const responsavel = document.querySelector('#responsavel').value.trim();
-                const descricao = document.querySelector('#descricao').value.trim();
+        // 1. Preparar conteúdo do editor Quill
+        const particularidadesField = document.querySelector('#particularidades');
+        if (particularidadesField) {
+            particularidadesField.value = quill.root.innerHTML;
+        }
 
-                if (!responsavel || !descricao) {
-                    e.preventDefault();
-                    alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-                }
-            });
-
-            const senhaField = document.querySelector('#senha_prefeitura');
-            if (senhaField) {
-                const toggleBtn = document.createElement('button');
-                toggleBtn.type = 'button';
-                toggleBtn.className = 'btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2';
-                toggleBtn.style.zIndex = '10';
-                toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
-
-                senhaField.parentElement.style.position = 'relative';
-                senhaField.parentElement.appendChild(toggleBtn);
-
-                toggleBtn.addEventListener('click', function () {
-                    const type = senhaField.getAttribute('type') === 'password' ? 'text' : 'password';
-                    senhaField.setAttribute('type', type);
-                    this.querySelector('i').classList.toggle('bi-eye');
-                    this.querySelector('i').classList.toggle('bi-eye-slash');
-                });
+        // 2. Preparar dados de contato como JSON
+        const contactData = prepareContactData();
+        if (contactData) {
+            // Criar campo hidden para contatos
+            let contactField = document.querySelector('#contatos_json');
+            if (!contactField) {
+                contactField = document.createElement('input');
+                contactField.type = 'hidden';
+                contactField.name = 'contatos_json';
+                contactField.id = 'contatos_json';
+                this.appendChild(contactField);
             }
+            contactField.value = JSON.stringify(contactData);
+        }
+
+        // 3. Preparar arrays de checkboxes
+        const formasImportacao = getCheckedValues('formas_importacao');
+        const envioDigital = getCheckedValues('envio_digital');
+        const envioDigitalFisico = getCheckedValues('envio_digital_fisico');
+
+        // Criar campos hidden para os arrays
+        ['formas_importacao', 'envio_digital', 'envio_digital_fisico'].forEach(fieldName => {
+            let hiddenField = document.querySelector(`#${fieldName}_json`);
+            if (!hiddenField) {
+                hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = `${fieldName}_json`;
+                hiddenField.id = `${fieldName}_json`;
+                this.appendChild(hiddenField);
+            }
+            
+            let values = [];
+            if (fieldName === 'formas_importacao') values = formasImportacao;
+            else if (fieldName === 'envio_digital') values = envioDigital;
+            else if (fieldName === 'envio_digital_fisico') values = envioDigitalFisico;
+            
+            hiddenField.value = JSON.stringify(values);
         });
-    </script>
+
+        console.log('Dados preparados do fiscal:', {
+            formasImportacao,
+            envioDigital,
+            envioDigitalFisico,
+            contatos: contactData,
+            particularidades: quill.root.innerHTML
+        });
+    });
+
+    // Estilo visual para checkboxes selecionados
+    document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            this.closest('.form-check').style.fontWeight = this.checked ? '600' : 'normal';
+            this.closest('.form-check').style.color = this.checked ? '#0558c5' : '';
+        });
+
+        if (checkbox.checked) {
+            checkbox.closest('.form-check').style.fontWeight = '600';
+            checkbox.closest('.form-check').style.color = '#0558c5';
+        }
+    });
+
+    // Toggle para campo de senha
+    const senhaField = document.querySelector('#senha_prefeitura');
+    if (senhaField) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2';
+        toggleBtn.style.zIndex = '10';
+        toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+
+        senhaField.parentElement.style.position = 'relative';
+        senhaField.parentElement.appendChild(toggleBtn);
+
+        toggleBtn.addEventListener('click', function () {
+            const type = senhaField.getAttribute('type') === 'password' ? 'text' : 'password';
+            senhaField.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

@@ -1,17 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Detalhes da Empresa{% endblock %}
+{% block title %}{{ empresa.NomeEmpresa }} - Detalhes Completos{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{{ url_for('listar_empresas') }}">Empresas</a>
+</li>
+<li class="breadcrumb-item active">{{ empresa.NomeEmpresa }}</li>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 1200px;">
+<div class="container-fluid" style="max-width: 1400px;">
     <!-- Cabeçalho da Página -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="text-center">
-                <h1 class="text-primary mb-2">
-                    <i class="bi bi-building me-3"></i>{{ empresa.NomeEmpresa }}
-                </h1>
-                <p class="text-muted">Visualização completa dos dados da empresa e departamentos</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-building-gear me-3"></i>{{ empresa.NomeEmpresa }}
+                    </h1>
+                    <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
+                </div>
+                <div class="text-end">
+                    <div class="badge bg-primary-subtle text-primary px-3 py-2 mb-2">
+                        Código: {{ empresa.CodigoEmpresa or 'N/A' }}
+                    </div>
+                    <div class="d-block">
+                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-pencil me-1"></i>Editar
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -21,27 +40,27 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-3">
+                    <div class="d-flex justify-content-center flex-wrap gap-2">
                         <a href="#dados-empresa" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-building me-1"></i>Dados da Empresa
                         </a>
-                        {% if departamentos.get('Departamento Fiscal') %}
-                        <a href="#fiscal" class="btn btn-outline-primary btn-sm">
+                        {% if fiscal %}
+                        <a href="#fiscal" class="btn btn-outline-success btn-sm">
                             <i class="bi bi-receipt me-1"></i>Fiscal
                         </a>
                         {% endif %}
-                        {% if departamentos.get('Departamento Contábil') %}
-                        <a href="#contabil" class="btn btn-outline-primary btn-sm">
+                        {% if contabil %}
+                        <a href="#contabil" class="btn btn-outline-info btn-sm">
                             <i class="bi bi-calculator me-1"></i>Contábil
                         </a>
                         {% endif %}
-                        {% if departamentos.get('Departamento Pessoal') %}
-                        <a href="#pessoal" class="btn btn-outline-primary btn-sm">
+                        {% if pessoal %}
+                        <a href="#pessoal" class="btn btn-outline-warning btn-sm">
                             <i class="bi bi-people me-1"></i>Pessoal
                         </a>
                         {% endif %}
-                        {% if departamentos.get('Departamento Administrativo') %}
-                        <a href="#administrativo" class="btn btn-outline-primary btn-sm">
+                        {% if administrativo %}
+                        <a href="#administrativo" class="btn btn-outline-dark btn-sm">
                             <i class="bi bi-gear me-1"></i>Administrativo
                         </a>
                         {% endif %}
@@ -60,94 +79,133 @@
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Código da Empresa</label>
-                        <div class="info-value">
-                            <span class="badge bg-primary-subtle text-primary fs-6">
-                                {{ empresa.CodigoEmpresa or '-' }}
-                            </span>
+                <!-- Coluna 1 -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-primary mb-3 border-bottom pb-2">Identificação</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Código da Empresa</label>
+                            <div class="info-value">
+                                <span class="badge bg-primary-subtle text-primary fs-6">
+                                    {{ empresa.CodigoEmpresa or '-' }}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Nome da Empresa</label>
-                        <div class="info-value">{{ empresa.NomeEmpresa or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">CNPJ</label>
-                        <div class="info-value font-monospace">{{ empresa.CNPJ or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Data de Abertura</label>
-                        <div class="info-value">
-                            {% if empresa.DataAbertura %}
-                                {% set data_abertura = empresa.DataAbertura %}
-                                {% if data_abertura.__class__.__name__ == 'str' %}
-                                    {{ data_abertura }}
-                                {% elif data_abertura.__class__.__name__ in ['date', 'datetime'] %}
-                                    {{ data_abertura.strftime('%d/%m/%Y') }}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Nome da Empresa</label>
+                            <div class="info-value fw-semibold">{{ empresa.NomeEmpresa or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">CNPJ</label>
+                            <div class="info-value font-monospace">
+                                {% if empresa.CNPJ %}
+                                    {% set cnpj = empresa.CNPJ|string %}
+                                    {% if cnpj|length == 14 %}
+                                        {{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}
+                                    {% else %}
+                                        {{ empresa.CNPJ }}
+                                    {% endif %}
                                 {% else %}
-                                    {{ data_abertura }}
+                                    -
                                 {% endif %}
-                            {% else %}
-                                -
-                            {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Sócio Administrador</label>
-                        <div class="info-value">{{ empresa.SocioAdministrador or '-' }}</div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Data de Abertura</label>
+                            <div class="info-value">
+                                {% if empresa.DataAbertura %}
+                                    {% set data_abertura = empresa.DataAbertura %}
+                                    {% if data_abertura.__class__.__name__ == 'str' %}
+                                        {% if '/' in data_abertura %}
+                                            {{ data_abertura }}
+                                        {% elif '-' in data_abertura %}
+                                            {% set parts = data_abertura.split('-') %}
+                                            {% if parts|length == 3 %}
+                                                {{ parts[2] }}/{{ parts[1] }}/{{ parts[0] }}
+                                            {% else %}
+                                                {{ data_abertura }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ data_abertura }}
+                                        {% endif %}
+                                    {% elif data_abertura.__class__.__name__ in ['date', 'datetime'] %}
+                                        {{ data_abertura.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        {{ data_abertura }}
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Tributação</label>
-                        <div class="info-value">
-                            {% if empresa.Tributacao %}
-                                <span class="badge bg-success-subtle text-success">{{ empresa.Tributacao }}</span>
-                            {% else %}
-                                -
-                            {% endif %}
+
+                <!-- Coluna 2 -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-primary mb-3 border-bottom pb-2">Informações Empresariais</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Sócio Administrador</label>
+                            <div class="info-value">{{ empresa.SocioAdministrador or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Atividade Principal</label>
+                            <div class="info-value">{{ empresa.AtividadePrincipal or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Tributação</label>
+                            <div class="info-value">
+                                {% if empresa.Tributacao %}
+                                    <span class="badge bg-success-subtle text-success">{{ empresa.Tributacao }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Regime de Lançamento</label>
+                            <div class="info-value">
+                                {% if empresa.RegimeLancamento %}
+                                    <span class="badge bg-info-subtle text-info">{{ empresa.RegimeLancamento }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Regime de Lançamento</label>
-                        <div class="info-value">
-                            {% if empresa.RegimeLancamento %}
-                                <span class="badge bg-info-subtle text-info">{{ empresa.RegimeLancamento }}</span>
-                            {% else %}
-                                -
-                            {% endif %}
+                </div>
+
+                <!-- Coluna 3 -->
+                <div class="col-lg-4 col-md-12">
+                    <div class="info-group">
+                        <h6 class="text-primary mb-3 border-bottom pb-2">Sistemas e Tecnologia</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Sistema Utilizado</label>
+                            <div class="info-value">{{ empresa.SistemaUtilizado or '-' }}</div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Atividade Principal</label>
-                        <div class="info-value">{{ empresa.AtividadePrincipal or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Sistemas/Consultorias</label>
-                        <div class="info-value">
-                            {% if empresa.SistemasConsultorias and empresa.SistemasConsultorias.strip() %}
-                                {% for sistema in empresa.SistemasConsultorias.split(',') %}
-                                    <span class="badge bg-secondary me-1 mb-1">{{ sistema.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Sistemas/Consultorias</label>
+                            <div class="info-value">
+                                {% if empresa.SistemasConsultorias and empresa.SistemasConsultorias.strip() %}
+                                    {% for sistema in empresa.SistemasConsultorias.split(',') %}
+                                        <span class="badge bg-secondary me-1 mb-1">{{ sistema.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Sistema Utilizado</label>
-                        <div class="info-value">{{ empresa.SistemaUtilizado or '-' }}</div>
                     </div>
                 </div>
             </div>
@@ -155,141 +213,163 @@
     </div>
 
     <!-- Departamento Fiscal -->
-    {% if departamentos.get('Departamento Fiscal') %}
-    {% set fiscal = departamentos['Departamento Fiscal'] %}
+    {% if fiscal %}
     <div class="card shadow-lg mb-5" id="fiscal">
         <div class="card-header bg-success text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-receipt me-2"></i>Departamento Fiscal
-            </h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0 fw-semibold">
+                    <i class="bi bi-receipt me-2"></i>Departamento Fiscal
+                </h3>
+                {% if fiscal.updated_at %}
+                <small class="opacity-75">
+                    <i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                </small>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Responsável</label>
-                        <div class="info-value">{{ fiscal.responsavel or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Descrição</label>
-                        <div class="info-value">{{ fiscal.descricao or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Formas de Importação</label>
-                        <div class="info-value">
-                            {% if fiscal.formas_importacao and fiscal.formas_importacao.strip() %}
-                                {% for forma in fiscal.formas_importacao.split(',') %}
-                                    <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ forma.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                <!-- Informações Básicas -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-success mb-3 border-bottom pb-2">Informações Básicas</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Responsável</label>
+                            <div class="info-value">{{ fiscal.responsavel or '-' }}</div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Link Prefeitura</label>
-                        <div class="info-value">
-                            {% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}
-                                <a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none">
-                                    <i class="bi bi-link-45deg me-1"></i>{{ fiscal.link_prefeitura }}
-                                </a>
-                            {% else %}
-                                -
-                            {% endif %}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Descrição</label>
+                            <div class="info-value">{{ fiscal.descricao or '-' }}</div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Usuário Prefeitura</label>
-                        <div class="info-value font-monospace">{{ fiscal.usuario_prefeitura or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Senha Prefeitura</label>
-                        <div class="info-value">
-                            {% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}
-                                <span class="password-field" data-password="{{ fiscal.senha_prefeitura }}">
-                                    <span class="password-hidden">••••••••</span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2 toggle-password">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </span>
-                            {% else %}
-                                -
-                            {% endif %}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Forma Movimento</label>
+                            <div class="info-value">{{ fiscal.forma_movimento or '-' }}</div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Forma Movimento</label>
-                        <div class="info-value">{{ fiscal.forma_movimento or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Envio Digital</label>
-                        <div class="info-value">
-                            {% if fiscal.envio_digital and fiscal.envio_digital.strip() %}
-                                {% for envio in fiscal.envio_digital.split(',') %}
-                                    <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+
+                <!-- Importação e Movimento -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-success mb-3 border-bottom pb-2">Importação e Movimento</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Formas de Importação</label>
+                            <div class="info-value">
+                                {% if fiscal.formas_importacao and fiscal.formas_importacao.strip() %}
+                                    {% for forma in fiscal.formas_importacao.split(',') %}
+                                        <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ forma.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Envio Digital</label>
+                            <div class="info-value">
+                                {% if fiscal.envio_digital and fiscal.envio_digital.strip() %}
+                                    {% for envio in fiscal.envio_digital.split(',') %}
+                                        <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Envio Digital/Físico</label>
+                            <div class="info-value">
+                                {% if fiscal.envio_digital_fisico and fiscal.envio_digital_fisico.strip() %}
+                                    {% for envio in fiscal.envio_digital_fisico.split(',') %}
+                                        <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Observação Movimento</label>
+                            <div class="info-value">{{ fiscal.observacao_movimento or '-' }}</div>
                         </div>
                     </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Envio Digital/Físico</label>
-                        <div class="info-value">
-                            {% if fiscal.envio_digital_fisico and fiscal.envio_digital_fisico.strip() %}
-                                {% for envio in fiscal.envio_digital_fisico.split(',') %}
-                                    <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                </div>
+
+                <!-- Acesso Prefeitura e Contato -->
+                <div class="col-lg-4 col-md-12">
+                    <div class="info-group">
+                        <h6 class="text-success mb-3 border-bottom pb-2">Prefeitura e Contato</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Link Prefeitura</label>
+                            <div class="info-value">
+                                {% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}
+                                    <a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-link-45deg me-1"></i>{{ fiscal.link_prefeitura[:50] }}{% if fiscal.link_prefeitura|length > 50 %}...{% endif %}
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Observação Movimento</label>
-                        <div class="info-value">{{ fiscal.observacao_movimento or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Nome do Contato</label>
-                        <div class="info-value">{{ fiscal.contato_nome or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Meios de Contato</label>
-                        <div class="info-value">
-                            {% if fiscal.contato_meios and fiscal.contato_meios.strip() %}
-                                {% for meio in fiscal.contato_meios.split(',') %}
-                                    <span class="badge bg-info-subtle text-info me-1 mb-1">{{ meio.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Usuário Prefeitura</label>
+                            <div class="info-value font-monospace">{{ fiscal.usuario_prefeitura or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Senha Prefeitura</label>
+                            <div class="info-value">
+                                {% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}
+                                    <span class="password-field" data-password="{{ fiscal.senha_prefeitura }}">
+                                        <span class="password-hidden">••••••••</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2 toggle-password">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Nome do Contato</label>
+                            <div class="info-value">{{ fiscal.contato_nome or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Meios de Contato</label>
+                            <div class="info-value">
+                                {% if fiscal.contato_meios and fiscal.contato_meios.strip() %}
+                                    {% for meio in fiscal.contato_meios.split(',') %}
+                                        <span class="badge bg-info-subtle text-info me-1 mb-1">{{ meio.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Particularidades (se existir) -->
             {% if fiscal.particularidades and fiscal.particularidades.strip() %}
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="info-item">
-                        <label class="info-label">Particularidades</label>
-                        <div class="info-value">
-                            <div class="border rounded p-3 bg-light">
-                                {{ fiscal.particularidades|safe }}
-                            </div>
+                    <div class="info-group">
+                        <h6 class="text-success mb-3 border-bottom pb-2">Particularidades</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ fiscal.particularidades|safe }}
                         </div>
                     </div>
                 </div>
@@ -300,99 +380,121 @@
     {% endif %}
 
     <!-- Departamento Contábil -->
-    {% if departamentos.get('Departamento Contábil') %}
-    {% set contabil = departamentos['Departamento Contábil'] %}
+    {% if contabil %}
     <div class="card shadow-lg mb-5" id="contabil">
         <div class="card-header bg-info text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-calculator me-2"></i>Departamento Contábil
-            </h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0 fw-semibold">
+                    <i class="bi bi-calculator me-2"></i>Departamento Contábil
+                </h3>
+                {% if contabil.updated_at %}
+                <small class="opacity-75">
+                    <i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                </small>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Responsável</label>
-                        <div class="info-value">{{ contabil.responsavel or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Descrição</label>
-                        <div class="info-value">{{ contabil.descricao or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Método de Importação</label>
-                        <div class="info-value">{{ contabil.metodo_importacao or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Forma Movimento</label>
-                        <div class="info-value">{{ contabil.forma_movimento or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Observação Movimento</label>
-                        <div class="info-value">{{ contabil.observacao_movimento or '-' }}</div>
+                <!-- Informações Básicas -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-info mb-3 border-bottom pb-2">Informações Básicas</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Responsável</label>
+                            <div class="info-value">{{ contabil.responsavel or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Descrição</label>
+                            <div class="info-value">{{ contabil.descricao or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Método de Importação</label>
+                            <div class="info-value">{{ contabil.metodo_importacao or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Forma Movimento</label>
+                            <div class="info-value">{{ contabil.forma_movimento or '-' }}</div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Envio Digital</label>
-                        <div class="info-value">
-                            {% if contabil.envio_digital and contabil.envio_digital.strip() %}
-                                {% for envio in contabil.envio_digital.split(',') %}
-                                    <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+
+                <!-- Envio e Movimento -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-info mb-3 border-bottom pb-2">Envio e Movimento</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Envio Digital</label>
+                            <div class="info-value">
+                                {% if contabil.envio_digital and contabil.envio_digital.strip() %}
+                                    {% for envio in contabil.envio_digital.split(',') %}
+                                        <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Envio Digital/Físico</label>
+                            <div class="info-value">
+                                {% if contabil.envio_digital_fisico and contabil.envio_digital_fisico.strip() %}
+                                    {% for envio in contabil.envio_digital_fisico.split(',') %}
+                                        <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Observação Movimento</label>
+                            <div class="info-value">{{ contabil.observacao_movimento or '-' }}</div>
                         </div>
                     </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Envio Digital/Físico</label>
-                        <div class="info-value">
-                            {% if contabil.envio_digital_fisico and contabil.envio_digital_fisico.strip() %}
-                                {% for envio in contabil.envio_digital_fisico.split(',') %}
-                                    <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                </div>
+
+                <!-- Controle e Relatórios -->
+                <div class="col-lg-4 col-md-12">
+                    <div class="info-group">
+                        <h6 class="text-info mb-3 border-bottom pb-2">Controle e Relatórios</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Controle Relatórios</label>
+                            <div class="info-value">
+                                {% if contabil.controle_relatorios and contabil.controle_relatorios.strip() %}
+                                    {% for controle in contabil.controle_relatorios.split(',') %}
+                                        <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ controle.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Controle Relatórios</label>
-                        <div class="info-value">
-                            {% if contabil.controle_relatorios and contabil.controle_relatorios.strip() %}
-                                {% for controle in contabil.controle_relatorios.split(',') %}
-                                    <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ controle.strip() }}</span>
-                                {% endfor %}
-                            {% else %}
-                                -
-                            {% endif %}
+                        
+                        <div class="info-item">
+                            <label class="info-label">Observação Relatórios</label>
+                            <div class="info-value">{{ contabil.observacao_controle_relatorios or '-' }}</div>
                         </div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Observação Relatórios</label>
-                        <div class="info-value">{{ contabil.observacao_controle_relatorios or '-' }}</div>
                     </div>
                 </div>
             </div>
             
+            <!-- Particularidades (se existir) -->
             {% if contabil.particularidades and contabil.particularidades.strip() %}
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="info-item">
-                        <label class="info-label">Particularidades</label>
-                        <div class="info-value">
-                            <div class="border rounded p-3 bg-light">
-                                {{ contabil.particularidades|safe }}
-                            </div>
+                    <div class="info-group">
+                        <h6 class="text-info mb-3 border-bottom pb-2">Particularidades</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ contabil.particularidades|safe }}
                         </div>
                     </div>
                 </div>
@@ -403,60 +505,75 @@
     {% endif %}
 
     <!-- Departamento Pessoal -->
-    {% if departamentos.get('Departamento Pessoal') %}
-    {% set pessoal = departamentos['Departamento Pessoal'] %}
+    {% if pessoal %}
     <div class="card shadow-lg mb-5" id="pessoal">
-        <div class="card-header text-white py-3" style="background-color: #6f42c1;">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-people me-2"></i>Departamento Pessoal
-            </h3>
+        <div class="card-header text-white py-3" style="background-color: #f39c12;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0 fw-semibold">
+                    <i class="bi bi-people me-2"></i>Departamento Pessoal
+                </h3>
+                {% if pessoal.updated_at %}
+                <small class="opacity-75">
+                    <i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                </small>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Responsável</label>
-                        <div class="info-value">{{ pessoal.responsavel or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Descrição</label>
-                        <div class="info-value">{{ pessoal.descricao or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Data de Envio</label>
-                        <div class="info-value">{{ pessoal.data_envio or '-' }}</div>
+                <!-- Informações Básicas -->
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-warning mb-3 border-bottom pb-2">Informações Básicas</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Responsável</label>
+                            <div class="info-value">{{ pessoal.responsavel or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Descrição</label>
+                            <div class="info-value">{{ pessoal.descricao or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Data de Envio</label>
+                            <div class="info-value">{{ pessoal.data_envio or '-' }}</div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Registro de Funcionários</label>
-                        <div class="info-value">{{ pessoal.registro_funcionarios or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Ponto Eletrônico</label>
-                        <div class="info-value">{{ pessoal.ponto_eletronico or '-' }}</div>
-                    </div>
-                    
-                    <div class="info-item">
-                        <label class="info-label">Pagamento Funcionário</label>
-                        <div class="info-value">{{ pessoal.pagamento_funcionario or '-' }}</div>
+
+                <!-- Controles e Sistemas -->
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-warning mb-3 border-bottom pb-2">Controles e Sistemas</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Registro de Funcionários</label>
+                            <div class="info-value">{{ pessoal.registro_funcionarios or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Ponto Eletrônico</label>
+                            <div class="info-value">{{ pessoal.ponto_eletronico or '-' }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Pagamento Funcionário</label>
+                            <div class="info-value">{{ pessoal.pagamento_funcionario or '-' }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Particularidades (se existir) -->
             {% if pessoal.particularidades and pessoal.particularidades.strip() %}
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="info-item">
-                        <label class="info-label">Particularidades</label>
-                        <div class="info-value">
-                            <div class="border rounded p-3 bg-light">
-                                {{ pessoal.particularidades|safe }}
-                            </div>
+                    <div class="info-group">
+                        <h6 class="text-warning mb-3 border-bottom pb-2">Particularidades</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ pessoal.particularidades|safe }}
                         </div>
                     </div>
                 </div>
@@ -467,26 +584,41 @@
     {% endif %}
 
     <!-- Departamento Administrativo -->
-    {% if departamentos.get('Departamento Administrativo') %}
-    {% set adm = departamentos['Departamento Administrativo'] %}
+    {% if administrativo %}
     <div class="card shadow-lg mb-5" id="administrativo">
         <div class="card-header bg-dark text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-gear me-2"></i>Departamento Administrativo
-            </h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0 fw-semibold">
+                    <i class="bi bi-gear me-2"></i>Departamento Administrativo
+                </h3>
+                {% if administrativo.updated_at %}
+                <small class="opacity-75">
+                    <i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                </small>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Responsável</label>
-                        <div class="info-value">{{ adm.responsavel or '-' }}</div>
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-dark mb-3 border-bottom pb-2">Informações Básicas</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Responsável</label>
+                            <div class="info-value">{{ administrativo.responsavel or '-' }}</div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <label class="info-label">Descrição</label>
-                        <div class="info-value">{{ adm.descricao or '-' }}</div>
+                
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-group">
+                        <h6 class="text-dark mb-3 border-bottom pb-2">Descrição</h6>
+                        
+                        <div class="info-item">
+                            <label class="info-label">Descrição</label>
+                            <div class="info-value">{{ administrativo.descricao or '-' }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -494,44 +626,106 @@
     </div>
     {% endif %}
 
+    <!-- Resumo Geral -->
+    <div class="card shadow-lg mb-5">
+        <div class="card-header bg-secondary text-white py-3">
+            <h3 class="mb-0 fw-semibold">
+                <i class="bi bi-info-circle me-2"></i>Resumo Geral
+            </h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded">
+                        <i class="bi bi-building fs-2 text-primary mb-2"></i>
+                        <h6 class="mb-1">Empresa Cadastrada</h6>
+                        <small class="text-muted">{{ empresa.NomeEmpresa }}</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded">
+                        <i class="bi bi-receipt fs-2 text-success mb-2"></i>
+                        <h6 class="mb-1">Departamento Fiscal</h6>
+                        <small class="text-muted">{% if fiscal %}Configurado{% else %}Não Configurado{% endif %}</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded">
+                        <i class="bi bi-calculator fs-2 text-info mb-2"></i>
+                        <h6 class="mb-1">Departamento Contábil</h6>
+                        <small class="text-muted">{% if contabil %}Configurado{% else %}Não Configurado{% endif %}</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 border rounded">
+                        <i class="bi bi-people fs-2 text-warning mb-2"></i>
+                        <h6 class="mb-1">Departamento Pessoal</h6>
+                        <small class="text-muted">{% if pessoal %}Configurado{% else %}Não Configurado{% endif %}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Botões de Ação -->
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="text-center">
-                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4 me-3">
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
                     <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
                 </a>
                 <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary px-4">
                     <i class="bi bi-pencil me-2"></i>Editar Empresa
                 </a>
+                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-info px-4">
+                    <i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-success px-4">
+                    <i class="bi bi-printer me-2"></i>Imprimir
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+/* Grupos de informação */
+.info-group {
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 0.5rem;
+    height: 100%;
+    border: 1px solid #e9ecef;
+}
+
 .info-item {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
 }
 
 .info-label {
     font-weight: 600;
     color: #495057;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
     display: block;
 }
 
 .info-value {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #212529;
     line-height: 1.4;
+    word-wrap: break-word;
 }
 
+/* Badges personalizados */
 .bg-primary-subtle {
-    background-color: rgba(13, 110, 253, 0.1) !important;
+    background-color: rgba(5, 88, 197, 0.1) !important;
 }
 
 .bg-success-subtle {
@@ -546,22 +740,13 @@
     background-color: rgba(255, 193, 7, 0.1) !important;
 }
 
+/* Cores personalizadas */
 .text-primary {
     color: #0558c5 !important;
 }
 
 .card-header.bg-primary {
     background-color: #0558c5 !important;
-}
-
-.btn-outline-primary {
-    color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-outline-primary:hover {
-    background-color: #0558c5;
-    border-color: #0558c5;
 }
 
 .btn-primary {
@@ -574,6 +759,17 @@
     border-color: #043a91;
 }
 
+.btn-outline-primary {
+    color: #0558c5;
+    border-color: #0558c5;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0558c5;
+    border-color: #0558c5;
+}
+
+/* Campo de senha */
 .password-field {
     display: flex;
     align-items: center;
@@ -584,6 +780,37 @@
     letter-spacing: 2px;
 }
 
+/* Estilos para impressão */
+@media print {
+    .btn, .card-header .d-flex small, nav, .content-breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+        border: 1px solid #000 !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .card-header {
+        background: #f0f0f0 !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+    }
+    
+    .info-group {
+        background: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+    }
+    
+    .badge {
+        border: 1px solid #000 !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+}
+
+/* Responsividade */
 @media (max-width: 768px) {
     .d-flex.justify-content-center.flex-wrap {
         flex-direction: column;
@@ -594,10 +821,79 @@
         margin-bottom: 0.5rem;
     }
     
-    .text-center .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
+    .info-group {
+        padding: 1rem;
+        margin-bottom: 1rem;
     }
+    
+    .info-label {
+        font-size: 0.75rem;
+    }
+    
+    .info-value {
+        font-size: 0.9rem;
+    }
+    
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+    
+    h6 {
+        font-size: 1rem;
+    }
+}
+
+/* Links */
+.info-value a {
+    color: #0558c5;
+    text-decoration: none;
+}
+
+.info-value a:hover {
+    text-decoration: underline;
+}
+
+/* Melhorias de legibilidade */
+.font-monospace {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e9ecef;
+}
+
+.fw-semibold {
+    font-weight: 600;
+}
+
+/* Animações suaves */
+.card {
+    transition: all 0.3s ease;
+}
+
+.info-group:hover {
+    background: #f1f3f4;
+    transition: background-color 0.2s ease;
+}
+
+/* Scroll suave para navegação */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Estados de loading */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 </style>
 
@@ -611,9 +907,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const targetId = this.getAttribute('href').substring(1);
             const targetElement = document.getElementById(targetId);
             if (targetElement) {
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
+                const offset = 100; // Offset para o header fixo
+                const elementPosition = targetElement.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
                 });
             }
         });
@@ -631,12 +931,105 @@ document.addEventListener("DOMContentLoaded", function () {
                 hiddenSpan.textContent = password;
                 icon.classList.remove('bi-eye');
                 icon.classList.add('bi-eye-slash');
+                this.setAttribute('title', 'Ocultar senha');
             } else {
                 hiddenSpan.textContent = '••••••••';
                 icon.classList.remove('bi-eye-slash');
                 icon.classList.add('bi-eye');
+                this.setAttribute('title', 'Mostrar senha');
             }
         });
+    });
+
+    // Highlighting da seção ativa durante scroll
+    const observerOptions = {
+        root: null,
+        rootMargin: '-20% 0px -70% 0px',
+        threshold: 0
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            const id = entry.target.getAttribute('id');
+            const navLink = document.querySelector(`a[href="#${id}"]`);
+            
+            if (entry.isIntersecting && navLink) {
+                // Remove active class from all nav links
+                document.querySelectorAll('.btn-outline-primary, .btn-outline-success, .btn-outline-info, .btn-outline-warning, .btn-outline-dark').forEach(link => {
+                    link.classList.remove('active');
+                });
+                // Add active class to current link
+                navLink.classList.add('active');
+            }
+        });
+    }, observerOptions);
+
+    // Observe all card sections
+    document.querySelectorAll('.card[id]').forEach(card => {
+        observer.observe(card);
+    });
+
+    // Copy to clipboard functionality for CNPJ and sensitive data
+    document.querySelectorAll('.font-monospace').forEach(element => {
+        if (element.textContent.trim() !== '-') {
+            element.style.cursor = 'pointer';
+            element.setAttribute('title', 'Clique para copiar');
+            
+            element.addEventListener('click', function() {
+                navigator.clipboard.writeText(this.textContent.trim()).then(() => {
+                    // Show temporary feedback
+                    const originalText = this.textContent;
+                    this.textContent = 'Copiado!';
+                    this.style.background = '#d4edda';
+                    
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                        this.style.background = '#f8f9fa';
+                    }, 1000);
+                });
+            });
+        }
+    });
+
+    // Loading state for buttons
+    document.querySelectorAll('a.btn:not([onclick])').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (this.href && !this.href.includes('#') && !this.href.includes('javascript:')) {
+                this.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Carregando...';
+                this.disabled = true;
+            }
+        });
+    });
+
+    // Print optimization
+    window.addEventListener('beforeprint', function() {
+        // Expand all collapsed content
+        document.querySelectorAll('.password-field .password-hidden').forEach(field => {
+            if (field.textContent === '••••••••') {
+                const passwordField = field.closest('.password-field');
+                const password = passwordField.getAttribute('data-password');
+                if (password) {
+                    field.textContent = password;
+                }
+            }
+        });
+    });
+
+    window.addEventListener('afterprint', function() {
+        // Collapse sensitive content back
+        document.querySelectorAll('.password-field .password-hidden').forEach(field => {
+            const passwordField = field.closest('.password-field');
+            if (passwordField) {
+                field.textContent = '••••••••';
+            }
+        });
+    });
+
+    // Tooltip para elementos interativos
+    document.querySelectorAll('[title]').forEach(element => {
+        if (bootstrap && bootstrap.Tooltip) {
+            new bootstrap.Tooltip(element);
+        }
     });
 });
 </script>

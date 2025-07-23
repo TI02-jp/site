@@ -78,9 +78,9 @@ class DepartamentoFiscalForm(DepartamentoForm):
     usuario_prefeitura = StringField('Usuário Prefeitura')
     senha_prefeitura = StringField('Senha Prefeitura')
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
-        ('digital', 'Digital'),
-        ('fisico', 'Físico'),
-        ('ambos', 'Digital e Físico')
+        ('Digital', 'Digital'),
+        ('Fisico', 'Físico'),
+        ('Digital e Físico', 'Digital e Físico')
     ])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
         ('email', 'Email'),
@@ -117,9 +117,9 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('digitado', 'Digitado')
     ])
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
-        ('digital', 'Digital'),
-        ('fisico', 'Físico'),
-        ('ambos', 'Digital e Físico')
+        ('Digital', 'Digital'),
+        ('Fisico', 'Físico'),
+        ('Digital e Físico', 'Digital e Físico')
     ])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
         ('email', 'Email'),

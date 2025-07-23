@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mt-4" style="max-width: 1000px;">
     <div class="card shadow-lg">
-        <div class="card-header bg-primary text-white py-3">
+        <div class="card-header text-white py-3" style="background-color: #f39c12;">
             <h2 class="mb-0 text-center fw-semibold">
                 <i class="bi bi-people me-2"></i>{{ tipo_nome }} - {{ empresa.NomeEmpresa }}
             </h2>
@@ -13,12 +13,13 @@
         
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="form_type" value="pessoal">
                 {{ form.hidden_tag() }}
                 
                 <!-- Seção 1: Informações Básicas -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-warning border-bottom pb-2 mb-3">
                             <i class="bi bi-info-circle me-2"></i>Informações Básicas
                         </h5>
                     </div>
@@ -42,7 +43,7 @@
                 <!-- Seção 2: Configurações de Envio -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-warning border-bottom pb-2 mb-3">
                             <i class="bi bi-calendar-event me-2"></i>Configurações de Envio
                         </h5>
                     </div>
@@ -66,7 +67,7 @@
                 <!-- Seção 3: Controle de Funcionários -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-warning border-bottom pb-2 mb-3">
                             <i class="bi bi-clock me-2"></i>Controle de Funcionários
                         </h5>
                     </div>
@@ -90,7 +91,7 @@
                 <!-- Seção 4: Particularidades -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-warning border-bottom pb-2 mb-3">
                             <i class="bi bi-pencil-square me-2"></i>Particularidades
                         </h5>
                     </div>
@@ -107,7 +108,7 @@
                         {{ form.particularidades(id="particularidades", type="hidden") }}
                         <small class="text-muted">
                             <i class="bi bi-info-circle me-1"></i>
-                            Use o editor para adicionar texto formatado, listas e imagens
+                            Use o editor para adicionar texto formatado, listas e fazer upload de imagens. Você também pode colar imagens com <strong>Ctrl+V</strong>
                         </small>
                     </div>
                 </div>
@@ -119,7 +120,7 @@
                             <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
                                 <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary px-5">
+                            <button type="submit" class="btn btn-warning px-5">
                                 <i class="bi bi-check-lg me-2"></i>Salvar Departamento
                             </button>
                         </div>
@@ -143,46 +144,197 @@
     </div>
 </div>
 
+<!-- Input escondido para upload de imagens -->
+<input type="file" id="image-input" accept="image/*" style="display: none;">
+
+<!-- CSS adicional para melhorar a aparência -->
+<style>
+.form-floating > .form-control:focus {
+    border-color: #f39c12;
+    box-shadow: 0 0 0 0.2rem rgba(243, 156, 18, 0.25);
+}
+
+.form-select:focus {
+    border-color: #f39c12;
+    box-shadow: 0 0 0 0.2rem rgba(243, 156, 18, 0.25);
+}
+
+.text-warning {
+    color: #f39c12 !important;
+}
+
+.btn-warning {
+    background-color: #f39c12;
+    border-color: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #e67e22;
+    border-color: #e67e22;
+    color: white;
+}
+
+.border-bottom {
+    border-color: #f39c12 !important;
+    border-width: 2px !important;
+}
+
+#editor {
+    background-color: #fff;
+}
+
+.ql-toolbar {
+    border-top: 1px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
+}
+
+.ql-container {
+    border-bottom: 1px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    border-bottom-left-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.form-control.is-valid {
+    border-color: #28a745;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='m2.3 6.73.13-.13 4-4c.1-.1.26-.1.36 0l.1.1c.1.1.1.25 0 .35L2.85 7.09c-.1.1-.26.1-.36 0L.85 5.45c-.1-.1-.1-.26 0-.36l.1-.1c.1-.1.26-.1.36 0l1 1z'/%3e%3c/svg%3e");
+}
+
+@media (max-width: 768px) {
+    .container {
+        max-width: 100% !important;
+        padding: 0.5rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem 1rem;
+    }
+    
+    .d-flex.justify-content-center.gap-3 {
+        flex-direction: column;
+    }
+    
+    .d-flex.justify-content-center.gap-3 .btn {
+        width: 100%;
+    }
+}
+</style>
+
 {% block scripts %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    
+    // Função de upload de imagem
+    function uploadImage(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            console.log("Enviando imagem para o servidor...");
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.image_url) {
+                    console.log("Sucesso! URL recebida:", result.image_url);
+                    resolve(result.image_url);
+                } else {
+                    reject('Erro no servidor: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error("Falha grave na requisição fetch:", error);
+                reject('Falha no upload');
+            });
+        });
+    }
+
+    // Função para selecionar imagem local
+    function selectLocalImage() {
+        const input = document.getElementById('image-input');
+        input.click();
+    }
+
     // Configuração do editor Quill
     var quill = new Quill('#editor', {
         theme: 'snow',
-        placeholder: 'Digite ou cole aqui as particularidades...',
+        placeholder: 'Digite as particularidades. Use o ícone de imagem para fazer upload...',
         modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['link', 'image'],
-                ['clean']
-            ]
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['link', 'image'],
+                    ['clean']
+                ],
+                handlers: {
+                    'image': selectLocalImage 
+                }
+            }
         }
     });
 
-    // Carrega conteúdo salvo
-    const savedContent = document.getElementById('particularidades').value;
-    if (savedContent) {
-        quill.clipboard.dangerouslyPasteHTML(savedContent);
-    }
+    // Upload de imagem quando arquivo é selecionado
+    const imageInput = document.getElementById('image-input');
+    imageInput.addEventListener('change', () => {
+        if (imageInput.files && imageInput.files[0]) {
+            const file = imageInput.files[0];
+            
+            const range = quill.getSelection(true);
+            quill.insertText(range.index, 'Carregando imagem...', 'italic', true);
 
-    // Salva conteúdo antes do submit
-    document.querySelector('form').addEventListener('submit', function () {
-        document.getElementById('particularidades').value = quill.root.innerHTML;
+            uploadImage(file).then(imageUrl => {
+                quill.deleteText(range.index, 'Carregando imagem...'.length);
+                quill.insertEmbed(range.index, 'image', imageUrl);
+                quill.setSelection(range.index + 1);
+            }).catch(error => {
+                console.error(error);
+                quill.deleteText(range.index, 'Carregando imagem...'.length);
+                quill.insertText(range.index, '[Erro ao carregar imagem]', 'color', 'red');
+            });
+        }
     });
 
-    // Validação básica do formulário
-    document.querySelector('form').addEventListener('submit', function(e) {
+    // Submissão do formulário com preparação de dados
+    document.querySelector('form').addEventListener('submit', function (e) {
+        console.log('Preparando dados do departamento pessoal...');
+        
+        // Validação básica
         const responsavel = document.querySelector('#responsavel').value.trim();
         const descricao = document.querySelector('#descricao').value.trim();
-        
+
         if (!responsavel || !descricao) {
             e.preventDefault();
             alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return false;
+            return;
         }
+
+        // Preparar conteúdo do editor Quill
+        const particularidadesField = document.querySelector('#particularidades');
+        if (particularidadesField) {
+            particularidadesField.value = quill.root.innerHTML;
+        }
+
+        console.log('Dados preparados do pessoal:', {
+            responsavel: responsavel,
+            descricao: descricao,
+            data_envio: document.querySelector('#data_envio').value,
+            registro_funcionarios: document.querySelector('#registro_funcionarios').value,
+            ponto_eletronico: document.querySelector('#ponto_eletronico').value,
+            pagamento_funcionario: document.querySelector('#pagamento_funcionario').value,
+            particularidades: quill.root.innerHTML
+        });
     });
 
     // Configuração especial para campo de data
@@ -195,7 +347,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Adiciona formatação automática para campos de texto que podem ser números
-    const numericFields = ['registro_funcionarios', 'ponto_eletronico', 'pagamento_funcionario'];
+    const numericFields = ['registro_funcionarios'];
     numericFields.forEach(fieldName => {
         const field = document.querySelector(`#${fieldName}`);
         if (field) {
@@ -214,10 +366,94 @@ document.addEventListener("DOMContentLoaded", function () {
         input.addEventListener('blur', function() {
             if (this.value.trim() !== '') {
                 this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
             } else {
                 this.classList.remove('is-valid');
+                if (this.hasAttribute('required')) {
+                    this.classList.add('is-invalid');
+                }
             }
         });
+
+        // Verifica se já tem valor inicial
+        if (input.value.trim() !== '') {
+            input.classList.add('is-valid');
+        }
+    });
+
+    // Adiciona máscara para campos de valores monetários se necessário
+    const valorFields = ['pagamento_funcionario'];
+    valorFields.forEach(fieldName => {
+        const field = document.querySelector(`#${fieldName}`);
+        if (field) {
+            field.addEventListener('input', function(e) {
+                // Remove tudo que não é número
+                let value = this.value.replace(/\D/g, '');
+                
+                // Adiciona formatação de moeda se tiver valor
+                if (value.length > 0) {
+                    value = (parseInt(value) / 100).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    });
+                }
+                
+                this.value = value;
+            });
+        }
+    });
+
+    // Auto-save draft (opcional)
+    let autoSaveTimer;
+    function autoSaveDraft() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            const draftData = {
+                responsavel: document.querySelector('#responsavel').value,
+                descricao: document.querySelector('#descricao').value,
+                data_envio: document.querySelector('#data_envio').value,
+                registro_funcionarios: document.querySelector('#registro_funcionarios').value,
+                ponto_eletronico: document.querySelector('#ponto_eletronico').value,
+                pagamento_funcionario: document.querySelector('#pagamento_funcionario').value,
+                particularidades: quill.root.innerHTML
+            };
+            
+            // Salva no localStorage
+            localStorage.setItem('draft_pessoal', JSON.stringify(draftData));
+            console.log('Draft salvo automaticamente');
+        }, 2000);
+    }
+
+    // Adiciona auto-save nos campos
+    document.querySelectorAll('.form-control').forEach(field => {
+        field.addEventListener('input', autoSaveDraft);
+    });
+    
+    quill.on('text-change', autoSaveDraft);
+
+    // Recupera draft ao carregar
+    const savedDraft = localStorage.getItem('draft_pessoal');
+    if (savedDraft) {
+        try {
+            const draftData = JSON.parse(savedDraft);
+            Object.keys(draftData).forEach(key => {
+                const field = document.querySelector(`#${key}`);
+                if (field && !field.value) {
+                    if (key === 'particularidades') {
+                        quill.clipboard.dangerouslyPasteHTML(draftData[key]);
+                    } else {
+                        field.value = draftData[key];
+                    }
+                }
+            });
+        } catch (e) {
+            console.log('Erro ao recuperar draft:', e);
+        }
+    }
+
+    // Limpa draft ao submeter com sucesso
+    document.querySelector('form').addEventListener('submit', function() {
+        localStorage.removeItem('draft_pessoal');
     });
 });
 </script>

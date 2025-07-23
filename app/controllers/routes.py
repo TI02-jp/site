@@ -1,6 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, Flask
 from functools import wraps
-from flask_login import current_user, login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user, current_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
@@ -13,10 +13,20 @@ from app.forms import (
     DepartamentoPessoalForm,
 )
 from datetime import datetime
-import re
-import os
+import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
+
+@app.context_processor
+def inject_stats():
+    if current_user.is_authenticated:
+        total_empresas = Empresa.query.count()
+        total_usuarios = User.query.count() if current_user.role == 'admin' else 0
+        return {
+            'total_empresas': total_empresas,
+            'total_usuarios': total_usuarios
+        }
+    return {}
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -27,14 +37,14 @@ def allowed_file(filename):
 @app.route('/upload_image', methods=['POST'])
 @login_required
 def upload_image():
-    print("--- Rota /upload_image foi chamada! ---") # 1. Verifica se a rota foi acessada
+    print("--- Rota /upload_image foi chamada! ---")
 
     if 'image' not in request.files:
         print("ERRO: 'image' não está no request.files.")
         return jsonify({'error': 'Nenhuma imagem enviada'}), 400
 
     file = request.files['image']
-    print(f"Arquivo recebido: {file.filename}") # 2. Mostra o nome do arquivo
+    print(f"Arquivo recebido: {file.filename}")
 
     if file.filename == '':
         print("ERRO: Nome de arquivo vazio.")
@@ -45,21 +55,18 @@ def upload_image():
         unique_name = f"{uuid4().hex}_{filename}"
         
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-        
-        # 3. Imprime o caminho completo onde o arquivo deveria ser salvo
         file_path = os.path.join(upload_folder, unique_name)
         print(f"Tentando salvar em: {file_path}")
 
         try:
-            os.makedirs(upload_folder, exist_ok=True) # Garante que a pasta existe
+            os.makedirs(upload_folder, exist_ok=True)
             file.save(file_path)
-            print("SUCESSO: file.save() executado sem erros!") # 4. Confirmação de sucesso
+            print("SUCESSO: file.save() executado sem erros!")
 
             file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
             return jsonify({'image_url': file_url})
 
         except Exception as e:
-            # 5. Captura e imprime QUALQUER erro que ocorra durante o save
             print(f"!!! ERRO AO SALVAR O ARQUIVO: {e} !!!")
             return jsonify({'error': f'Erro no servidor ao salvar: {e}'}), 500
 
@@ -165,7 +172,99 @@ def excluir_empresa(id):
         flash(f'Erro ao excluir empresa: {e}', 'danger')
     return redirect(url_for('listar_empresas'))
 
-# Substitua a função editar_empresa no routes.py por esta versão corrigida:
+def processar_dados_fiscal(request):
+    """Função auxiliar para processar dados do departamento fiscal"""
+    # Dados básicos do formulário
+    responsavel = request.form.get('responsavel')
+    descricao = request.form.get('descricao')
+    link_prefeitura = request.form.get('link_prefeitura')
+    usuario_prefeitura = request.form.get('usuario_prefeitura')
+    senha_prefeitura = request.form.get('senha_prefeitura')
+    forma_movimento = request.form.get('forma_movimento')
+    observacao_movimento = request.form.get('observacao_movimento')
+    particularidades = request.form.get('particularidades')
+    
+    # Processar dados JSON dos checkboxes
+    formas_importacao_json = request.form.get('formas_importacao_json', '[]')
+    formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
+    
+    envio_digital_json = request.form.get('envio_digital_json', '[]')
+    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []
+    
+    envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
+    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
+    
+    # Processar dados de contato
+    contatos_json = request.form.get('contatos_json', 'null')
+    contatos = json.loads(contatos_json) if contatos_json != 'null' else None
+    
+    return {
+        'responsavel': responsavel,
+        'descricao': descricao,
+        'formas_importacao': formas_importacao,
+        'link_prefeitura': link_prefeitura,
+        'usuario_prefeitura': usuario_prefeitura,
+        'senha_prefeitura': senha_prefeitura,
+        'forma_movimento': forma_movimento,
+        'envio_digital': envio_digital,
+        'envio_digital_fisico': envio_digital_fisico,
+        'observacao_movimento': observacao_movimento,
+        'contatos': contatos,
+        'particularidades_texto': particularidades
+    }
+
+def processar_dados_contabil(request):
+    """Função auxiliar para processar dados do departamento contábil"""
+    # Dados básicos do formulário
+    responsavel = request.form.get('responsavel')
+    descricao = request.form.get('descricao')
+    metodo_importacao = request.form.get('metodo_importacao')
+    forma_movimento = request.form.get('forma_movimento')
+    observacao_movimento = request.form.get('observacao_movimento')
+    observacao_controle_relatorios = request.form.get('observacao_controle_relatorios')
+    particularidades = request.form.get('particularidades')
+    
+    # Processar dados JSON dos checkboxes
+    envio_digital_json = request.form.get('envio_digital_json', '[]')
+    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []
+    
+    envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
+    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
+    
+    controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
+    controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
+    
+    return {
+        'responsavel': responsavel,
+        'descricao': descricao,
+        'metodo_importacao': metodo_importacao,
+        'forma_movimento': forma_movimento,
+        'envio_digital': envio_digital,
+        'envio_digital_fisico': envio_digital_fisico,
+        'observacao_movimento': observacao_movimento,
+        'controle_relatorios': controle_relatorios,
+        'observacao_controle_relatorios': observacao_controle_relatorios,
+        'particularidades_texto': particularidades
+    }
+
+def processar_dados_pessoal(request):
+    """Função auxiliar para processar dados do departamento pessoal"""
+    return {
+        'responsavel': request.form.get('responsavel'),
+        'descricao': request.form.get('descricao'),
+        'data_envio': request.form.get('data_envio'),
+        'registro_funcionarios': request.form.get('registro_funcionarios'),
+        'ponto_eletronico': request.form.get('ponto_eletronico'),
+        'pagamento_funcionario': request.form.get('pagamento_funcionario'),
+        'particularidades_texto': request.form.get('particularidades')
+    }
+
+def processar_dados_administrativo(request):
+    """Função auxiliar para processar dados do departamento administrativo"""
+    return {
+        'responsavel': request.form.get('responsavel'),
+        'descricao': request.form.get('descricao')
+    }
 
 @app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -205,103 +304,118 @@ def editar_empresa(id):
             db.session.rollback()
             flash(f'Erro ao atualizar empresa: {e}', 'danger')
 
-    if submitted == 'fiscal' and fiscal_form.validate_on_submit():
-        if not fiscal:
-            fiscal = Departamento(
-                empresa_id=id, 
-                tipo='Departamento Fiscal',
-                created_at=datetime.now(),  # Adicione esta linha
-                updated_at=datetime.now()   # Adicione esta linha
-            )
-        else:
-            fiscal.updated_at = datetime.now()  # Adicione esta linha
+    if submitted == 'fiscal':
+        try:
+            dados_fiscal = processar_dados_fiscal(request)
             
-        fiscal.responsavel = fiscal_form.responsavel.data
-        fiscal.descricao = fiscal_form.descricao.data
-        fiscal.formas_importacao = fiscal_form.formas_importacao.data
-        fiscal.link_prefeitura = fiscal_form.link_prefeitura.data
-        fiscal.usuario_prefeitura = fiscal_form.usuario_prefeitura.data
-        fiscal.senha_prefeitura = fiscal_form.senha_prefeitura.data
-        fiscal.forma_movimento = fiscal_form.forma_movimento.data
-        fiscal.envio_digital = fiscal_form.envio_digital.data
-        fiscal.envio_digital_fisico = fiscal_form.envio_digital_fisico.data
-        fiscal.observacao_movimento = fiscal_form.observacao_movimento.data
-        fiscal.contatos = {
-            'nome': fiscal_form.contato_nome.data,
-            'meios': fiscal_form.contato_meios.data,
-        }
-        fiscal.particularidades = fiscal_form.particularidades.data
-        db.session.add(fiscal)
-        db.session.commit()
-        flash('Departamento Fiscal salvo!', 'success')
-        return redirect(url_for('editar_empresa', id=id))
+            # Criar ou atualizar departamento
+            if not fiscal:
+                fiscal = Departamento(
+                    empresa_id=id, 
+                    tipo='Departamento Fiscal',
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            else:
+                fiscal.updated_at = datetime.now()
+            
+            # Atualizar campos
+            for campo, valor in dados_fiscal.items():
+                setattr(fiscal, campo, valor)
+            
+            db.session.add(fiscal)
+            db.session.commit()
+            flash('Departamento Fiscal salvo com sucesso!', 'success')
+            return redirect(url_for('editar_empresa', id=id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento fiscal: {str(e)}', 'error')
+            print(f"Erro ao salvar fiscal: {e}")
 
-    if submitted == 'contabil' and contabil_form.validate_on_submit():
-        if not contabil:
-            contabil = Departamento(
-                empresa_id=id, 
-                tipo='Departamento Contábil',
-                created_at=datetime.now(),  # Adicione esta linha
-                updated_at=datetime.now()   # Adicione esta linha
-            )
-        else:
-            contabil.updated_at = datetime.now()  # Adicione esta linha
+    if submitted == 'contabil':
+        try:
+            dados_contabil = processar_dados_contabil(request)
             
-        contabil.responsavel = contabil_form.responsavel.data
-        contabil.descricao = contabil_form.descricao.data
-        contabil.metodo_importacao = contabil_form.metodo_importacao.data
-        contabil.forma_movimento = contabil_form.forma_movimento.data
-        contabil.envio_digital = contabil_form.envio_digital.data
-        contabil.envio_digital_fisico = contabil_form.envio_digital_fisico.data
-        contabil.observacao_movimento = contabil_form.observacao_movimento.data
-        contabil.controle_relatorios = contabil_form.controle_relatorios.data
-        contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
-        contabil.particularidades_texto = contabil_form.particularidades.data
-        db.session.add(contabil)
-        db.session.commit()
-        flash('Departamento Contábil salvo!', 'success')
-        return redirect(url_for('editar_empresa', id=id))
+            if not contabil:
+                contabil = Departamento(
+                    empresa_id=id, 
+                    tipo='Departamento Contábil',
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            else:
+                contabil.updated_at = datetime.now()
+            
+            # Atualizar campos
+            for campo, valor in dados_contabil.items():
+                setattr(contabil, campo, valor)
+            
+            db.session.add(contabil)
+            db.session.commit()
+            flash('Departamento Contábil salvo com sucesso!', 'success')
+            return redirect(url_for('editar_empresa', id=id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento contábil: {str(e)}', 'error')
+            print(f"Erro ao salvar contábil: {e}")
 
-    if submitted == 'pessoal' and pessoal_form.validate_on_submit():
-        if not pessoal:
-            pessoal = Departamento(
-                empresa_id=id, 
-                tipo='Departamento Pessoal',
-                created_at=datetime.now(),  # Adicione esta linha
-                updated_at=datetime.now()   # Adicione esta linha
-            )
-        else:
-            pessoal.updated_at = datetime.now()  # Adicione esta linha
+    if submitted == 'pessoal':
+        try:
+            dados_pessoal = processar_dados_pessoal(request)
             
-        pessoal.responsavel = pessoal_form.responsavel.data
-        pessoal.descricao = pessoal_form.descricao.data
-        pessoal.data_envio = pessoal_form.data_envio.data
-        pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
-        pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
-        pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
-        pessoal.particularidades_texto = pessoal_form.particularidades.data
-        db.session.add(pessoal)
-        db.session.commit()
-        flash('Departamento Pessoal salvo!', 'success')
-        return redirect(url_for('editar_empresa', id=id))
+            if not pessoal:
+                pessoal = Departamento(
+                    empresa_id=id, 
+                    tipo='Departamento Pessoal',
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            else:
+                pessoal.updated_at = datetime.now()
+            
+            # Atualizar campos
+            for campo, valor in dados_pessoal.items():
+                setattr(pessoal, campo, valor)
+            
+            db.session.add(pessoal)
+            db.session.commit()
+            flash('Departamento Pessoal salvo com sucesso!', 'success')
+            return redirect(url_for('editar_empresa', id=id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento pessoal: {str(e)}', 'error')
+            print(f"Erro ao salvar pessoal: {e}")
 
-    if submitted == 'administrativo' and administrativo_form.validate_on_submit():
-        if not administrativo:
-            administrativo = Departamento(
-                empresa_id=id, 
-                tipo='Departamento Administrativo',
-                created_at=datetime.now(),  # Adicione esta linha
-                updated_at=datetime.now()   # Adicione esta linha
-            )
-        else:
-            administrativo.updated_at = datetime.now()  # Adicione esta linha
+    if submitted == 'administrativo':
+        try:
+            dados_administrativo = processar_dados_administrativo(request)
             
-        administrativo.responsavel = administrativo_form.responsavel.data
-        administrativo.descricao = administrativo_form.descricao.data
-        db.session.add(administrativo)
-        db.session.commit()
-        flash('Departamento Administrativo salvo!', 'success')
-        return redirect(url_for('editar_empresa', id=id))
+            if not administrativo:
+                administrativo = Departamento(
+                    empresa_id=id, 
+                    tipo='Departamento Administrativo',
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+            else:
+                administrativo.updated_at = datetime.now()
+            
+            # Atualizar campos
+            for campo, valor in dados_administrativo.items():
+                setattr(administrativo, campo, valor)
+            
+            db.session.add(administrativo)
+            db.session.commit()
+            flash('Departamento Administrativo salvo com sucesso!', 'success')
+            return redirect(url_for('editar_empresa', id=id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento administrativo: {str(e)}', 'error')
+            print(f"Erro ao salvar administrativo: {e}")
 
     return render_template(
         'empresas/editar_empresa.html',
@@ -321,9 +435,32 @@ def editar_empresa(id):
 @login_required
 def visualizar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
-    departamentos = Departamento.query.filter_by(empresa_id=id).all()
-    dept_by_tipo = {d.tipo: d for d in departamentos}
-    return render_template('empresas/visualizar.html', empresa=empresa, departamentos=dept_by_tipo)
+    
+    # Buscar departamentos individualmente
+    fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
+    contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
+    pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
+    administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+    
+    # Processar dados JSON para exibição
+    if fiscal and fiscal.contatos:
+        try:
+            if isinstance(fiscal.contatos, dict):
+                fiscal.contato_nome = fiscal.contatos.get('nome', '')
+                fiscal.contato_meios = ','.join(fiscal.contatos.get('meios', []))
+            else:
+                fiscal.contato_nome = ''
+                fiscal.contato_meios = ''
+        except:
+            fiscal.contato_nome = ''
+            fiscal.contato_meios = ''
+    
+    return render_template('empresas/visualizar.html',
+                         empresa=empresa,
+                         fiscal=fiscal,
+                         contabil=contabil,
+                         pessoal=pessoal,
+                         administrativo=administrativo)
 
 @app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
 @login_required
@@ -342,71 +479,98 @@ def gerenciar_departamentos(empresa_id):
 
     submitted = request.form.get('form_type')
 
-    if submitted == 'fiscal' and fiscal_form.validate_on_submit():
-        if not fiscal:
-            fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
-        fiscal.responsavel = fiscal_form.responsavel.data
-        fiscal.descricao = fiscal_form.descricao.data
-        fiscal.formas_importacao = fiscal_form.formas_importacao.data
-        fiscal.link_prefeitura = fiscal_form.link_prefeitura.data
-        fiscal.usuario_prefeitura = fiscal_form.usuario_prefeitura.data
-        fiscal.senha_prefeitura = fiscal_form.senha_prefeitura.data
-        fiscal.forma_movimento = fiscal_form.forma_movimento.data
-        fiscal.envio_digital = fiscal_form.envio_digital.data
-        fiscal.envio_digital_fisico = fiscal_form.envio_digital_fisico.data
-        fiscal.observacao_movimento = fiscal_form.observacao_movimento.data
-        fiscal.contatos = {
-            'nome': fiscal_form.contato_nome.data,
-            'meios': fiscal_form.contato_meios.data,
-        }
-        fiscal.particularidades_texto = fiscal_form.particularidades.data
-        db.session.add(fiscal)
-        db.session.commit()
-        flash('Departamento Fiscal salvo!', 'success')
-        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+    if submitted == 'fiscal':
+        try:
+            dados_fiscal = processar_dados_fiscal(request)
+            
+            # Criar ou atualizar departamento
+            if not fiscal:
+                fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
+            
+            # Atualizar campos
+            for campo, valor in dados_fiscal.items():
+                setattr(fiscal, campo, valor)
+                
+            fiscal.updated_at = datetime.utcnow()
+            
+            db.session.add(fiscal)
+            db.session.commit()
+            flash('Departamento Fiscal salvo com sucesso!', 'success')
+            return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+    
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento fiscal: {str(e)}', 'error')
+            print(f"Erro ao salvar fiscal: {e}")
 
-    if submitted == 'contabil' and contabil_form.validate_on_submit():
-        if not contabil:
-            contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
-        contabil.responsavel = contabil_form.responsavel.data
-        contabil.descricao = contabil_form.descricao.data
-        contabil.metodo_importacao = contabil_form.metodo_importacao.data
-        contabil.forma_movimento = contabil_form.forma_movimento.data
-        contabil.envio_digital = contabil_form.envio_digital.data
-        contabil.envio_digital_fisico = contabil_form.envio_digital_fisico.data
-        contabil.observacao_movimento = contabil_form.observacao_movimento.data
-        contabil.controle_relatorios = contabil_form.controle_relatorios.data
-        contabil.observacao_controle_relatorios = contabil_form.observacao_controle_relatorios.data
-        contabil.particularidades_texto = contabil_form.particularidades.data
-        db.session.add(contabil)
-        db.session.commit()
-        flash('Departamento Contábil salvo!', 'success')
-        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+    if submitted == 'contabil':
+        try:
+            dados_contabil = processar_dados_contabil(request)
+            
+            if not contabil:
+                contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+            
+            # Atualizar campos
+            for campo, valor in dados_contabil.items():
+                setattr(contabil, campo, valor)
+                
+            contabil.updated_at = datetime.utcnow()
+            
+            db.session.add(contabil)
+            db.session.commit()
+            flash('Departamento Contábil salvo com sucesso!', 'success')
+            return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento contábil: {str(e)}', 'error')
+            print(f"Erro ao salvar contábil: {e}")
 
-    if submitted == 'pessoal' and pessoal_form.validate_on_submit():
-        if not pessoal:
-            pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
-        pessoal.responsavel = pessoal_form.responsavel.data
-        pessoal.descricao = pessoal_form.descricao.data
-        pessoal.data_envio = pessoal_form.data_envio.data
-        pessoal.registro_funcionarios = pessoal_form.registro_funcionarios.data
-        pessoal.ponto_eletronico = pessoal_form.ponto_eletronico.data
-        pessoal.pagamento_funcionario = pessoal_form.pagamento_funcionario.data
-        pessoal.particularidades_texto = pessoal_form.particularidades.data
-        db.session.add(pessoal)
-        db.session.commit()
-        flash('Departamento Pessoal salvo!', 'success')
-        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+    if submitted == 'pessoal':
+        try:
+            dados_pessoal = processar_dados_pessoal(request)
+            
+            if not pessoal:
+                pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+            
+            # Atualizar campos
+            for campo, valor in dados_pessoal.items():
+                setattr(pessoal, campo, valor)
+                
+            pessoal.updated_at = datetime.utcnow()
+            
+            db.session.add(pessoal)
+            db.session.commit()
+            flash('Departamento Pessoal salvo com sucesso!', 'success')
+            return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento pessoal: {str(e)}', 'error')
+            print(f"Erro ao salvar pessoal: {e}")
 
-    if submitted == 'administrativo' and administrativo_form.validate_on_submit():
-        if not administrativo:
-            administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
-        administrativo.responsavel = administrativo_form.responsavel.data
-        administrativo.descricao = administrativo_form.descricao.data
-        db.session.add(administrativo)
-        db.session.commit()
-        flash('Departamento Administrativo salvo!', 'success')
-        return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+    if submitted == 'administrativo':
+        try:
+            dados_administrativo = processar_dados_administrativo(request)
+            
+            if not administrativo:
+                administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
+            
+            # Atualizar campos
+            for campo, valor in dados_administrativo.items():
+                setattr(administrativo, campo, valor)
+                
+            administrativo.updated_at = datetime.utcnow()
+            
+            db.session.add(administrativo)
+            db.session.commit()
+            flash('Departamento Administrativo salvo com sucesso!', 'success')
+            return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar departamento administrativo: {str(e)}', 'error')
+            print(f"Erro ao salvar administrativo: {e}")
 
     return render_template(
         'empresas/departamentos.html',

@@ -5,119 +5,365 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}SISTEMA DE EMPRESAS{% endblock %}</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" /> 
-
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
     <style>
+      :root {
+        --primary-color: #0558c5;
+        --primary-dark: #043a91;
+        --sidebar-bg: #ffffff;
+        --sidebar-text: #495057;
+        --sidebar-hover: #f8f9fa;
+        --sidebar-active: #e3f2fd;
+        --border-color: #e9ecef;
+        --text-muted: #6c757d;
+        --danger-color: #dc3545;
+        --danger-hover: #c82333;
+      }
+
       body, html {
         height: 100%;
         margin: 0;
+        background-color: #f8f9fa;
       }
+
       .wrapper {
         display: flex;
         min-height: 100vh;
         flex-direction: column;
       }
+
       .main-content {
         flex: 1 0 auto;
         display: flex;
         overflow: hidden;
       }
-      .sidebar {
-        width: 250px;
-        background-color: #f8f9fa;
-        border-right: 1px solid #dee2e6;
-        padding: 1rem;
-        box-shadow: 2px 0 5px rgba(0,0,0,.1);
 
-        /* Flex para posicionar o conteúdo e o rodapé */
+      /* Sidebar Principal */
+      .sidebar {
+        width: 280px;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        position: relative;
+        transition: all 0.3s ease;
       }
-      .sidebar h4 {
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        color: #0d6efd;
-      }      
-      .sidebar .nav-link {
-        color: #333;
-        font-weight: 500;
+
+      /* Header da Sidebar */
+      .sidebar-header {
+        padding: 1.5rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
       }
-      .sidebar .nav-link.active {
-        color: #0d6efd;
+
+      .sidebar-header h4 {
         font-weight: 700;
-        background-color: #e7f1ff;
-        border-radius: 0.375rem;
+        margin: 0;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
       }
-      .content-area {
-        flex-grow: 1;
+
+      .sidebar-header .user-info {
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.75rem;
+      }
+
+      /* Navegação */
+      .sidebar-nav {
+        flex: 1;
+        padding: 1.25rem 0;
         overflow-y: auto;
-        padding: 2rem;
-        background-color: #fff;
       }
+
+      .nav-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .nav-section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin: 0 1.25rem 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .sidebar .nav-link {
+        color: var(--sidebar-text);
+        font-weight: 500;
+        padding: 0.875rem 1.25rem;
+        border-radius: 0;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9rem;
+        text-decoration: none;
+        position: relative;
+      }
+
+      .sidebar .nav-link:hover {
+        background-color: var(--sidebar-hover);
+        color: var(--primary-color);
+        border-left-color: var(--primary-color);
+        transform: translateX(3px);
+      }
+
+      .sidebar .nav-link.active {
+        color: var(--primary-color);
+        background-color: var(--sidebar-active);
+        border-left-color: var(--primary-color);
+        font-weight: 600;
+        box-shadow: inset 0 0 0 1px rgba(5, 88, 197, 0.1);
+      }
+
+      .sidebar .nav-link i {
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+      }
+
+      /* Badge para contadores */
+      .nav-badge {
+        background: var(--primary-color);
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 1rem;
+        margin-left: auto;
+        font-weight: 600;
+      }
+
+      /* Footer da Sidebar */
       .sidebar-footer {
-        padding-top: 1rem;
-        border-top: 1px solid #dee2e6;
+        padding: 1.25rem;
+        border-top: 1px solid var(--border-color);
+        background: #f8f9fa;
       }
+
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border-color);
+      }
+
+      .user-profile-avatar {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .user-profile-info h6 {
+        margin: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--sidebar-text);
+      }
+
+      .user-profile-info small {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+      }
+
       .btn-logout {
         width: 100%;
-        text-align: left;
-        font-weight: 600;
-        color: #dc3545;
+        padding: 0.75rem;
         background: none;
-        border: none;
-        padding: 0.5rem 0;
+        border: 1px solid var(--danger-color);
+        color: var(--danger-color);
+        border-radius: 0.375rem;
+        font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 1rem;
-      }
-      .btn-logout:hover {
-        color: #a71d2a;
-        text-decoration: underline;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
       }
 
-      /* Responsivo: sidebar vira topo */
+      .btn-logout:hover {
+        background-color: var(--danger-color);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+      }
+
+      /* Área de Conteúdo */
+      .content-area {
+        flex-grow: 1;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        position: relative;
+      }
+
+      .content-wrapper {
+        padding: 2rem;
+        max-width: 100%;
+      }
+
+      /* Breadcrumb */
+      .content-breadcrumb {
+        background: white;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 0;
+      }
+
+      .breadcrumb {
+        margin: 0;
+        background: none;
+        padding: 0;
+      }
+
+      .breadcrumb-item a {
+        color: var(--primary-color);
+        text-decoration: none;
+      }
+
+      /* Toggle Button para Mobile */
+      .sidebar-toggle {
+        display: none;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 1050;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Footer */
+      footer {
+        background: white;
+        border-top: 1px solid var(--border-color);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        padding: 1rem 0;
+      }
+
+      /* Responsivo */
       @media (max-width: 768px) {
-        .main-content {
-          flex-direction: column;
-        }
         .sidebar {
+          position: fixed;
+          top: 0;
+          left: -280px;
+          height: 100vh;
+          z-index: 1040;
+          transition: left 0.3s ease;
+        }
+
+        .sidebar.show {
+          left: 0;
+        }
+
+        .sidebar-toggle {
+          display: block;
+        }
+
+        .main-content {
           width: 100%;
-          border-right: none;
-          border-bottom: 1px solid #dee2e6;
-          box-shadow: none;
-          flex-direction: row;
-          justify-content: space-between;
-          align-items: center;
-          padding: 0.5rem 1rem;
         }
-        .sidebar h4 {
-          margin-bottom: 0;
-        }
-        .sidebar .nav {
-          flex-direction: row;
-          gap: 1rem;
-        }
-        .sidebar-footer {
-          border-top: none;
-          padding-top: 0;
-        }
-        .btn-logout {
-          padding: 0;
-          font-size: 0.9rem;
-        }
-        .content-area {
+
+        .content-wrapper {
           padding: 1rem;
+          margin-top: 4rem;
+        }
+
+        .sidebar-header h4 {
+          font-size: 1.1rem;
+        }
+
+        .user-info {
+          font-size: 0.8rem;
+        }
+
+        .sidebar .nav-link {
+          padding: 1rem 1.25rem;
+          font-size: 0.95rem;
+        }
+      }
+
+      /* Overlay para mobile */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1035;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar-overlay.show {
+          display: block;
+        }
+      }
+
+      /* Estados de Loading */
+      .nav-link.loading i {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* Tema escuro (opcional) */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --sidebar-bg: #2c2c2c;
+          --sidebar-text: #e9ecef;
+          --sidebar-hover: #3c3c3c;
+          --sidebar-active: #4c4c4c;
+          --border-color: #495057;
         }
       }
     </style>
@@ -125,76 +371,239 @@
 <body class="bg-light text-dark" style="font-family: 'Inter', sans-serif;">
 
 <div class="wrapper">
+    <!-- Toggle Button para Mobile -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Overlay para Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <div class="main-content">
-
-        <nav class="sidebar">
-            <div>
-                <h4>Menu</h4>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'listar_empresas' %}active{% endif %}" href="{{ url_for('listar_empresas') }}">
-                            <i class="bi bi-building me-2"></i>Empresas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'relatorios' %}active{% endif %}" href="{{ url_for('relatorios') }}">
-                            <i class="bi bi-bar-chart-line me-2"></i>Relatórios
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'list_users' %}active{% endif %}" href="{{ url_for('list_users') }}">
-                            <i class="bi bi-people me-2"></i>Usuários
-                        </a>
-                    </li>
-                </ul>
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <!-- Header da Sidebar -->
+            <div class="sidebar-header">
+                <h4>
+                    <i class="bi bi-building-gear"></i>
+                    JP Contábil
+                </h4>
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {{ current_user.name[0].upper() if current_user.name else 'U' }}
+                    </div>
+                    <div>
+                        <div>{{ current_user.name or 'Usuário' }}</div>
+                        <small>{{ current_user.role|title if current_user.role else 'User' }}</small>
+                    </div>
+                </div>
             </div>
 
+            <!-- Navegação -->
+            <div class="sidebar-nav">
+                <!-- Seção Principal -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Principal</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                                <i class="bi bi-speedometer2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint in ['listar_empresas', 'cadastrar_empresa', 'editar_empresa', 'visualizar_empresa'] %}active{% endif %}" href="{{ url_for('listar_empresas') }}">
+                                <i class="bi bi-buildings"></i>
+                                Empresas
+                                <span class="nav-badge">{{ total_empresas or 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'cadastrar_empresa' %}active{% endif %}" href="{{ url_for('cadastrar_empresa') }}">
+                                <i class="bi bi-building-add"></i>
+                                Nova Empresa
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Seção Administrativa -->
+                {% if current_user.role == 'admin' %}
+                <div class="nav-section">
+                    <div class="nav-section-title">Administração</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'relatorios' %}active{% endif %}" href="{{ url_for('relatorios') }}">
+                                <i class="bi bi-graph-up"></i>
+                                Relatórios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint in ['list_users', 'novo_usuario'] %}active{% endif %}" href="{{ url_for('list_users') }}">
+                                <i class="bi bi-people"></i>
+                                Usuários
+                                <span class="nav-badge">{{ total_usuarios or 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="return false;" style="opacity: 0.6;">
+                                <i class="bi bi-gear"></i>
+                                Configurações
+                                <small style="margin-left: auto; font-size: 0.6rem; background: #ffc107; color: #000; padding: 0.1rem 0.3rem; border-radius: 0.2rem;">BREVE</small>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Seção Ajuda -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Suporte</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="return false;">
+                                <i class="bi bi-question-circle"></i>
+                                Ajuda
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="return false;">
+                                <i class="bi bi-book"></i>
+                                Documentação
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer da Sidebar -->
             <div class="sidebar-footer">
-                <form method="POST" action="{{ url_for('logout') }}">
-                    <a href="{{ url_for('logout') }}" class="btn-logout">
-                        <i class="bi bi-box-arrow-right"></i> Sair
-                    </a>
-                </form>
+                <div class="user-profile">
+                    <div class="user-profile-avatar">
+                        {{ current_user.name[0].upper() if current_user.name else 'U' }}
+                    </div>
+                    <div class="user-profile-info">
+                        <h6>{{ current_user.name or 'Usuário' }}</h6>
+                        <small>{{ current_user.email if current_user.email else 'Sem email' }}</small>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn-logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Sair do Sistema
+                </a>
             </div>
         </nav>
 
+        <!-- Área de Conteúdo -->
         <main class="content-area">
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div id="flash-message" class="alert alert-info alert-dismissible fade show" role="alert">
-                        {{ messages[0] }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                    </div>
-                {% endif %}
-            {% endwith %}
+            <!-- Breadcrumb -->
+            <nav class="content-breadcrumb" aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-house-door me-1"></i>Início
+                        </a>
+                    </li>
+                    {% block breadcrumb %}{% endblock %}
+                </ol>
+            </nav>
 
-            {% block content %}{% endblock %}
+            <!-- Conteúdo -->
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
         </main>
-
     </div>
 
-    <footer class="bg-white border-top py-3 mt-auto text-center text-muted small">
+    <!-- Footer -->
+    <footer class="text-center">
         <div class="container">
-            Sistema de Cadastro &copy; {{ now().year }} - Desenvolvido com Flask e Bootstrap
+            <div class="d-flex justify-content-between align-items-center">
+                <span>JP Contábil &copy; {{ now().year }}</span>
+                <span>Desenvolvido por TI JP Contábil</span>
+            </div>
         </div>
     </footer>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-
 <script src="{{ url_for('static', filename='javascript/mensagens.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/paste_images.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle sidebar para mobile
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('show');
+        overlay.classList.remove('show');
+    }
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Fechar sidebar ao clicar em link (mobile)
+    document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+
+    // Loading state nos links
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+            if (this.href && !this.href.includes('#')) {
+                this.classList.add('loading');
+            }
+        });
+    });
+
+    // Auto-dismiss alerts
+    document.querySelectorAll('.alert-dismissible').forEach(alert => {
+        setTimeout(() => {
+            if (bootstrap.Alert) {
+                new bootstrap.Alert(alert).close();
+            }
+        }, 5000);
+    });
+
+    // Fechar sidebar ao redimensionar para desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeSidebar();
+        }
+    });
+});
+</script>
 
 {% block scripts %}{% endblock %}
 

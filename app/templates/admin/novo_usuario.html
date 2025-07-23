@@ -42,7 +42,7 @@
                         <label class="form-label fw-semibold">{{ form.username.label }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            {{ form.username(class="form-control", placeholder="Digite o nome de usuário") }}
+                            {{ form.username(class="form-control", placeholder="Nome de usuário") }}
                         </div>
                         {% for error in form.username.errors %}
                             <div class="form-text text-danger">
@@ -55,7 +55,7 @@
                         <label class="form-label fw-semibold">{{ form.email.label }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            {{ form.email(class="form-control", placeholder="Digite o e-mail") }}
+                            {{ form.email(class="form-control", placeholder="E-mail") }}
                         </div>
                         {% for error in form.email.errors %}
                             <div class="form-text text-danger">
@@ -79,7 +79,7 @@
                         <label class="form-label fw-semibold">{{ form.name.label }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-card-text"></i></span>
-                            {{ form.name(class="form-control", placeholder="Digite o nome completo") }}
+                            {{ form.name(class="form-control", placeholder="Nome completo") }}
                         </div>
                         {% for error in form.name.errors %}
                             <div class="form-text text-danger">
@@ -116,7 +116,7 @@
                         <label class="form-label fw-semibold">{{ form.password.label }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            {{ form.password(class="form-control", placeholder="Digite a senha", type="password", id="password") }}
+                            {{ form.password(class="form-control", placeholder="Senha", type="password", id="password") }}
                             <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                 <i class="bi bi-eye"></i>
                             </button>
