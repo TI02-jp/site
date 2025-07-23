@@ -57,8 +57,8 @@ class EditUserForm(FlaskForm):
 
 
 class DepartamentoForm(FlaskForm):
-    responsavel = StringField('Responsável', validators=[DataRequired()])
-    descricao = StringField('Descrição', validators=[DataRequired()])
+    responsavel = StringField('Responsável')
+    descricao = StringField('Descrição')
 
 class DepartamentoFiscalForm(DepartamentoForm):
     formas_importacao = SelectMultipleField('Formas de Importação', choices=[
@@ -104,12 +104,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('ligacao', 'Ligação Telefônica'),
         ('acessorias', 'Acessórias')
     ])
-    
-    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
     particularidades_texto = TextAreaField('Particularidades')
-    
-    ## ALTERAÇÃO 2: Campo de upload múltiplo removido, pois o editor agora lida com isso. ##
-    # particularidades_imagens = MultipleFileField(...) # Removido
 
 class DepartamentoContabilForm(DepartamentoForm):
     metodo_importacao = SelectField('Forma de Importação', choices=[
@@ -145,8 +140,6 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('conferir_aplicacao', 'Conferir aplicação')
     ])
     observacao_controle_relatorios = StringField('Observação Relatórios')
-    
-    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
     particularidades_texto = TextAreaField('Particularidades')
 
 class DepartamentoPessoalForm(DepartamentoForm):
@@ -154,6 +147,4 @@ class DepartamentoPessoalForm(DepartamentoForm):
     registro_funcionarios = StringField('Registro de Funcionários')
     ponto_eletronico = StringField('Ponto Eletrônico')
     pagamento_funcionario = StringField('Pagamento de Funcionário')
-    
-    ## ALTERAÇÃO 1: Renomeado para corresponder ao models.py e ao template ##
     particularidades_texto = TextAreaField('Particularidades')

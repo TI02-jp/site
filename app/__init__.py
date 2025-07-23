@@ -24,24 +24,23 @@ migrate = Migrate(app, db)
 
 # Login Manager
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'  # Rota onde o usuário será redirecionado se não estiver logado
+login_manager.login_view = 'login'
 
-# Importa o modelo User para o user_loader
 from app.models.tables import User
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))  # busca o usuário pelo ID
+    return User.query.get(int(user_id))
 
 @app.context_processor
 def inject_now():
     from datetime import datetime
     return {'now': datetime.now}
 
-# Criação das tabelas (apenas para desenvolvimento)
+# Criação das tabelas
 with app.app_context():
-    db.create_all()  # Isso cria as tabelas no banco de dados, se não existirem
+    db.create_all()
 
-# Importa os controladores (depois de tudo configurado)
+# Importa os controladores
 from app.forms import *
 from app.controllers import routes

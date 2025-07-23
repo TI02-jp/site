@@ -40,57 +40,6 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Cards de Estatísticas Rápidas -->
-    <div class="row mb-5">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 card-hover">
-                <div class="card-body text-center p-4">
-                    <div class="icon-circle bg-primary-subtle text-primary mb-3">
-                        <i class="bi bi-buildings fs-2"></i>
-                    </div>
-                    <h4 class="text-primary mb-2">{{ total_empresas or 0 }}</h4>
-                    <p class="text-muted mb-0">Empresas Cadastradas</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 card-hover">
-                <div class="card-body text-center p-4">
-                    <div class="icon-circle bg-success-subtle text-success mb-3">
-                        <i class="bi bi-diagram-3 fs-2"></i>
-                    </div>
-                    <h4 class="text-success mb-2">{{ total_departamentos or 0 }}</h4>
-                    <p class="text-muted mb-0">Departamentos Ativos</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 card-hover">
-                <div class="card-body text-center p-4">
-                    <div class="icon-circle bg-info-subtle text-info mb-3">
-                        <i class="bi bi-people fs-2"></i>
-                    </div>
-                    <h4 class="text-info mb-2">{{ total_usuarios or 0 }}</h4>
-                    <p class="text-muted mb-0">Usuários do Sistema</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 card-hover">
-                <div class="card-body text-center p-4">
-                    <div class="icon-circle bg-warning-subtle text-warning mb-3">
-                        <i class="bi bi-clock-history fs-2"></i>
-                    </div>
-                    <h4 class="text-warning mb-2">Hoje</h4>
-                    <p class="text-muted mb-0">Última Atividade</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Ações Principais -->
     <div class="row mb-5">
         <div class="col-12">
@@ -217,9 +166,11 @@
                         <i class="bi bi-bookmark-star me-2"></i>Acesso Rápido
                     </h5>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        {% if current_user.role == 'admin' %}
                         <a href="{{ url_for('novo_usuario') }}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-person-plus me-1"></i>Novo Usuário
                         </a>
+                        {% endif %}
                         <a href="#" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-download me-1"></i>Exportar Dados
                         </a>

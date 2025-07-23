@@ -117,9 +117,15 @@
                         <div class="border rounded p-3 bg-light">
                             <div class="row">
                                 {% for value, label in form.envio_digital.choices %}
-                                <div class="col-md-6 mb-2">
+                                <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}[]" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data or []) %}checked{% endif %}>
+                                        <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="{{ form.envio_digital.name }}"
+                                        value="{{ value }}"
+                                        id="ed-{{ loop.index }}"
+                                        {% if value in (form.envio_digital.data) %}checked{% endif %}>
                                         <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -425,72 +431,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Submissão do formulário com preparação de dados
-    document.querySelector('form').addEventListener('submit', function (e) {
-        console.log('Preparando dados do departamento fiscal...');
-        
-        // Validação básica
-        const responsavel = document.querySelector('#responsavel').value.trim();
-        const descricao = document.querySelector('#descricao').value.trim();
-
-        if (!responsavel || !descricao) {
-            e.preventDefault();
-            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return;
-        }
-
-        // 1. Preparar conteúdo do editor Quill
+    document.querySelector('form[method="POST"]').addEventListener('submit', function (e) {
+        // A única coisa que precisamos fazer é atualizar o campo do editor Quill.
+        // O WTForms cuidará de todos os outros campos (checkboxes, selects, etc.)
         const particularidadesField = document.querySelector('#particularidades');
-        if (particularidadesField) {
+        if (particularidadesField && window.quill) {
             particularidadesField.value = quill.root.innerHTML;
         }
 
-        // 2. Preparar dados de contato como JSON
-        const contactData = prepareContactData();
-        if (contactData) {
-            // Criar campo hidden para contatos
-            let contactField = document.querySelector('#contatos_json');
-            if (!contactField) {
-                contactField = document.createElement('input');
-                contactField.type = 'hidden';
-                contactField.name = 'contatos_json';
-                contactField.id = 'contatos_json';
-                this.appendChild(contactField);
-            }
-            contactField.value = JSON.stringify(contactData);
+        // Validação simples (opcional, mas recomendada)
+        const responsavel = document.querySelector('#responsavel').value.trim();
+        if (!responsavel) {
+            e.preventDefault(); // Impede o envio do formulário
+            alert('O campo "Responsável" é obrigatório.');
+            return;
         }
-
-        // 3. Preparar arrays de checkboxes
-        const formasImportacao = getCheckedValues('formas_importacao');
-        const envioDigital = getCheckedValues('envio_digital');
-        const envioDigitalFisico = getCheckedValues('envio_digital_fisico');
-
-        // Criar campos hidden para os arrays
-        ['formas_importacao', 'envio_digital', 'envio_digital_fisico'].forEach(fieldName => {
-            let hiddenField = document.querySelector(`#${fieldName}_json`);
-            if (!hiddenField) {
-                hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = `${fieldName}_json`;
-                hiddenField.id = `${fieldName}_json`;
-                this.appendChild(hiddenField);
-            }
-            
-            let values = [];
-            if (fieldName === 'formas_importacao') values = formasImportacao;
-            else if (fieldName === 'envio_digital') values = envioDigital;
-            else if (fieldName === 'envio_digital_fisico') values = envioDigitalFisico;
-            
-            hiddenField.value = JSON.stringify(values);
-        });
-
-        console.log('Dados preparados do fiscal:', {
-            formasImportacao,
-            envioDigital,
-            envioDigitalFisico,
-            contatos: contactData,
-            particularidades: quill.root.innerHTML
-        });
-    });
 
     // Estilo visual para checkboxes selecionados
     document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function (checkbox) {

@@ -213,7 +213,7 @@
                                         <input 
                                             class="form-check-input" 
                                             type="checkbox" 
-                                            name="{{ form.sistemas_consultorias.name }}" {# Removido "[]" para o Flask Forms lidar com MultiCheckboxField #}
+                                            name="{{ form.sistemas_consultorias.name }}"
                                             value="{{ value }}" 
                                             id="sistema-{{ loop.index }}"
                                             {% if value in form.sistemas_consultorias.data %}checked{% endif %}

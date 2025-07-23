@@ -3,15 +3,47 @@
 {% block title %}{{ empresa.NomeEmpresa }} - Detalhes Completos{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item">
-    <a href="{{ url_for('listar_empresas') }}">Empresas</a>
-</li>
+<li class="breadcrumb-item"><a href="{{ url_for('listar_empresas') }}">Empresas</a></li>
 <li class="breadcrumb-item active">{{ empresa.NomeEmpresa }}</li>
 {% endblock %}
 
 {% block content %}
+{#
+    MACRO PARA RENDERIZAR LISTAS DE BADGES
+    Este macro simplifica a exibição de dados que podem ser uma lista, uma string separada por vírgulas,
+    ou uma string formatada como uma lista Python. Ele elimina a lógica repetitiva nos templates de cada departamento.
+#}
+{% macro render_badge_list(items, badge_class, icon_class, placeholder_html) %}
+    {% if items %}
+        <div class="d-flex flex-wrap gap-2">
+            {% set processed_items = [] %}
+            {% if items is iterable and items is not string %}
+                {% set processed_items = items %}
+            {% elif items is string and items.strip() %}
+                {% set temp_str = items.strip() %}
+                {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                    {# Remove colchetes e aspas para strings como "['item1', 'item2']" #}
+                    {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                {% endif %}
+                {% set processed_items = temp_str.split(',') %}
+            {% elif items %}
+                 {# Trata como um único item se não for iterável nem string, mas existir #}
+                {% set processed_items = [items|string] %}
+            {% endif %}
+
+            {% for item in processed_items if item and item.strip() %}
+                <span class="badge {{ badge_class }} fs-6 px-3 py-2">
+                    <i class="bi {{ icon_class }} me-1"></i>{{ item.strip() }}
+                </span>
+            {% endfor %}
+        </div>
+    {% else %}
+        {{ placeholder_html|safe }}
+    {% endif %}
+{% endmacro %}
+
+
 <div class="container-fluid" style="max-width: 1400px;">
-    <!-- Cabeçalho da Página -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
@@ -35,175 +67,86 @@
         </div>
     </div>
 
-    <!-- Navegação Rápida -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-building me-1"></i>Dados da Empresa
-                        </a>
-                        {% if fiscal %}
-                        <a href="#fiscal" class="btn btn-outline-success btn-sm">
-                            <i class="bi bi-receipt me-1"></i>Fiscal
-                        </a>
-                        {% endif %}
-                        {% if contabil %}
-                        <a href="#contabil" class="btn btn-outline-info btn-sm">
-                            <i class="bi bi-calculator me-1"></i>Contábil
-                        </a>
-                        {% endif %}
-                        {% if pessoal %}
-                        <a href="#pessoal" class="btn btn-outline-warning btn-sm">
-                            <i class="bi bi-people me-1"></i>Pessoal
-                        </a>
-                        {% endif %}
-                        {% if administrativo %}
-                        <a href="#administrativo" class="btn btn-outline-dark btn-sm">
-                            <i class="bi bi-gear me-1"></i>Administrativo
-                        </a>
-                        {% endif %}
+                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
+                        <a href="#fiscal" class="btn btn-outline-success btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn btn-outline-info btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn btn-outline-warning btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn btn-outline-dark btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Dados da Empresa -->
     <div class="card shadow-lg mb-5" id="dados-empresa">
         <div class="card-header bg-primary text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-building me-2"></i>Dados da Empresa
-            </h3>
+            <h3 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Dados da Empresa</h3>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
-                <!-- Coluna 1 -->
-                <div class="col-lg-4 col-md-6">
+                 <div class="col-lg-4 col-md-6">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2">Identificação</h6>
-                        
+                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
                         <div class="info-item">
                             <label class="info-label">Código da Empresa</label>
-                            <div class="info-value">
-                                <span class="badge bg-primary-subtle text-primary fs-6">
-                                    {{ empresa.CodigoEmpresa or '-' }}
-                                </span>
-                            </div>
+                            <div class="info-value"><span class="badge bg-primary-subtle text-primary fs-6">{{ empresa.CodigoEmpresa or 'Não informado' }}</span></div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Nome da Empresa</label>
-                            <div class="info-value fw-semibold">{{ empresa.NomeEmpresa or '-' }}</div>
+                            <div class="info-value fw-semibold text-primary">{{ empresa.NomeEmpresa or 'Não informado' }}</div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">CNPJ</label>
-                            <div class="info-value font-monospace">
-                                {% if empresa.CNPJ %}
-                                    {% set cnpj = empresa.CNPJ|string %}
-                                    {% if cnpj|length == 14 %}
-                                        {{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}
-                                    {% else %}
-                                        {{ empresa.CNPJ }}
-                                    {% endif %}
-                                {% else %}
-                                    -
-                                {% endif %}
+                            <div class="info-value font-monospace clickable-copy">
+                                {% if empresa.CNPJ %}{% set cnpj = empresa.CNPJ|string %}{% if cnpj|length == 14 %}{{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}{% else %}{{ empresa.CNPJ }}{% endif %}{% else %}<span class="text-muted">Não informado</span>{% endif %}
                             </div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Data de Abertura</label>
                             <div class="info-value">
-                                {% if empresa.DataAbertura %}
-                                    {% set data_abertura = empresa.DataAbertura %}
-                                    {% if data_abertura.__class__.__name__ == 'str' %}
-                                        {% if '/' in data_abertura %}
-                                            {{ data_abertura }}
-                                        {% elif '-' in data_abertura %}
-                                            {% set parts = data_abertura.split('-') %}
-                                            {% if parts|length == 3 %}
-                                                {{ parts[2] }}/{{ parts[1] }}/{{ parts[0] }}
-                                            {% else %}
-                                                {{ data_abertura }}
-                                            {% endif %}
-                                        {% else %}
-                                            {{ data_abertura }}
-                                        {% endif %}
-                                    {% elif data_abertura.__class__.__name__ in ['date', 'datetime'] %}
-                                        {{ data_abertura.strftime('%d/%m/%Y') }}
-                                    {% else %}
-                                        {{ data_abertura }}
-                                    {% endif %}
-                                {% else %}
-                                    -
-                                {% endif %}
+                                {% if empresa.DataAbertura %}{% if empresa.DataAbertura.__class__.__name__ in ['date', 'datetime'] %}<span class="badge bg-info-subtle text-info">{{ empresa.DataAbertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="badge bg-info-subtle text-info">{{ empresa.DataAbertura }}</span>{% endif %}{% else %}<span class="text-muted">Não informada</span>{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Coluna 2 -->
-                <div class="col-lg-4 col-md-6">
+                 <div class="col-lg-4 col-md-6">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2">Informações Empresariais</h6>
-                        
+                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
                         <div class="info-item">
                             <label class="info-label">Sócio Administrador</label>
-                            <div class="info-value">{{ empresa.SocioAdministrador or '-' }}</div>
+                            <div class="info-value">{% if empresa.SocioAdministrador %}<i class="bi bi-person-check me-2 text-primary"></i>{{ empresa.SocioAdministrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Atividade Principal</label>
-                            <div class="info-value">{{ empresa.AtividadePrincipal or '-' }}</div>
+                            <div class="info-value">{% if empresa.AtividadePrincipal %}</i>{{ empresa.AtividadePrincipal }}{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Tributação</label>
-                            <div class="info-value">
-                                {% if empresa.Tributacao %}
-                                    <span class="badge bg-success-subtle text-success">{{ empresa.Tributacao }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
+                            <div class="info-value">{% if empresa.Tributacao %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.Tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Regime de Lançamento</label>
-                            <div class="info-value">
-                                {% if empresa.RegimeLancamento %}
-                                    <span class="badge bg-info-subtle text-info">{{ empresa.RegimeLancamento }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
+                            <div class="info-value">{% if empresa.RegimeLancamento %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-journal-text me-1"></i>{{ empresa.RegimeLancamento }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Coluna 3 -->
                 <div class="col-lg-4 col-md-12">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2">Sistemas e Tecnologia</h6>
-                        
+                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
                         <div class="info-item">
                             <label class="info-label">Sistema Utilizado</label>
-                            <div class="info-value">{{ empresa.SistemaUtilizado or '-' }}</div>
+                            <div class="info-value">{% if empresa.SistemaUtilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-primary"></i><span class="badge bg-primary-subtle text-primary">{{ empresa.SistemaUtilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
-                        
                         <div class="info-item">
                             <label class="info-label">Sistemas/Consultorias</label>
                             <div class="info-value">
-                                {% if empresa.SistemasConsultorias and empresa.SistemasConsultorias.strip() %}
-                                    {% for sistema in empresa.SistemasConsultorias.split(',') %}
-                                        <span class="badge bg-secondary me-1 mb-1">{{ sistema.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
+                                {% set placeholder_sistemas %}<span class="text-muted">Nenhum sistema adicional</span>{% endset %}
+                                {{ render_badge_list(empresa.SistemasConsultorias, 'badge bg-secondary', 'bi-tools', placeholder_sistemas) }}
                             </div>
                         </div>
                     </div>
@@ -212,477 +155,452 @@
         </div>
     </div>
 
-    <!-- Departamento Fiscal -->
+    <div id="fiscal">
     {% if fiscal %}
-    <div class="card shadow-lg mb-5" id="fiscal">
-        <div class="card-header bg-success text-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0 fw-semibold">
-                    <i class="bi bi-receipt me-2"></i>Departamento Fiscal
-                </h3>
-                {% if fiscal.updated_at %}
-                <small class="opacity-75">
-                    <i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                </small>
+        <div class="card shadow-lg mb-5">
+            <div class="card-header bg-success text-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
+                    {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <div class="info-item">
+                                <label class="info-label">Responsável</label>
+                                <div class="info-value">{% if fiscal.responsavel %}<i class="bi bi-person-badge me-2 text-success"></i><span class="fw-semibold">{{ fiscal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Descrição do Departamento</label>
+                                <div class="info-value">{% if fiscal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-success"></i>{{ fiscal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Forma de Movimento</label>
+                                <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
+                            <div class="info-item">
+                                <label class="info-label">Link da Prefeitura</label>
+                                <div class="info-value">{% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}<a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-success"></i><span class="text-primary">{{ fiscal.link_prefeitura[:60] }}{% if fiscal.link_prefeitura|length > 60 %}...{% endif %}</span><i class="bi bi-box-arrow-up-right ms-1"></i></a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Usuário da Prefeitura</label>
+                                <div class="info-value">{% if fiscal.usuario_prefeitura %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-success"></i>{{ fiscal.usuario_prefeitura }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Senha da Prefeitura</label>
+                                <div class="info-value">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-success"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-success ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-12">
+                         <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
+                            <div class="info-value">
+                                {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
+                                {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                         <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
+                            <div class="info-value">
+                                {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                {{ render_badge_list(fiscal.envio_digital, 'bg-success-subtle text-success', 'bi-cloud-check', placeholder_env_digital) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
+                             <div class="info-value">
+                                {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                {{ render_badge_list(fiscal.envio_digital_fisico, 'bg-warning-subtle text-warning', 'bi-layers', placeholder_env_fisico) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 {% if fiscal.particularidades_texto and fiscal.particularidades_texto.strip() %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="info-group">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <div class="border rounded p-4 bg-white editor-content">{{ fiscal.particularidades_texto|safe }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <!-- Informações Básicas -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-success mb-3 border-bottom pb-2">Informações Básicas</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Responsável</label>
-                            <div class="info-value">{{ fiscal.responsavel or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Descrição</label>
-                            <div class="info-value">{{ fiscal.descricao or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Forma Movimento</label>
-                            <div class="info-value">{{ fiscal.forma_movimento or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Importação e Movimento -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-success mb-3 border-bottom pb-2">Importação e Movimento</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Formas de Importação</label>
-                            <div class="info-value">
-                                {% if fiscal.formas_importacao and fiscal.formas_importacao.strip() %}
-                                    {% for forma in fiscal.formas_importacao.split(',') %}
-                                        <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ forma.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Envio Digital</label>
-                            <div class="info-value">
-                                {% if fiscal.envio_digital and fiscal.envio_digital.strip() %}
-                                    {% for envio in fiscal.envio_digital.split(',') %}
-                                        <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Envio Digital/Físico</label>
-                            <div class="info-value">
-                                {% if fiscal.envio_digital_fisico and fiscal.envio_digital_fisico.strip() %}
-                                    {% for envio in fiscal.envio_digital_fisico.split(',') %}
-                                        <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Observação Movimento</label>
-                            <div class="info-value">{{ fiscal.observacao_movimento or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Acesso Prefeitura e Contato -->
-                <div class="col-lg-4 col-md-12">
-                    <div class="info-group">
-                        <h6 class="text-success mb-3 border-bottom pb-2">Prefeitura e Contato</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Link Prefeitura</label>
-                            <div class="info-value">
-                                {% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}
-                                    <a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none">
-                                        <i class="bi bi-link-45deg me-1"></i>{{ fiscal.link_prefeitura[:50] }}{% if fiscal.link_prefeitura|length > 50 %}...{% endif %}
-                                    </a>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Usuário Prefeitura</label>
-                            <div class="info-value font-monospace">{{ fiscal.usuario_prefeitura or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Senha Prefeitura</label>
-                            <div class="info-value">
-                                {% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}
-                                    <span class="password-field" data-password="{{ fiscal.senha_prefeitura }}">
-                                        <span class="password-hidden">••••••••</span>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2 toggle-password">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </span>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Nome do Contato</label>
-                            <div class="info-value">{{ fiscal.contato_nome or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Meios de Contato</label>
-                            <div class="info-value">
-                                {% if fiscal.contato_meios and fiscal.contato_meios.strip() %}
-                                    {% for meio in fiscal.contato_meios.split(',') %}
-                                        <span class="badge bg-info-subtle text-info me-1 mb-1">{{ meio.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Particularidades (se existir) -->
-            {% if fiscal.particularidades and fiscal.particularidades.strip() %}
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="info-group">
-                        <h6 class="text-success mb-3 border-bottom pb-2">Particularidades</h6>
-                        <div class="border rounded p-3 bg-light">
-                            {{ fiscal.particularidades|safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+    {% else %}
+        <div class="card shadow-lg mb-5 border-success">
+            <div class="card-header bg-success text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-success mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
-    </div>
     {% endif %}
+    </div>
 
-    <!-- Departamento Contábil -->
+    <div id="contabil">
     {% if contabil %}
-    <div class="card shadow-lg mb-5" id="contabil">
-        <div class="card-header bg-info text-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0 fw-semibold">
-                    <i class="bi bi-calculator me-2"></i>Departamento Contábil
-                </h3>
-                {% if contabil.updated_at %}
-                <small class="opacity-75">
-                    <i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                </small>
+        <div class="card shadow-lg mb-5">
+            <div class="card-header bg-info text-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
+                    {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <div class="info-item">
+                                <label class="info-label">Responsável</label>
+                                <div class="info-value">{% if contabil.responsavel %}<i class="bi bi-person-badge me-2 text-info"></i><span class="fw-semibold">{{ contabil.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Descrição</label>
+                                <div class="info-value">{% if contabil.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-info"></i>{{ contabil.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Método de Importação</label>
+                                <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-download me-1"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                             <div class="info-item">
+                                <label class="info-label">Forma de Movimento</label>
+                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-chat-square-text me-2"></i>Observações</h6>
+                             <div class="info-item">
+                                <label class="info-label">Observação de Movimento</label>
+                                <div class="info-value">{% if contabil.observacao_movimento %}<div class="border rounded p-3 bg-light"><i class="bi bi-sticky me-2 text-info"></i>{{ contabil.observacao_movimento }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-chat-square fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Observação de Relatórios</label>
+                                <div class="info-value">{% if contabil.observacao_controle_relatorios %}<div class="border rounded p-3 bg-light"><i class="bi bi-file-earmark-text me-2 text-info"></i>{{ contabil.observacao_controle_relatorios }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-file-earmark fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
+                            <div class="info-value">
+                                {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                {{ render_badge_list(contabil.envio_digital, 'bg-success-subtle text-success', 'bi-cloud-check', placeholder_cont_digital) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
+                            <div class="info-value">
+                                {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                {{ render_badge_list(contabil.envio_digital_fisico, 'bg-warning-subtle text-warning', 'bi-layers', placeholder_cont_fisico) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-4 mt-2">
+                    <div class="col-12">
+                        <div class="info-group">
+                             <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
+                             <div class="info-value">
+                                {% set placeholder_relatorios %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-earmark-x fs-2 mb-2"></i><p class="mb-0">Nenhum controle de relatório configurado</p></div>{% endset %}
+                                {{ render_badge_list(contabil.controle_relatorios, 'bg-primary-subtle text-primary', 'bi-check-square', placeholder_relatorios) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if contabil.particularidades_texto and contabil.particularidades_texto.strip() %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="info-group">
+                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <div class="border rounded p-4 bg-white editor-content">{{ contabil.particularidades_texto|safe }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <!-- Informações Básicas -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-info mb-3 border-bottom pb-2">Informações Básicas</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Responsável</label>
-                            <div class="info-value">{{ contabil.responsavel or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Descrição</label>
-                            <div class="info-value">{{ contabil.descricao or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Método de Importação</label>
-                            <div class="info-value">{{ contabil.metodo_importacao or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Forma Movimento</label>
-                            <div class="info-value">{{ contabil.forma_movimento or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Envio e Movimento -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-info mb-3 border-bottom pb-2">Envio e Movimento</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Envio Digital</label>
-                            <div class="info-value">
-                                {% if contabil.envio_digital and contabil.envio_digital.strip() %}
-                                    {% for envio in contabil.envio_digital.split(',') %}
-                                        <span class="badge bg-success-subtle text-success me-1 mb-1">{{ envio.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Envio Digital/Físico</label>
-                            <div class="info-value">
-                                {% if contabil.envio_digital_fisico and contabil.envio_digital_fisico.strip() %}
-                                    {% for envio in contabil.envio_digital_fisico.split(',') %}
-                                        <span class="badge bg-warning-subtle text-warning me-1 mb-1">{{ envio.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Observação Movimento</label>
-                            <div class="info-value">{{ contabil.observacao_movimento or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Controle e Relatórios -->
-                <div class="col-lg-4 col-md-12">
-                    <div class="info-group">
-                        <h6 class="text-info mb-3 border-bottom pb-2">Controle e Relatórios</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Controle Relatórios</label>
-                            <div class="info-value">
-                                {% if contabil.controle_relatorios and contabil.controle_relatorios.strip() %}
-                                    {% for controle in contabil.controle_relatorios.split(',') %}
-                                        <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ controle.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Observação Relatórios</label>
-                            <div class="info-value">{{ contabil.observacao_controle_relatorios or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Particularidades (se existir) -->
-            {% if contabil.particularidades and contabil.particularidades.strip() %}
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="info-group">
-                        <h6 class="text-info mb-3 border-bottom pb-2">Particularidades</h6>
-                        <div class="border rounded p-3 bg-light">
-                            {{ contabil.particularidades|safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+    {% else %}
+        <div class="card shadow-lg mb-5 border-info">
+            <div class="card-header bg-info text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-info mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-info"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
-    </div>
     {% endif %}
+    </div>
 
-    <!-- Departamento Pessoal -->
+    <div id="pessoal">
     {% if pessoal %}
-    <div class="card shadow-lg mb-5" id="pessoal">
-        <div class="card-header text-white py-3" style="background-color: #f39c12;">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0 fw-semibold">
-                    <i class="bi bi-people me-2"></i>Departamento Pessoal
-                </h3>
-                {% if pessoal.updated_at %}
-                <small class="opacity-75">
-                    <i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                </small>
+        <div class="card shadow-lg mb-5">
+            <div class="card-header text-white py-3" style="background-color: #f39c12;">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
+                    {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <div class="info-item">
+                                <label class="info-label">Responsável</label>
+                                <div class="info-value">{% if pessoal.responsavel %}<i class="bi bi-person-badge me-2 text-warning"></i><span class="fw-semibold">{{ pessoal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Descrição</label>
+                                <div class="info-value">{% if pessoal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-warning"></i>{{ pessoal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                             <div class="info-item">
+                                <label class="info-label">Data de Envio</label>
+                                <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-calendar-event me-1"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col-lg-6 col-md-12">
+                        <div class="info-group">
+                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
+                            <div class="info-item">
+                                <label class="info-label">Registro de Funcionários</label>
+                                <div class="info-value">{% if pessoal.registro_funcionarios %}<div class="d-flex align-items-center"><i class="bi bi-person-lines-fill me-2 text-warning"></i><span class="badge bg-warning-subtle text-warning">{{ pessoal.registro_funcionarios }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Sistema de Ponto Eletrônico</label>
+                                <div class="info-value">{% if pessoal.ponto_eletronico %}<div class="d-flex align-items-center"><i class="bi bi-clock me-2 text-warning"></i><span class="badge bg-info-subtle text-info">{{ pessoal.ponto_eletronico }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Sistema de Pagamento</label>
+                                <div class="info-value">{% if pessoal.pagamento_funcionario %}<div class="d-flex align-items-center"><i class="bi bi-currency-dollar me-2 text-warning"></i><span class="badge bg-success-subtle text-success">{{ pessoal.pagamento_funcionario }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-12">
+                        <div class="info-group">
+                             <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>Resumo dos Sistemas Configurados</h6>
+                             <div class="row text-center g-3">
+                                 <div class="col-md-4">
+                                     <div class="p-3 border rounded {% if pessoal.registro_funcionarios %}bg-success-subtle border-success{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-person-check fs-2 {% if pessoal.registro_funcionarios %}text-success{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Registro de Funcionários</h6><small class="{% if pessoal.registro_funcionarios %}text-success fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.registro_funcionarios %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
+                                 </div>
+                                  <div class="col-md-4">
+                                     <div class="p-3 border rounded {% if pessoal.ponto_eletronico %}bg-info-subtle border-info{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-clock-history fs-2 {% if pessoal.ponto_eletronico %}text-info{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Ponto Eletrônico</h6><small class="{% if pessoal.ponto_eletronico %}text-info fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.ponto_eletronico %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
+                                 </div>
+                                 <div class="col-md-4">
+                                     <div class="p-3 border rounded {% if pessoal.pagamento_funcionario %}bg-warning-subtle border-warning{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-credit-card fs-2 {% if pessoal.pagamento_funcionario %}text-warning{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Sistema de Pagamento</h6><small class="{% if pessoal.pagamento_funcionario %}text-warning fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.pagamento_funcionario %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if pessoal.particularidades_texto and pessoal.particularidades_texto.strip() %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="info-group">
+                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <!-- Informações Básicas -->
-                <div class="col-lg-6 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-warning mb-3 border-bottom pb-2">Informações Básicas</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Responsável</label>
-                            <div class="info-value">{{ pessoal.responsavel or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Descrição</label>
-                            <div class="info-value">{{ pessoal.descricao or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Data de Envio</label>
-                            <div class="info-value">{{ pessoal.data_envio or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Controles e Sistemas -->
-                <div class="col-lg-6 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-warning mb-3 border-bottom pb-2">Controles e Sistemas</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Registro de Funcionários</label>
-                            <div class="info-value">{{ pessoal.registro_funcionarios or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Ponto Eletrônico</label>
-                            <div class="info-value">{{ pessoal.ponto_eletronico or '-' }}</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Pagamento Funcionário</label>
-                            <div class="info-value">{{ pessoal.pagamento_funcionario or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Particularidades (se existir) -->
-            {% if pessoal.particularidades and pessoal.particularidades.strip() %}
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="info-group">
-                        <h6 class="text-warning mb-3 border-bottom pb-2">Particularidades</h6>
-                        <div class="border rounded p-3 bg-light">
-                            {{ pessoal.particularidades|safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+    {% else %}
+        <div class="card shadow-lg mb-5 border-warning">
+            <div class="card-header text-white py-3" style="background-color: #f39c12;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-warning"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
-    </div>
     {% endif %}
+    </div>
 
-    <!-- Departamento Administrativo -->
+    <div id="administrativo">
     {% if administrativo %}
-    <div class="card shadow-lg mb-5" id="administrativo">
-        <div class="card-header bg-dark text-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0 fw-semibold">
-                    <i class="bi bi-gear me-2"></i>Departamento Administrativo
-                </h3>
-                {% if administrativo.updated_at %}
-                <small class="opacity-75">
-                    <i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}
-                </small>
+        <div class="card shadow-lg mb-5">
+            <div class="card-header bg-dark text-white py-3">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
+                    {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-6 col-md-6">
+                        <div class="info-group">
+                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-person-gear me-2"></i>Responsável</h6>
+                            <div class="info-item">
+                                <label class="info-label">Responsável do Departamento</label>
+                                <div class="info-value">{% if administrativo.responsavel %}<div class="d-flex align-items-center"><i class="bi bi-person-badge fs-4 me-3 text-dark"></i><div><span class="fw-semibold fs-5">{{ administrativo.responsavel }}</span><div class="text-muted small">Responsável Administrativo</div></div></div>{% else %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-person-x fs-2 mb-2"></i><p class="mb-0">Responsável não informado</p></div>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-6">
+                        <div class="info-group">
+                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-file-text me-2"></i>Descrição</h6>
+                            <div class="info-item">
+                                <label class="info-label">Descrição do Departamento</label>
+                                <div class="info-value">{% if administrativo.descricao %}<div class="border rounded p-3 bg-light"><i class="bi bi-info-circle me-2 text-dark"></i><span>{{ administrativo.descricao }}</span></div>{% else %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-text fs-2 mb-2"></i><p class="mb-0">Descrição não informada</p></div>{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if administrativo.particularidades_texto and administrativo.particularidades_texto.strip() %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="info-group">
+                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <div class="border rounded p-4 bg-white editor-content">{{ administrativo.particularidades_texto|safe }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <div class="col-lg-6 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-dark mb-3 border-bottom pb-2">Informações Básicas</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Responsável</label>
-                            <div class="info-value">{{ administrativo.responsavel or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-lg-6 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-dark mb-3 border-bottom pb-2">Descrição</h6>
-                        
-                        <div class="info-item">
-                            <label class="info-label">Descrição</label>
-                            <div class="info-value">{{ administrativo.descricao or '-' }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {% else %}
+        <div class="card shadow-lg mb-5 border-dark">
+            <div class="card-header bg-dark text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dark mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-dark"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
-    </div>
     {% endif %}
+    </div>
 
-    <!-- Resumo Geral -->
     <div class="card shadow-lg mb-5">
         <div class="card-header bg-secondary text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-info-circle me-2"></i>Resumo Geral
-            </h3>
+            <h3 class="mb-0 fw-semibold"><i class="bi bi-clipboard-check me-2"></i>Status dos Departamentos</h3>
         </div>
         <div class="card-body p-4">
             <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="text-center p-3 border rounded">
-                        <i class="bi bi-building fs-2 text-primary mb-2"></i>
-                        <h6 class="mb-1">Empresa Cadastrada</h6>
-                        <small class="text-muted">{{ empresa.NomeEmpresa }}</small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 border rounded">
-                        <i class="bi bi-receipt fs-2 text-success mb-2"></i>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center p-3 border rounded h-100 {% if fiscal %}border-success bg-success-subtle{% else %}border-secondary bg-light{% endif %}">
+                        <i class="bi bi-receipt fs-2 {% if fiscal %}text-success{% else %}text-muted{% endif %} mb-2"></i>
                         <h6 class="mb-1">Departamento Fiscal</h6>
-                        <small class="text-muted">{% if fiscal %}Configurado{% else %}Não Configurado{% endif %}</small>
+                        <small class="{% if fiscal %}text-success fw-semibold{% else %}text-muted{% endif %}">
+                            {% if fiscal %}✓ Configurado{% if fiscal.responsavel %}<br><small>Resp: {{ fiscal.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
+                        </small>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 border rounded">
-                        <i class="bi bi-calculator fs-2 text-info mb-2"></i>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center p-3 border rounded h-100 {% if contabil %}border-info bg-info-subtle{% else %}border-secondary bg-light{% endif %}">
+                        <i class="bi bi-calculator fs-2 {% if contabil %}text-info{% else %}text-muted{% endif %} mb-2"></i>
                         <h6 class="mb-1">Departamento Contábil</h6>
-                        <small class="text-muted">{% if contabil %}Configurado{% else %}Não Configurado{% endif %}</small>
+                        <small class="{% if contabil %}text-info fw-semibold{% else %}text-muted{% endif %}">
+                            {% if contabil %}✓ Configurado{% if contabil.responsavel %}<br><small>Resp: {{ contabil.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
+                        </small>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 border rounded">
-                        <i class="bi bi-people fs-2 text-warning mb-2"></i>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center p-3 border rounded h-100 {% if pessoal %}border-warning bg-warning-subtle{% else %}border-secondary bg-light{% endif %}">
+                        <i class="bi bi-people fs-2 {% if pessoal %}text-warning{% else %}text-muted{% endif %} mb-2"></i>
                         <h6 class="mb-1">Departamento Pessoal</h6>
-                        <small class="text-muted">{% if pessoal %}Configurado{% else %}Não Configurado{% endif %}</small>
+                        <small class="{% if pessoal %}text-warning fw-semibold{% else %}text-muted{% endif %}">
+                            {% if pessoal %}✓ Configurado{% if pessoal.responsavel %}<br><small>Resp: {{ pessoal.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center p-3 border rounded h-100 {% if administrativo %}border-dark bg-dark-subtle{% else %}border-secondary bg-light{% endif %}">
+                        <i class="bi bi-gear fs-2 {% if administrativo %}text-dark{% else %}text-muted{% endif %} mb-2"></i>
+                        <h6 class="mb-1">Departamento Administrativo</h6>
+                        <small class="{% if administrativo %}text-dark fw-semibold{% else %}text-muted{% endif %}">
+                            {% if administrativo %}✓ Configurado{% if administrativo.responsavel %}<br><small>Resp: {{ administrativo.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="border-top pt-3">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="p-2">
+                                    <h5 class="text-primary mb-1">{{ [fiscal, contabil, pessoal, administrativo]|select|list|length }}/4</h5>
+                                    <small class="text-muted">Departamentos Configurados</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2">
+                                    <h5 class="text-success mb-1">{% set percentual = ([fiscal, contabil, pessoal, administrativo]|select|list|length / 4 * 100)|round %}{{ percentual }}%</h5>
+                                    <small class="text-muted">Completude</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2">
+                                    <h5 class="text-info mb-1">{% if empresa.created_at %}{{ ((empresa.created_at|string)[:10])|replace('-', '/') }}{% else %}N/A{% endif %}</h5>
+                                    <small class="text-muted">Data de Cadastro</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Botões de Ação -->
-    <div class="row mb-4">
+    {% set updates = [] %}
+    {% if fiscal and fiscal.updated_at %}{% set _ = updates.append(('Fiscal', fiscal.updated_at, 'success')) %}{% endif %}
+    {% if contabil and contabil.updated_at %}{% set _ = updates.append(('Contábil', contabil.updated_at, 'info')) %}{% endif %}
+    {% if pessoal and pessoal.updated_at %}{% set _ = updates.append(('Pessoal', pessoal.updated_at, 'warning')) %}{% endif %}
+    {% if administrativo and administrativo.updated_at %}{% set _ = updates.append(('Administrativo', administrativo.updated_at, 'dark')) %}{% endif %}
+    
+    {% if updates %}
+    <div class="card shadow-lg mb-5">
+        <div class="card-header bg-light text-dark py-3">
+            <h3 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2"></i>Histórico de Atualizações</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="timeline">
+                {% for dept, timestamp, color in updates|sort(attribute=1, reverse=true) %}
+                <div class="timeline-item d-flex align-items-center mb-3">
+                    <div class="timeline-marker bg-{{ color }}-subtle border border-{{ color }} rounded-circle p-2 me-3">
+                        <i class="bi bi-{% if dept == 'Fiscal' %}receipt{% elif dept == 'Contábil' %}calculator{% elif dept == 'Pessoal' %}people{% else %}gear{% endif %} text-{{ color }}"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h6 class="mb-1">Departamento {{ dept }} Atualizado</h6>
+                        <small class="text-muted">{{ timestamp.strftime('%d/%m/%Y às %H:%M') }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row my-5">
         <div class="col-12">
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
-                    <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
-                </a>
-                <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary px-4">
-                    <i class="bi bi-pencil me-2"></i>Editar Empresa
-                </a>
-                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-info px-4">
-                    <i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos
-                </a>
-                <button onclick="window.print()" class="btn btn-outline-success px-4">
-                    <i class="bi bi-printer me-2"></i>Imprimir
-                </button>
+                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista</a>
+                <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary px-4"><i class="bi bi-pencil me-2"></i>Editar Empresa</a>
+                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-info px-4"><i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos</a>
+                <button onclick="window.print()" class="btn btn-outline-success px-4"><i class="bi bi-printer me-2"></i>Imprimir</button>
+                {% if current_user.role == 'admin' %}
+                <button onclick="exportToPDF()" class="btn btn-outline-warning px-4"><i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF</button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -690,237 +608,99 @@
 
 <style>
 /* Grupos de informação */
-.info-group {
-    background: #f8f9fa;
-    padding: 1.25rem;
-    border-radius: 0.5rem;
-    height: 100%;
-    border: 1px solid #e9ecef;
-}
+.info-group { background: #f8f9fa; padding: 1.25rem; border-radius: 0.5rem; height: 100%; border: 1px solid #e9ecef; transition: all 0.3s ease; }
+.info-group:hover { background: #f1f3f4; border-color: #dee2e6; }
+.info-item { margin-bottom: 1.25rem; }
+.info-item:last-child { margin-bottom: 0; }
+.info-label { font-weight: 600; color: #495057; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; display: block; }
+.info-value { font-size: 0.95rem; color: #212529; line-height: 1.4; word-wrap: break-word; }
 
-.info-item {
-    margin-bottom: 1.25rem;
-}
+/* Badges e Cores personalizadas */
+.bg-primary-subtle { background-color: rgba(5, 88, 197, 0.1) !important; }
+.bg-success-subtle { background-color: rgba(25, 135, 84, 0.1) !important; }
+.bg-info-subtle { background-color: rgba(13, 202, 240, 0.1) !important; }
+.bg-warning-subtle { background-color: rgba(255, 193, 7, 0.1) !important; }
+.bg-dark-subtle { background-color: rgba(33, 37, 41, 0.1) !important; }
+.text-primary { color: #0558c5 !important; }
+.card-header.bg-primary { background-color: #0558c5 !important; }
+.btn-primary, .btn-primary:hover { background-color: #0558c5; border-color: #0558c5; }
+.btn-primary:hover { background-color: #043a91; border-color: #043a91; }
+.btn-outline-primary { color: #0558c5; border-color: #0558c5; }
+.btn-outline-primary:hover { background-color: #0558c5; color: white; border-color: #0558c5; }
 
-.info-item:last-child {
-    margin-bottom: 0;
-}
+/* Componentes interativos */
+.password-field { display: flex; align-items: center; }
+.password-hidden { font-family: monospace; letter-spacing: 2px; }
+.clickable-copy { cursor: pointer; transition: all 0.2s ease; }
+.clickable-copy:hover { background-color: #e9ecef !important; transform: scale(1.02); }
+.editor-content { max-height: 400px; overflow-y: auto; }
+.editor-content img { max-width: 100%; height: auto; border-radius: 0.25rem; margin: 0.5rem 0; }
 
-.info-label {
-    font-weight: 600;
-    color: #495057;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.4rem;
-    display: block;
-}
+/* Timeline */
+.timeline { position: relative; }
+.timeline-item { position: relative; }
+.timeline-marker { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; }
+.timeline-item::before { content: ''; position: absolute; left: 19px; top: 40px; bottom: -1rem; width: 2px; background-color: #e9ecef; }
+.timeline-item:last-child::before { display: none; }
 
-.info-value {
-    font-size: 0.95rem;
-    color: #212529;
-    line-height: 1.4;
-    word-wrap: break-word;
-}
+/* Outros */
+html { scroll-behavior: smooth; }
+.font-monospace { font-family: 'Courier New', monospace; background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 0.25rem; border: 1px solid #e9ecef; }
+.fw-semibold { font-weight: 600; }
+.card { transition: all 0.3s ease; }
+.btn.active { background-color: var(--bs-primary); color: white; border-color: var(--bs-primary); }
+a.btn.btn-outline-success.active{ background-color: var(--bs-success); color:white; }
+a.btn.btn-outline-info.active{ background-color: var(--bs-info); color:white; }
+a.btn.btn-outline-warning.active{ background-color: var(--bs-warning); color:black; }
+a.btn.btn-outline-dark.active{ background-color: var(--bs-dark); color:white; }
 
-/* Badges personalizados */
-.bg-primary-subtle {
-    background-color: rgba(5, 88, 197, 0.1) !important;
-}
-
-.bg-success-subtle {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-}
-
-.bg-info-subtle {
-    background-color: rgba(13, 202, 240, 0.1) !important;
-}
-
-.bg-warning-subtle {
-    background-color: rgba(255, 193, 7, 0.1) !important;
-}
-
-/* Cores personalizadas */
-.text-primary {
-    color: #0558c5 !important;
-}
-
-.card-header.bg-primary {
-    background-color: #0558c5 !important;
-}
-
-.btn-primary {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-primary:hover {
-    background-color: #043a91;
-    border-color: #043a91;
-}
-
-.btn-outline-primary {
-    color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-outline-primary:hover {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-/* Campo de senha */
-.password-field {
-    display: flex;
-    align-items: center;
-}
-
-.password-hidden {
-    font-family: monospace;
-    letter-spacing: 2px;
-}
 
 /* Estilos para impressão */
 @media print {
-    .btn, .card-header .d-flex small, nav, .content-breadcrumb {
-        display: none !important;
-    }
-    
-    .card {
-        break-inside: avoid;
-        border: 1px solid #000 !important;
-        margin-bottom: 1rem !important;
-    }
-    
-    .card-header {
-        background: #f0f0f0 !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: exact;
-    }
-    
-    .info-group {
-        background: #f8f9fa !important;
-        -webkit-print-color-adjust: exact;
-    }
-    
-    .badge {
-        border: 1px solid #000 !important;
-        background: #fff !important;
-        color: #000 !important;
-    }
+    body, .container-fluid { margin: 0 !important; padding: 0 !important; }
+    .btn, .card-header .opacity-75, nav, .breadcrumb, .content-breadcrumb { display: none !important; }
+    .card { break-inside: avoid; border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 1.5rem !important; }
+    .card-header { background-color: #f8f9fa !important; color: #212529 !important; -webkit-print-color-adjust: exact; }
+    h1, h3, h5, h6 { color: #000 !important; }
+    .info-group { background: #fff !important; border-color: #dee2e6 !important; -webkit-print-color-adjust: exact; padding: 1rem; }
+    .badge { border: 1px solid #ccc !important; background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+    .password-hidden { font-family: monospace; }
+    .text-muted { color: #6c757d !important; }
+    a { text-decoration: none; color: #000 !important; }
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
-    .d-flex.justify-content-center.flex-wrap {
-        flex-direction: column;
-    }
-    
-    .d-flex.justify-content-center.flex-wrap .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    .info-group {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .info-label {
-        font-size: 0.75rem;
-    }
-    
-    .info-value {
-        font-size: 0.9rem;
-    }
-    
-    .container-fluid {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
-    
-    h3 {
-        font-size: 1.25rem;
-    }
-    
-    h6 {
-        font-size: 1rem;
-    }
-}
-
-/* Links */
-.info-value a {
-    color: #0558c5;
-    text-decoration: none;
-}
-
-.info-value a:hover {
-    text-decoration: underline;
-}
-
-/* Melhorias de legibilidade */
-.font-monospace {
-    font-family: 'Courier New', monospace;
-    background: #f8f9fa;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    border: 1px solid #e9ecef;
-}
-
-.fw-semibold {
-    font-weight: 600;
-}
-
-/* Animações suaves */
-.card {
-    transition: all 0.3s ease;
-}
-
-.info-group:hover {
-    background: #f1f3f4;
-    transition: background-color 0.2s ease;
-}
-
-/* Scroll suave para navegação */
-html {
-    scroll-behavior: smooth;
-}
-
-/* Estados de loading */
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    .info-group { margin-bottom: 1rem; }
+    .container-fluid { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.5rem; }
+    h3 { font-size: 1.25rem; }
 }
 </style>
+{% endblock %}
+
 
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Smooth scroll para navegação
+    // Smooth scroll para navegação com offset para o cabeçalho
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
-            const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                const offset = 100; // Offset para o header fixo
+                const offset = 80; // Ajuste este valor conforme a altura do seu cabeçalho fixo
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
+                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
             }
         });
     });
 
     // Toggle para mostrar/ocultar senhas
-    document.querySelectorAll('.toggle-password').forEach(function(btn) {
+    document.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', function() {
             const passwordField = this.closest('.password-field');
             const hiddenSpan = passwordField.querySelector('.password-hidden');
@@ -929,109 +709,79 @@ document.addEventListener("DOMContentLoaded", function () {
             
             if (hiddenSpan.textContent === '••••••••') {
                 hiddenSpan.textContent = password;
-                icon.classList.remove('bi-eye');
-                icon.classList.add('bi-eye-slash');
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
                 this.setAttribute('title', 'Ocultar senha');
             } else {
                 hiddenSpan.textContent = '••••••••';
-                icon.classList.remove('bi-eye-slash');
-                icon.classList.add('bi-eye');
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
                 this.setAttribute('title', 'Mostrar senha');
             }
         });
     });
 
-    // Highlighting da seção ativa durante scroll
-    const observerOptions = {
-        root: null,
-        rootMargin: '-20% 0px -70% 0px',
-        threshold: 0
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            const id = entry.target.getAttribute('id');
-            const navLink = document.querySelector(`a[href="#${id}"]`);
-            
-            if (entry.isIntersecting && navLink) {
-                // Remove active class from all nav links
-                document.querySelectorAll('.btn-outline-primary, .btn-outline-success, .btn-outline-info, .btn-outline-warning, .btn-outline-dark').forEach(link => {
-                    link.classList.remove('active');
-                });
-                // Add active class to current link
-                navLink.classList.add('active');
-            }
-        });
-    }, observerOptions);
-
-    // Observe all card sections
-    document.querySelectorAll('.card[id]').forEach(card => {
-        observer.observe(card);
-    });
-
-    // Copy to clipboard functionality for CNPJ and sensitive data
-    document.querySelectorAll('.font-monospace').forEach(element => {
-        if (element.textContent.trim() !== '-') {
-            element.style.cursor = 'pointer';
-            element.setAttribute('title', 'Clique para copiar');
-            
+    // Funcionalidade de copiar para a área de transferência
+    document.querySelectorAll('.clickable-copy').forEach(element => {
+        const textToCopy = element.textContent.trim();
+        if (textToCopy && textToCopy !== '-' && textToCopy !== 'Não informado') {
             element.addEventListener('click', function() {
-                navigator.clipboard.writeText(this.textContent.trim()).then(() => {
-                    // Show temporary feedback
-                    const originalText = this.textContent;
-                    this.textContent = 'Copiado!';
-                    this.style.background = '#d4edda';
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalHTML = this.innerHTML;
+                    const icon = this.querySelector('.bi-clipboard');
+                    if (icon) icon.classList.replace('bi-clipboard', 'bi-clipboard-check-fill');
                     
                     setTimeout(() => {
-                        this.textContent = originalText;
-                        this.style.background = '#f8f9fa';
-                    }, 1000);
-                });
+                        if (icon) icon.classList.replace('bi-clipboard-check-fill', 'bi-clipboard');
+                    }, 1500);
+                }).catch(err => console.error('Erro ao copiar: ', err));
             });
         }
     });
 
-    // Loading state for buttons
-    document.querySelectorAll('a.btn:not([onclick])').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (this.href && !this.href.includes('#') && !this.href.includes('javascript:')) {
-                this.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Carregando...';
-                this.disabled = true;
+    // Highlighting da seção ativa durante scroll
+    const observerOptions = { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0.1 };
+    const observer = new IntersectionObserver((entries) => {
+        let lastIntersectingId = null;
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                 lastIntersectingId = entry.target.getAttribute('id');
             }
         });
+
+        if (lastIntersectingId) {
+            document.querySelectorAll('.card-body .btn-sm').forEach(link => link.classList.remove('active'));
+            const activeLink = document.querySelector(`a[href="#${lastIntersectingId}"]`);
+            if (activeLink) activeLink.classList.add('active');
+        }
+    }, observerOptions);
+
+    document.querySelectorAll('div[id]').forEach(section => {
+        if (section.id) observer.observe(section);
     });
 
-    // Print optimization
-    window.addEventListener('beforeprint', function() {
-        // Expand all collapsed content
+    // Otimização para impressão
+    window.addEventListener('beforeprint', () => {
         document.querySelectorAll('.password-field .password-hidden').forEach(field => {
             if (field.textContent === '••••••••') {
-                const passwordField = field.closest('.password-field');
-                const password = passwordField.getAttribute('data-password');
-                if (password) {
-                    field.textContent = password;
-                }
+                const password = field.closest('.password-field').getAttribute('data-password');
+                if (password) field.textContent = password;
             }
         });
     });
 
-    window.addEventListener('afterprint', function() {
-        // Collapse sensitive content back
+    window.addEventListener('afterprint', () => {
         document.querySelectorAll('.password-field .password-hidden').forEach(field => {
-            const passwordField = field.closest('.password-field');
-            if (passwordField) {
-                field.textContent = '••••••••';
-            }
+             const password = field.closest('.password-field').getAttribute('data-password');
+             if (password) field.textContent = '••••••••';
         });
     });
 
-    // Tooltip para elementos interativos
-    document.querySelectorAll('[title]').forEach(element => {
-        if (bootstrap && bootstrap.Tooltip) {
-            new bootstrap.Tooltip(element);
-        }
-    });
+    // Função de exportar para PDF (usa a funcionalidade de impressão do navegador)
+    window.exportToPDF = function() { window.print(); };
+
+    // Inicialização de Tooltips do Bootstrap, se disponível
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        document.querySelectorAll('[title]').forEach(element => new bootstrap.Tooltip(element));
+    }
 });
 </script>
-{% endblock %}
 {% endblock %}
