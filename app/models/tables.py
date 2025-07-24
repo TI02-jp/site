@@ -82,7 +82,7 @@ class Departamento(db.Model):
     senha_prefeitura = db.Column(db.String(100))
     forma_movimento = db.Column(db.String(20))
     envio_digital = db.Column(JsonString(200))
-    envio_digital_fisico = db.Column(db.String(255))
+    envio_digital_fisico = db.Column(JsonString(200))
     observacao_movimento = db.Column(db.String(200))
     metodo_importacao = db.Column(db.String(20))
     controle_relatorios = db.Column(JsonString(255))

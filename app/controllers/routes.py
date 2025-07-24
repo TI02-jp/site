@@ -334,13 +334,11 @@ def editar_empresa(id):
 def visualizar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
     
-    # Buscar departamentos individualmente
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
     
-    # Processar dados JSON para exibição
     if fiscal and fiscal.contatos:
         try:
             if isinstance(fiscal.contatos, dict):
@@ -352,6 +350,16 @@ def visualizar_empresa(id):
         except:
             fiscal.contato_nome = ''
             fiscal.contato_meios = ''
+
+    if fiscal and fiscal.formas_importacao:
+        if isinstance(fiscal.formas_importacao, str):
+            try:
+                fiscal.formas_importacao = json.loads(fiscal.formas_importacao)
+            except:
+                fiscal.formas_importacao = []
+    else:
+        fiscal.formas_importacao = []
+
     
     return render_template('empresas/visualizar.html',
                          empresa=empresa,
@@ -365,21 +373,16 @@ def visualizar_empresa(id):
 def gerenciar_departamentos(empresa_id):
     empresa = Empresa.query.get_or_404(empresa_id)
 
-    # 1. Carrega os objetos do banco.
     fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
-    # CORREÇÃO: Faltava buscar o departamento administrativo
     administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
     
-    # 2. Instancia os formulários.
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
-    # CORREÇÃO: Faltava instanciar o formulário administrativo
     administrativo_form = DepartamentoForm(request.form, obj=administrativo)
     
-    # Tratamento manual para o campo 'contatos' (composto) ao carregar a página (GET)
     if request.method == 'GET':
         if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
             fiscal_form.contato_nome.data = fiscal.contatos.get('nome')

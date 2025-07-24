@@ -8,11 +8,6 @@
 {% endblock %}
 
 {% block content %}
-{#
-    MACRO PARA RENDERIZAR LISTAS DE BADGES
-    Este macro simplifica a exibição de dados que podem ser uma lista, uma string separada por vírgulas,
-    ou uma string formatada como uma lista Python. Ele elimina a lógica repetitiva nos templates de cada departamento.
-#}
 {% macro render_badge_list(items, badge_class, icon_class, placeholder_html) %}
     {% if items %}
         <div class="d-flex flex-wrap gap-2">
@@ -22,12 +17,10 @@
             {% elif items is string and items.strip() %}
                 {% set temp_str = items.strip() %}
                 {% if temp_str.startswith('[') and temp_str.endswith(']') %}
-                    {# Remove colchetes e aspas para strings como "['item1', 'item2']" #}
                     {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
                 {% endif %}
                 {% set processed_items = temp_str.split(',') %}
             {% elif items %}
-                 {# Trata como um único item se não for iterável nem string, mas existir #}
                 {% set processed_items = [items|string] %}
             {% endif %}
 
@@ -209,7 +202,7 @@
                             <div class="info-value">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -605,80 +598,7 @@
         </div>
     </div>
 </div>
-
-<style>
-/* Grupos de informação */
-.info-group { background: #f8f9fa; padding: 1.25rem; border-radius: 0.5rem; height: 100%; border: 1px solid #e9ecef; transition: all 0.3s ease; }
-.info-group:hover { background: #f1f3f4; border-color: #dee2e6; }
-.info-item { margin-bottom: 1.25rem; }
-.info-item:last-child { margin-bottom: 0; }
-.info-label { font-weight: 600; color: #495057; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; display: block; }
-.info-value { font-size: 0.95rem; color: #212529; line-height: 1.4; word-wrap: break-word; }
-
-/* Badges e Cores personalizadas */
-.bg-primary-subtle { background-color: rgba(5, 88, 197, 0.1) !important; }
-.bg-success-subtle { background-color: rgba(25, 135, 84, 0.1) !important; }
-.bg-info-subtle { background-color: rgba(13, 202, 240, 0.1) !important; }
-.bg-warning-subtle { background-color: rgba(255, 193, 7, 0.1) !important; }
-.bg-dark-subtle { background-color: rgba(33, 37, 41, 0.1) !important; }
-.text-primary { color: #0558c5 !important; }
-.card-header.bg-primary { background-color: #0558c5 !important; }
-.btn-primary, .btn-primary:hover { background-color: #0558c5; border-color: #0558c5; }
-.btn-primary:hover { background-color: #043a91; border-color: #043a91; }
-.btn-outline-primary { color: #0558c5; border-color: #0558c5; }
-.btn-outline-primary:hover { background-color: #0558c5; color: white; border-color: #0558c5; }
-
-/* Componentes interativos */
-.password-field { display: flex; align-items: center; }
-.password-hidden { font-family: monospace; letter-spacing: 2px; }
-.clickable-copy { cursor: pointer; transition: all 0.2s ease; }
-.clickable-copy:hover { background-color: #e9ecef !important; transform: scale(1.02); }
-.editor-content { max-height: 400px; overflow-y: auto; }
-.editor-content img { max-width: 100%; height: auto; border-radius: 0.25rem; margin: 0.5rem 0; }
-
-/* Timeline */
-.timeline { position: relative; }
-.timeline-item { position: relative; }
-.timeline-marker { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; }
-.timeline-item::before { content: ''; position: absolute; left: 19px; top: 40px; bottom: -1rem; width: 2px; background-color: #e9ecef; }
-.timeline-item:last-child::before { display: none; }
-
-/* Outros */
-html { scroll-behavior: smooth; }
-.font-monospace { font-family: 'Courier New', monospace; background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 0.25rem; border: 1px solid #e9ecef; }
-.fw-semibold { font-weight: 600; }
-.card { transition: all 0.3s ease; }
-.btn.active { background-color: var(--bs-primary); color: white; border-color: var(--bs-primary); }
-a.btn.btn-outline-success.active{ background-color: var(--bs-success); color:white; }
-a.btn.btn-outline-info.active{ background-color: var(--bs-info); color:white; }
-a.btn.btn-outline-warning.active{ background-color: var(--bs-warning); color:black; }
-a.btn.btn-outline-dark.active{ background-color: var(--bs-dark); color:white; }
-
-
-/* Estilos para impressão */
-@media print {
-    body, .container-fluid { margin: 0 !important; padding: 0 !important; }
-    .btn, .card-header .opacity-75, nav, .breadcrumb, .content-breadcrumb { display: none !important; }
-    .card { break-inside: avoid; border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 1.5rem !important; }
-    .card-header { background-color: #f8f9fa !important; color: #212529 !important; -webkit-print-color-adjust: exact; }
-    h1, h3, h5, h6 { color: #000 !important; }
-    .info-group { background: #fff !important; border-color: #dee2e6 !important; -webkit-print-color-adjust: exact; padding: 1rem; }
-    .badge { border: 1px solid #ccc !important; background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
-    .password-hidden { font-family: monospace; }
-    .text-muted { color: #6c757d !important; }
-    a { text-decoration: none; color: #000 !important; }
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .info-group { margin-bottom: 1rem; }
-    .container-fluid { padding-left: 1rem; padding-right: 1rem; }
-    h1 { font-size: 1.5rem; }
-    h3 { font-size: 1.25rem; }
-}
-</style>
 {% endblock %}
-
 
 {% block scripts %}
 <script>
