@@ -71,8 +71,9 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('nfce_sped', 'NFCe por Sped'),
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'),
         ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
-        ('nenhum', 'Não importa nada')
-    ])
+        ('nenhum', 'Não importa nada')],
+            default=[],
+            validators=[])
     link_prefeitura = StringField('Link Prefeitura')
     usuario_prefeitura = StringField('Usuário Prefeitura')
     senha_prefeitura = StringField('Senha Prefeitura')
