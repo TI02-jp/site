@@ -55,7 +55,6 @@ class EditUserForm(FlaskForm):
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
     ativo = BooleanField('Usuário Ativo')
 
-
 class DepartamentoForm(FlaskForm):
     responsavel = StringField('Responsável')
     descricao = StringField('Descrição')

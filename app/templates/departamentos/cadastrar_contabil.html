@@ -16,7 +16,6 @@
                 <input type="hidden" name="form_type" value="contabil">
                 {{ form.hidden_tag() }}
                 
-                <!-- Seção 1: Informações Básicas -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -40,7 +39,6 @@
                     </div>
                 </div>
 
-                <!-- Seção 2: Configurações de Importação -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -60,7 +58,6 @@
                     </div>
                 </div>
 
-                <!-- Seção 3: Envio Digital -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -77,7 +74,7 @@
                                 {% for value, label in form.envio_digital.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}[]" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data) %}checked{% endif %}>
                                         <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -93,7 +90,7 @@
                                 {% for value, label in form.envio_digital_fisico.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}[]" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data) %}checked{% endif %}>
                                         <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -103,7 +100,6 @@
                     </div>
                 </div>
 
-                <!-- Seção 4: Controle e Relatórios -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -120,7 +116,7 @@
                                 {% for value, label in form.controle_relatorios.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (form.controle_relatorios.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.controle_relatorios.name }}" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (form.controle_relatorios.data) %}checked{% endif %}>
                                         <label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
@@ -137,7 +133,6 @@
                     </div>
                 </div>
 
-                <!-- Seção 5: Observações e Particularidades -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -169,7 +164,6 @@
                     </div>
                 </div>
 
-                <!-- Botões de Ação -->
                 <div class="row">
                     <div class="col-12">
                         <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top">
@@ -200,87 +194,10 @@
     </div>
 </div>
 
-<!-- Input escondido para upload de imagens -->
 <input type="file" id="image-input" accept="image/*" style="display: none;">
 
-<!-- CSS adicional para melhorar a aparência -->
 <style>
-.form-check-input:checked {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-.form-floating > .form-control:focus {
-    border-color: #0558c5;
-    box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
-}
-
-.form-select:focus {
-    border-color: #0558c5;
-    box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
-}
-
-.card-header.bg-primary {
-    background-color: #0558c5 !important;
-}
-
-.text-primary {
-    color: #0558c5 !important;
-}
-
-.btn-primary {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-primary:hover {
-    background-color: #043a91;
-    border-color: #043a91;
-}
-
-.border-bottom {
-    border-color: #0558c5 !important;
-    border-width: 2px !important;
-}
-
-#editor {
-    background-color: #fff;
-}
-
-.ql-toolbar {
-    border-top: 1px solid #dee2e6;
-    border-left: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
-    border-top-left-radius: 0.375rem;
-    border-top-right-radius: 0.375rem;
-}
-
-.ql-container {
-    border-bottom: 1px solid #dee2e6;
-    border-left: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
-    border-bottom-left-radius: 0.375rem;
-    border-bottom-right-radius: 0.375rem;
-}
-
-@media (max-width: 768px) {
-    .container {
-        max-width: 100% !important;
-        padding: 0.5rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem 1rem;
-    }
-    
-    .d-flex.justify-content-center.gap-3 {
-        flex-direction: column;
-    }
-    
-    .d-flex.justify-content-center.gap-3 .btn {
-        width: 100%;
-    }
-}
+/* Estilos específicos da página, se necessário */
 </style>
 
 {% block scripts %}
@@ -295,9 +212,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('image', file);
-
-            console.log("Enviando imagem para o servidor...");
-
             fetch('/upload_image', {
                 method: 'POST',
                 body: formData
@@ -305,14 +219,13 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => response.json())
             .then(result => {
                 if (result.image_url) {
-                    console.log("Sucesso! URL recebida:", result.image_url);
                     resolve(result.image_url);
                 } else {
                     reject('Erro no servidor: ' + result.error);
                 }
             })
             .catch(error => {
-                console.error("Falha grave na requisição fetch:", error);
+                console.error("Falha na requisição fetch:", error);
                 reject('Falha no upload');
             });
         });
@@ -320,8 +233,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Função para selecionar imagem local
     function selectLocalImage() {
-        const input = document.getElementById('image-input');
-        input.click();
+        document.getElementById('image-input').click();
     }
 
     // Inicialização do Quill
@@ -348,7 +260,6 @@ document.addEventListener("DOMContentLoaded", function () {
     imageInput.addEventListener('change', () => {
         if (imageInput.files && imageInput.files[0]) {
             const file = imageInput.files[0];
-            
             const range = quill.getSelection(true);
             quill.insertText(range.index, 'Carregando imagem...', 'italic', true);
 
@@ -364,75 +275,26 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Função para coletar checkboxes selecionados
-    function getCheckedValues(name) {
-        const checkboxes = document.querySelectorAll(`input[name="${name}[]"]:checked`);
-        return Array.from(checkboxes).map(cb => cb.value);
-    }
-
-    // Submissão do formulário com preparação de dados
     document.querySelector('form').addEventListener('submit', function (e) {
-        console.log('Preparando dados do departamento contábil...');
-        
-        // Validação básica
-        const responsavel = document.querySelector('#responsavel').value.trim();
-        const descricao = document.querySelector('#descricao').value.trim();
-
-        if (!responsavel || !descricao) {
-            e.preventDefault();
-            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return;
-        }
-
-        // 1. Preparar conteúdo do editor Quill
         const particularidadesField = document.querySelector('#particularidades');
-        if (particularidadesField) {
+        if (particularidadesField && window.quill) {
             particularidadesField.value = quill.root.innerHTML;
         }
-
-        // 2. Preparar arrays de checkboxes
-        const envioDigital = getCheckedValues('envio_digital');
-        const envioDigitalFisico = getCheckedValues('envio_digital_fisico');
-        const controleRelatorios = getCheckedValues('controle_relatorios');
-
-        // Criar campos hidden para os arrays
-        ['envio_digital', 'envio_digital_fisico', 'controle_relatorios'].forEach(fieldName => {
-            let hiddenField = document.querySelector(`#${fieldName}_json`);
-            if (!hiddenField) {
-                hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = `${fieldName}_json`;
-                hiddenField.id = `${fieldName}_json`;
-                this.appendChild(hiddenField);
-            }
-            
-            let values = [];
-            if (fieldName === 'envio_digital') values = envioDigital;
-            else if (fieldName === 'envio_digital_fisico') values = envioDigitalFisico;
-            else if (fieldName === 'controle_relatorios') values = controleRelatorios;
-            
-            hiddenField.value = JSON.stringify(values);
-        });
-
-        console.log('Dados preparados do contábil:', {
-            envioDigital,
-            envioDigitalFisico,
-            controleRelatorios,
-            particularidades: quill.root.innerHTML
-        });
     });
 
-    // Estilo visual para checkboxes selecionados
     document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(function (checkbox) {
-        checkbox.addEventListener('change', function () {
-            this.closest('.form-check').style.fontWeight = this.checked ? '600' : 'normal';
-            this.closest('.form-check').style.color = this.checked ? '#0558c5' : '';
-        });
-
-        if (checkbox.checked) {
-            checkbox.closest('.form-check').style.fontWeight = '600';
-            checkbox.closest('.form-check').style.color = '#0558c5';
-        }
+        const updateStyle = () => {
+            const label = checkbox.closest('.form-check');
+            if (checkbox.checked) {
+                label.style.fontWeight = '600';
+                label.style.color = '#0558c5';
+            } else {
+                label.style.fontWeight = 'normal';
+                label.style.color = '';
+            }
+        };
+        checkbox.addEventListener('change', updateStyle);
+        updateStyle(); // Aplica o estilo na carga da página
     });
 });
 </script>

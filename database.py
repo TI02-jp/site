@@ -118,14 +118,15 @@ def main():
             return
         
         # 2. Alterar coluna para NOT NULL
+        # CORREÇÃO: Alterado de 'DataAberturaEmpresa' para 'DataAbertura' para corresponder ao modelo.
         alter_query = """
         ALTER TABLE tbl_empresas
-        MODIFY COLUMN DataAberturaEmpresa VARCHAR(10) NOT NULL;
+        MODIFY COLUMN DataAbertura VARCHAR(10) NOT NULL;
         """
         if db.execute_query(alter_query):
-            logger.info("Coluna DataAberturaEmpresa alterada para NOT NULL")
+            logger.info("Coluna DataAbertura alterada para NOT NULL")
         else:
-            logger.warning("Falha ao alterar coluna DataAberturaEmpresa")
+            logger.warning("Falha ao alterar coluna DataAbertura")
 
         # 3. Verificar se já existe PRIMARY KEY antes de tentar adicionar
         pk_check_query = """
@@ -138,17 +139,18 @@ def main():
         pk_exists = db.fetch_one(pk_check_query, (os.getenv('DB_NAME'), 'tbl_empresas'))
         
         if pk_exists and pk_exists['pk_count'] == 0:
+            # CORREÇÃO: Alterado de 'IdEmpresas' para 'id' para corresponder ao modelo.
             pk_query = """
             ALTER TABLE tbl_empresas
-            ADD PRIMARY KEY (IdEmpresas);
+            ADD PRIMARY KEY (id);
             """
             if db.execute_query(pk_query):
-                logger.info("Primary Key adicionada com sucesso")
+                logger.info("Primary Key adicionada com sucesso na coluna 'id'")
             else:
                 logger.warning("Falha ao adicionar Primary Key")
         else:
             logger.info("Primary Key já existe na tabela")
-                
+            
     except Exception as e:
         logger.error(f"Erro durante as operações: {e}")
     finally:

@@ -16,6 +16,7 @@ from datetime import datetime
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
+from app.forms import DepartamentoFiscalForm, DepartamentoContabilForm, DepartamentoPessoalForm
 
 @app.context_processor
 def inject_stats():
@@ -257,164 +258,75 @@ def processar_dados_administrativo(request):
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
 
+    # 1. Carrega os objetos do banco
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+    
+    # 2. Instancia os formulários, populando com dados do banco (via `obj=`) e da requisição (via `request.form`)
+    empresa_form = EmpresaForm(request.form, obj=empresa)
+    fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
+    contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
+    pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
+    administrativo_form = DepartamentoForm(request.form, obj=administrativo)
+    
+    # Tratamento manual para o campo 'contatos' (composto) ao carregar a página (GET)
+    if request.method == 'GET':
+        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
+            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
+            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
 
-    empresa_form = EmpresaForm(obj=empresa)
-    fiscal_form = DepartamentoFiscalForm(obj=fiscal)
-    contabil_form = DepartamentoContabilForm(obj=contabil)
-    pessoal_form = DepartamentoPessoalForm(obj=pessoal)
-    administrativo_form = DepartamentoForm(obj=administrativo)
+    form_type = request.form.get('form_type')
 
-    submitted = request.form.get('form_type')
+    if request.method == 'POST':
+        form_map = {
+            'empresa': (empresa_form, empresa),
+            'fiscal': (fiscal_form, fiscal or Departamento(empresa_id=id, tipo='Departamento Fiscal')),
+            'contabil': (contabil_form, contabil or Departamento(empresa_id=id, tipo='Departamento Contábil')),
+            'pessoal': (pessoal_form, pessoal or Departamento(empresa_id=id, tipo='Departamento Pessoal')),
+            'administrativo': (administrativo_form, administrativo or Departamento(empresa_id=id, tipo='Departamento Administrativo'))
+        }
 
-    if submitted == 'empresa' and empresa_form.validate_on_submit():
-        cnpj_limpo = re.sub(r'\D', '', empresa_form.cnpj.data or '')
-        empresa.CodigoEmpresa = empresa_form.codigo_empresa.data
-        empresa.NomeEmpresa = empresa_form.nome_empresa.data
-        empresa.CNPJ = cnpj_limpo
-        empresa.DataAbertura = empresa_form.data_abertura.data
-        empresa.SocioAdministrador = empresa_form.socio_administrador.data
-        empresa.Tributacao = empresa_form.tributacao.data
-        empresa.RegimeLancamento = empresa_form.regime_lancamento.data
-        empresa.AtividadePrincipal = empresa_form.atividade_principal.data
-        empresa.SistemasConsultorias = ",".join(empresa_form.sistemas_consultorias.data) if empresa_form.sistemas_consultorias.data else ""
-        empresa.SistemaUtilizado = empresa_form.sistema_utilizado.data
-        try:
-            db.session.commit()
-            flash('Empresa atualizada com sucesso!', 'success')
-            return redirect(url_for('editar_empresa', id=id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao atualizar empresa: {e}', 'danger')
+        if form_type in form_map:
+            form_to_validate, obj_to_populate = form_map[form_type]
 
-    if submitted == 'fiscal':
-        try:
-            dados_fiscal = processar_dados_fiscal(request)
-            
-            # Criar ou atualizar departamento
-            if not fiscal:
-                fiscal = Departamento(
-                    empresa_id=id, 
-                    tipo='Departamento Fiscal',
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
+            if form_to_validate.validate():
+                form_to_validate.populate_obj(obj_to_populate)
+                
+                # Tratamentos manuais específicos
+                if form_type == 'empresa':
+                    obj_to_populate.CNPJ = re.sub(r'\D', '', form_to_validate.cnpj.data or '')
+                    # Se você decidir usar JsonString para SistemasConsultorias no modelo, mude a linha abaixo
+                    obj_to_populate.SistemasConsultorias = ",".join(form_to_validate.sistemas_consultorias.data or [])
+                
+                if form_type == 'fiscal':
+                    obj_to_populate.contatos = {
+                        "nome": fiscal_form.contato_nome.data,
+                        "meios": fiscal_form.contato_meios.data
+                    }
+                
+                db.session.add(obj_to_populate)
+                try:
+                    db.session.commit()
+                    flash(f'Dados de "{form_type.capitalize()}" salvos com sucesso!', 'success')
+                    return redirect(url_for('editar_empresa', id=id))
+                except Exception as e:
+                    db.session.rollback()
+                    flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
             else:
-                fiscal.updated_at = datetime.now()
-            
-            # Atualizar campos
-            for campo, valor in dados_fiscal.items():
-                setattr(fiscal, campo, valor)
-            
-            db.session.add(fiscal)
-            db.session.commit()
-            flash('Departamento Fiscal salvo com sucesso!', 'success')
-            return redirect(url_for('editar_empresa', id=id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao salvar departamento fiscal: {str(e)}', 'error')
-            print(f"Erro ao salvar fiscal: {e}")
-
-    if submitted == 'contabil':
-        try:
-            dados_contabil = processar_dados_contabil(request)
-            
-            if not contabil:
-                contabil = Departamento(
-                    empresa_id=id, 
-                    tipo='Departamento Contábil',
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-            else:
-                contabil.updated_at = datetime.now()
-            
-            # Atualizar campos
-            for campo, valor in dados_contabil.items():
-                setattr(contabil, campo, valor)
-            
-            db.session.add(contabil)
-            db.session.commit()
-            flash('Departamento Contábil salvo com sucesso!', 'success')
-            return redirect(url_for('editar_empresa', id=id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao salvar departamento contábil: {str(e)}', 'error')
-            print(f"Erro ao salvar contábil: {e}")
-
-    if submitted == 'pessoal':
-        try:
-            dados_pessoal = processar_dados_pessoal(request)
-            
-            if not pessoal:
-                pessoal = Departamento(
-                    empresa_id=id, 
-                    tipo='Departamento Pessoal',
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-            else:
-                pessoal.updated_at = datetime.now()
-            
-            # Atualizar campos
-            for campo, valor in dados_pessoal.items():
-                setattr(pessoal, campo, valor)
-            
-            db.session.add(pessoal)
-            db.session.commit()
-            flash('Departamento Pessoal salvo com sucesso!', 'success')
-            return redirect(url_for('editar_empresa', id=id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao salvar departamento pessoal: {str(e)}', 'error')
-            print(f"Erro ao salvar pessoal: {e}")
-
-    if submitted == 'administrativo':
-        try:
-            dados_administrativo = processar_dados_administrativo(request)
-            
-            if not administrativo:
-                administrativo = Departamento(
-                    empresa_id=id, 
-                    tipo='Departamento Administrativo',
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-            else:
-                administrativo.updated_at = datetime.now()
-            
-            # Atualizar campos
-            for campo, valor in dados_administrativo.items():
-                setattr(administrativo, campo, valor)
-            
-            db.session.add(administrativo)
-            db.session.commit()
-            flash('Departamento Administrativo salvo com sucesso!', 'success')
-            return redirect(url_for('editar_empresa', id=id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro ao salvar departamento administrativo: {str(e)}', 'error')
-            print(f"Erro ao salvar administrativo: {e}")
+                for field, errors in form_to_validate.errors.items():
+                    for error in errors:
+                        flash(f"Erro no formulário '{form_type.capitalize()}': {error}", 'danger')
 
     return render_template(
         'empresas/editar_empresa.html',
-        empresa_form=empresa_form,
         empresa=empresa,
+        empresa_form=empresa_form,
         fiscal_form=fiscal_form,
         contabil_form=contabil_form,
         pessoal_form=pessoal_form,
-        administrativo_form=administrativo_form,
-        fiscal=fiscal,
-        contabil=contabil,
-        pessoal=pessoal,
-        administrativo=administrativo,
+        administrativo_form=administrativo_form
     )
 
 @app.route('/empresa/visualizar/<int:id>')
@@ -453,89 +365,90 @@ def visualizar_empresa(id):
 def gerenciar_departamentos(empresa_id):
     empresa = Empresa.query.get_or_404(empresa_id)
 
-    # Carrega os departamentos ou deixa como None se não existirem
+    # 1. Carrega os objetos do banco.
     fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
+    # CORREÇÃO: Faltava buscar o departamento administrativo
     administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
+    
+    # 2. Instancia os formulários.
+    fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
+    contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
+    pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
+    # CORREÇÃO: Faltava instanciar o formulário administrativo
+    administrativo_form = DepartamentoForm(request.form, obj=administrativo)
+    
+    # Tratamento manual para o campo 'contatos' (composto) ao carregar a página (GET)
+    if request.method == 'GET':
+        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
+            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
+            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
 
-    # Instancia os formulários, pré-populando com dados existentes (se houver)
-    fiscal_form = DepartamentoFiscalForm(obj=fiscal)
-    contabil_form = DepartamentoContabilForm(obj=contabil)
-    pessoal_form = DepartamentoPessoalForm(obj=pessoal)
-    administrativo_form = DepartamentoForm(obj=administrativo)
-
-    # Popula os campos de contato manualmente no formulário fiscal se os dados existirem
-    if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
-        fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
-        fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
-
-    # Identifica qual formulário foi enviado
     form_type = request.form.get('form_type')
 
-    try:
-        if request.method == 'POST':
-            if form_type == 'fiscal' and fiscal_form.validate_on_submit():
-                if not fiscal:
-                    fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
-                
-                # 1. Popula automaticamente todos os campos que têm nomes correspondentes
-                fiscal_form.populate_obj(fiscal)
-                
-                # 2. Lida manualmente com o campo 'contatos', que é composto
-                fiscal.contatos = {
-                    "nome": fiscal_form.contato_nome.data,
-                    "meios": fiscal_form.contato_meios.data
-                }
-                
+    if request.method == 'POST':
+        form_processed_successfully = False
+
+        if form_type == 'fiscal' and fiscal_form.validate():
+            if not fiscal:
+                fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
                 db.session.add(fiscal)
-                flash('Departamento Fiscal salvo com sucesso!', 'success')
-
-            elif form_type == 'contabil' and contabil_form.validate_on_submit():
-                if not contabil:
-                    contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
-                contabil_form.populate_obj(contabil)
-                db.session.add(contabil)
-                flash('Departamento Contábil salvo com sucesso!', 'success')
-                
-            elif form_type == 'pessoal' and pessoal_form.validate_on_submit():
-                if not pessoal:
-                    pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
-                pessoal_form.populate_obj(pessoal)
-                db.session.add(pessoal)
-                flash('Departamento Pessoal salvo com sucesso!', 'success')
-
-            elif form_type == 'administrativo' and administrativo_form.validate_on_submit():
-                if not administrativo:
-                    administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
-                administrativo_form.populate_obj(administrativo)
-                db.session.add(administrativo)
-                flash('Departamento Administrativo salvo com sucesso!', 'success')
             
-            else:
-                # Se a validação de algum formulário falhar, exibe os erros para o usuário
-                active_form = {
-                    'fiscal': fiscal_form,
-                    'contabil': contabil_form,
-                    'pessoal': pessoal_form,
-                    'administrativo': administrativo_form
-                }.get(form_type)
-                
-                if active_form and active_form.errors:
-                    for field, errors in active_form.errors.items():
-                        for error in errors:
-                            flash(f"Erro no campo '{getattr(active_form, field).label.text}': {error}", 'danger')
+            fiscal_form.populate_obj(fiscal)
+            fiscal.contatos = {
+                "nome": fiscal_form.contato_nome.data,
+                "meios": fiscal_form.contato_meios.data
+            }
+            flash('Departamento Fiscal salvo com sucesso!', 'success')
+            form_processed_successfully = True
 
-            # Salva as alterações no banco de dados se um formulário foi processado
-            if form_type:
+        elif form_type == 'contabil' and contabil_form.validate():
+            if not contabil:
+                contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+                db.session.add(contabil)
+            
+            contabil_form.populate_obj(contabil)
+            flash('Departamento Contábil salvo com sucesso!', 'success')
+            form_processed_successfully = True
+
+        elif form_type == 'pessoal' and pessoal_form.validate():
+            if not pessoal:
+                pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+                db.session.add(pessoal)
+
+            pessoal_form.populate_obj(pessoal)
+            flash('Departamento Pessoal salvo com sucesso!', 'success')
+            form_processed_successfully = True
+        
+        # CORREÇÃO: Faltava a lógica para salvar o formulário administrativo
+        elif form_type == 'administrativo' and administrativo_form.validate():
+            if not administrativo:
+                administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
+                db.session.add(administrativo)
+            
+            administrativo_form.populate_obj(administrativo)
+            flash('Departamento Administrativo salvo com sucesso!', 'success')
+            form_processed_successfully = True
+
+        if form_processed_successfully:
+            try:
                 db.session.commit()
-                # Redireciona para a mesma página para recarregar os dados
                 return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Ocorreu um erro inesperado ao salvar os dados: {str(e)}', 'danger')
-        print(f"Erro ao salvar departamento: {e}")
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
+        else:
+            active_form = {
+                'fiscal': fiscal_form, 
+                'contabil': contabil_form, 
+                'pessoal': pessoal_form,
+                'administrativo': administrativo_form
+            }.get(form_type)
+            if active_form and active_form.errors:
+                for field, errors in active_form.errors.items():
+                    for error in errors:
+                        flash(f"Erro no formulário {form_type.capitalize()}: {error}", 'danger')
 
     return render_template(
         'empresas/departamentos.html',
@@ -543,7 +456,11 @@ def gerenciar_departamentos(empresa_id):
         fiscal_form=fiscal_form,
         contabil_form=contabil_form,
         pessoal_form=pessoal_form,
-        administrativo_form=administrativo_form
+        administrativo_form=administrativo_form,
+        fiscal=fiscal,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo
     )
 
 @app.route('/relatorios')
