@@ -1,3 +1,4 @@
+import os, json, re
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, Flask
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user, current_user
@@ -13,7 +14,6 @@ from app.forms import (
     DepartamentoPessoalForm
 )
 from datetime import datetime
-import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from app.forms import DepartamentoFiscalForm, DepartamentoContabilForm, DepartamentoPessoalForm
@@ -119,16 +119,16 @@ def cadastrar_empresa():
             sistemas_consultorias_str = ",".join(form.sistemas_consultorias.data) if form.sistemas_consultorias.data else ""
 
             nova_empresa = Empresa(
-                CodigoEmpresa=form.codigo_empresa.data,
-                NomeEmpresa=form.nome_empresa.data,
-                CNPJ=cnpj_limpo,
-                DataAbertura=form.data_abertura.data,
-                SocioAdministrador=form.socio_administrador.data,
-                Tributacao=form.tributacao.data,
-                RegimeLancamento=form.regime_lancamento.data,
-                AtividadePrincipal=form.atividade_principal.data,
-                SistemasConsultorias=sistemas_consultorias_str,
-                SistemaUtilizado=form.sistema_utilizado.data
+                codigo_empresa=form.codigo_empresa.data,
+                nome_empresa=form.nome_empresa.data,
+                cnpj=cnpj_limpo,
+                data_abertura=form.data_abertura.data,
+                socio_administrador=form.socio_administrador.data,
+                tributacao=form.tributacao.data,
+                regime_lancamento=form.regime_lancamento.data,
+                atividade_principal=form.atividade_principal.data,
+                sistemas_consultorias=sistemas_consultorias_str,
+                sistema_utilizado=form.sistema_utilizado.data
             )
 
             db.session.add(nova_empresa)
@@ -149,13 +149,6 @@ def cadastrar_empresa():
 @login_required
 def listar_empresas():
     empresas = Empresa.query.all()
-
-    for empresa in empresas:
-        if empresa.DataAbertura and isinstance(empresa.DataAbertura, str):
-            try:
-                empresa.DataAbertura = datetime.strptime(empresa.DataAbertura, '%d-%m-%Y')
-            except ValueError:
-                empresa.DataAbertura = None
 
     return render_template('empresas/listar.html', empresas=empresas)
 
@@ -256,30 +249,25 @@ def processar_dados_administrativo(request):
 @app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_empresa(id):
+    # 1. Carrega todos os objetos do banco
     empresa = Empresa.query.get_or_404(id)
-
-    # 1. Carrega os objetos do banco
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-    
-    # 2. Instancia os formulários, populando com dados do banco (via `obj=`) e da requisição (via `request.form`)
+
+    # 2. Instancia todos os formulários.
+    # Para GET, preenche com 'obj'. Para POST, com 'request.form'.
     empresa_form = EmpresaForm(request.form, obj=empresa)
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoForm(request.form, obj=administrativo)
-    
-    # Tratamento manual para o campo 'contatos' (composto) ao carregar a página (GET)
-    if request.method == 'GET':
-        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
-            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
-            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
 
-    form_type = request.form.get('form_type')
-
+    # 3. Lógica para quando o formulário é ENVIADO (POST)
     if request.method == 'POST':
+        form_type = request.form.get('form_type')
+
         form_map = {
             'empresa': (empresa_form, empresa),
             'fiscal': (fiscal_form, fiscal or Departamento(empresa_id=id, tipo='Departamento Fiscal')),
@@ -287,38 +275,47 @@ def editar_empresa(id):
             'pessoal': (pessoal_form, pessoal or Departamento(empresa_id=id, tipo='Departamento Pessoal')),
             'administrativo': (administrativo_form, administrativo or Departamento(empresa_id=id, tipo='Departamento Administrativo'))
         }
+        form_to_validate, obj_to_populate = form_map.get(form_type, (None, None))
 
-        if form_type in form_map:
-            form_to_validate, obj_to_populate = form_map[form_type]
+        if form_to_validate and form_to_validate.validate():
+            # A MÁGICA ACONTECE AQUI!
+            # populate_obj agora funciona perfeitamente.
+            form_to_validate.populate_obj(obj_to_populate)
+            
+            # Tratamentos manuais que ainda são necessários
+            if form_type == 'empresa':
+                obj_to_populate.cnpj = re.sub(r'\D', '', form_to_validate.cnpj.data or '')
+                obj_to_populate.sistemas_consultorias = ",".join(form_to_validate.sistemas_consultorias.data or [])
+            
+            if form_type == 'fiscal':
+                obj_to_populate.contatos = {
+                    "nome": form_to_validate.contato_nome.data,
+                    "meios": form_to_validate.contato_meios.data
+                }
+            
+            db.session.add(obj_to_populate)
+            try:
+                db.session.commit()
+                flash(f'Dados de "{form_type.capitalize()}" salvos com sucesso!', 'success')
+                return redirect(url_for('editar_empresa', id=id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
+        
+        elif form_to_validate:
+            flash(f"Erro de validação no formulário '{form_type.capitalize()}'. Por favor, verifique os campos.", 'danger')
 
-            if form_to_validate.validate():
-                form_to_validate.populate_obj(obj_to_populate)
-                
-                # Tratamentos manuais específicos
-                if form_type == 'empresa':
-                    obj_to_populate.CNPJ = re.sub(r'\D', '', form_to_validate.cnpj.data or '')
-                    # Se você decidir usar JsonString para SistemasConsultorias no modelo, mude a linha abaixo
-                    obj_to_populate.SistemasConsultorias = ",".join(form_to_validate.sistemas_consultorias.data or [])
-                
-                if form_type == 'fiscal':
-                    obj_to_populate.contatos = {
-                        "nome": fiscal_form.contato_nome.data,
-                        "meios": fiscal_form.contato_meios.data
-                    }
-                
-                db.session.add(obj_to_populate)
-                try:
-                    db.session.commit()
-                    flash(f'Dados de "{form_type.capitalize()}" salvos com sucesso!', 'success')
-                    return redirect(url_for('editar_empresa', id=id))
-                except Exception as e:
-                    db.session.rollback()
-                    flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
-            else:
-                for field, errors in form_to_validate.errors.items():
-                    for error in errors:
-                        flash(f"Erro no formulário '{form_type.capitalize()}': {error}", 'danger')
+    # 4. Tratamentos manuais para GET
+    if request.method == 'GET':
+        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
+            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
+            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
+        
+        # --- CORREÇÃO APLICADA AQUI ---
+        if isinstance(empresa.sistemas_consultorias, str):
+            empresa_form.sistemas_consultorias.data = [item.strip() for item in empresa.sistemas_consultorias.split(',') if item.strip()]
 
+    # 5. Renderiza o template no final.
     return render_template(
         'empresas/editar_empresa.html',
         empresa=empresa,
