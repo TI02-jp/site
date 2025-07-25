@@ -56,7 +56,7 @@ class Empresa(db.Model):
     NomeEmpresa = db.Column(db.String(100), nullable=False)
     CNPJ = db.Column(db.String(18), unique=True, nullable=False)
     AtividadePrincipal = db.Column(db.String(100))
-    DataAbertura = db.Column(db.String(10), nullable=False)
+    DataAbertura = db.Column(db.Date, nullable=False)
     SocioAdministrador = db.Column(db.String(100))
     Tributacao = db.Column(db.String(50))
     RegimeLancamento = db.Column(db.Enum('CAIXA', 'COMPETENCIA'))

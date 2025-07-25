@@ -59,7 +59,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}[]" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                            {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
                     <div class="col-md-6">
@@ -80,18 +80,18 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.envio_digital.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}[]" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}><label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                            {% for value, label in fiscal_form.envio_digital.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}><label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                         <label class="form-label fw-semibold mt-3">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.envio_digital_fisico.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}[]" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}><label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                            {% for value, label in fiscal_form.envio_digital_fisico.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}><label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating mb-3">{{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}{{ fiscal_form.contato_nome.label }}</div>
                         <label class="form-label fw-semibold">{{ fiscal_form.contato_meios.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.contato_meios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}[]" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}><label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                            {% for value, label in fiscal_form.contato_meios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}><label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in contabil_form.controle_relatorios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}[]" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}><label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
+                            {% for value, label in contabil_form.controle_relatorios.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}" value="{{ value }}" id="cr-{{ loop.index }}" {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}><label class="form-check-label" for="cr-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
                     <div class="col-md-6"><div class="form-floating">{{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação", style="height: 100px") }}{{ contabil_form.observacao_controle_relatorios.label }}</div></div>
