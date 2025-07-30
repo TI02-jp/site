@@ -113,11 +113,8 @@ def dashboard():
 def cadastrar_empresa():
     form = EmpresaForm()
     if form.validate_on_submit():
-        print("Formulário validado, tentando cadastrar...")
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
-            sistemas_consultorias_str = ",".join(form.sistemas_consultorias.data) if form.sistemas_consultorias.data else ""
-
             nova_empresa = Empresa(
                 CodigoEmpresa=form.codigo_empresa.data,
                 NomeEmpresa=form.nome_empresa.data,
@@ -127,15 +124,13 @@ def cadastrar_empresa():
                 Tributacao=form.tributacao.data,
                 RegimeLancamento=form.regime_lancamento.data,
                 AtividadePrincipal=form.atividade_principal.data,
-                SistemasConsultorias=sistemas_consultorias_str,
+                SistemasConsultorias=form.sistemas_consultorias.data,
                 SistemaUtilizado=form.sistema_utilizado.data
             )
-
             db.session.add(nova_empresa)
             db.session.commit()
             flash('Empresa cadastrada com sucesso!', 'success')
             return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
-
         except Exception as e:
             db.session.rollback()
             flash(f'Erro ao cadastrar empresa: {e}', 'danger')
@@ -151,17 +146,16 @@ def listar_empresas():
     empresas = Empresa.query.all()
 
     for empresa in empresas:
-        if empresa.DataAbertura and isinstance(empresa.DataAbertura, str):
+        if empresa.data_abertura and isinstance(empresa.data_abertura, str):
             try:
-                empresa.DataAbertura = datetime.strptime(empresa.DataAbertura, '%d-%m-%Y')
+                empresa.data_abertura = datetime.strptime(empresa.data_abertura, '%d-%m-%Y')
             except ValueError:
-                empresa.DataAbertura = None
+                empresa.data_abertura = None
 
     return render_template('empresas/listar.html', empresas=empresas)
 
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
-    # Dados básicos do formulário
     responsavel = request.form.get('responsavel')
     descricao = request.form.get('descricao')
     link_prefeitura = request.form.get('link_prefeitura')
@@ -170,18 +164,12 @@ def processar_dados_fiscal(request):
     forma_movimento = request.form.get('forma_movimento')
     observacao_movimento = request.form.get('observacao_movimento')
     particularidades = request.form.get('particularidades')
-    
-    # Processar dados JSON dos checkboxes
     formas_importacao_json = request.form.get('formas_importacao_json', '[]')
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
-    
     envio_digital_json = request.form.get('envio_digital_json', '[]')
     envio_digital = json.loads(envio_digital_json) if envio_digital_json else []
-    
     envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
     envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
-    
-    # Processar dados de contato
     contatos_json = request.form.get('contatos_json', 'null')
     contatos = json.loads(contatos_json) if contatos_json != 'null' else None
     
@@ -202,7 +190,6 @@ def processar_dados_fiscal(request):
 
 def processar_dados_contabil(request):
     """Função auxiliar para processar dados do departamento contábil"""
-    # Dados básicos do formulário
     responsavel = request.form.get('responsavel')
     descricao = request.form.get('descricao')
     metodo_importacao = request.form.get('metodo_importacao')
@@ -210,14 +197,10 @@ def processar_dados_contabil(request):
     observacao_movimento = request.form.get('observacao_movimento')
     observacao_controle_relatorios = request.form.get('observacao_controle_relatorios')
     particularidades = request.form.get('particularidades')
-    
-    # Processar dados JSON dos checkboxes
     envio_digital_json = request.form.get('envio_digital_json', '[]')
-    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []
-    
+    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []    
     envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
-    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
-    
+    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []    
     controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
     controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
     
@@ -257,28 +240,47 @@ def processar_dados_administrativo(request):
 @login_required
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
-
-    # 1. Carrega os objetos do banco
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-    
-    # 2. Instancia os formulários, populando com dados do banco (via `obj=`) e da requisição (via `request.form`)
+
+    # Initialize forms
     empresa_form = EmpresaForm(request.form, obj=empresa)
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoForm(request.form, obj=administrativo)
-    
-    # Tratamento manual para o campo 'contatos' (composto) ao carregar a página (GET)
+
+    # Populate JSON and complex fields for GET requests
     if request.method == 'GET':
-        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
-            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
-            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
+        if fiscal and fiscal.senha_prefeitura:
+            fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura
+        if empresa:
+            empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
+        if empresa:
+            empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
+        if fiscal:
+            fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
+            fiscal_form.envio_digital.data = fiscal.envio_digital or []
+            fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
+            fiscal_form.contato_meios.data = fiscal.contatos.get('meios', []) if fiscal.contatos else []
+            fiscal_form.contato_nome.data = fiscal.contatos.get('nome', '') if fiscal.contatos else ''
+            fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura or ''
+        if contabil:
+            contabil_form.envio_digital.data = contabil.envio_digital or []
+            contabil_form.envio_digital_fisico.data = contabil.envio_digital_fisico or []
+            contabil_form.controle_relatorios.data = contabil.controle_relatorios or []
+        if pessoal:
+            pessoal_form.data_envio.data = pessoal.data_envio or ''
+            pessoal_form.registro_funcionarios.data = pessoal.registro_funcionarios or ''
+            pessoal_form.ponto_eletronico.data = pessoal.ponto_eletronico or ''
+            pessoal_form.pagamento_funcionario.data = pessoal.pagamento_funcionario or ''
+        if administrativo:
+            administrativo_form.responsavel.data = administrativo.responsavel or ''
+            administrativo_form.descricao.data = administrativo.descricao or ''
 
-    form_type = request.form.get('form_type')
-
+    # Process form submissions
     if request.method == 'POST':
         form_map = {
             'empresa': (empresa_form, empresa),
@@ -286,53 +288,52 @@ def editar_empresa(id):
             'contabil': (contabil_form, contabil or Departamento(empresa_id=id, tipo='Departamento Contábil')),
             'pessoal': (pessoal_form, pessoal or Departamento(empresa_id=id, tipo='Departamento Pessoal')),
             'administrativo': (administrativo_form, administrativo or Departamento(empresa_id=id, tipo='Departamento Administrativo'))
-        }
-
+        }   
+        form_type = request.form.get('form_type')
         if form_type in form_map:
-            form_to_validate, obj_to_populate = form_map[form_type]
-
-            if form_to_validate.validate():
-                form_to_validate.populate_obj(obj_to_populate)
-                
-                # Tratamentos manuais específicos
+            form, obj = form_map[form_type]
+            if form.validate():
+                form.populate_obj(obj)
                 if form_type == 'empresa':
-                    obj_to_populate.CNPJ = re.sub(r'\D', '', form_to_validate.cnpj.data or '')
-                    # Se você decidir usar JsonString para SistemasConsultorias no modelo, mude a linha abaixo
-                    obj_to_populate.SistemasConsultorias = ",".join(form_to_validate.sistemas_consultorias.data or [])
-                
-                if form_type == 'fiscal':
-                    obj_to_populate.contatos = {
-                        "nome": fiscal_form.contato_nome.data,
-                        "meios": fiscal_form.contato_meios.data
+                    obj.cnpj = re.sub(r'\D', '', form.cnpj.data)
+                    obj.sistemas_consultorias = form.sistemas_consultorias.data
+                elif form_type == 'fiscal':
+                    obj.contatos = {
+                        'nome': form.contato_nome.data,
+                        'meios': form.contato_meios.data
                     }
-                
-                db.session.add(obj_to_populate)
+                    obj.senha_prefeitura = form.senha_prefeitura.data
+                db.session.add(obj)
                 try:
                     db.session.commit()
                     flash(f'Dados de "{form_type.capitalize()}" salvos com sucesso!', 'success')
                     return redirect(url_for('editar_empresa', id=id))
                 except Exception as e:
                     db.session.rollback()
-                    flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
+                    flash(f'Erro ao salvar: {str(e)}', 'danger')
             else:
-                for field, errors in form_to_validate.errors.items():
+                for field, errors in form.errors.items():
                     for error in errors:
                         flash(f"Erro no formulário '{form_type.capitalize()}': {error}", 'danger')
+        else:
+            flash('Tipo de formulário inválido', 'danger')
 
     return render_template(
         'empresas/editar_empresa.html',
-        empresa=empresa,
-        empresa_form=empresa_form,
-        fiscal_form=fiscal_form,
-        contabil_form=contabil_form,
-        pessoal_form=pessoal_form,
-        administrativo_form=administrativo_form
+        empresa=empresa, empresa_form=empresa_form, fiscal_form=fiscal_form,
+        contabil_form=contabil_form, pessoal_form=pessoal_form, administrativo_form=administrativo_form,
+        fiscal=fiscal, contabil=contabil, pessoal=pessoal, administrativo=administrativo
     )
 
 @app.route('/empresa/visualizar/<int:id>')
 @login_required
 def visualizar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
+    
+    if empresa.regime_lancamento:
+        empresa.regime_lancamento_display = empresa.regime_lancamento.value
+    else:
+        empresa.regime_lancamento_display = None
     
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()

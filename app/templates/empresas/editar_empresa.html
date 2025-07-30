@@ -21,8 +21,8 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                <div class="alert alert-{{ 'danger' if category in ['error', 'danger'] else category }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-{{ 'exclamation-triangle' if category in ['error', 'danger'] else 'check-circle' }} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
@@ -33,9 +33,12 @@
     <!-- Navegação entre Departamentos -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-3">
+                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-building me-1"></i>Empresa
+                        </a>
                         <a href="#fiscal" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-receipt me-1"></i>Fiscal
                         </a>
@@ -80,12 +83,26 @@
                         <div class="form-floating">
                             {{ empresa_form.codigo_empresa(class="form-control", placeholder="Código") }}
                             {{ empresa_form.codigo_empresa.label(class="form-label") }}
+                            {% if empresa_form.codigo_empresa.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.codigo_empresa.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.nome_empresa(class="form-control", placeholder="Nome") }}
                             {{ empresa_form.nome_empresa.label(class="form-label") }}
+                            {% if empresa_form.nome_empresa.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.nome_empresa.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -95,11 +112,25 @@
                         <div class="form-floating">
                             {{ empresa_form.cnpj(class="form-control", placeholder="CNPJ", id="cnpj") }}
                             {{ empresa_form.cnpj.label(class="form-label") }}
+                            {% if empresa_form.cnpj.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.cnpj.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ empresa_form.data_abertura.label.text }}</label>
                         {{ empresa_form.data_abertura(class="form-control", type="date") }}
+                        {% if empresa_form.data_abertura.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in empresa_form.data_abertura.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -117,12 +148,26 @@
                         <div class="form-floating">
                             {{ empresa_form.socio_administrador(class="form-control", placeholder="Sócio Administrador") }}
                             {{ empresa_form.socio_administrador.label(class="form-label") }}
+                            {% if empresa_form.socio_administrador.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.socio_administrador.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.atividade_principal(class="form-control", placeholder="Atividade") }}
                             {{ empresa_form.atividade_principal.label(class="form-label") }}
+                            {% if empresa_form.atividade_principal.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.atividade_principal.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -140,10 +185,11 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ empresa_form.tributacao.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
-                            {% for value, label in empresa_form.tributacao.choices %}
+                            {# Este loop simples resolve tudo! #}
+                            {% for subfield in empresa_form.tributacao %}
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="{{ empresa_form.tributacao.name }}" value="{{ value }}" id="trib-{{ loop.index }}" {% if empresa_form.tributacao.data == value %}checked{% endif %}>
-                                <label class="form-check-label" for="trib-{{ loop.index }}">{{ label }}</label>
+                                {{ subfield(class="form-check-input") }}
+                                {{ subfield.label(class="form-check-label") }}
                             </div>
                             {% endfor %}
                         </div>
@@ -152,10 +198,11 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ empresa_form.regime_lancamento.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
-                            {% for value, label in empresa_form.regime_lancamento.choices %}
+                            {# O mesmo loop para o outro campo #}
+                            {% for subfield in empresa_form.regime_lancamento %}
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="{{ empresa_form.regime_lancamento.name }}" value="{{ value }}" id="reg-{{ loop.index }}" {% if empresa_form.regime_lancamento.data == value %}checked{% endif %}>
-                                <label class="form-check-label" for="reg-{{ loop.index }}">{{ label }}</label>
+                                {{ subfield(class="form-check-input") }}
+                                {{ subfield.label(class="form-check-label") }}
                             </div>
                             {% endfor %}
                         </div>
@@ -179,12 +226,22 @@
                                 {% for value, label in empresa_form.sistemas_consultorias.choices %}
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ empresa_form.sistemas_consultorias.name }}" value="{{ value }}" id="sis-{{ loop.index }}" {% if value in (empresa_form.sistemas_consultorias.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ empresa_form.sistemas_consultorias.name }}"
+                                               value="{{ value }}" id="sis-{{ loop.index }}"
+                                               {% if value in (empresa_form.sistemas_consultorias.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
                                         <label class="form-check-label" for="sis-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if empresa_form.sistemas_consultorias.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.sistemas_consultorias.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -194,13 +251,24 @@
                         <div class="form-floating">
                             {{ empresa_form.sistema_utilizado(class="form-control", placeholder="Sistema atualmente utilizado") }}
                             {{ empresa_form.sistema_utilizado.label(class="form-label") }}
+                            {% if empresa_form.sistema_utilizado.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.sistema_utilizado.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary px-5">
+                    <button type="submit" class="btn btn-primary px-5" id="empresa-submit-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-building-check me-2"></i>Salvar Dados da Empresa
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary px-4 ms-3">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurar
                     </button>
                 </div>
             </form>
@@ -219,7 +287,7 @@
                 {{ fiscal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="fiscal">
                 
-                <!-- Mesmo padrão do departamento fiscal anterior -->
+                <!-- Informações Básicas -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -233,12 +301,26 @@
                         <div class="form-floating">
                             {{ fiscal_form.responsavel(class="form-control", placeholder="Responsável") }}
                             {{ fiscal_form.responsavel.label(class="form-label") }}
+                            {% if fiscal_form.responsavel.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.responsavel.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ fiscal_form.descricao(class="form-control", placeholder="Descrição") }}
                             {{ fiscal_form.descricao.label(class="form-label") }}
+                            {% if fiscal_form.descricao.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.descricao.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -251,18 +333,35 @@
                                 {% for value, label in fiscal_form.formas_importacao.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}"
+                                               value="{{ value }}" id="fi-{{ loop.index }}"
+                                               {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
                                         <label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if fiscal_form.formas_importacao.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.formas_importacao.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
                         {{ fiscal_form.forma_movimento(class="form-select") }}
+                        {% if fiscal_form.forma_movimento.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in fiscal_form.forma_movimento.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -280,18 +379,39 @@
                         <div class="form-floating">
                             {{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link da Prefeitura") }}
                             {{ fiscal_form.link_prefeitura.label(class="form-label") }}
+                            {% if fiscal_form.link_prefeitura.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.link_prefeitura.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}
                             {{ fiscal_form.usuario_prefeitura.label(class="form-label") }}
+                            {% if fiscal_form.usuario_prefeitura.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.usuario_prefeitura.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha", type="password") }}
                             {{ fiscal_form.senha_prefeitura.label(class="form-label") }}
+                            {% if fiscal_form.senha_prefeitura.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.senha_prefeitura.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -313,12 +433,22 @@
                                 {% for value, label in fiscal_form.envio_digital.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}" value="{{ value }}" id="fed-{{ loop.index }}" {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}"
+                                               value="{{ value }}" id="fed-{{ loop.index }}"
+                                               {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
                                         <label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if fiscal_form.envio_digital.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.envio_digital.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         
                         <label class="form-label fw-semibold mt-3">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
@@ -327,12 +457,22 @@
                                 {% for value, label in fiscal_form.envio_digital_fisico.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}" value="{{ value }}" id="fedf-{{ loop.index }}" {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}"
+                                               value="{{ value }}" id="fedf-{{ loop.index }}"
+                                               {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
                                         <label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if fiscal_form.envio_digital_fisico.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.envio_digital_fisico.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -340,6 +480,13 @@
                         <div class="form-floating mb-3">
                             {{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}
                             {{ fiscal_form.contato_nome.label(class="form-label") }}
+                            {% if fiscal_form.contato_nome.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.contato_nome.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         
                         <label class="form-label fw-semibold">{{ fiscal_form.contato_meios.label.text }}</label>
@@ -348,12 +495,22 @@
                                 {% for value, label in fiscal_form.contato_meios.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}" value="{{ value }}" id="fcm-{{ loop.index }}" {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}>
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}"
+                                               value="{{ value }}" id="fcm-{{ loop.index }}"
+                                               {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
                                         <label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% if fiscal_form.contato_meios.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.contato_meios.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -364,19 +521,37 @@
                         <div class="form-floating">
                             {{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 100px") }}
                             {{ fiscal_form.observacao_movimento.label(class="form-label") }}
+                            {% if fiscal_form.observacao_movimento.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.observacao_movimento.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ fiscal_form.particularidades_texto(class="form-control", placeholder="Particularidades", style="height: 100px") }}
                             {{ fiscal_form.particularidades_texto.label(class="form-label") }}
+                            {% if fiscal_form.particularidades_texto.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.particularidades_texto.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-success px-5">
+                    <button type="submit" class="btn btn-success px-5" id="fiscal-submit-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary px-4 ms-3">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurar
                     </button>
                 </div>
             </form>
@@ -386,7 +561,7 @@
                 <div class="alert alert-info d-flex align-items-center" role="alert">
                     <i class="bi bi-clock me-2"></i>
                     <div>
-                        <strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                        <strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') if fiscal.updated_at else 'Nunca atualizado' }}
                     </div>
                 </div>
             </div>
@@ -394,8 +569,465 @@
         </div>
     </div>
 
-    <!-- Os outros departamentos seguem o mesmo padrão... -->
-    <!-- Por brevidade, vou incluir só os principais elementos -->
+    <!-- Departamento Contábil -->
+    <div class="card shadow-lg mb-5" id="contabil">
+        <div class="card-header bg-warning text-white py-3">
+            <h3 class="mb-0 fw-semibold">
+                <i class="bi bi-calculator me-2"></i>Departamento Contábil
+            </h3>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" enctype="multipart/form-data">
+                {{ contabil_form.hidden_tag() }}
+                <input type="hidden" name="form_type" value="contabil">
+                
+                <!-- Informações Básicas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
+                        </h5>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ contabil_form.responsavel(class="form-control", placeholder="Responsável") }}
+                            {{ contabil_form.responsavel.label(class="form-label") }}
+                            {% if contabil_form.responsavel.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.responsavel.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ contabil_form.descricao(class="form-control", placeholder="Descrição") }}
+                            {{ contabil_form.descricao.label(class="form-label") }}
+                            {% if contabil_form.descricao.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.descricao.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>
+                        {{ contabil_form.metodo_importacao(class="form-select") }}
+                        {% if contabil_form.metodo_importacao.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in contabil_form.metodo_importacao.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>
+                        {{ contabil_form.forma_movimento(class="form-select") }}
+                        {% if contabil_form.forma_movimento.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in contabil_form.forma_movimento.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Envio Digital -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-cloud-upload me-2"></i>Formas de Envio
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in contabil_form.envio_digital.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}"
+                                               value="{{ value }}" id="ced-{{ loop.index }}"
+                                               {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="ced-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if contabil_form.envio_digital.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.envio_digital.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <label class="form-label fw-semibold mt-3">{{ contabil_form.envio_digital_fisico.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in contabil_form.envio_digital_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital_fisico.name }}"
+                                               value="{{ value }}" id="cedf-{{ loop.index }}"
+                                               {% if value in (contabil_form.envio_digital_fisico.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="cedf-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if contabil_form.envio_digital_fisico.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.envio_digital_fisico.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in contabil_form.controle_relatorios.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.controle_relatorios.name }}"
+                                               value="{{ value }}" id="ccr-{{ loop.index }}"
+                                               {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="ccr-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if contabil_form.controle_relatorios.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.controle_relatorios.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 100px") }}
+                            {{ contabil_form.observacao_movimento.label(class="form-label") }}
+                            {% if contabil_form.observacao_movimento.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.observacao_movimento.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação Controle Relatórios", style="height: 100px") }}
+                            {{ contabil_form.observacao_controle_relatorios.label(class="form-label") }}
+                            {% if contabil_form.observacao_controle_relatorios.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.observacao_controle_relatorios.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            {{ contabil_form.particularidades_texto(class="form-control", placeholder="Particularidades", style="height: 100px") }}
+                            {{ contabil_form.particularidades_texto.label(class="form-label") }}
+                            {% if contabil_form.particularidades_texto.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.particularidades_texto.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-warning px-5" id="contabil-submit-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary px-4 ms-3">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurar
+                    </button>
+                </div>
+            </form>
+            
+            {% if contabil and contabil.updated_at %}
+            <div class="mt-3">
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="bi bi-clock me-2"></i>
+                    <div>
+                        <strong>Última atualização:</strong> {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') if contabil.updated_at else 'Nunca atualizado' }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Departamento Pessoal -->
+    <div class="card shadow-lg mb-5" id="pessoal">
+        <div class="card-header bg-info text-white py-3">
+            <h3 class="mb-0 fw-semibold">
+                <i class="bi bi-people me-2"></i>Departamento Pessoal
+            </h3>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" enctype="multipart/form-data">
+                {{ pessoal_form.hidden_tag() }}
+                <input type="hidden" name="form_type" value="pessoal">
+                
+                <!-- Informações Básicas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
+                        </h5>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.responsavel(class="form-control", placeholder="Responsável") }}
+                            {{ pessoal_form.responsavel.label(class="form-label") }}
+                            {% if pessoal_form.responsavel.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.responsavel.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.descricao(class="form-control", placeholder="Descrição") }}
+                            {{ pessoal_form.descricao.label(class="form-label") }}
+                            {% if pessoal_form.descricao.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.descricao.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalhes do Departamento -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-person-lines-fill me-2"></i>Detalhes do Departamento
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
+                            {{ pessoal_form.data_envio.label(class="form-label") }}
+                            {% if pessoal_form.data_envio.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.data_envio.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
+                            {{ pessoal_form.registro_funcionarios.label(class="form-label") }}
+                            {% if pessoal_form.registro_funcionarios.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.registro_funcionarios.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
+                            {{ pessoal_form.ponto_eletronico.label(class="form-label") }}
+                            {% if pessoal_form.ponto_eletronico.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.ponto_eletronico.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionários") }}
+                            {{ pessoal_form.pagamento_funcionario.label(class="form-label") }}
+                            {% if pessoal_form.pagamento_funcionario.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.pagamento_funcionario.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            {{ pessoal_form.particularidades_texto(class="form-control", placeholder="Particularidades", style="height: 100px") }}
+                            {{ pessoal_form.particularidades_texto.label(class="form-label") }}
+                            {% if pessoal_form.particularidades_texto.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in pessoal_form.particularidades_texto.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-info px-5" id="pessoal-submit-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary px-4 ms-3">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurar
+                    </button>
+                </div>
+            </form>
+            
+            {% if pessoal and pessoal.updated_at %}
+            <div class="mt-3">
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="bi bi-clock me-2"></i>
+                    <div>
+                        <strong>Última atualização:</strong> {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') if pessoal.updated_at else 'Nunca atualizado' }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Departamento Administrativo -->
+    <div class="card shadow-lg mb-5" id="administrativo">
+        <div class="card-header bg-secondary text-white py-3">
+            <h3 class="mb-0 fw-semibold">
+                <i class="bi bi-gear me-2"></i>Departamento Administrativo
+            </h3>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" enctype="multipart/form-data">
+                {{ administrativo_form.hidden_tag() }}
+                <input type="hidden" name="form_type" value="administrativo">
+                
+                <!-- Informações Básicas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
+                        </h5>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ administrativo_form.responsavel(class="form-control", placeholder="Responsável") }}
+                            {{ administrativo_form.responsavel.label(class="form-label") }}
+                            {% if administrativo_form.responsavel.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in administrativo_form.responsavel.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ administrativo_form.descricao(class="form-control", placeholder="Descrição") }}
+                            {{ administrativo_form.descricao.label(class="form-label") }}
+                            {% if administrativo_form.descricao.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in administrativo_form.descricao.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-secondary px-5" id="administrativo-submit-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary px-4 ms-3">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurar
+                    </button>
+                </div>
+            </form>
+            
+            {% if administrativo and administrativo.updated_at %}
+            <div class="mt-3">
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="bi bi-clock me-2"></i>
+                    <div>
+                        <strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') if administrativo.updated_at else 'Nunca atualizado' }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
     <!-- Botões de Navegação -->
     <div class="row">
@@ -413,18 +1045,14 @@
 </div>
 
 {% block scripts %}
+<script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
     if (cnpjField) {
-        cnpjField.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-            value = value.replace(/(\d{4})(\d)/, '$1-$2');
-            e.target.value = value;
+        IMask(cnpjField, {
+            mask: '00.000.000/0000-00'
         });
     }
 
@@ -455,7 +1083,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
         
-        // Aplica estilo inicial para inputs já marcados
         if (input.checked) {
             input.closest('.form-check').style.fontWeight = '600';
             input.closest('.form-check').style.color = '#0558c5';
@@ -477,21 +1104,38 @@ document.addEventListener("DOMContentLoaded", function () {
             container.appendChild(toggleBtn);
             
             toggleBtn.addEventListener('click', function() {
-                const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
-                field.setAttribute('type', type);
-                this.querySelector('i').classList.toggle('bi-eye');
-                this.querySelector('i').classList.toggle('bi-eye-slash');
+            const isPassword = field.type === 'password';
+            field.type = isPassword ? 'text' : 'password';
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
             });
         }
+    });
+
+    // Loading spinner para botões de submit
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function() {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                const spinner = submitBtn.querySelector('.spinner-border');
+                if (spinner) {
+                    spinner.classList.remove('d-none');
+                    submitBtn.disabled = true;
+                }
+            }
+        });
     });
 
     // Auto-dismiss alerts
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(function(alert) {
         setTimeout(function() {
-            if (alert && bootstrap.Alert) {
+            if (alert && typeof bootstrap !== 'undefined' && bootstrap.Alert) {
                 const bsAlert = new bootstrap.Alert(alert);
                 bsAlert.close();
+            } else {
+                alert.remove();
             }
         }, 5000);
     });

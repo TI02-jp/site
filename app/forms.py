@@ -1,5 +1,7 @@
+# app/forms.py
+# Este arquivo define TODOS os formulários da aplicação.
+
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileAllowed
 from wtforms import (
     StringField,
     RadioField,
@@ -9,46 +11,57 @@ from wtforms import (
     SelectField,
     TextAreaField,
     PasswordField,
-    HiddenField,
     BooleanField
 )
-from wtforms.validators import DataRequired, Email, Optional
+from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo
+from app.models.tables import RegimeLancamento
+
+# --- Formulários de Autenticação ---
+
+class LoginForm(FlaskForm):
+    """Formulário para login de usuários."""
+    username = StringField("Usuário", validators=[DataRequired()])
+    password = PasswordField("Senha", validators=[DataRequired()])
+    remember_me = BooleanField("Lembrar-me")
+    submit = SubmitField("Entrar")
+
+class RegistrationForm(FlaskForm):
+    """Formulário para registrar novos usuários."""
+    username = StringField('Usuário', validators=[DataRequired(), Length(min=4, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    name = StringField('Nome Completo', validators=[DataRequired()])
+    password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
+    role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+    submit = SubmitField('Cadastrar')
+
+# --- Formulários da Aplicação ---
 
 class EmpresaForm(FlaskForm):
+    """Formulário para cadastrar ou editar uma empresa."""
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
     cnpj = StringField('CNPJ', validators=[DataRequired()])
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
-    socio_administrador = StringField('Sócio Administrador', validators=[DataRequired()])
-
+    socio_administrador = StringField('Sócio Administrador', validators=[Optional()])
+    atividade_principal = StringField('Atividade Principal', validators=[Optional()])
     tributacao = RadioField('Tributação', choices=[
         ('Simples Nacional', 'Simples Nacional'), 
         ('Lucro Presumido', 'Lucro Presumido'), 
         ('Lucro Real', 'Lucro Real')], validators=[DataRequired()])
-
     regime_lancamento = RadioField('Regime de Lançamento', choices=[
-        ('CAIXA', 'Caixa'), 
-        ('COMPETENCIA', 'Competência')], validators=[DataRequired()])
-
-    atividade_principal = StringField('Atividade Principal', validators=[DataRequired()])
-
+        (e.value, e.value) for e in RegimeLancamento
+    ], validators=[DataRequired()])
     sistemas_consultorias = SelectMultipleField('Sistemas e Consultorias', choices=[
-        ('IOB', 'IOB'), 
-        ('ACESSÓRIAS', 'ACESSÓRIAS'),
-        ('ACESSO AO SAT', 'ACESSO AO SAT'), 
-        ('ITC', 'ITC'), 
-        ('QUESTOR', 'QUESTOR'),
-        ('ECONET', 'ECONET'), 
-        ('QUESTOR NET', 'QUESTOR NET'), 
-        ('SIEG', 'SIEG'),
-        ('SIEG - Utiliza TAGs', 'SIEG - Utiliza TAGs')],
-        default=[],
-        validators=[])
-
-    sistema_utilizado = StringField('Sistema Utilizado')
+        ('IOB', 'IOB'), ('ACESSORIAS', 'Acessórias'), ('ACESSO_AO_SAT', 'Acesso ao SAT'),
+        ('ITC', 'ITC'), ('QUESTOR', 'Questor'), ('ECONET', 'Econet'),
+        ('QUESTOR_NET', 'Questor Net'), ('SIEG', 'Sieg'), ('SIEG_TAG', 'Sieg - Utiliza TAGs')
+    ], validators=[Optional()])
+    sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
 
 class EditUserForm(FlaskForm):
+    """Formulário para editar um usuário existente."""
     username = StringField('Usuário', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
@@ -56,98 +69,66 @@ class EditUserForm(FlaskForm):
     ativo = BooleanField('Usuário Ativo')
 
 class DepartamentoForm(FlaskForm):
-    responsavel = StringField('Responsável')
-    descricao = StringField('Descrição')
+    """Formulário base para departamentos."""
+    responsavel = StringField('Responsável', validators=[Optional()])
+    descricao = StringField('Descrição', validators=[Optional()])
 
 class DepartamentoFiscalForm(DepartamentoForm):
+    """Formulário para o Departamento Fiscal."""
     formas_importacao = SelectMultipleField('Formas de Importação', choices=[
-        ('entradas_sped', 'Entradas por Sped'),
-        ('entradas_xml', 'Entradas por XML'),
-        ('entradas_sat', 'Entradas pelo SAT'),
-        ('entradas_sieg', 'Entradas pelo Sieg'),
-        ('saidas_sped', 'Saídas por Sped'),
-        ('saidas_xml', 'Saídas por XML'),
-        ('saidas_sieg', 'Saídas pelo SIEG'),
-        ('nfce_sped', 'NFCe por Sped'),
-        ('nfce_xml_sieg', 'NFCe por XML - Sieg'),
-        ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
-        ('nenhum', 'Não importa nada')],
-        default=[],
-        validators=[]
-        )
-    link_prefeitura = StringField('Link Prefeitura')
-    usuario_prefeitura = StringField('Usuário Prefeitura')
-    senha_prefeitura = StringField('Senha Prefeitura')
+        ('entradas_sped', 'Entradas por Sped'), ('entradas_xml', 'Entradas por XML'),
+        ('entradas_sat', 'Entradas pelo SAT'), ('entradas_sieg', 'Entradas pelo Sieg'),
+        ('saidas_sped', 'Saídas por Sped'), ('saidas_xml', 'Saídas por XML'),
+        ('saidas_sieg', 'Saídas pelo SIEG'), ('nfce_sped', 'NFCe por Sped'),
+        ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
+        ('nenhum', 'Não importa nada')], validators=[Optional()])
+    link_prefeitura = StringField('Link Prefeitura', validators=[Optional()])
+    usuario_prefeitura = StringField('Usuário Prefeitura', validators=[Optional()])
+    senha_prefeitura = StringField('Senha Prefeitura', validators=[Optional()])
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
-        ('Digital', 'Digital'),
-        ('Fisico', 'Físico'),
-        ('Digital e Físico', 'Digital e Físico')],
-        default=[],
-        validators=[]
-    )
+        ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
+    ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'),
-        ('whatsapp', 'Whatsapp'),
-        ('skype', 'Skype'),
-        ('acessorias', 'Acessórias')
-    ])
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), ('acessorias', 'Acessórias')
+    ], validators=[Optional()])
     envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
-        ('email', 'Email'),
-        ('whatsapp', 'Whatsapp'),
-        ('skype', 'Skype'),
-        ('acessorias', 'Acessórias'),
-        ('malote', 'Malote')
-    ])
-    observacao_movimento = StringField('Observação')
-    contato_nome = StringField('Nome do Contato')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), 
+        ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
+    observacao_movimento = TextAreaField('Observação', validators=[Optional()])
+    contato_nome = StringField('Nome do Contato', validators=[Optional()])
     contato_meios = SelectMultipleField('Formas de Contato', choices=[
-        ('email', 'E-mail'),
-        ('whatsapp', 'Whatsapp'),
-        ('skype', 'Skype'),
-        ('ligacao', 'Ligação Telefônica'),
-        ('acessorias', 'Acessórias')
-    ])
-    particularidades_texto = TextAreaField('Particularidades')
+        ('email', 'E-mail'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'),
+        ('ligacao', 'Ligação Telefônica'), ('acessorias', 'Acessórias')], validators=[Optional()])
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 class DepartamentoContabilForm(DepartamentoForm):
+    """Formulário para o Departamento Contábil."""
     metodo_importacao = SelectField('Forma de Importação', choices=[
-        ('importado', 'Importado'),
-        ('digitado', 'Digitado')
-    ])
+        ('', 'Selecione'), ('importado', 'Importado'), ('digitado', 'Digitado')
+    ], validators=[Optional()])
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
-        ('Digital', 'Digital'),
-        ('Fisico', 'Físico'),
-        ('Digital e Físico', 'Digital e Físico')
-    ])
+        ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
+    ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'),
-        ('whatsapp', 'Whatsapp'),
-        ('skype', 'Skype'),
-        ('acessorias', 'Acessórias')
-    ])
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), ('acessorias', 'Acessórias')
+    ], validators=[Optional()])
     envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
-        ('email', 'Email'),
-        ('whatsapp', 'Whatsapp'),
-        ('skype', 'Skype'),
-        ('acessorias', 'Acessórias'),
-        ('malote', 'Malote')
-    ])
-    observacao_movimento = StringField('Observação Movimento')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), 
+        ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
+    observacao_movimento = TextAreaField('Observação Movimento', validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
-        ('forn_cli_cota_unica', 'Fornecedor e clientes cota unica'),
+        ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),
-        ('adiantamentos', 'Relatório de adiantamentos'),
-        ('contas_pagas', 'Relatório de contas pagas'),
+        ('adiantamentos', 'Relatório de adiantamentos'), ('contas_pagas', 'Relatório de contas pagas'),
         ('contas_recebidas', 'Relatório de contas recebidas'),
-        ('adiantamentos2', 'Relatório de adiantamentos'),
-        ('conferir_aplicacao', 'Conferir aplicação')
-    ])
-    observacao_controle_relatorios = StringField('Observação Relatórios')
-    particularidades_texto = TextAreaField('Particularidades')
+        ('conferir_aplicacao', 'Conferir aplicação')], validators=[Optional()])
+    observacao_controle_relatorios = TextAreaField('Observação Relatórios', validators=[Optional()])
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 class DepartamentoPessoalForm(DepartamentoForm):
-    data_envio = StringField('Data de Envio')
-    registro_funcionarios = StringField('Registro de Funcionários')
-    ponto_eletronico = StringField('Ponto Eletrônico')
-    pagamento_funcionario = StringField('Pagamento de Funcionário')
-    particularidades_texto = TextAreaField('Particularidades')
+    """Formulário para o Departamento Pessoal."""
+    data_envio = StringField('Data de Envio', validators=[Optional()])
+    registro_funcionarios = StringField('Registro de Funcionários', validators=[Optional()])
+    ponto_eletronico = StringField('Ponto Eletrônico', validators=[Optional()])
+    pagamento_funcionario = StringField('Pagamento de Funcionário', validators=[Optional()])
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])

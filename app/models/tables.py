@@ -19,7 +19,10 @@ class JsonString(TypeDecorator):
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            return json.loads(value)
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return None
         return None
 
 class User(db.Model, UserMixin):
@@ -51,26 +54,23 @@ class RegimeLancamento(Enum):
 
 class Empresa(db.Model):
     __tablename__ = 'tbl_empresas'
-    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    NomeEmpresa = db.Column(db.String(100), nullable=False)
-    CNPJ = db.Column(db.String(18), unique=True, nullable=False)
-    AtividadePrincipal = db.Column(db.String(100))
-    DataAbertura = db.Column(db.Date, nullable=False)
-    SocioAdministrador = db.Column(db.String(100))
-    Tributacao = db.Column(db.String(50))
-    RegimeLancamento = db.Column(db.Enum('CAIXA', 'COMPETENCIA'))
-    SistemasConsultorias = db.Column(db.String(200))
-    SistemaUtilizado = db.Column(db.String(150))
-    CodigoEmpresa = db.Column(db.String(100), nullable=False)
+    nome_empresa = db.Column(db.String(100), nullable=False)
+    cnpj = db.Column(db.String(18), unique=True, nullable=False)
+    atividade_principal = db.Column(db.String(100))
+    data_abertura = db.Column(db.Date, nullable=False)
+    socio_administrador = db.Column(db.String(100))
+    tributacao = db.Column(db.String(50))
+    regime_lancamento = db.Column(db.Enum(RegimeLancamento), nullable=False)
+    sistemas_consultorias = db.Column(JsonString(255))
+    sistema_utilizado = db.Column(db.String(150))
+    codigo_empresa = db.Column(db.String(100), nullable=False)
 
     def __repr__(self):
-        return f"<Empresa {self.NomeEmpresa}>"
-
+        return f"<Empresa {self.nome_empresa}>"
 
 class Departamento(db.Model):
     __tablename__ = 'departamentos'
-
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False)
     tipo = db.Column(db.String(50), nullable=False)
@@ -98,4 +98,3 @@ class Departamento(db.Model):
 
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
-

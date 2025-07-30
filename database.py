@@ -121,7 +121,7 @@ def main():
         # CORREÇÃO: Alterado de 'DataAberturaEmpresa' para 'DataAbertura' para corresponder ao modelo.
         alter_query = """
         ALTER TABLE tbl_empresas
-        MODIFY COLUMN DataAbertura VARCHAR(10) NOT NULL;
+        MODIFY COLUMN DataAbertura DATE NOT NULL;
         """
         if db.execute_query(alter_query):
             logger.info("Coluna DataAbertura alterada para NOT NULL")

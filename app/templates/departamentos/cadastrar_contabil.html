@@ -99,6 +99,40 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.envio_digital.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in form.envio_digital.choices %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data) %}checked{% endif %}>
+                                        <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.envio_digital_fisico.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in form.envio_digital_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data) %}checked{% endif %}>
+                                        <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -254,7 +288,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Upload de imagem quando arquivo é selecionado
     const imageInput = document.getElementById('image-input');
     imageInput.addEventListener('change', () => {
         if (imageInput.files && imageInput.files[0]) {
@@ -293,7 +326,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         };
         checkbox.addEventListener('change', updateStyle);
-        updateStyle(); // Aplica o estilo na carga da página
+        updateStyle();
     });
 });
 </script>

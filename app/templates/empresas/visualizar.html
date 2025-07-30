@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}{{ empresa.NomeEmpresa }} - Detalhes Completos{% endblock %}
+{% block title %}{{ empresa.nome_empresa }} - Detalhes Completos{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{{ url_for('listar_empresas') }}">Empresas</a></li>
-<li class="breadcrumb-item active">{{ empresa.NomeEmpresa }}</li>
+<li class="breadcrumb-item active">{{ empresa.nome_empresa }}</li>
 {% endblock %}
 
 {% block content %}
@@ -42,13 +42,13 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1 class="text-primary mb-2">
-                        <i class="bi bi-building-gear me-3"></i>{{ empresa.NomeEmpresa }}
+                        <i class="bi bi-building-gear me-3"></i>{{ empresa.nome_empresa }}
                     </h1>
                     <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
                 </div>
                 <div class="text-end">
                     <div class="badge bg-primary-subtle text-primary px-3 py-2 mb-2">
-                        Código: {{ empresa.CodigoEmpresa or 'N/A' }}
+                        Código: {{ empresa.codigo_empresa or 'N/A' }}
                     </div>
                     <div class="d-block">
                         <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary btn-sm">
@@ -87,22 +87,22 @@
                         <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
                         <div class="info-item">
                             <label class="info-label">Código da Empresa</label>
-                            <div class="info-value"><span class="badge bg-primary-subtle text-primary fs-6">{{ empresa.CodigoEmpresa or 'Não informado' }}</span></div>
+                            <div class="info-value"><span class="badge bg-primary-subtle text-primary fs-6">{{ empresa.codigo_empresa or 'Não informado' }}</span></div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Nome da Empresa</label>
-                            <div class="info-value fw-semibold text-primary">{{ empresa.NomeEmpresa or 'Não informado' }}</div>
+                            <div class="info-value fw-semibold text-primary">{{ empresa.nome_empresa or 'Não informado' }}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">CNPJ</label>
                             <div class="info-value font-monospace clickable-copy">
-                                {% if empresa.CNPJ %}{% set cnpj = empresa.CNPJ|string %}{% if cnpj|length == 14 %}{{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}{% else %}{{ empresa.CNPJ }}{% endif %}{% else %}<span class="text-muted">Não informado</span>{% endif %}
+                                {% if empresa.cnpj %}{% set cnpj = empresa.cnpj|string %}{% if cnpj|length == 14 %}{{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}{% else %}{{ empresa.cnpj }}{% endif %}{% else %}<span class="text-muted">Não informado</span>{% endif %}
                             </div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Data de Abertura</label>
                             <div class="info-value">
-                                {% if empresa.DataAbertura %}{% if empresa.DataAbertura.__class__.__name__ in ['date', 'datetime'] %}<span class="badge bg-info-subtle text-info">{{ empresa.DataAbertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="badge bg-info-subtle text-info">{{ empresa.DataAbertura }}</span>{% endif %}{% else %}<span class="text-muted">Não informada</span>{% endif %}
+                                {% if empresa.data_abertura %}<span class="badge bg-info-subtle text-info">{{ empresa.data_abertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -112,19 +112,19 @@
                         <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
                         <div class="info-item">
                             <label class="info-label">Sócio Administrador</label>
-                            <div class="info-value">{% if empresa.SocioAdministrador %}<i class="bi bi-person-check me-2 text-primary"></i>{{ empresa.SocioAdministrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.socio_administrador %}<i class="bi bi-person-check me-2 text-primary"></i>{{ empresa.socio_administrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Atividade Principal</label>
-                            <div class="info-value">{% if empresa.AtividadePrincipal %}</i>{{ empresa.AtividadePrincipal }}{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.atividade_principal %}</i>{{ empresa.atividade_principal }}{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Tributação</label>
-                            <div class="info-value">{% if empresa.Tributacao %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.Tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.tributacao %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Regime de Lançamento</label>
-                            <div class="info-value">{% if empresa.RegimeLancamento %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-journal-text me-1"></i>{{ empresa.RegimeLancamento }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.regime_lancamento %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-journal-text me-1"></i>{{ empresa.regime_lancamento.value }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                     </div>
                 </div>
@@ -133,13 +133,13 @@
                         <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
                         <div class="info-item">
                             <label class="info-label">Sistema Utilizado</label>
-                            <div class="info-value">{% if empresa.SistemaUtilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-primary"></i><span class="badge bg-primary-subtle text-primary">{{ empresa.SistemaUtilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.sistema_utilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-primary"></i><span class="badge bg-primary-subtle text-primary">{{ empresa.sistema_utilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Sistemas/Consultorias</label>
                             <div class="info-value">
                                 {% set placeholder_sistemas %}<span class="text-muted">Nenhum sistema adicional</span>{% endset %}
-                                {{ render_badge_list(empresa.SistemasConsultorias, 'badge bg-secondary', 'bi-tools', placeholder_sistemas) }}
+                                {{ render_badge_list(empresa.sistemas_consultorias, 'badge bg-secondary', 'bi-tools', placeholder_sistemas) }}
                             </div>
                         </div>
                     </div>
@@ -202,7 +202,7 @@
                             <div class="info-value">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
-
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,7 +242,7 @@
     {% else %}
         <div class="card shadow-lg mb-5 border-success">
             <div class="card-header bg-success text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-success mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-success mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#fiscal" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
@@ -341,96 +341,97 @@
     {% else %}
         <div class="card shadow-lg mb-5 border-info">
             <div class="card-header bg-info text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-info mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-info"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-info mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#contabil" class="btn btn-info"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
 
     <div id="pessoal">
-    {% if pessoal %}
-        <div class="card shadow-lg mb-5">
-            <div class="card-header text-white py-3" style="background-color: #f39c12;">
-                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
-                    {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+        {% if pessoal %}
+            <div class="card shadow-lg mb-5">
+                <div class="card-header text-white py-3" style="background-color: #f39c12;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
+                        {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-lg-6 col-md-12">
+                            <div class="info-group">
+                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                                <div class="info-item">
+                                    <label class="info-label">Responsável</label>
+                                    <div class="info-value">{% if pessoal.responsavel %}<i class="bi bi-person-badge me-2 text-warning"></i><span class="fw-semibold">{{ pessoal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                </div>
+                                <div class="info-item">
+                                    <label class="info-label">Descrição</label>
+                                    <div class="info-value">{% if pessoal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-warning"></i>{{ pessoal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                </div>
+                                <div class="info-item">
+                                    <label class="info-label">Data de Envio</label>
+                                    <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-calendar-event me-1"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-md-12">
+                            <div class="info-group">
+                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
+                                <div class="row">
+                                    <div class="col-md-4 text-center info-item">
+                                        <label class="info-label">Registro de Funcionários</label>
+                                        <div class="info-value mt-2">
+                                            {% if pessoal.registro_funcionarios %}
+                                                <span class="badge bg-warning-subtle text-warning fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2"></i>{{ pessoal.registro_funcionarios }}</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não tem</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center info-item">
+                                        <label class="info-label">Ponto Eletrônico</label>
+                                        <div class="info-value mt-2">
+                                            {% if pessoal.ponto_eletronico %}
+                                                <span class="badge bg-info-subtle text-info fs-6 px-3 py-2"><i class="bi bi-clock me-2"></i>{{ pessoal.ponto_eletronico }}</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center info-item">
+                                        <label class="info-label">Sistema de Pagamento</label>
+                                        <div class="info-value mt-2">
+                                            {% if pessoal.pagamento_funcionario %}
+                                                <span class="badge bg-success-subtle text-success fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2"></i>{{ pessoal.pagamento_funcionario }}</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+    
+                    {% if pessoal.particularidades_texto and pessoal.particularidades_texto.strip() %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="info-group">
+                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                                <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="card-body p-4">
-                <div class="row g-4">
-                    <div class="col-lg-6 col-md-12">
-                        <div class="info-group">
-                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
-                            <div class="info-item">
-                                <label class="info-label">Responsável</label>
-                                <div class="info-value">{% if pessoal.responsavel %}<i class="bi bi-person-badge me-2 text-warning"></i><span class="fw-semibold">{{ pessoal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Descrição</label>
-                                <div class="info-value">{% if pessoal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-warning"></i>{{ pessoal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
-                             <div class="info-item">
-                                <label class="info-label">Data de Envio</label>
-                                <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-calendar-event me-1"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                     <div class="col-lg-6 col-md-12">
-                        <div class="info-group">
-                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
-                            <div class="info-item">
-                                <label class="info-label">Registro de Funcionários</label>
-                                <div class="info-value">{% if pessoal.registro_funcionarios %}<div class="d-flex align-items-center"><i class="bi bi-person-lines-fill me-2 text-warning"></i><span class="badge bg-warning-subtle text-warning">{{ pessoal.registro_funcionarios }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Sistema de Ponto Eletrônico</label>
-                                <div class="info-value">{% if pessoal.ponto_eletronico %}<div class="d-flex align-items-center"><i class="bi bi-clock me-2 text-warning"></i><span class="badge bg-info-subtle text-info">{{ pessoal.ponto_eletronico }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Sistema de Pagamento</label>
-                                <div class="info-value">{% if pessoal.pagamento_funcionario %}<div class="d-flex align-items-center"><i class="bi bi-currency-dollar me-2 text-warning"></i><span class="badge bg-success-subtle text-success">{{ pessoal.pagamento_funcionario }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row g-4 mt-2">
-                    <div class="col-12">
-                        <div class="info-group">
-                             <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>Resumo dos Sistemas Configurados</h6>
-                             <div class="row text-center g-3">
-                                 <div class="col-md-4">
-                                     <div class="p-3 border rounded {% if pessoal.registro_funcionarios %}bg-success-subtle border-success{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-person-check fs-2 {% if pessoal.registro_funcionarios %}text-success{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Registro de Funcionários</h6><small class="{% if pessoal.registro_funcionarios %}text-success fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.registro_funcionarios %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
-                                 </div>
-                                  <div class="col-md-4">
-                                     <div class="p-3 border rounded {% if pessoal.ponto_eletronico %}bg-info-subtle border-info{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-clock-history fs-2 {% if pessoal.ponto_eletronico %}text-info{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Ponto Eletrônico</h6><small class="{% if pessoal.ponto_eletronico %}text-info fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.ponto_eletronico %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
-                                 </div>
-                                 <div class="col-md-4">
-                                     <div class="p-3 border rounded {% if pessoal.pagamento_funcionario %}bg-warning-subtle border-warning{% else %}bg-light border-secondary{% endif %}"><i class="bi bi-credit-card fs-2 {% if pessoal.pagamento_funcionario %}text-warning{% else %}text-muted{% endif %} mb-2"></i><h6 class="mb-1">Sistema de Pagamento</h6><small class="{% if pessoal.pagamento_funcionario %}text-warning fw-semibold{% else %}text-muted{% endif %}">{% if pessoal.pagamento_funcionario %}✓ Configurado{% else %}✗ Não Configurado{% endif %}</small></div>
-                                 </div>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% if pessoal.particularidades_texto and pessoal.particularidades_texto.strip() %}
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                            <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+        {% else %}
+            <div class="card shadow-lg mb-5 border-warning">
+                <div class="card-header text-white py-3" style="background-color: #f39c12;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
+                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#pessoal" class="btn btn-warning"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
             </div>
+        {% endif %}
         </div>
-    {% else %}
-        <div class="card shadow-lg mb-5 border-warning">
-            <div class="card-header text-white py-3" style="background-color: #f39c12;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-warning"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
-        </div>
-    {% endif %}
-    </div>
 
     <div id="administrativo">
     {% if administrativo %}
@@ -478,122 +479,17 @@
     {% else %}
         <div class="card shadow-lg mb-5 border-dark">
             <div class="card-header bg-dark text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dark mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-dark"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dark mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#administrativo" class="btn btn-dark"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
-
-    <div class="card shadow-lg mb-5">
-        <div class="card-header bg-secondary text-white py-3">
-            <h3 class="mb-0 fw-semibold"><i class="bi bi-clipboard-check me-2"></i>Status dos Departamentos</h3>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="text-center p-3 border rounded h-100 {% if fiscal %}border-success bg-success-subtle{% else %}border-secondary bg-light{% endif %}">
-                        <i class="bi bi-receipt fs-2 {% if fiscal %}text-success{% else %}text-muted{% endif %} mb-2"></i>
-                        <h6 class="mb-1">Departamento Fiscal</h6>
-                        <small class="{% if fiscal %}text-success fw-semibold{% else %}text-muted{% endif %}">
-                            {% if fiscal %}✓ Configurado{% if fiscal.responsavel %}<br><small>Resp: {{ fiscal.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
-                        </small>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="text-center p-3 border rounded h-100 {% if contabil %}border-info bg-info-subtle{% else %}border-secondary bg-light{% endif %}">
-                        <i class="bi bi-calculator fs-2 {% if contabil %}text-info{% else %}text-muted{% endif %} mb-2"></i>
-                        <h6 class="mb-1">Departamento Contábil</h6>
-                        <small class="{% if contabil %}text-info fw-semibold{% else %}text-muted{% endif %}">
-                            {% if contabil %}✓ Configurado{% if contabil.responsavel %}<br><small>Resp: {{ contabil.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
-                        </small>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="text-center p-3 border rounded h-100 {% if pessoal %}border-warning bg-warning-subtle{% else %}border-secondary bg-light{% endif %}">
-                        <i class="bi bi-people fs-2 {% if pessoal %}text-warning{% else %}text-muted{% endif %} mb-2"></i>
-                        <h6 class="mb-1">Departamento Pessoal</h6>
-                        <small class="{% if pessoal %}text-warning fw-semibold{% else %}text-muted{% endif %}">
-                            {% if pessoal %}✓ Configurado{% if pessoal.responsavel %}<br><small>Resp: {{ pessoal.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
-                        </small>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="text-center p-3 border rounded h-100 {% if administrativo %}border-dark bg-dark-subtle{% else %}border-secondary bg-light{% endif %}">
-                        <i class="bi bi-gear fs-2 {% if administrativo %}text-dark{% else %}text-muted{% endif %} mb-2"></i>
-                        <h6 class="mb-1">Departamento Administrativo</h6>
-                        <small class="{% if administrativo %}text-dark fw-semibold{% else %}text-muted{% endif %}">
-                            {% if administrativo %}✓ Configurado{% if administrativo.responsavel %}<br><small>Resp: {{ administrativo.responsavel }}</small>{% endif %}{% else %}✗ Não Configurado{% endif %}
-                        </small>
-                    </div>
-                </div>
-            </div>
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="border-top pt-3">
-                        <div class="row text-center">
-                            <div class="col-md-4">
-                                <div class="p-2">
-                                    <h5 class="text-primary mb-1">{{ [fiscal, contabil, pessoal, administrativo]|select|list|length }}/4</h5>
-                                    <small class="text-muted">Departamentos Configurados</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="p-2">
-                                    <h5 class="text-success mb-1">{% set percentual = ([fiscal, contabil, pessoal, administrativo]|select|list|length / 4 * 100)|round %}{{ percentual }}%</h5>
-                                    <small class="text-muted">Completude</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="p-2">
-                                    <h5 class="text-info mb-1">{% if empresa.created_at %}{{ ((empresa.created_at|string)[:10])|replace('-', '/') }}{% else %}N/A{% endif %}</h5>
-                                    <small class="text-muted">Data de Cadastro</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% set updates = [] %}
-    {% if fiscal and fiscal.updated_at %}{% set _ = updates.append(('Fiscal', fiscal.updated_at, 'success')) %}{% endif %}
-    {% if contabil and contabil.updated_at %}{% set _ = updates.append(('Contábil', contabil.updated_at, 'info')) %}{% endif %}
-    {% if pessoal and pessoal.updated_at %}{% set _ = updates.append(('Pessoal', pessoal.updated_at, 'warning')) %}{% endif %}
-    {% if administrativo and administrativo.updated_at %}{% set _ = updates.append(('Administrativo', administrativo.updated_at, 'dark')) %}{% endif %}
-    
-    {% if updates %}
-    <div class="card shadow-lg mb-5">
-        <div class="card-header bg-light text-dark py-3">
-            <h3 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2"></i>Histórico de Atualizações</h3>
-        </div>
-        <div class="card-body p-4">
-            <div class="timeline">
-                {% for dept, timestamp, color in updates|sort(attribute=1, reverse=true) %}
-                <div class="timeline-item d-flex align-items-center mb-3">
-                    <div class="timeline-marker bg-{{ color }}-subtle border border-{{ color }} rounded-circle p-2 me-3">
-                        <i class="bi bi-{% if dept == 'Fiscal' %}receipt{% elif dept == 'Contábil' %}calculator{% elif dept == 'Pessoal' %}people{% else %}gear{% endif %} text-{{ color }}"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h6 class="mb-1">Departamento {{ dept }} Atualizado</h6>
-                        <small class="text-muted">{{ timestamp.strftime('%d/%m/%Y às %H:%M') }}</small>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <div class="row my-5">
         <div class="col-12">
             <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista</a>
                 <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary px-4"><i class="bi bi-pencil me-2"></i>Editar Empresa</a>
-                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-info px-4"><i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos</a>
-                <button onclick="window.print()" class="btn btn-outline-success px-4"><i class="bi bi-printer me-2"></i>Imprimir</button>
-                {% if current_user.role == 'admin' %}
-                <button onclick="exportToPDF()" class="btn btn-outline-warning px-4"><i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF</button>
-                {% endif %}
+                <a href="{{ url_for('editar_empresa', id=empresa.id) }}#fiscal" class="btn btn-outline-info px-4"><i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos</a>
             </div>
         </div>
     </div>
@@ -610,7 +506,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const targetId = this.getAttribute('href');
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                const offset = 80; // Ajuste este valor conforme a altura do seu cabeçalho fixo
+                const offset = 80; 
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -645,7 +541,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (textToCopy && textToCopy !== '-' && textToCopy !== 'Não informado') {
             element.addEventListener('click', function() {
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    const originalHTML = this.innerHTML;
                     const icon = this.querySelector('.bi-clipboard');
                     if (icon) icon.classList.replace('bi-clipboard', 'bi-clipboard-check-fill');
                     

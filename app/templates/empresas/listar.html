@@ -54,26 +54,26 @@
                         <tr>
                             <td class="codigo-col">
                                 <span class="badge bg-primary-subtle text-primary fw-semibold">
-                                    {{ empresa.CodigoEmpresa }}
+                                    {{ empresa.codigo_empresa }}
                                 </span>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-building me-2 text-muted"></i>
                                     <div>
-                                        <div class="fw-semibold">{{ empresa.NomeEmpresa }}</div>
-                                        {% if empresa.SocioAdministrador %}
-                                        <small class="text-muted">{{ empresa.SocioAdministrador }}</small>
+                                        <div class="fw-semibold">{{ empresa.nome_empresa }}</div>
+                                        {% if empresa.socio_administrador %}
+                                        <small class="text-muted">{{ empresa.socio_administrador }}</small>
                                         {% endif %}
                                     </div>
                                 </div>
                             </td>
                             <td class="cnpj-col">
-                                <span class="font-monospace cnpj-formatted">{{ empresa.CNPJ }}</span>
+                                <span class="font-monospace cnpj-formatted">{{ empresa.cnpj }}</span>
                             </td>
                             <td>
                                 <span class="text-muted">
-                                    {{ empresa.DataAbertura.strftime('%d/%m/%Y') if empresa.DataAbertura else 'N/A' }}
+                                    {{ empresa.data_abertura.strftime('%d/%m/%Y') if empresa.data_abertura else 'N/A' }}
                                 </span>
                             </td>
                             <td class="acao-col">
@@ -145,19 +145,15 @@ document.addEventListener("DOMContentLoaded", function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Formatar CNPJ
     function formatCNPJ(cnpj) {
-        // Remove tudo que não é número
         cnpj = cnpj.replace(/\D/g, '');
         
-        // Aplica a máscara XX.XXX.XXX/XXXX-XX
         if (cnpj.length === 14) {
             return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
         }
         return cnpj;
     }
 
-    // Aplica formatação nos CNPJs
     document.querySelectorAll('.cnpj-formatted').forEach(function(element) {
         const cnpjText = element.textContent.trim();
         if (cnpjText) {

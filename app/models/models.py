@@ -1,6 +1,7 @@
 from app import db
 from sqlalchemy.types import TypeDecorator, String
 import json
+from enum import Enum
 
 class JsonString(TypeDecorator):
     impl = String
@@ -18,19 +19,24 @@ class JsonString(TypeDecorator):
             return json.loads(value)
         return None
 
+class RegimeLancamentoEnum(Enum):
+    CAIXA = 'CAIXA'
+    COMPETENCIA = 'COMPETENCIA'
+
 class Empresa(db.Model):
     __tablename__ = 'tbl_empresas'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    NomeEmpresa = db.Column(db.String(100), nullable=False)
-    CNPJ = db.Column(db.String(18), unique=True, nullable=False)
-    AtividadePrincipal = db.Column(db.String(100))
-    DataAbertura = db.Column(db.String(10), nullable=False)
-    SocioAdministrador = db.Column(db.String(100))
-    Tributacao = db.Column(db.String(50))
-    RegimeLancamento = db.Column(db.Enum('CAIXA', 'COMPETENCIA'))
-    SistemasConsultorias = db.Column(JsonString(500))
-    SistemaUtilizado = db.Column(db.String(150))
-    CodigoEmpresa = db.Column(db.String(100), nullable=False)
+    nome_empresa = db.Column(db.String(100), nullable=False)
+    cnpj = db.Column(db.String(18), unique=True, nullable=False)
+    atividade_principal = db.Column(db.String(100))
+    data_abertura = db.Column(db.Date, nullable=False)
+    socio_administrador = db.Column(db.String(100))
+    tributacao = db.Column(db.String(50))
+    regime_lancamento = db.Column(db.Enum(RegimeLancamentoEnum), nullable=False)
+    sistemas_consultorias = db.Column(JsonString(500))
+    sistema_utilizado = db.Column(db.String(150))
+    codigo_empresa = db.Column(db.String(100), nullable=False)
 
-    
+    def __repr__(self):
+        return f"<Empresa {self.nome_empresa}>"
