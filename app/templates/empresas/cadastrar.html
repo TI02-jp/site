@@ -237,7 +237,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div class="form-floating">
-                            {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado", placeholder="Sistema atualmente utilizado", **{'aria-describedby': 'sistemaUtilizadoHelp'}) }}
+                            {{ form.sistema_utilizado(class="form-control", id="sistema_utilizado", placeholder="Sistema atualmente utilizado", required=false, **{'aria-describedby': 'sistemaUtilizadoHelp'}) }}
                             {{ form.sistema_utilizado.label(class="form-label") }}
                         </div>
                         {% if form.sistema_utilizado.errors %}
@@ -249,22 +249,6 @@
                         {% else %}
                             <div id="sistemaUtilizadoHelp" class="form-text">Qual sistema a empresa utiliza para gestão (ex: Omie, ContaAzul, ERP próprio).</div>
                         {% endif %}
-                    </div>
-                </div>
-
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="alert alert-light border-start border-4 border-primary">
-                            <h6 class="alert-heading">
-                                <i class="bi bi-lightbulb-fill me-2"></i>Dicas para preenchimento:
-                            </h6>
-                            <ul class="mb-0 small">
-                                <li><strong>Código da Empresa:</strong> Código interno único para identificação</li>
-                                <li><strong>CNPJ:</strong> Será formatado automaticamente durante a digitação</li>
-                                <li><strong>Tributação:</strong> Selecione o regime tributário da empresa</li>
-                                <li><strong>Sistemas:</strong> Marque todos os sistemas/consultorias que a empresa utiliza</li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
 

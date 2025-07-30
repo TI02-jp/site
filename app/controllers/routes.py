@@ -112,20 +112,22 @@ def dashboard():
 @login_required
 def cadastrar_empresa():
     form = EmpresaForm()
+    if request.method == 'GET':
+        form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
             nova_empresa = Empresa(
-                CodigoEmpresa=form.codigo_empresa.data,
-                NomeEmpresa=form.nome_empresa.data,
-                CNPJ=cnpj_limpo,
-                DataAbertura=form.data_abertura.data,
-                SocioAdministrador=form.socio_administrador.data,
-                Tributacao=form.tributacao.data,
-                RegimeLancamento=form.regime_lancamento.data,
-                AtividadePrincipal=form.atividade_principal.data,
-                SistemasConsultorias=form.sistemas_consultorias.data,
-                SistemaUtilizado=form.sistema_utilizado.data
+                codigo_empresa=form.codigo_empresa.data,
+                nome_empresa=form.nome_empresa.data,
+                cnpj=cnpj_limpo,
+                data_abertura=form.data_abertura.data,
+                socio_administrador=form.socio_administrador.data,
+                tributacao=form.tributacao.data,
+                regime_lancamento=form.regime_lancamento.data,
+                atividade_principal=form.atividade_principal.data,
+                sistemas_consultorias=form.sistemas_consultorias.data,
+                sistema_utilizado=form.sistema_utilizado.data
             )
             db.session.add(nova_empresa)
             db.session.commit()
@@ -254,12 +256,12 @@ def editar_empresa(id):
 
     # Populate JSON and complex fields for GET requests
     if request.method == 'GET':
+        if empresa:
+            empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if fiscal and fiscal.senha_prefeitura:
             fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura
         if empresa:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
-        if empresa:
-            empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if fiscal:
             fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
             fiscal_form.envio_digital.data = fiscal.envio_digital or []
@@ -352,16 +354,16 @@ def visualizar_empresa(id):
             fiscal.contato_nome = ''
             fiscal.contato_meios = ''
 
-    if fiscal and fiscal.formas_importacao:
-        if isinstance(fiscal.formas_importacao, str):
-            try:
-                fiscal.formas_importacao = json.loads(fiscal.formas_importacao)
-            except:
-                fiscal.formas_importacao = []
-    else:
-        fiscal.formas_importacao = []
+    if fiscal:
+        if fiscal.formas_importacao:
+            if isinstance(fiscal.formas_importacao, str):
+                try:
+                    fiscal.formas_importacao = json.loads(fiscal.formas_importacao)
+                except:
+                    fiscal.formas_importacao = []
+        else:
+            fiscal.formas_importacao = []
 
-    
     return render_template('empresas/visualizar.html',
                          empresa=empresa,
                          fiscal=fiscal,

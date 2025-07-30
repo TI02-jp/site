@@ -4,26 +4,22 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header do Dashboard -->
+    <!-- Header -->
     <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="text-primary mb-2">
-                        <i class="bi bi-speedometer2 me-3"></i>Dashboard
-                    </h1>
-                    <p class="text-muted mb-0">Bem-vindo, <strong>{{ current_user.name }}</strong>! Aqui está o resumo do seu sistema.</p>
-                </div>
-                <div class="text-end">
-                    <div class="badge bg-primary-subtle text-primary px-3 py-2">
-                        <i class="bi bi-person-circle me-1"></i>{{ current_user.role|title }}
-                    </div>
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="text-primary mb-2"><i class="bi bi-speedometer2 me-3"></i>Dashboard</h1>
+                <p class="text-muted mb-0">Bem-vindo, <strong>{{ current_user.name }}</strong>! Aqui está o resumo do seu sistema.</p>
+            </div>
+            <div class="text-end">
+                <div class="badge bg-primary-subtle text-primary px-3 py-2">
+                    <i class="bi bi-person-circle me-1"></i>{{ current_user.role|title }}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mensagens Flash -->
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="row mb-4">
@@ -42,60 +38,49 @@
 
     <!-- Ações Principais -->
     <div class="row mb-5">
-        <div class="col-12">
-            <h3 class="text-primary border-bottom pb-2 mb-4">
-                <i class="bi bi-lightning-charge me-2"></i>Ações Principais
-            </h3>
-        </div>
-        
+        {% set actions = [
+            {
+                "title": "Cadastrar Nova Empresa",
+                "desc": "Registre uma nova empresa com todas as informações necessárias, incluindo dados fiscais, contábeis e departamentos.",
+                "icon": "bi-building-add",
+                "btn_class": "btn-primary",
+                "btn_text": "Cadastrar Empresa",
+                "btn_icon": "bi-plus-circle",
+                "url": url_for('cadastrar_empresa')
+            },
+            {
+                "title": "Gerenciar Empresas",
+                "desc": "Acesse a lista completa de empresas cadastradas, edite informações e gerencie departamentos.",
+                "icon": "bi-buildings",
+                "btn_class": "btn-info",
+                "btn_text": "Ver Empresas",
+                "btn_icon": "bi-buildings",
+                "url": url_for('listar_empresas')
+            }
+        ] %}
+        {% for action in actions %}
         <div class="col-lg-6 col-md-6 mb-4">
             <div class="card border-0 shadow-sm h-100 action-card">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center mb-3">
                         <div class="icon-circle bg-primary-subtle text-primary me-3">
-                            <i class="bi bi-building-add fs-4"></i>
+                            <i class="bi {{ action.icon }} fs-4"></i>
                         </div>
                         <div>
-                            <h5 class="mb-1">Cadastrar Nova Empresa</h5>
-                            <small class="text-muted">Adicione uma nova empresa ao sistema</small>
+                            <h5 class="mb-1">{{ action.title }}</h5>
+                            <small class="text-muted">{{ action.desc }}</small>
                         </div>
                     </div>
-                    <p class="text-muted small mb-3">
-                        Registre uma nova empresa com todas as informações necessárias, 
-                        incluindo dados fiscais, contábeis e departamentos.
-                    </p>
-                    <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary w-100">
-                        <i class="bi bi-plus-circle me-2"></i>Cadastrar Empresa
+                    <a href="{{ action.url }}" class="btn {{ action.btn_class }} w-100">
+                        <i class="{{ action.btn_icon }} me-2"></i>{{ action.btn_text }}
                     </a>
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-6 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 action-card">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-circle bg-info-subtle text-info me-3">
-                            <i class="bi bi-buildings fs-4"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-1">Gerenciar Empresas</h5>
-                            <small class="text-muted">Visualize e edite empresas existentes</small>
-                        </div>
-                    </div>
-                    <p class="text-muted small mb-3">
-                        Acesse a lista completa de empresas cadastradas, 
-                        edite informações e gerencie departamentos.
-                    </p>
-                    <a href="{{ url_for('listar_empresas') }}" class="btn btn-info w-100">
-                        <i class="bi bi-buildings me-2"></i>Ver Empresas
-                    </a>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 
-    <!-- Seção Admin (se for admin) -->
+    <!-- Área Administrativa -->
     {% if current_user.role == 'admin' %}
     <div class="row mb-5">
         <div class="col-12">
@@ -103,57 +88,59 @@
                 <i class="bi bi-shield-lock me-2"></i>Área Administrativa
             </h3>
         </div>
-        
+
+        {% set admin_actions = [
+            {
+                "title": "Relatórios",
+                "desc": "Visualize dados consolidados e gere relatórios do sistema",
+                "icon": "bi-graph-up",
+                "btn_class": "btn-success",
+                "btn_text": "Acessar Relatórios",
+                "btn_icon": "bi-bar-chart-fill",
+                "url": url_for('relatorios')
+            },
+            {
+                "title": "Usuários",
+                "desc": "Gerencie usuários, permissões e acessos ao sistema",
+                "icon": "bi-person-gear",
+                "btn_class": "btn-dark",
+                "btn_text": "Gerenciar Usuários",
+                "btn_icon": "bi-people-fill",
+                "url": url_for('list_users')
+            },
+            {
+                "title": "Configurações",
+                "desc": "Configure preferências e parâmetros do sistema",
+                "icon": "bi-gear",
+                "btn_class": "btn-warning",
+                "btn_text": "Em Breve",
+                "btn_icon": "bi-tools",
+                "url": None,
+                "disabled": True
+            }
+        ] %}
+        {% for admin in admin_actions %}
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 action-card admin-card">
-                <div class="card-body p-4 text-center">
-                    <div class="icon-circle bg-success-subtle text-success mb-3 mx-auto">
-                        <i class="bi bi-graph-up fs-3"></i>
+            <div class="card border-0 shadow-sm h-100 action-card admin-card text-center">
+                <div class="card-body p-4">
+                    <div class="icon-circle bg-{{ admin.btn_class.split('-')[1] }}-subtle text-{{ admin.btn_class.split('-')[1] }} mb-3 mx-auto">
+                        <i class="bi {{ admin.icon }} fs-3"></i>
                     </div>
-                    <h5 class="mb-2">Relatórios</h5>
-                    <p class="text-muted small mb-3">
-                        Visualize dados consolidados e gere relatórios do sistema
-                    </p>
-                    <a href="{{ url_for('relatorios') }}" class="btn btn-success w-100">
-                        <i class="bi bi-bar-chart-fill me-2"></i>Acessar Relatórios
-                    </a>
+                    <h5 class="mb-2">{{ admin.title }}</h5>
+                    <p class="text-muted small mb-3">{{ admin.desc }}</p>
+                    {% if admin.disabled %}
+                        <button class="btn {{ admin.btn_class }} w-100" disabled>
+                            <i class="{{ admin.btn_icon }} me-2"></i>{{ admin.btn_text }}
+                        </button>
+                    {% else %}
+                        <a href="{{ admin.url }}" class="btn {{ admin.btn_class }} w-100">
+                            <i class="{{ admin.btn_icon }} me-2"></i>{{ admin.btn_text }}
+                        </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 action-card admin-card">
-                <div class="card-body p-4 text-center">
-                    <div class="icon-circle bg-dark-subtle text-dark mb-3 mx-auto">
-                        <i class="bi bi-person-gear fs-3"></i>
-                    </div>
-                    <h5 class="mb-2">Usuários</h5>
-                    <p class="text-muted small mb-3">
-                        Gerencie usuários, permissões e acessos ao sistema
-                    </p>
-                    <a href="{{ url_for('list_users') }}" class="btn btn-dark w-100">
-                        <i class="bi bi-people-fill me-2"></i>Gerenciar Usuários
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 action-card admin-card">
-                <div class="card-body p-4 text-center">
-                    <div class="icon-circle bg-warning-subtle text-warning mb-3 mx-auto">
-                        <i class="bi bi-gear fs-3"></i>
-                    </div>
-                    <h5 class="mb-2">Configurações</h5>
-                    <p class="text-muted small mb-3">
-                        Configure preferências e parâmetros do sistema
-                    </p>
-                    <button class="btn btn-warning w-100" disabled>
-                        <i class="bi bi-tools me-2"></i>Em Breve
-                    </button>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
     {% endif %}
 
@@ -161,10 +148,8 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 bg-light">
-                <div class="card-body py-4">
-                    <h5 class="text-center mb-3">
-                        <i class="bi bi-bookmark-star me-2"></i>Acesso Rápido
-                    </h5>
+                <div class="card-body py-4 text-center">
+                    <h5 class="mb-3"><i class="bi bi-bookmark-star me-2"></i>Acesso Rápido</h5>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         {% if current_user.role == 'admin' %}
                         <a href="{{ url_for('novo_usuario') }}" class="btn btn-outline-primary btn-sm">
@@ -188,33 +173,6 @@
 </div>
 
 <style>
-/* Cards com hover effect */
-.card-hover {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.card-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Action cards */
-.action-card {
-    transition: all 0.3s ease;
-    border-left: 4px solid transparent;
-}
-
-.action-card:hover {
-    transform: translateY(-2px);
-    border-left-color: #0558c5;
-}
-
-.admin-card:hover {
-    border-left-color: #dc3545;
-}
-
-/* Círculos de ícones */
 .icon-circle {
     width: 80px;
     height: 80px;
@@ -224,116 +182,32 @@
     justify-content: center;
     margin: 0 auto;
 }
-
-/* Backgrounds sutis */
-.bg-primary-subtle {
-    background-color: rgba(5, 88, 197, 0.1) !important;
-}
-
-.bg-success-subtle {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-}
-
-.bg-info-subtle {
-    background-color: rgba(13, 202, 240, 0.1) !important;
-}
-
-.bg-warning-subtle {
-    background-color: rgba(255, 193, 7, 0.1) !important;
-}
-
-.bg-dark-subtle {
-    background-color: rgba(33, 37, 41, 0.1) !important;
-}
-
-/* Cores personalizadas */
-.text-primary {
-    color: #0558c5 !important;
-}
-
-.btn-primary {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-primary:hover {
-    background-color: #043a91;
-    border-color: #043a91;
-}
-
-.btn-outline-primary {
-    color: #0558c5;
-    border-color: #0558c5;
-}
-
-.btn-outline-primary:hover {
-    background-color: #0558c5;
-    border-color: #0558c5;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .d-flex.gap-3.flex-wrap {
-        flex-direction: column;
-    }
-    
-    .d-flex.gap-3.flex-wrap .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    .card-hover:hover {
-        transform: none;
-    }
-    
-    .action-card:hover {
-        transform: none;
-    }
-    
-    .icon-circle {
-        width: 60px;
-        height: 60px;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
-}
+.bg-primary-subtle {background-color: rgba(5, 88, 197, 0.1) !important;}
+.bg-success-subtle {background-color: rgba(25, 135, 84, 0.1) !important;}
+.bg-info-subtle {background-color: rgba(13, 202, 240, 0.1) !important;}
+.bg-warning-subtle {background-color: rgba(255, 193, 7, 0.1) !important;}
+.bg-dark-subtle {background-color: rgba(33, 37, 41, 0.1) !important;}
+.text-primary {color: #0558c5 !important;}
 </style>
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
     // Auto-dismiss alerts
-    const alerts = document.querySelectorAll('.alert-dismissible');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            if (alert && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+    document.querySelectorAll('.alert-dismissible').forEach(alert => {
+        setTimeout(() => {
+            if (bootstrap?.Alert) {
+                new bootstrap.Alert(alert).close();
             }
         }, 5000);
     });
 
-    // Adiciona interatividade aos cards de estatística
-    document.querySelectorAll('.card-hover').forEach(function(card) {
-        card.addEventListener('click', function() {
-            // Efeito visual de clique
-            this.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                this.style.transform = '';
-            }, 100);
-        });
-    });
-
-    // Loading state nos botões
-    document.querySelectorAll('a.btn:not(.btn-outline-secondary):not(.btn-outline-info)').forEach(function(btn) {
+    // Button loading icon
+    document.querySelectorAll('a.btn:not(.btn-outline-secondary):not(.btn-outline-info)').forEach(btn => {
         if (!btn.disabled) {
-            btn.addEventListener('click', function() {
-                const icon = this.querySelector('i');
-                if (icon) {
-                    icon.className = 'bi bi-hourglass-split me-2';
-                }
+            btn.addEventListener('click', () => {
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = 'bi bi-hourglass-split me-2';
             });
         }
     });
