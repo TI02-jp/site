@@ -387,9 +387,27 @@ def gerenciar_departamentos(empresa_id):
     administrativo_form = DepartamentoForm(request.form, obj=administrativo)
     
     if request.method == 'GET':
+        fiscal_form = DepartamentoFiscalForm(obj=fiscal)
         if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
             fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
             fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
+        
+        contabil_form = DepartamentoContabilForm(obj=contabil)
+        if contabil:
+            try:
+                contabil_form.envio_digital.data = json.loads(contabil.envio_digital) if contabil.envio_digital else []
+            except Exception:
+                contabil_form.envio_digital.data = []
+            
+            try:
+                contabil_form.envio_digital_fisico.data = json.loads(contabil.envio_digital_fisico) if contabil.envio_digital_fisico else []
+            except Exception:
+                contabil_form.envio_digital_fisico.data = []
+            
+            try:
+                contabil_form.controle_relatorios.data = json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
+            except Exception:
+                contabil_form.controle_relatorios.data = []
 
     form_type = request.form.get('form_type')
 
@@ -415,6 +433,11 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(contabil)
             
             contabil_form.populate_obj(contabil)
+            
+            contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
+            contabil.envio_digital_fisico = json.dumps(contabil_form.envio_digital_fisico.data or [])
+            contabil.controle_relatorios = json.dumps(contabil_form.controle_relatorios.data or [])
+            
             flash('Departamento Contábil salvo com sucesso!', 'success')
             form_processed_successfully = True
 
@@ -427,7 +450,6 @@ def gerenciar_departamentos(empresa_id):
             flash('Departamento Pessoal salvo com sucesso!', 'success')
             form_processed_successfully = True
         
-        # CORREÇÃO: Faltava a lógica para salvar o formulário administrativo
         elif form_type == 'administrativo' and administrativo_form.validate():
             if not administrativo:
                 administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')

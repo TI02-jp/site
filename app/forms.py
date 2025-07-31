@@ -1,6 +1,3 @@
-# app/forms.py
-# Este arquivo define TODOS os formulários da aplicação.
-
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
@@ -15,8 +12,6 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo
 from app.models.tables import RegimeLancamento
-
-# --- Formulários de Autenticação ---
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
