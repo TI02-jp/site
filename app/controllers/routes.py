@@ -441,7 +441,6 @@ def gerenciar_departamentos(empresa_id):
             flash('Departamento Contábil salvo com sucesso!', 'success')
             form_processed_successfully = True
 
-
         elif form_type == 'pessoal' and pessoal_form.validate():
             if not pessoal:
                 pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
