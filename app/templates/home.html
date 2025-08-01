@@ -21,8 +21,8 @@
             color: #333; /* Cor padrão do texto */
         }
 
-        .header-bg-primary { /* Classe personalizada para o header, se não quiser usar bg-primary direto */
-            background-color: #0d6efd; /* Cor azul do Bootstrap primary */
+        .header-bg-primary {
+            background-color: #0b288b; /* Azul personalizado */
         }
 
         /* Seções de conteúdo para espaçamento e centralização */
@@ -42,8 +42,17 @@
             padding: 12px 25px;
             font-size: 1.1rem;
             border-radius: 30px; /* Botões arredondados */
+            background-color: #e87429; /* Laranja personalizado */
+            color: #fff;
+            border: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .action-btn .btn:hover {
+            background-color: #cf661f; /* Laranja um pouco mais escuro no hover */
         }
     </style>
+
 </head>
 <body>
     <header class="py-5 text-white text-center header-bg-primary"> {# Ajustado para usar classes Bootstrap e a custom #}

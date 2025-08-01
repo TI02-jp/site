@@ -189,7 +189,7 @@
                             </div>
                             <div class="info-item">
                                 <label class="info-label">Senha da Prefeitura</label>
-                                <div class="info-value">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-success"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-success ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                <div class="info-value centered">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-success"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-success ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
                         </div>
                     </div>
@@ -197,11 +197,24 @@
 
                 <div class="row g-4 mt-2">
                     <div class="col-12">
-                         <div class="info-group">
+                        <div class="info-group">
                             <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
                             <div class="info-value">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
+                            </div>
+                        </div>
+                        <div class="info-group mt-4">
+                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
+                            <div class="info-value">
+                                {% if fiscal.contato_nome %}
+                                    <span class="fw-semibold">{{ fiscal.contato_nome }}</span>
+                                    {% if fiscal.contato_meios %}
+                                        <div class="text-muted small">{{ fiscal.contato_meios }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Não informado</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

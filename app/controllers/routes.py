@@ -35,6 +35,8 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+    ## Rota para upload de imagens
+
 @app.route('/upload_image', methods=['POST'])
 @login_required
 def upload_image():
@@ -107,6 +109,8 @@ def login():
 @login_required
 def dashboard():
     return render_template('dashboard.html')
+
+    ## Rota para cadastrar uma nova empresa
 
 @app.route('/cadastrar_empresa', methods=['GET', 'POST'])
 @login_required
@@ -247,14 +251,12 @@ def editar_empresa(id):
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
 
-    # Initialize forms
     empresa_form = EmpresaForm(request.form, obj=empresa)
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoForm(request.form, obj=administrativo)
 
-    # Populate JSON and complex fields for GET requests
     if request.method == 'GET':
         if empresa:
             empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
@@ -262,27 +264,50 @@ def editar_empresa(id):
             fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura
         if empresa:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
+            
         if fiscal:
             fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
             fiscal_form.envio_digital.data = fiscal.envio_digital or []
             fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
-            fiscal_form.contato_meios.data = fiscal.contatos.get('meios', []) if fiscal.contatos else []
-            fiscal_form.contato_nome.data = fiscal.contatos.get('nome', '') if fiscal.contatos else ''
             fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura or ''
+            
+        if fiscal and fiscal.contatos:
+            try:
+                if isinstance(fiscal.contatos, str):
+                    contatos_dict = json.loads(fiscal.contatos)
+                elif isinstance(fiscal.contatos, dict):
+                    contatos_dict = fiscal.contatos
+                else:
+                    contatos_dict = {}
+            except Exception:
+                contatos_dict = {}
+        else:
+            contatos_dict = {}
+
+        fiscal_form.contato_nome.data = contatos_dict.get('nome', '')
+        meios = contatos_dict.get('meios', [])
+        if isinstance(meios, list):
+            fiscal_form.contato_meios.data = ', '.join(meios)
+        elif isinstance(meios, str):
+            fiscal_form.contato_meios.data = meios
+        else:
+            fiscal_form.contato_meios.data = ''
+            
         if contabil:
             contabil_form.envio_digital.data = contabil.envio_digital or []
             contabil_form.envio_digital_fisico.data = contabil.envio_digital_fisico or []
             contabil_form.controle_relatorios.data = contabil.controle_relatorios or []
+            
         if pessoal:
             pessoal_form.data_envio.data = pessoal.data_envio or ''
             pessoal_form.registro_funcionarios.data = pessoal.registro_funcionarios or ''
             pessoal_form.ponto_eletronico.data = pessoal.ponto_eletronico or ''
             pessoal_form.pagamento_funcionario.data = pessoal.pagamento_funcionario or ''
+            
         if administrativo:
             administrativo_form.responsavel.data = administrativo.responsavel or ''
             administrativo_form.descricao.data = administrativo.descricao or ''
 
-    # Process form submissions
     if request.method == 'POST':
         form_map = {
             'empresa': (empresa_form, empresa),
@@ -290,7 +315,8 @@ def editar_empresa(id):
             'contabil': (contabil_form, contabil or Departamento(empresa_id=id, tipo='Departamento Contábil')),
             'pessoal': (pessoal_form, pessoal or Departamento(empresa_id=id, tipo='Departamento Pessoal')),
             'administrativo': (administrativo_form, administrativo or Departamento(empresa_id=id, tipo='Departamento Administrativo'))
-        }   
+        }
+        
         form_type = request.form.get('form_type')
         if form_type in form_map:
             form, obj = form_map[form_type]
@@ -344,15 +370,28 @@ def visualizar_empresa(id):
     
     if fiscal and fiscal.contatos:
         try:
-            if isinstance(fiscal.contatos, dict):
-                fiscal.contato_nome = fiscal.contatos.get('nome', '')
-                fiscal.contato_meios = ','.join(fiscal.contatos.get('meios', []))
+            if isinstance(fiscal.contatos, str):
+                contatos_dict = json.loads(fiscal.contatos)
+            elif isinstance(fiscal.contatos, dict):
+                contatos_dict = fiscal.contatos
             else:
-                fiscal.contato_nome = ''
+                contatos_dict = {}
+            
+            fiscal.contato_nome = contatos_dict.get('nome', '')
+            # Se 'meios' for lista ou string, trata para exibir legível
+            meios = contatos_dict.get('meios', [])
+            if isinstance(meios, list):
+                fiscal.contato_meios = ', '.join(meios)
+            elif isinstance(meios, str):
+                fiscal.contato_meios = meios
+            else:
                 fiscal.contato_meios = ''
-        except:
+        except Exception as e:
             fiscal.contato_nome = ''
             fiscal.contato_meios = ''
+    else:
+        fiscal.contato_nome = ''
+        fiscal.contato_meios = ''
 
     if fiscal:
         if fiscal.formas_importacao:
@@ -370,6 +409,8 @@ def visualizar_empresa(id):
                          contabil=contabil,
                          pessoal=pessoal,
                          administrativo=administrativo)
+    
+    ## Rota para gerenciar departamentos de uma empresa
 
 @app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
 @login_required
@@ -388,9 +429,14 @@ def gerenciar_departamentos(empresa_id):
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
-        if fiscal and fiscal.contatos and isinstance(fiscal.contatos, dict):
-            fiscal_form.contato_nome.data = fiscal.contatos.get('nome')
-            fiscal_form.contato_meios.data = fiscal.contatos.get('meios')
+        if fiscal and fiscal.contatos:
+            try:
+                contatos_dict = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
+                fiscal_form.contato_nome.data = contatos_dict.get('nome')
+                fiscal_form.contato_meios.data = contatos_dict.get('meios')
+            except Exception:
+                fiscal_form.contato_nome.data = ''
+                fiscal_form.contato_meios.data = ''
         
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
@@ -420,10 +466,10 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(fiscal)
             
             fiscal_form.populate_obj(fiscal)
-            fiscal.contatos = {
+            fiscal.contatos = json.dumps({
                 "nome": fiscal_form.contato_nome.data,
                 "meios": fiscal_form.contato_meios.data
-            }
+            })
             flash('Departamento Fiscal salvo com sucesso!', 'success')
             form_processed_successfully = True
 
@@ -462,10 +508,21 @@ def gerenciar_departamentos(empresa_id):
         if form_processed_successfully:
             try:
                 db.session.commit()
-                return redirect(url_for('gerenciar_departamentos', empresa_id=empresa_id))
+
+                hash_ancoras = {
+                    'fiscal': 'fiscal',
+                    'contabil': 'contabil',
+                    'pessoal': 'pessoal',
+                    'administrativo': 'administrativo'
+                }
+                hash_ancora = hash_ancoras.get(form_type, '')
+
+                return redirect(url_for('visualizar_empresa', id=empresa_id) + f'#{hash_ancora}')
+
             except Exception as e:
                 db.session.rollback()
                 flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
+        
         else:
             active_form = {
                 'fiscal': fiscal_form, 
@@ -511,6 +568,8 @@ def test_connection():
         return "Conexão bem-sucedida com o banco de dados!"
     except Exception as e:
         return f"Erro na conexão: {str(e)}", 500
+    
+    ## Rota para listar usuários
 
 @app.route('/users', methods=['GET', 'POST'])
 @login_required

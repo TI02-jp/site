@@ -14,7 +14,7 @@ body {
 Cabeçalho
 ----------------------------- */
 header {
-    background-color: #0558c5;
+    background-color: #0b288b;
     color: white;
     padding: 20px;
     font-size: 2em;
@@ -46,7 +46,7 @@ Seção Introdução
 }
 
 .intro h2 {
-    color: #0558c5;
+    color: #0b288b;
     font-size: 1.8em;
 }
 
@@ -70,7 +70,7 @@ Botões e Ações
     padding: 12px 20px;
     font-size: 1.1em;
     color: white;
-    background-color: #ff8800;
+    background-color: #e87429;
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -80,7 +80,7 @@ Botões e Ações
 }
 
 .btn:hover, .btn-custom:hover, .submit-btn:hover {
-    background-color: #0558c5;
+    background-color: #0b288b;
 }
 
 .btn:focus, .btn-custom:focus, .submit-btn:focus {
@@ -116,7 +116,7 @@ Tabelas (Empresas e Usuários)
 }
 
 .user-table th, .table-empresas thead th {
-    background-color: #0558c5;
+    background-color: #0b288b;
     color: white;
     text-align: center;
 }
@@ -160,7 +160,7 @@ td:nth-child(5) {
 Botões personalizados
 ----------------------------- */
 .btn-custom {
-    background-color: #ff8800;
+    background-color: #e87429;
     color: white;
     border-radius: 6px;
     padding: 6px 12px;
@@ -171,7 +171,7 @@ Botões personalizados
 }
 
 .btn-custom:hover {
-    background-color: #0558c5;
+    background-color: #0b288b;
 }
 
 .btn-danger {
@@ -209,7 +209,7 @@ Formulários
 .form-container h2 {
     text-align: center;
     margin-bottom: 1.5rem;
-    color: #0558c5;
+    color: #0b288b;
 }
 
 .form-group {
@@ -235,7 +235,7 @@ input[type="password"] {
 }
 
 input:focus {
-    border-color: #007bff;
+    border-color: #0b288b;
     outline: none;
 }
 
@@ -245,7 +245,7 @@ TELA DE LOGIN - ESTILOS ESPECÍFICOS
 
 /* Body da página de login com background especial */
 body.login-page {
-    background: linear-gradient(135deg, #e0ecf8, #f1f5fc);
+    background: linear-gradient(135deg, #0b288b, #e87429);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -305,14 +305,14 @@ body.login-page {
 }
 
 .login-container .form-control:focus {
-    border-color: #0558c5;
-    box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
+    border-color: #0b288b;
+    box-shadow: 0 0 0 0.2rem rgba(75, 148, 243, 0.25);
 }
 
 /* Botão principal do login */
 .login-container .btn-primary {
-    background-color: #0558c5;
-    border-color: #0558c5;
+    background-color: #0b288b;
+    border-color: #0b288b;
     padding: 0.75rem;
     font-weight: 500;
     border-radius: 8px;
@@ -320,8 +320,8 @@ body.login-page {
 }
 
 .login-container .btn-primary:hover {
-    background-color: #043a91;
-    border-color: #043a91;
+    background-color: #0b288b;
+    border-color: #0b288b;
     transform: translateY(-1px);
 }
 
@@ -370,46 +370,46 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
 
 /* Cabeçalho dos cards de formulário */
 .card-header.bg-primary {
-    background-color: #0558c5 !important;
+    background-color: #0b288b !important;
 }
 
 /* Títulos das seções */
 .text-primary {
-    color: #0558c5 !important;
+    color: #0b288b !important;
 }
 
 /* Bordas inferiores das seções */
 .border-bottom {
-    border-color: #0558c5 !important;
+    border-color: #0b288b !important;
     border-width: 2px !important;
 }
 
 /* Botões primários */
 .btn-primary {
-    background-color: #0558c5;
-    border-color: #0558c5;
+    background-color: #0b288b;
+    border-color: #0b288b;
 }
 
 .btn-primary:hover {
-    background-color: #043a91;
-    border-color: #043a91;
+    background-color: #0b288b;
+    border-color: #0b288b;
 }
 
 /* Checkboxes */
 .form-check-input:checked {
-    background-color: #0558c5;
-    border-color: #0558c5;
+    background-color: #0b288b;
+    border-color: #0b288b;
 }
 
 /* Focus states para inputs */
 .form-floating > .form-control:focus,
 .form-control:focus {
-    border-color: #0558c5;
+    border-color: #0b288b;
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
 .form-select:focus {
-    border-color: #0558c5;
+    border-color: #0b288b;
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
@@ -523,7 +523,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 
 /* Cores de borda consistentes */
 .border-primary {
-    border-color: #0558c5 !important;
+    border-color: #0b288b !important;
 }
 
 /* Headers coloridos para os cards de relatório */
@@ -717,13 +717,13 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 
 /* Botões outline personalizados */
 .btn-outline-primary {
-    color: #0558c5;
-    border-color: #0558c5;
+    color: #0b288b;
+    border-color: #0b288b;
 }
 
 .btn-outline-primary:hover {
-    background-color: #0558c5;
-    border-color: #0558c5;
+    background-color: #0b288b;
+    border-color: #0b288b;
 }
 
 .btn-outline-secondary {
@@ -778,7 +778,7 @@ Mensagens de erro
 Links
 ----------------------------- */
 a {
-    color: #007bff;
+    color: #0b288b;
     text-decoration: none;
 }
 
@@ -1088,4 +1088,10 @@ Mensagem de login flutuante
     .bi-building.me-2 {
         display: none;
     }
+}
+
+.info-value.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
