@@ -207,11 +207,12 @@
                         <div class="info-group mt-4">
                             <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
                             <div class="info-value">
-                                {% if fiscal.contato_nome %}
-                                    <span class="fw-semibold">{{ fiscal.contato_nome }}</span>
-                                    {% if fiscal.contato_meios %}
-                                        <div class="text-muted small">{{ fiscal.contato_meios }}</div>
-                                    {% endif %}
+                                {% if fiscal.contatos_list %}
+                                    <ul class="list-unstyled mb-0">
+                                        {% for contato in fiscal.contatos_list %}
+                                            <li><span class="fw-semibold">{{ contato.tipo|capitalize }}:</span> {{ contato.valor }}</li>
+                                        {% endfor %}
+                                    </ul>
                                 {% else %}
                                     <span class="text-muted">Não informado</span>
                                 {% endif %}
