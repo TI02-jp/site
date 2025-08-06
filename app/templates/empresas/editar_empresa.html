@@ -477,41 +477,12 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ fiscal_form.contato_nome(class="form-control", placeholder="Nome do Contato") }}
-                            {{ fiscal_form.contato_nome.label(class="form-label") }}
-                            {% if fiscal_form.contato_nome.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in fiscal_form.contato_nome.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <label class="form-label fw-semibold">{{ fiscal_form.contato_meios.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in fiscal_form.contato_meios.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.contato_meios.name }}"
-                                               value="{{ value }}" id="fcm-{{ loop.index }}"
-                                               {% if value in (fiscal_form.contato_meios.data or []) %}checked{% endif %}
-                                               aria-label="{{ label }}">
-                                        <label class="form-check-label" for="fcm-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% if fiscal_form.contato_meios.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in fiscal_form.contato_meios.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                        <label class="form-label fw-semibold">Contatos</label>
+                        <div id="contatos-container"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-contato">
+                            <i class="bi bi-plus-circle"></i> Adicionar Contato
+                        </button>
+                        {{ fiscal_form.contatos_json(id='contatos_json') }}
                     </div>
                 </div>
 
@@ -1046,6 +1017,7 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/imask"></script>
+<script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
@@ -1070,6 +1042,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+    setupContatos('contatos-container', 'add-contato', 'contatos_json');
 
     // Feedback visual para checkboxes e radio buttons
     document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {

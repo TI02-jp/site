@@ -270,28 +270,18 @@ def editar_empresa(id):
             fiscal_form.envio_digital.data = fiscal.envio_digital or []
             fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
             fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura or ''
-            
-        if fiscal and fiscal.contatos:
-            try:
-                if isinstance(fiscal.contatos, str):
-                    contatos_dict = json.loads(fiscal.contatos)
-                elif isinstance(fiscal.contatos, dict):
-                    contatos_dict = fiscal.contatos
-                else:
-                    contatos_dict = {}
-            except Exception:
-                contatos_dict = {}
-        else:
-            contatos_dict = {}
 
-        fiscal_form.contato_nome.data = contatos_dict.get('nome', '')
-        meios = contatos_dict.get('meios', [])
-        if isinstance(meios, list):
-            fiscal_form.contato_meios.data = ', '.join(meios)
-        elif isinstance(meios, str):
-            fiscal_form.contato_meios.data = meios
-        else:
-            fiscal_form.contato_meios.data = ''
+            if fiscal.contatos:
+                try:
+                    if isinstance(fiscal.contatos, str):
+                        contatos_list = json.loads(fiscal.contatos)
+                    else:
+                        contatos_list = fiscal.contatos
+                except Exception:
+                    contatos_list = []
+            else:
+                contatos_list = []
+            fiscal_form.contatos_json.data = json.dumps(contatos_list)
             
         if contabil:
             contabil_form.envio_digital.data = contabil.envio_digital or []
@@ -326,10 +316,11 @@ def editar_empresa(id):
                     obj.cnpj = re.sub(r'\D', '', form.cnpj.data)
                     obj.sistemas_consultorias = form.sistemas_consultorias.data
                 elif form_type == 'fiscal':
-                    obj.contatos = {
-                        'nome': form.contato_nome.data,
-                        'meios': form.contato_meios.data
-                    }
+                    try:
+                        contatos_data = json.loads(form.contatos_json.data or '[]')
+                    except Exception:
+                        contatos_data = []
+                    obj.contatos = contatos_data
                     obj.senha_prefeitura = form.senha_prefeitura.data
                 db.session.add(obj)
                 try:
@@ -371,27 +362,14 @@ def visualizar_empresa(id):
     if fiscal and fiscal.contatos:
         try:
             if isinstance(fiscal.contatos, str):
-                contatos_dict = json.loads(fiscal.contatos)
-            elif isinstance(fiscal.contatos, dict):
-                contatos_dict = fiscal.contatos
+                contatos_list = json.loads(fiscal.contatos)
             else:
-                contatos_dict = {}
-            
-            fiscal.contato_nome = contatos_dict.get('nome', '')
-            # Se 'meios' for lista ou string, trata para exibir legível
-            meios = contatos_dict.get('meios', [])
-            if isinstance(meios, list):
-                fiscal.contato_meios = ', '.join(meios)
-            elif isinstance(meios, str):
-                fiscal.contato_meios = meios
-            else:
-                fiscal.contato_meios = ''
-        except Exception as e:
-            fiscal.contato_nome = ''
-            fiscal.contato_meios = ''
+                contatos_list = fiscal.contatos
+        except Exception:
+            contatos_list = []
     else:
-        fiscal.contato_nome = ''
-        fiscal.contato_meios = ''
+        contatos_list = []
+    fiscal.contatos_list = contatos_list
 
     if fiscal:
         if fiscal.formas_importacao:
@@ -431,12 +409,12 @@ def gerenciar_departamentos(empresa_id):
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
         if fiscal and fiscal.contatos:
             try:
-                contatos_dict = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
-                fiscal_form.contato_nome.data = contatos_dict.get('nome')
-                fiscal_form.contato_meios.data = contatos_dict.get('meios')
+                contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
             except Exception:
-                fiscal_form.contato_nome.data = ''
-                fiscal_form.contato_meios.data = ''
+                contatos_list = []
+        else:
+            contatos_list = []
+        fiscal_form.contatos_json.data = json.dumps(contatos_list)
         
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
@@ -464,12 +442,12 @@ def gerenciar_departamentos(empresa_id):
             if not fiscal:
                 fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
                 db.session.add(fiscal)
-            
+
             fiscal_form.populate_obj(fiscal)
-            fiscal.contatos = json.dumps({
-                "nome": fiscal_form.contato_nome.data,
-                "meios": fiscal_form.contato_meios.data
-            })
+            try:
+                fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
+            except Exception:
+                fiscal.contatos = []
             flash('Departamento Fiscal salvo com sucesso!', 'success')
             form_processed_successfully = True
 

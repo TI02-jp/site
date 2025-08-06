@@ -8,7 +8,8 @@ from wtforms import (
     SelectField,
     TextAreaField,
     PasswordField,
-    BooleanField
+    BooleanField,
+    HiddenField
 )
 from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo
 from app.models.tables import RegimeLancamento
@@ -90,10 +91,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), 
         ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
-    contato_nome = StringField('Nome do Contato', validators=[Optional()])
-    contato_meios = SelectMultipleField('Formas de Contato', choices=[
-        ('email', 'E-mail'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'),
-        ('ligacao', 'Ligação Telefônica'), ('acessorias', 'Acessórias')], validators=[Optional()])
+    contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 class DepartamentoContabilForm(DepartamentoForm):
