@@ -17,29 +17,6 @@
                 {{ form.hidden_tag() }}
                 
                 <!-- Seção 1: Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-warning border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Seção 2: Configurações de Envio -->
                 <div class="row mb-4">
                     <div class="col-12">
@@ -309,16 +286,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Submissão do formulário com preparação de dados
     document.querySelector('form').addEventListener('submit', function (e) {
         console.log('Preparando dados do departamento pessoal...');
-        
-        // Validação básica
-        const responsavel = document.querySelector('#responsavel').value.trim();
-        const descricao = document.querySelector('#descricao').value.trim();
-
-        if (!responsavel || !descricao) {
-            e.preventDefault();
-            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return;
-        }
 
         // Preparar conteúdo do editor Quill
         const particularidadesField = document.querySelector('#particularidades');
@@ -327,8 +294,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         console.log('Dados preparados do pessoal:', {
-            responsavel: responsavel,
-            descricao: descricao,
             data_envio: document.querySelector('#data_envio').value,
             registro_funcionarios: document.querySelector('#registro_funcionarios').value,
             ponto_eletronico: document.querySelector('#ponto_eletronico').value,
@@ -409,8 +374,6 @@ document.addEventListener("DOMContentLoaded", function () {
         clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
             const draftData = {
-                responsavel: document.querySelector('#responsavel').value,
-                descricao: document.querySelector('#descricao').value,
                 data_envio: document.querySelector('#data_envio').value,
                 registro_funcionarios: document.querySelector('#registro_funcionarios').value,
                 ponto_eletronico: document.querySelector('#ponto_eletronico').value,
