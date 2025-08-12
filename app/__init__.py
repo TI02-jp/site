@@ -7,14 +7,21 @@ from flask_login import LoginManager
 from dotenv import load_dotenv
 from datetime import datetime
 from markupsafe import Markup
+from config import Config
 
 load_dotenv()
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+database_url = os.getenv('DATABASE_URL') or (
+    f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
+    f"{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config.from_object(Config)
+Config.validate()
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)
@@ -25,6 +32,9 @@ login_manager.login_view = 'login'
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
 from app.controllers import routes
+if Config.ACESSORIAS_ENABLED:
+    from app.controllers.acessorias import bp_acessorias
+    app.register_blueprint(bp_acessorias)
 
 @login_manager.user_loader
 def load_user(user_id):

@@ -1,0 +1,25 @@
+<h1>{{ company.nome_empresa }}</h1>
+<p>Identificador: {{ company.acessorias_identifier }}</p>
+<form method="post" action="{{ url_for('acessorias.link', company_id=company.id) }}">
+    <input type="hidden" name="identifier" value="{{ company.acessorias_identifier }}" />
+    <button type="submit">Atualizar agora</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>Nome</th><th>Status</th><th>Entregues</th><th>Atrasadas</th><th>Próx. 30d</th><th>Futuras 30+</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for ob in obligations %}
+        <tr>
+            <td>{{ ob.nome }}</td>
+            <td>{{ ob.status }}</td>
+            <td>{{ ob.entregues }}</td>
+            <td>{{ ob.atrasadas }}</td>
+            <td>{{ ob.proximos_30d }}</td>
+            <td>{{ ob.futuras_30p }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
