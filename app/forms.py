@@ -11,7 +11,8 @@ from wtforms import (
     BooleanField,
     HiddenField
 )
-from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo
+from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo, ValidationError
+import re
 from app.models.tables import RegimeLancamento
 
 class LoginForm(FlaskForm):
@@ -33,11 +34,33 @@ class RegistrationForm(FlaskForm):
 
 # --- Formulários da Aplicação ---
 
+def validar_cnpj(form, field):
+    """Valida um CNPJ utilizando os dígitos verificadores."""
+    cnpj = re.sub(r"\D", "", field.data or "")
+
+    if len(cnpj) != 14 or cnpj == cnpj[0] * 14:
+        raise ValidationError("CNPJ inválido")
+
+    pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma1 = sum(int(num) * peso for num, peso in zip(cnpj[:12], pesos1))
+    digito1 = 11 - (soma1 % 11)
+    digito1 = 0 if digito1 >= 10 else digito1
+
+    pesos2 = [6] + pesos1
+    soma2 = sum(int(num) * peso for num, peso in zip(cnpj[:13], pesos2))
+    digito2 = 11 - (soma2 % 11)
+    digito2 = 0 if digito2 >= 10 else digito2
+
+    if cnpj[-2:] != f"{digito1}{digito2}":
+        raise ValidationError("CNPJ inválido")
+
+    field.data = cnpj
+
 class EmpresaForm(FlaskForm):
     """Formulário para cadastrar ou editar uma empresa."""
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
-    cnpj = StringField('CNPJ', validators=[DataRequired()])
+    cnpj = StringField('CNPJ', validators=[DataRequired(), validar_cnpj])
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
     socio_administrador = StringField('Sócio Administrador', validators=[Optional()])
     atividade_principal = StringField('Atividade Principal', validators=[Optional()])
