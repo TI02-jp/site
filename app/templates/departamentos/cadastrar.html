@@ -15,30 +15,6 @@
             <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 
-                <!-- Seção 1: Informações Básicas -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-                        </h5>
-                    </div>
-                </div>
-                
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ form.responsavel(class="form-control", placeholder="Responsável") }}
-                            {{ form.responsavel.label(class="form-label") }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ form.descricao(class="form-control", placeholder="Descrição") }}
-                            {{ form.descricao.label(class="form-label") }}
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Seção 2: Particularidades -->
                 <div class="row mb-4">
                     <div class="col-12">
@@ -72,8 +48,6 @@
                                 <i class="bi bi-lightbulb me-2"></i>Dicas para preenchimento:
                             </h6>
                             <ul class="mb-0 small">
-                                <li><strong>Responsável:</strong> Nome da pessoa responsável pelo departamento</li>
-                                <li><strong>Descrição:</strong> Breve descrição das atividades do departamento</li>
                                 <li><strong>Particularidades:</strong> Procedimentos específicos, observações importantes, prints de telas, documentos necessários, etc.</li>
                             </ul>
                         </div>
@@ -144,18 +118,6 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById('particularidades').value = quill.root.innerHTML;
     });
 
-    // Validação básica do formulário
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const responsavel = document.querySelector('#responsavel').value.trim();
-        const descricao = document.querySelector('#descricao').value.trim();
-        
-        if (!responsavel || !descricao) {
-            e.preventDefault();
-            alert('Por favor, preencha os campos obrigatórios: Responsável e Descrição.');
-            return false;
-        }
-    });
-
     // Feedback visual para campos preenchidos
     document.querySelectorAll('.form-control').forEach(function(input) {
         input.addEventListener('blur', function() {
@@ -164,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 this.classList.remove('is-invalid');
             } else {
                 this.classList.remove('is-valid');
-                if (this.hasAttribute('required') || this.id === 'responsavel' || this.id === 'descricao') {
+                if (this.hasAttribute('required')) {
                     this.classList.add('is-invalid');
                 }
             }

@@ -163,14 +163,6 @@
                         <div class="info-group">
                             <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
-                                <label class="info-label">Responsável</label>
-                                <div class="info-value">{% if fiscal.responsavel %}<i class="bi bi-person-badge me-2 text-success"></i><span class="fw-semibold">{{ fiscal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Descrição do Departamento</label>
-                                <div class="info-value">{% if fiscal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-success"></i>{{ fiscal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
                                 <label class="info-label">Forma de Movimento</label>
                                 <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
@@ -276,18 +268,10 @@
                         <div class="info-group">
                             <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
-                                <label class="info-label">Responsável</label>
-                                <div class="info-value">{% if contabil.responsavel %}<i class="bi bi-person-badge me-2 text-info"></i><span class="fw-semibold">{{ contabil.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Descrição</label>
-                                <div class="info-value">{% if contabil.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-info"></i>{{ contabil.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
                                 <label class="info-label">Método de Importação</label>
                                 <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-download me-1"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                             </div>
-                             <div class="info-item">
+                            <div class="info-item">
                                 <label class="info-label">Forma de Movimento</label>
                                 <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
@@ -375,14 +359,6 @@
                             <div class="info-group">
                                 <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                                 <div class="info-item">
-                                    <label class="info-label">Responsável</label>
-                                    <div class="info-value">{% if pessoal.responsavel %}<i class="bi bi-person-badge me-2 text-warning"></i><span class="fw-semibold">{{ pessoal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                                </div>
-                                <div class="info-item">
-                                    <label class="info-label">Descrição</label>
-                                    <div class="info-value">{% if pessoal.descricao %}<div class="border rounded p-2 bg-light"><i class="bi bi-file-text me-2 text-warning"></i>{{ pessoal.descricao }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                                </div>
-                                <div class="info-item">
                                     <label class="info-label">Data de Envio</label>
                                     <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-calendar-event me-1"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                                 </div>
@@ -457,27 +433,6 @@
                 </div>
             </div>
             <div class="card-body p-4">
-                <div class="row g-4">
-                    <div class="col-lg-6 col-md-6">
-                        <div class="info-group">
-                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-person-gear me-2"></i>Responsável</h6>
-                            <div class="info-item">
-                                <label class="info-label">Responsável do Departamento</label>
-                                <div class="info-value">{% if administrativo.responsavel %}<div class="d-flex align-items-center"><i class="bi bi-person-badge fs-4 me-3 text-dark"></i><div><span class="fw-semibold fs-5">{{ administrativo.responsavel }}</span><div class="text-muted small">Responsável Administrativo</div></div></div>{% else %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-person-x fs-2 mb-2"></i><p class="mb-0">Responsável não informado</p></div>{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 col-md-6">
-                        <div class="info-group">
-                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-file-text me-2"></i>Descrição</h6>
-                            <div class="info-item">
-                                <label class="info-label">Descrição do Departamento</label>
-                                <div class="info-value">{% if administrativo.descricao %}<div class="border rounded p-3 bg-light"><i class="bi bi-info-circle me-2 text-dark"></i><span>{{ administrativo.descricao }}</span></div>{% else %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-text fs-2 mb-2"></i><p class="mb-0">Descrição não informada</p></div>{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {% if administrativo.particularidades_texto and administrativo.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
