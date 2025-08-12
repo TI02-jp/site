@@ -22,6 +22,18 @@
         </div>
     </div>
 
+    <!-- Campo de Busca -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <form method="get" action="{{ url_for('listar_empresas') }}" class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Buscar empresa" value="{{ search }}">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Mensagens Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
