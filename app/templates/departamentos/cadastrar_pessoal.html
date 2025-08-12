@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mt-4" style="max-width: 1000px;">
     <div class="card shadow-lg">
-        <div class="card-header text-white py-3" style="background-color: #f39c12;">
+        <div class="card-header text-white py-3" style="background-color: #e87429;">
             <h2 class="mb-0 text-center fw-semibold">
                 <i class="bi bi-people me-2"></i>{{ tipo_nome }} - {{ empresa.NomeEmpresa }}
             </h2>
@@ -102,7 +102,7 @@
                         <label class="form-label fw-semibold">
                             <i class="bi bi-image me-1"></i>Editor de Particularidades
                         </label>
-                        <div id="editor" style="height: 250px; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                        <div id="editor" style="height: 250px; border: 1px solid rgba(0,0,0,0.1); border-radius: 0.375rem;">
                             {{ form.particularidades.data|safe }}
                         </div>
                         {{ form.particularidades(id="particularidades", type="hidden") }}
@@ -170,8 +170,8 @@
 }
 
 .btn-warning:hover {
-    background-color: #cf661f;
-    border-color: #cf661f;
+    background-color: #0b288b;
+    border-color: #0b288b;
     color: white;
 }
 
@@ -185,25 +185,21 @@
 }
 
 .ql-toolbar {
-    border-top: 1px solid #dee2e6;
-    border-left: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    border-left: 1px solid rgba(0,0,0,0.1);
+    border-right: 1px solid rgba(0,0,0,0.1);
     border-top-left-radius: 0.375rem;
     border-top-right-radius: 0.375rem;
 }
 
 .ql-container {
-    border-bottom: 1px solid #dee2e6;
-    border-left: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    border-left: 1px solid rgba(0,0,0,0.1);
+    border-right: 1px solid rgba(0,0,0,0.1);
     border-bottom-left-radius: 0.375rem;
     border-bottom-right-radius: 0.375rem;
 }
 
-.form-control.is-valid {
-    border-color: #28a745;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='m2.3 6.73.13-.13 4-4c.1-.1.26-.1.36 0l.1.1c.1.1.1.25 0 .35L2.85 7.09c-.1.1-.26.1-.36 0L.85 5.45c-.1-.1-.1-.26 0-.36l.1-.1c.1-.1.26-.1.36 0l1 1z'/%3e%3c/svg%3e");
-}
 
 @media (max-width: 768px) {
     .container {
@@ -301,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }).catch(error => {
                 console.error(error);
                 quill.deleteText(range.index, 'Carregando imagem...'.length);
-                quill.insertText(range.index, '[Erro ao carregar imagem]', 'color', 'red');
+                quill.insertText(range.index, '[Erro ao carregar imagem]', 'color', '#e87429');
             });
         }
     });

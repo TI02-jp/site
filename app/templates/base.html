@@ -16,19 +16,26 @@
         --primary-color: #e87429;
         --primary-dark: #0b288b;
         --sidebar-bg: #ffffff;
-        --sidebar-text: #495057;
-        --sidebar-hover: #fde8d9;
-        --sidebar-active: #fbd1a8;
-        --border-color: #f7c79f;
-        --text-muted: #6c757d;
-        --danger-color: #dc3545;
-        --danger-hover: #c82333;
+        --sidebar-text: #000000;
+        --sidebar-hover: rgba(232,116,41,0.1);
+        --sidebar-active: rgba(232,116,41,0.2);
+        --border-color: rgba(0,0,0,0.1);
+        --text-muted: rgba(0,0,0,0.6);
+        --danger-color: #e87429;
+        --danger-hover: rgba(232,116,41,0.8);
+        --bs-primary: #0b288b;
+        --bs-secondary: #e87429;
+        --bs-success: #0b288b;
+        --bs-info: #0b288b;
+        --bs-warning: #e87429;
+        --bs-danger: #e87429;
+        --bs-dark: #000000;
       }
 
       body, html {
         height: 100%;
         margin: 0;
-        background-color: #f8f9fa;
+        background-color: #fff;
       }
 
       .wrapper {
@@ -166,7 +173,7 @@
       .sidebar-footer {
         padding: 1.25rem;
         border-top: 1px solid var(--border-color);
-        background: #f8f9fa;
+        background: #fff;
       }
 
       .user-profile {
@@ -234,7 +241,7 @@
       .content-area {
         flex-grow: 1;
         overflow-y: auto;
-        background-color: #f8f9fa;
+        background-color: #fff;
         position: relative;
       }
 
@@ -359,11 +366,11 @@
       /* Tema escuro (opcional) */
       @media (prefers-color-scheme: dark) {
         :root {
-          --sidebar-bg: #2c2c2c;
-          --sidebar-text: #e9ecef;
-          --sidebar-hover: #3c3c3c;
-          --sidebar-active: #4c4c4c;
-          --border-color: #495057;
+        --sidebar-bg: #000000;
+        --sidebar-text: #ffffff;
+        --sidebar-hover: rgba(255,255,255,0.1);
+        --sidebar-active: rgba(255,255,255,0.2);
+        --border-color: rgba(255,255,255,0.2);
         }
       }
     </style>
@@ -449,7 +456,7 @@
                             <a class="nav-link" href="#" onclick="return false;" style="opacity: 0.6;">
                                 <i class="bi bi-gear"></i>
                                 Configurações
-                                <small style="margin-left: auto; font-size: 0.6rem; background: #ffc107; color: #000; padding: 0.1rem 0.3rem; border-radius: 0.2rem;">BREVE</small>
+                                <small style="margin-left: auto; font-size: 0.6rem; background: #e87429; color: #000; padding: 0.1rem 0.3rem; border-radius: 0.2rem;">BREVE</small>
                             </a>
                         </li>
                     </ul>
