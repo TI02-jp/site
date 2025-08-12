@@ -164,9 +164,8 @@ def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
     responsavel = request.form.get('responsavel')
     descricao = request.form.get('descricao')
-    link_prefeitura = request.form.get('link_prefeitura')
-    usuario_prefeitura = request.form.get('usuario_prefeitura')
-    senha_prefeitura = request.form.get('senha_prefeitura')
+    prefeituras_json = request.form.get('prefeituras_json', 'null')
+    prefeituras = json.loads(prefeituras_json) if prefeituras_json != 'null' else None
     forma_movimento = request.form.get('forma_movimento')
     observacao_movimento = request.form.get('observacao_movimento')
     particularidades = request.form.get('particularidades')
@@ -183,9 +182,7 @@ def processar_dados_fiscal(request):
         'responsavel': responsavel,
         'descricao': descricao,
         'formas_importacao': formas_importacao,
-        'link_prefeitura': link_prefeitura,
-        'usuario_prefeitura': usuario_prefeitura,
-        'senha_prefeitura': senha_prefeitura,
+        'prefeituras': prefeituras,
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_digital_fisico': envio_digital_fisico,
@@ -260,16 +257,21 @@ def editar_empresa(id):
     if request.method == 'GET':
         if empresa:
             empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
-        if fiscal and fiscal.senha_prefeitura:
-            fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura
-        if empresa:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
-            
+
         if fiscal:
             fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
             fiscal_form.envio_digital.data = fiscal.envio_digital or []
             fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
-            fiscal_form.senha_prefeitura.data = fiscal.senha_prefeitura or ''
+
+            if fiscal.prefeituras:
+                try:
+                    prefeituras_list = json.loads(fiscal.prefeituras) if isinstance(fiscal.prefeituras, str) else fiscal.prefeituras
+                except Exception:
+                    prefeituras_list = []
+            else:
+                prefeituras_list = []
+            fiscal_form.prefeituras_json.data = json.dumps(prefeituras_list)
 
             if fiscal.contatos:
                 try:
@@ -317,11 +319,15 @@ def editar_empresa(id):
                     obj.sistemas_consultorias = form.sistemas_consultorias.data
                 elif form_type == 'fiscal':
                     try:
+                        prefeituras_data = json.loads(form.prefeituras_json.data or '[]')
+                    except Exception:
+                        prefeituras_data = []
+                    try:
                         contatos_data = json.loads(form.contatos_json.data or '[]')
                     except Exception:
                         contatos_data = []
+                    obj.prefeituras = prefeituras_data
                     obj.contatos = contatos_data
-                    obj.senha_prefeitura = form.senha_prefeitura.data
                 db.session.add(obj)
                 try:
                     db.session.commit()
@@ -358,7 +364,7 @@ def visualizar_empresa(id):
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-    
+
     if fiscal and fiscal.contatos:
         try:
             if isinstance(fiscal.contatos, str):
@@ -370,6 +376,18 @@ def visualizar_empresa(id):
     else:
         contatos_list = []
     fiscal.contatos_list = contatos_list
+
+    if fiscal and fiscal.prefeituras:
+        try:
+            if isinstance(fiscal.prefeituras, str):
+                prefeituras_list = json.loads(fiscal.prefeituras)
+            else:
+                prefeituras_list = fiscal.prefeituras
+        except Exception:
+            prefeituras_list = []
+    else:
+        prefeituras_list = []
+    fiscal.prefeituras_list = prefeituras_list
 
     if fiscal:
         if fiscal.formas_importacao:
@@ -407,6 +425,15 @@ def gerenciar_departamentos(empresa_id):
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
+        if fiscal and fiscal.prefeituras:
+            try:
+                prefeituras_list = json.loads(fiscal.prefeituras) if isinstance(fiscal.prefeituras, str) else fiscal.prefeituras
+            except Exception:
+                prefeituras_list = []
+        else:
+            prefeituras_list = []
+        fiscal_form.prefeituras_json.data = json.dumps(prefeituras_list)
+
         if fiscal and fiscal.contatos:
             try:
                 contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
@@ -444,6 +471,10 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(fiscal)
 
             fiscal_form.populate_obj(fiscal)
+            try:
+                fiscal.prefeituras = json.loads(fiscal_form.prefeituras_json.data or '[]')
+            except Exception:
+                fiscal.prefeituras = []
             try:
                 fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
             except Exception:
