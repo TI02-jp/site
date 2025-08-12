@@ -347,46 +347,54 @@ def editar_empresa(id):
 @app.route('/empresa/visualizar/<int:id>')
 @login_required
 def visualizar_empresa(id):
+    from types import SimpleNamespace
+
     empresa = Empresa.query.get_or_404(id)
-    
-    if empresa.regime_lancamento:
-        empresa.regime_lancamento_display = empresa.regime_lancamento.value
-    else:
-        empresa.regime_lancamento_display = None
-    
+
+    # display para enum (ou None)
+    empresa.regime_lancamento_display = (
+        empresa.regime_lancamento.value if empresa.regime_lancamento else None
+    )
+
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-    
-    if fiscal and fiscal.contatos:
+
+    # monta contatos_list
+    if fiscal and getattr(fiscal, "contatos", None):
         try:
-            if isinstance(fiscal.contatos, str):
-                contatos_list = json.loads(fiscal.contatos)
-            else:
-                contatos_list = fiscal.contatos
+            contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
         except Exception:
             contatos_list = []
     else:
         contatos_list = []
-    fiscal.contatos_list = contatos_list
 
-    if fiscal:
-        if fiscal.formas_importacao:
-            if isinstance(fiscal.formas_importacao, str):
-                try:
-                    fiscal.formas_importacao = json.loads(fiscal.formas_importacao)
-                except:
-                    fiscal.formas_importacao = []
-        else:
-            fiscal.formas_importacao = []
+    # fiscal_view: garante objeto mesmo quando fiscal é None
+    if fiscal is None:
+        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list)
+    else:
+        fiscal_view = fiscal
+        # normaliza formas_importacao
+        formas = getattr(fiscal_view, "formas_importacao", None)
+        if isinstance(formas, str):
+            try:
+                fiscal_view.formas_importacao = json.loads(formas)
+            except Exception:
+                fiscal_view.formas_importacao = []
+        elif not formas:
+            fiscal_view.formas_importacao = []
+        # injeta contatos_list sem risco
+        setattr(fiscal_view, "contatos_list", contatos_list)
 
-    return render_template('empresas/visualizar.html',
-                         empresa=empresa,
-                         fiscal=fiscal,
-                         contabil=contabil,
-                         pessoal=pessoal,
-                         administrativo=administrativo)
+    return render_template(
+        'empresas/visualizar.html',
+        empresa=empresa,
+        fiscal=fiscal_view,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo
+    )
     
     ## Rota para gerenciar departamentos de uma empresa
 
