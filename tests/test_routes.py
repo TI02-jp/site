@@ -12,6 +12,8 @@ from app.models.tables import Empresa, CompanyObligation
 def setup_module(module):
     with app.app_context():
         app.config['WTF_CSRF_ENABLED'] = False
+        app.config['LOGIN_DISABLED'] = True
+        app.config['SECRET_KEY'] = 'test'
         db.drop_all()
         db.create_all()
 

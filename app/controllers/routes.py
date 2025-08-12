@@ -17,6 +17,7 @@ import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from app.forms import DepartamentoFiscalForm, DepartamentoContabilForm, DepartamentoPessoalForm
+from services.acessorias_sync import sync_company_by_identifier
 
 @app.context_processor
 def inject_stats():
@@ -135,6 +136,11 @@ def cadastrar_empresa():
             )
             db.session.add(nova_empresa)
             db.session.commit()
+            if current_app.config.get('ACESSORIAS_ENABLED'):
+                try:
+                    sync_company_by_identifier(cnpj_limpo)
+                except Exception as e:
+                    current_app.logger.exception('Erro ao sincronizar com Acessorias: %s', e)
             flash('Empresa cadastrada com sucesso!', 'success')
             return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
         except Exception as e:

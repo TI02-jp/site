@@ -78,6 +78,7 @@
                             {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00", **{'aria-describedby': 'cnpjHelp'}) }}
                             {{ form.cnpj.label(class="form-label") }}
                         </div>
+                        <button type="button" class="btn btn-outline-primary w-100 mt-2" id="buscar-acessorias">Buscar no Acessórias</button>
                         {% if form.cnpj.errors %}
                             {% for error in form.cnpj.errors %}
                                 <div class="invalid-feedback d-block">
@@ -310,6 +311,28 @@ document.addEventListener("DOMContentLoaded", function () {
             cnpjField.value = initialValue;
             validateField(cnpjField); // Validate on load if pre-filled
         }
+    }
+
+    const buscarBtn = document.getElementById('buscar-acessorias');
+    if (buscarBtn && cnpjField) {
+        buscarBtn.addEventListener('click', async function () {
+            const cnpj = cnpjField.value.replace(/\D/g, '');
+            if (!cnpj) return;
+            try {
+                const resp = await fetch(`/integrations/acessorias/companies/${cnpj}`);
+                if (!resp.ok) throw new Error('Empresa não encontrada');
+                const data = await resp.json();
+                if (data.Razao) document.querySelector('#nome_empresa').value = data.Razao;
+                if (data.Fantasia && !document.querySelector('#nome_empresa').value) {
+                    document.querySelector('#nome_empresa').value = data.Fantasia;
+                }
+                if (data.Abertura) {
+                    document.querySelector('#data_abertura').value = data.Abertura.substring(0,10);
+                }
+            } catch (err) {
+                alert(err.message || 'Erro ao buscar dados');
+            }
+        });
     }
 
     // Função genérica de validação de campo para Bootstrap
