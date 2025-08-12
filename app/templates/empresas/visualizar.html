@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}{{ empresa.nome_empresa }} - Detalhes Completos{% endblock %}
+{% block title %}{{ empresa.nome_empresa|upper }} - DETALHES COMPLETOS{% endblock %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{{ url_for('listar_empresas') }}">Empresas</a></li>
-<li class="breadcrumb-item active">{{ empresa.nome_empresa }}</li>
+<li class="breadcrumb-item text-uppercase"><a class="text-uppercase" href="{{ url_for('listar_empresas') }}">Empresas</a></li>
+<li class="breadcrumb-item active text-uppercase">{{ empresa.nome_empresa }}</li>
 {% endblock %}
 
 {% block content %}
@@ -36,7 +36,7 @@
 {% endmacro %}
 
 
-<div class="container-fluid" style="max-width: 1400px;">
+<div class="container-fluid text-uppercase" style="max-width: 1400px;">
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
