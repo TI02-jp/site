@@ -40,11 +40,6 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.forma_movimento.label.text }}</label>
-                        {{ form.forma_movimento(id="forma_movimento", class="form-select") }}
-                    </div>
                 </div>
 
                 <div class="row mb-4">
@@ -72,7 +67,14 @@
                         </h5>
                     </div>
                 </div>
-                
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.forma_movimento.label.text }}</label>
+                        {{ form.forma_movimento(id="forma_movimento", class="form-select") }}
+                    </div>
+                </div>
+
                 <div class="row g-4 mb-4">
                     <div class="col-md-6" id="envio_digital_container">
                         <label class="form-label fw-semibold">{{ form.envio_digital.label.text }}</label>
@@ -89,7 +91,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6" id="envio_fisico_container">
                         <label class="form-label fw-semibold">{{ form.envio_fisico.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
