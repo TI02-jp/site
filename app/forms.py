@@ -101,9 +101,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('saidas_sieg', 'Saídas pelo SIEG'), ('nfce_sped', 'NFCe por Sped'),
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
         ('nenhum', 'Não importa nada')], validators=[Optional()])
-    link_prefeitura = StringField('Link Prefeitura', validators=[Optional()])
-    usuario_prefeitura = StringField('Usuário Prefeitura', validators=[Optional()])
-    senha_prefeitura = StringField('Senha Prefeitura', validators=[Optional()])
+    links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
     forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])

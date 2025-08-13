@@ -171,18 +171,32 @@
                     <div class="col-lg-6 col-md-12">
                         <div class="info-group">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
-                            <div class="info-item">
-                                <label class="info-label">Link da Prefeitura</label>
-                                <div class="info-value">{% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}<a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-dept-blue"></i><span class="text-primary">{{ fiscal.link_prefeitura[:60] }}{% if fiscal.link_prefeitura|length > 60 %}...{% endif %}</span><i class="bi bi-box-arrow-up-right ms-1"></i></a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Usuário da Prefeitura</label>
-                                <div class="info-value">{% if fiscal.usuario_prefeitura %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-dept-blue"></i>{{ fiscal.usuario_prefeitura }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Senha da Prefeitura</label>
-                                <div class="info-value centered">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-dept-blue"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-dept-blue ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
+                            {% if fiscal.links_prefeitura %}
+                                <ul class="list-unstyled mb-0">
+                                {% for acesso in fiscal.links_prefeitura %}
+                                    <li class="mb-3">
+                                        <div class="info-item">
+                                            <label class="info-label">Cidade</label>
+                                            <div class="info-value">{{ acesso.cidade or 'Não informada' }}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <label class="info-label">Link</label>
+                                            <div class="info-value">{% if acesso.link %}<a href="{{ acesso.link }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-dept-blue"></i>{{ acesso.link }}</a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <label class="info-label">Usuário</label>
+                                            <div class="info-value">{% if acesso.usuario %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-dept-blue"></i>{{ acesso.usuario }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <label class="info-label">Senha</label>
+                                            <div class="info-value">{% if acesso.senha %}<div class="font-monospace border rounded p-2 bg-light">{{ acesso.senha }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <div class="info-item"><span class="text-muted">Não informado</span></div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
