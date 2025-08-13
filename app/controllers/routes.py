@@ -10,13 +10,12 @@ from app.forms import (
     DepartamentoForm,
     DepartamentoFiscalForm,
     DepartamentoContabilForm,
-    DepartamentoPessoalForm
+    DepartamentoPessoalForm,
 )
 from datetime import datetime
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from app.forms import DepartamentoFiscalForm, DepartamentoContabilForm, DepartamentoPessoalForm
 from sqlalchemy import or_
 
 @app.context_processor
@@ -248,10 +247,9 @@ def processar_dados_fiscal(request):
     particularidades = request.form.get('particularidades')
     formas_importacao_json = request.form.get('formas_importacao_json', '[]')
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
-    envio_digital_json = request.form.get('envio_digital_json', '[]')
-    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []
-    envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
-    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
+    envio_digital = request.form.getlist('envio_digital')
+    envio_fisico = request.form.getlist('envio_fisico')
+    envio_fisico_outro = request.form.get('envio_fisico_outro')
     contatos_json = request.form.get('contatos_json', 'null')
     contatos = json.loads(contatos_json) if contatos_json != 'null' else None
     if contatos is not None:
@@ -264,7 +262,8 @@ def processar_dados_fiscal(request):
         'links_prefeitura': links_prefeitura,
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
-        'envio_digital_fisico': envio_digital_fisico,
+        'envio_fisico': envio_fisico,
+        'envio_fisico_outro': envio_fisico_outro,
         'observacao_movimento': observacao_movimento,
         'contatos': contatos,
         'particularidades_texto': particularidades
@@ -277,10 +276,9 @@ def processar_dados_contabil(request):
     metodo_importacao = request.form.get('metodo_importacao')
     forma_movimento = request.form.get('forma_movimento')
     particularidades = request.form.get('particularidades')
-    envio_digital_json = request.form.get('envio_digital_json', '[]')
-    envio_digital = json.loads(envio_digital_json) if envio_digital_json else []    
-    envio_digital_fisico_json = request.form.get('envio_digital_fisico_json', '[]')
-    envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []    
+    envio_digital = request.form.getlist('envio_digital')
+    envio_fisico = request.form.getlist('envio_fisico')
+    envio_fisico_outro = request.form.get('envio_fisico_outro')
     controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
     controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
     
@@ -290,7 +288,8 @@ def processar_dados_contabil(request):
         'metodo_importacao': metodo_importacao,
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
-        'envio_digital_fisico': envio_digital_fisico,
+        'envio_fisico': envio_fisico,
+        'envio_fisico_outro': envio_fisico_outro,
         'controle_relatorios': controle_relatorios,
         'particularidades_texto': particularidades
     }
@@ -318,128 +317,42 @@ def processar_dados_administrativo(request):
 @login_required
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
-    fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
-    contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
-    pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
-    administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-
     empresa_form = EmpresaForm(request.form, obj=empresa)
-    fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
-    contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
-    pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
-    administrativo_form = DepartamentoForm(request.form, obj=administrativo)
+
+    # Placeholders to avoid NameError in legacy references; departments are not edited here
+    fiscal = contabil = pessoal = administrativo = None
 
     if request.method == 'GET':
-        if empresa:
-            empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
-        if empresa:
+        empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
+        if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
 
-        if fiscal:
-            fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
-            fiscal_form.envio_digital.data = fiscal.envio_digital or []
-            fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
-
-            if fiscal.links_prefeitura:
-                try:
-                    if isinstance(fiscal.links_prefeitura, str):
-                        prefeituras_list = json.loads(fiscal.links_prefeitura)
-                    else:
-                        prefeituras_list = fiscal.links_prefeitura
-                except Exception:
-                    prefeituras_list = []
-            else:
-                prefeituras_list = []
-            if not prefeituras_list and (
-                getattr(fiscal, 'link_prefeitura', None) or
-                getattr(fiscal, 'usuario_prefeitura', None) or
-                getattr(fiscal, 'senha_prefeitura', None)
-            ):
-                prefeituras_list = [{
-                    'cidade': '',
-                    'link': getattr(fiscal, 'link_prefeitura', '') or '',
-                    'usuario': getattr(fiscal, 'usuario_prefeitura', '') or '',
-                    'senha': getattr(fiscal, 'senha_prefeitura', '') or ''
-                }]
-            fiscal_form.links_prefeitura_json.data = json.dumps(prefeituras_list)
-
-            if fiscal.contatos:
-                try:
-                    if isinstance(fiscal.contatos, str):
-                        contatos_list = json.loads(fiscal.contatos)
-                    else:
-                        contatos_list = fiscal.contatos
-                except Exception:
-                    contatos_list = []
-            else:
-                contatos_list = []
-            contatos_list = normalize_contatos(contatos_list)
-            fiscal_form.contatos_json.data = json.dumps(contatos_list)
-            
-        if contabil:
-            contabil_form.envio_digital.data = contabil.envio_digital or []
-            contabil_form.envio_digital_fisico.data = contabil.envio_digital_fisico or []
-            contabil_form.controle_relatorios.data = contabil.controle_relatorios or []
-            
-        if pessoal:
-            pessoal_form.data_envio.data = pessoal.data_envio or ''
-            pessoal_form.registro_funcionarios.data = pessoal.registro_funcionarios or ''
-            pessoal_form.ponto_eletronico.data = pessoal.ponto_eletronico or ''
-            pessoal_form.pagamento_funcionario.data = pessoal.pagamento_funcionario or ''
-            
-        if administrativo:
-            administrativo_form.responsavel.data = administrativo.responsavel or ''
-            administrativo_form.descricao.data = administrativo.descricao or ''
-
     if request.method == 'POST':
-        form_map = {
-            'empresa': (empresa_form, empresa),
-            'fiscal': (fiscal_form, fiscal or Departamento(empresa_id=id, tipo='Departamento Fiscal')),
-            'contabil': (contabil_form, contabil or Departamento(empresa_id=id, tipo='Departamento Contábil')),
-            'pessoal': (pessoal_form, pessoal or Departamento(empresa_id=id, tipo='Departamento Pessoal')),
-            'administrativo': (administrativo_form, administrativo or Departamento(empresa_id=id, tipo='Departamento Administrativo'))
-        }
-        
-        form_type = request.form.get('form_type')
-        if form_type in form_map:
-            form, obj = form_map[form_type]
-            if form.validate():
-                form.populate_obj(obj)
-                if form_type == 'empresa':
-                    obj.cnpj = re.sub(r'\D', '', form.cnpj.data)
-                    obj.sistemas_consultorias = form.sistemas_consultorias.data
-                elif form_type == 'fiscal':
-                    try:
-                        contatos_data = json.loads(form.contatos_json.data or '[]')
-                        contatos_data = validate_contatos(contatos_data)
-                    except Exception as e:
-                        flash(f'Erro nos contatos: {e}', 'danger')
-                        contatos_data = []
-                    obj.contatos = contatos_data
-                    try:
-                        obj.links_prefeitura = json.loads(form.links_prefeitura_json.data or '[]')
-                    except Exception:
-                        obj.links_prefeitura = []
-                db.session.add(obj)
-                try:
-                    db.session.commit()
-                    flash(f'Dados de "{form_type.capitalize()}" salvos com sucesso!', 'success')
-                    return redirect(url_for('editar_empresa', id=id))
-                except Exception as e:
-                    db.session.rollback()
-                    flash(f'Erro ao salvar: {str(e)}', 'danger')
-            else:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        flash(f"Erro no formulário '{form_type.capitalize()}': {error}", 'danger')
+        if empresa_form.validate():
+            empresa_form.populate_obj(empresa)
+            empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
+            empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
+            db.session.add(empresa)
+            try:
+                db.session.commit()
+                flash('Dados da Empresa salvos com sucesso!', 'success')
+                return redirect(url_for('editar_empresa', id=id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erro ao salvar: {str(e)}', 'danger')
         else:
-            flash('Tipo de formulário inválido', 'danger')
+            for field, errors in empresa_form.errors.items():
+                for error in errors:
+                    flash(f"Erro: {error}", 'danger')
 
     return render_template(
         'empresas/editar_empresa.html',
-        empresa=empresa, empresa_form=empresa_form, fiscal_form=fiscal_form,
-        contabil_form=contabil_form, pessoal_form=pessoal_form, administrativo_form=administrativo_form,
-        fiscal=fiscal, contabil=contabil, pessoal=pessoal, administrativo=administrativo
+        empresa=empresa,
+        empresa_form=empresa_form,
+        fiscal=fiscal,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo,
     )
 
 @app.route('/empresa/visualizar/<int:id>')
@@ -562,9 +475,10 @@ def gerenciar_departamentos(empresa_id):
                 contabil_form.envio_digital.data = []
             
             try:
-                contabil_form.envio_digital_fisico.data = json.loads(contabil.envio_digital_fisico) if contabil.envio_digital_fisico else []
+                contabil_form.envio_fisico.data = json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
             except Exception:
-                contabil_form.envio_digital_fisico.data = []
+                contabil_form.envio_fisico.data = []
+            contabil_form.envio_fisico_outro.data = contabil.envio_fisico_outro
             
             try:
                 contabil_form.controle_relatorios.data = json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
@@ -599,9 +513,10 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(contabil)
             
             contabil_form.populate_obj(contabil)
-            
+
             contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
-            contabil.envio_digital_fisico = json.dumps(contabil_form.envio_digital_fisico.data or [])
+            contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])
+            contabil.envio_fisico_outro = contabil_form.envio_fisico_outro.data
             contabil.controle_relatorios = json.dumps(contabil_form.controle_relatorios.data or [])
             
             flash('Departamento Contábil salvo com sucesso!', 'success')
