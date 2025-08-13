@@ -66,10 +66,10 @@
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
                         <a href="#dados-empresa" class="btn btn-outline-primary btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
-                        <a href="#fiscal" class="btn btn-outline-success btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-outline-info btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-outline-warning btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-outline-dark btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                        <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn btn-outline-dept-orange btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn btn-outline-dept-orange btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                     </div>
                 </div>
             </div>
@@ -151,7 +151,7 @@
     <div id="fiscal">
     {% if fiscal %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-success text-white py-3">
+            <div class="card-header bg-dept-blue text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
                     {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
@@ -161,27 +161,27 @@
                 <div class="row g-4">
                     <div class="col-lg-6 col-md-12">
                         <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
                                 <label class="info-label">Forma de Movimento</label>
-                                <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-blue"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-6 col-md-12">
                         <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
                             <div class="info-item">
                                 <label class="info-label">Link da Prefeitura</label>
-                                <div class="info-value">{% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}<a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-success"></i><span class="text-primary">{{ fiscal.link_prefeitura[:60] }}{% if fiscal.link_prefeitura|length > 60 %}...{% endif %}</span><i class="bi bi-box-arrow-up-right ms-1"></i></a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                <div class="info-value">{% if fiscal.link_prefeitura and fiscal.link_prefeitura.strip() %}<a href="{{ fiscal.link_prefeitura }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-dept-blue"></i><span class="text-primary">{{ fiscal.link_prefeitura[:60] }}{% if fiscal.link_prefeitura|length > 60 %}...{% endif %}</span><i class="bi bi-box-arrow-up-right ms-1"></i></a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                             </div>
                             <div class="info-item">
                                 <label class="info-label">Usuário da Prefeitura</label>
-                                <div class="info-value">{% if fiscal.usuario_prefeitura %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-success"></i>{{ fiscal.usuario_prefeitura }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                <div class="info-value">{% if fiscal.usuario_prefeitura %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-dept-blue"></i>{{ fiscal.usuario_prefeitura }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                             </div>
                             <div class="info-item">
                                 <label class="info-label">Senha da Prefeitura</label>
-                                <div class="info-value centered">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-success"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-success ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                <div class="info-value centered">{% if fiscal.senha_prefeitura and fiscal.senha_prefeitura.strip() %}<span class="password-field" data-password="{{ fiscal.senha_prefeitura }}"><div class="d-flex align-items-center border rounded p-2 bg-light"><i class="bi bi-key me-2 text-dept-blue"></i><span class="password-hidden font-monospace">••••••••</span><button type="button" class="btn btn-sm btn-outline-dept-blue ms-2 toggle-password"><i class="bi bi-eye"></i></button></div></span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
                         </div>
                     </div>
@@ -190,14 +190,14 @@
                 <div class="row g-4 mt-2">
                     <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
                             <div class="info-value">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                         </div>
                         <div class="info-group mt-4">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
                             <div class="info-value">
                                 {% if fiscal.contatos_list %}
                                     <ul class="list-unstyled mb-0">
@@ -215,19 +215,19 @@
                 <div class="row g-4 mt-2">
                     <div class="col-md-6">
                          <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
                             <div class="info-value">
                                 {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(fiscal.envio_digital, 'bg-success-subtle text-success', 'bi-cloud-check', placeholder_env_digital) }}
+                                {{ render_badge_list(fiscal.envio_digital, 'bg-dept-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
                          <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
                              <div class="info-value">
                                 {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(fiscal.envio_digital_fisico, 'bg-warning-subtle text-warning', 'bi-layers', placeholder_env_fisico) }}
+                                {{ render_badge_list(fiscal.envio_digital_fisico, 'bg-dept-blue-subtle', 'bi-layers', placeholder_env_fisico) }}
                             </div>
                         </div>
                     </div>
@@ -237,7 +237,7 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-success mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
                             <div class="border rounded p-4 bg-white editor-content">{{ fiscal.particularidades_texto|safe }}</div>
                         </div>
                     </div>
@@ -246,9 +246,9 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5 border-success">
-            <div class="card-header bg-success text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-success mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#fiscal" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+        <div class="card shadow-lg mb-5" style="border-color:#0b288b;">
+            <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#fiscal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
@@ -256,7 +256,7 @@
     <div id="contabil">
     {% if contabil %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-info text-white py-3">
+            <div class="card-header bg-dept-orange text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
                     {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
@@ -266,27 +266,27 @@
                 <div class="row g-4">
                     <div class="col-lg-6 col-md-12">
                         <div class="info-group">
-                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
                                 <label class="info-label">Método de Importação</label>
-                                <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-download me-1"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-download me-1 text-dept-orange"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                             </div>
                             <div class="info-item">
                                 <label class="info-label">Forma de Movimento</label>
-                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-info-subtle text-info fs-6"><i class="bi bi-arrow-left-right me-1"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-6 col-md-12">
                         <div class="info-group">
-                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-chat-square-text me-2"></i>Observações</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-chat-square-text me-2"></i>Observações</h6>
                              <div class="info-item">
                                 <label class="info-label">Observação de Movimento</label>
-                                <div class="info-value">{% if contabil.observacao_movimento %}<div class="border rounded p-3 bg-light"><i class="bi bi-sticky me-2 text-info"></i>{{ contabil.observacao_movimento }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-chat-square fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
+                                <div class="info-value">{% if contabil.observacao_movimento %}<div class="border rounded p-3 bg-light"><i class="bi bi-sticky me-2 text-dept-orange"></i>{{ contabil.observacao_movimento }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-chat-square fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
                             </div>
                             <div class="info-item">
                                 <label class="info-label">Observação de Relatórios</label>
-                                <div class="info-value">{% if contabil.observacao_controle_relatorios %}<div class="border rounded p-3 bg-light"><i class="bi bi-file-earmark-text me-2 text-info"></i>{{ contabil.observacao_controle_relatorios }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-file-earmark fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
+                                <div class="info-value">{% if contabil.observacao_controle_relatorios %}<div class="border rounded p-3 bg-light"><i class="bi bi-file-earmark-text me-2 text-dept-orange"></i>{{ contabil.observacao_controle_relatorios }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-file-earmark fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
                             </div>
                         </div>
                     </div>
@@ -295,19 +295,19 @@
                 <div class="row g-4 mt-2">
                     <div class="col-md-6">
                         <div class="info-group">
-                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
                             <div class="info-value">
                                 {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(contabil.envio_digital, 'bg-success-subtle text-success', 'bi-cloud-check', placeholder_cont_digital) }}
+                                {{ render_badge_list(contabil.envio_digital, 'bg-dept-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="info-group">
-                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-layers me-2"></i>Envio Digital/Físico</h6>
                             <div class="info-value">
                                 {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(contabil.envio_digital_fisico, 'bg-warning-subtle text-warning', 'bi-layers', placeholder_cont_fisico) }}
+                                {{ render_badge_list(contabil.envio_digital_fisico, 'bg-dept-orange-subtle', 'bi-layers', placeholder_cont_fisico) }}
                             </div>
                         </div>
                     </div>
@@ -315,10 +315,10 @@
                 <div class="row g-4 mt-2">
                     <div class="col-12">
                         <div class="info-group">
-                             <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
+                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
                              <div class="info-value">
                                 {% set placeholder_relatorios %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-earmark-x fs-2 mb-2"></i><p class="mb-0">Nenhum controle de relatório configurado</p></div>{% endset %}
-                                {{ render_badge_list(contabil.controle_relatorios, 'bg-primary-subtle text-primary', 'bi-check-square', placeholder_relatorios) }}
+                                {{ render_badge_list(contabil.controle_relatorios, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
                             </div>
                         </div>
                     </div>
@@ -328,7 +328,7 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-info mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
                             <div class="border rounded p-4 bg-white editor-content">{{ contabil.particularidades_texto|safe }}</div>
                         </div>
                     </div>
@@ -337,9 +337,9 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5 border-info">
-            <div class="card-header bg-info text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-info mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#contabil" class="btn btn-info"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+        <div class="card shadow-lg mb-5" style="border-color:#e87429;">
+            <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#contabil" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
@@ -347,7 +347,7 @@
     <div id="pessoal">
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
-                <div class="card-header text-white py-3" style="background-color: #f39c12;">
+                <div class="card-header bg-dept-blue text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
                         {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
@@ -357,22 +357,22 @@
                     <div class="row g-4">
                         <div class="col-lg-6 col-md-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                                 <div class="info-item">
                                     <label class="info-label">Data de Envio</label>
-                                    <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-calendar-event me-1"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                    <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-calendar-event me-1 text-dept-blue"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
+                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
                                 <div class="row">
                                     <div class="col-md-4 text-center info-item">
                                         <label class="info-label">Registro de Funcionários</label>
                                         <div class="info-value mt-2">
                                             {% if pessoal.registro_funcionarios %}
-                                                <span class="badge bg-warning-subtle text-warning fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2"></i>{{ pessoal.registro_funcionarios }}</span>
+                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2 text-dept-blue"></i>{{ pessoal.registro_funcionarios }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não tem</span>
                                             {% endif %}
@@ -382,7 +382,7 @@
                                         <label class="info-label">Ponto Eletrônico</label>
                                         <div class="info-value mt-2">
                                             {% if pessoal.ponto_eletronico %}
-                                                <span class="badge bg-info-subtle text-info fs-6 px-3 py-2"><i class="bi bi-clock me-2"></i>{{ pessoal.ponto_eletronico }}</span>
+                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-clock me-2 text-dept-blue"></i>{{ pessoal.ponto_eletronico }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
                                             {% endif %}
@@ -392,7 +392,7 @@
                                         <label class="info-label">Sistema de Pagamento</label>
                                         <div class="info-value mt-2">
                                             {% if pessoal.pagamento_funcionario %}
-                                                <span class="badge bg-success-subtle text-success fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2"></i>{{ pessoal.pagamento_funcionario }}</span>
+                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2 text-dept-blue"></i>{{ pessoal.pagamento_funcionario }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
                                             {% endif %}
@@ -407,7 +407,7 @@
                     <div class="row mt-4">
                         <div class="col-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
                                 <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
                             </div>
                         </div>
@@ -416,9 +416,9 @@
                 </div>
             </div>
         {% else %}
-            <div class="card shadow-lg mb-5 border-warning">
-                <div class="card-header text-white py-3" style="background-color: #f39c12;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
-                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#pessoal" class="btn btn-warning"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card shadow-lg mb-5" style="border-color:#0b288b;">
+                <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
+                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#pessoal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
             </div>
         {% endif %}
         </div>
@@ -426,7 +426,7 @@
     <div id="administrativo">
     {% if administrativo %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-dark text-white py-3">
+            <div class="card-header bg-dept-orange text-white py-3">
                  <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
                     {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
@@ -437,7 +437,7 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-dark mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
                             <div class="border rounded p-4 bg-white editor-content">{{ administrativo.particularidades_texto|safe }}</div>
                         </div>
                     </div>
@@ -446,9 +446,9 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5 border-dark">
-            <div class="card-header bg-dark text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dark mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#administrativo" class="btn btn-dark"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+        <div class="card shadow-lg mb-5" style="border-color:#e87429;">
+            <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#administrativo" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
