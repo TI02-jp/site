@@ -39,16 +39,16 @@
                         <a href="#dados-empresa" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-building me-1"></i>Empresa
                         </a>
-                        <a href="#fiscal" class="btn btn-outline-primary btn-sm">
+                        <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm">
                             <i class="bi bi-receipt me-1"></i>Fiscal
                         </a>
-                        <a href="#contabil" class="btn btn-outline-primary btn-sm">
+                        <a href="#contabil" class="btn btn-outline-dept-orange btn-sm">
                             <i class="bi bi-calculator me-1"></i>Contábil
                         </a>
-                        <a href="#pessoal" class="btn btn-outline-primary btn-sm">
+                        <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm">
                             <i class="bi bi-people me-1"></i>Pessoal
                         </a>
-                        <a href="#administrativo" class="btn btn-outline-primary btn-sm">
+                        <a href="#administrativo" class="btn btn-outline-dept-orange btn-sm">
                             <i class="bi bi-gear me-1"></i>Administrativo
                         </a>
                     </div>
@@ -277,7 +277,7 @@
 
     <!-- Departamento Fiscal -->
     <div class="card shadow-lg mb-5" id="fiscal">
-        <div class="card-header bg-success text-white py-3">
+        <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-receipt me-2"></i>Departamento Fiscal
             </h3>
@@ -330,7 +330,7 @@
                 <!-- Seção Prefeitura -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-dept-blue border-bottom pb-2 mb-3">
                             <i class="bi bi-building me-2"></i>Acesso à Prefeitura
                         </h5>
                     </div>
@@ -381,7 +381,7 @@
                 <!-- Envio Digital e Contato -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-dept-blue border-bottom pb-2 mb-3">
                             <i class="bi bi-cloud-upload me-2"></i>Formas de Envio e Contato
                         </h5>
                     </div>
@@ -441,7 +441,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Contatos</label>
                         <div id="contatos-container"></div>
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-contato">
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-contato">
                             <i class="bi bi-plus-circle"></i> Adicionar Contato
                         </button>
                         {{ fiscal_form.contatos_json(id='contatos_json') }}
@@ -479,7 +479,7 @@
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-success px-5" id="fiscal-submit-btn">
+                    <button type="submit" class="btn btn-dept-blue px-5" id="fiscal-submit-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal
                     </button>
@@ -504,7 +504,7 @@
 
     <!-- Departamento Contábil -->
     <div class="card shadow-lg mb-5" id="contabil">
-        <div class="card-header bg-warning text-white py-3">
+        <div class="card-header bg-dept-orange text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-calculator me-2"></i>Departamento Contábil
             </h3>
@@ -543,7 +543,7 @@
                 <!-- Envio Digital -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-dept-orange border-bottom pb-2 mb-3">
                             <i class="bi bi-cloud-upload me-2"></i>Formas de Envio
                         </h5>
                     </div>
@@ -670,7 +670,7 @@
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-warning px-5" id="contabil-submit-btn">
+                    <button type="submit" class="btn btn-dept-orange px-5" id="contabil-submit-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil
                     </button>
@@ -695,7 +695,7 @@
 
     <!-- Departamento Pessoal -->
     <div class="card shadow-lg mb-5" id="pessoal">
-        <div class="card-header bg-info text-white py-3">
+        <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-people me-2"></i>Departamento Pessoal
             </h3>
@@ -708,7 +708,7 @@
                 <!-- Detalhes do Departamento -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                        <h5 class="text-dept-blue border-bottom pb-2 mb-3">
                             <i class="bi bi-person-lines-fill me-2"></i>Detalhes do Departamento
                         </h5>
                     </div>
@@ -790,7 +790,7 @@
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-info px-5" id="pessoal-submit-btn">
+                    <button type="submit" class="btn btn-dept-blue px-5" id="pessoal-submit-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal
                     </button>
@@ -815,7 +815,7 @@
 
     <!-- Departamento Administrativo -->
     <div class="card shadow-lg mb-5" id="administrativo">
-        <div class="card-header bg-secondary text-white py-3">
+        <div class="card-header bg-dept-orange text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-gear me-2"></i>Departamento Administrativo
             </h3>
@@ -826,7 +826,7 @@
                 <input type="hidden" name="form_type" value="administrativo">
                 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-secondary px-5" id="administrativo-submit-btn">
+                    <button type="submit" class="btn btn-dept-orange px-5" id="administrativo-submit-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo
                     </button>
@@ -856,7 +856,7 @@
                 <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4 me-3">
                     <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
                 </a>
-                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-primary px-4">
+                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-dept-blue px-4">
                     <i class="bi bi-diagram-3 me-2"></i>Ver Departamentos
                 </a>
             </div>
