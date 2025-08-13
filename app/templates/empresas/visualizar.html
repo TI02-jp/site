@@ -159,12 +159,35 @@
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
-                    <div class="col-lg-6 col-md-12">
+                    <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
                             <div class="info-item">
-                                <label class="info-label">Forma de Movimento</label>
+                                <label class="info-label">Envio de Documento</label>
                                 <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-blue"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Envio Digital</label>
+                                <div class="info-value">
+                                    {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                    {{ render_badge_list(fiscal.envio_digital, 'bg-dept-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Envio Físico</label>
+                                <div class="info-value">
+                                    {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                    {% set fisico_list = fiscal.envio_fisico %}
+                                    {% if fisico_list is string %}
+                                        {% set fisico_list = [fisico_list] %}
+                                    {% elif not fisico_list %}
+                                        {% set fisico_list = [] %}
+                                    {% endif %}
+                                    {% if fiscal.envio_fisico_outro %}
+                                        {% set fisico_list = fisico_list + [fiscal.envio_fisico_outro] %}
+                                    {% endif %}
+                                    {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -234,37 +257,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="row g-4 mt-2">
-                    <div class="col-md-6">
-                         <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
-                            <div class="info-value">
-                                {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(fiscal.envio_digital, 'bg-dept-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                         <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-inbox me-2"></i>Envio Físico</h6>
-                             <div class="info-value">
-                                {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {% set fisico_list = fiscal.envio_fisico %}
-                                {% if fisico_list is string %}
-                                    {% set fisico_list = [fisico_list] %}
-                                {% elif not fisico_list %}
-                                    {% set fisico_list = [] %}
-                                {% endif %}
-                                {% if fiscal.envio_fisico_outro %}
-                                    {% set fisico_list = fisico_list + [fiscal.envio_fisico_outro] %}
-                                {% endif %}
-                                {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                 {% if fiscal.particularidades_texto and fiscal.particularidades_texto.strip() %}
+                {% if fiscal.particularidades_texto and fiscal.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="info-group">
@@ -302,39 +295,39 @@
                                 <label class="info-label">Método de Importação</label>
                                 <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-download me-1 text-dept-orange"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">Forma de Movimento</label>
-                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="row g-4 mt-2">
-                    <div class="col-md-6">
+                <div class="row g-4">
+                    <div class="col-12">
                         <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio Digital</h6>
-                            <div class="info-value">
-                                {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {{ render_badge_list(contabil.envio_digital, 'bg-dept-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
+                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
+                            <div class="info-item">
+                                <label class="info-label">Envio de Documento</label>
+                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-inbox me-2"></i>Envio Físico</h6>
-                            <div class="info-value">
-                                {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {% set cont_fisico = contabil.envio_fisico %}
-                                {% if cont_fisico is string %}
-                                    {% set cont_fisico = [cont_fisico] %}
-                                {% elif not cont_fisico %}
-                                    {% set cont_fisico = [] %}
-                                {% endif %}
-                                {% if contabil.envio_fisico_outro %}
-                                    {% set cont_fisico = cont_fisico + [contabil.envio_fisico_outro] %}
-                                {% endif %}
-                                {{ render_badge_list(cont_fisico, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
+                            <div class="info-item">
+                                <label class="info-label">Envio Digital</label>
+                                <div class="info-value">
+                                    {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                    {{ render_badge_list(contabil.envio_digital, 'bg-dept-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">Envio Físico</label>
+                                <div class="info-value">
+                                    {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
+                                    {% set cont_fisico = contabil.envio_fisico %}
+                                    {% if cont_fisico is string %}
+                                        {% set cont_fisico = [cont_fisico] %}
+                                    {% elif not cont_fisico %}
+                                        {% set cont_fisico = [] %}
+                                    {% endif %}
+                                    {% if contabil.envio_fisico_outro %}
+                                        {% set cont_fisico = cont_fisico + [contabil.envio_fisico_outro] %}
+                                    {% endif %}
+                                    {{ render_badge_list(cont_fisico, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
+                                </div>
                             </div>
                         </div>
                     </div>
