@@ -45,19 +45,56 @@ def format_phone(digits: str) -> str:
     return digits
 
 
+def normalize_contatos(contatos):
+    if not contatos:
+        return []
+    if all(isinstance(c, dict) and 'meios' in c for c in contatos):
+        for c in contatos:
+            meios = c.get('meios') or []
+            for m in meios:
+                if 'valor' in m and 'endereco' not in m:
+                    m['endereco'] = m.pop('valor')
+                if m.get('tipo') in ('telefone', 'whatsapp'):
+                    digits = re.sub(r'\D', '', m.get('endereco', ''))
+                    m['endereco'] = format_phone(digits)
+        return contatos
+    grouped = {}
+    for c in contatos:
+        if not isinstance(c, dict):
+            continue
+        nome = c.get('nome', '')
+        tipo = c.get('tipo')
+        endereco = c.get('endereco') or c.get('valor', '')
+        if tipo in ('telefone', 'whatsapp'):
+            digits = re.sub(r'\D', '', endereco)
+            endereco = format_phone(digits)
+        contato = grouped.setdefault(nome, {'nome': nome, 'meios': []})
+        contato['meios'].append({'tipo': tipo, 'endereco': endereco})
+    return list(grouped.values())
+
+
 def validate_contatos(contatos):
     email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
     for c in contatos:
-        tipo = c.get('tipo')
-        endereco = c.get('endereco', '')
-        if tipo == 'email':
-            if not email_re.match(endereco):
-                raise ValueError(f"E-mail inválido: {endereco}")
-        elif tipo in ('telefone', 'whatsapp'):
-            digits = re.sub(r'\D', '', endereco)
-            if not digits:
-                raise ValueError(f"Número inválido: {endereco}")
-            c['endereco'] = format_phone(digits)
+        meios = c.get('meios')
+        if meios is None:
+            meios = [{'tipo': c.get('tipo'), 'endereco': c.get('endereco', '')}]
+        validated = []
+        for m in meios:
+            tipo = m.get('tipo')
+            endereco = m.get('endereco', '')
+            if tipo == 'email':
+                if not email_re.match(endereco):
+                    raise ValueError(f"E-mail inválido: {endereco}")
+            elif tipo in ('telefone', 'whatsapp'):
+                digits = re.sub(r'\D', '', endereco)
+                if not digits:
+                    raise ValueError(f"Número inválido: {endereco}")
+                endereco = format_phone(digits)
+            validated.append({'tipo': tipo, 'endereco': endereco})
+        c['meios'] = validated
+        c.pop('tipo', None)
+        c.pop('endereco', None)
     return contatos
 
     ## Rota para upload de imagens
@@ -320,13 +357,7 @@ def editar_empresa(id):
                     contatos_list = []
             else:
                 contatos_list = []
-            for c in contatos_list:
-                if isinstance(c, dict):
-                    if 'valor' in c and 'endereco' not in c:
-                        c['endereco'] = c.pop('valor')
-                    if c.get('tipo') in ('telefone', 'whatsapp'):
-                        digits = re.sub(r'\D', '', c.get('endereco', ''))
-                        c['endereco'] = format_phone(digits)
+            contatos_list = normalize_contatos(contatos_list)
             fiscal_form.contatos_json.data = json.dumps(contatos_list)
             
         if contabil:
@@ -417,13 +448,7 @@ def visualizar_empresa(id):
             contatos_list = []
     else:
         contatos_list = []
-    for c in contatos_list:
-        if isinstance(c, dict):
-            if 'valor' in c and 'endereco' not in c:
-                c['endereco'] = c.pop('valor')
-            if c.get('tipo') in ('telefone', 'whatsapp'):
-                digits = re.sub(r'\D', '', c.get('endereco', ''))
-                c['endereco'] = format_phone(digits)
+    contatos_list = normalize_contatos(contatos_list)
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
@@ -477,13 +502,7 @@ def gerenciar_departamentos(empresa_id):
                 contatos_list = []
         else:
             contatos_list = []
-        for c in contatos_list:
-            if isinstance(c, dict):
-                if 'valor' in c and 'endereco' not in c:
-                    c['endereco'] = c.pop('valor')
-                if c.get('tipo') in ('telefone', 'whatsapp'):
-                    digits = re.sub(r'\D', '', c.get('endereco', ''))
-                    c['endereco'] = format_phone(digits)
+        contatos_list = normalize_contatos(contatos_list)
         fiscal_form.contatos_json.data = json.dumps(contatos_list)
         
         contabil_form = DepartamentoContabilForm(obj=contabil)
