@@ -247,7 +247,6 @@
         </div>
     </div>
 
-    <!-- Departamento Fiscal -->
     <div class="card shadow-lg mb-5" id="fiscal">
         <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold">
@@ -288,7 +287,7 @@
                     
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
-                        {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
+                        {{ fiscal_form.forma_movimento(class="form-select") }}
                         {% if fiscal_form.forma_movimento.errors %}
                             <div class="text-danger mt-1">
                                 {% for error in fiscal_form.forma_movimento.errors %}
@@ -330,66 +329,52 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div id="fiscal_envio_digital">
-                            <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
-                            <div class="border rounded p-3 bg-light">
-                                <div class="row">
-                                    {% for value, label in fiscal_form.envio_digital.choices %}
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}"
-                                                   value="{{ value }}" id="fed-{{ loop.index }}"
-                                                   {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}
-                                                   aria-label="{{ label }}">
-                                            <label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label>
-                                        </div>
+                        <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in fiscal_form.envio_digital.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital.name }}"
+                                               value="{{ value }}" id="fed-{{ loop.index }}"
+                                               {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="fed-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if fiscal_form.envio_digital.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.envio_digital.errors %}
+                                        <small>{{ error }}</small><br>
                                     {% endfor %}
                                 </div>
-                                {% if fiscal_form.envio_digital.errors %}
-                                    <div class="text-danger mt-1">
-                                        {% for error in fiscal_form.envio_digital.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
-
-                        <div id="fiscal_envio_fisico" class="mt-3">
-                            <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light">
-                                <div class="row">
-                                    {% for value, label in fiscal_form.envio_fisico.choices %}
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox"
-                                                name="{{ fiscal_form.envio_fisico.name }}"
-                                                value="{{ value }}" id="fiscal-ef-{{ loop.index }}"
-                                                {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
-                                            <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
-                                        </div>
+                        
+                        <label class="form-label fw-semibold mt-3">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in fiscal_form.envio_digital_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_digital_fisico.name }}"
+                                               value="{{ value }}" id="fedf-{{ loop.index }}"
+                                               {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="fedf-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if fiscal_form.envio_digital_fisico.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in fiscal_form.envio_digital_fisico.errors %}
+                                        <small>{{ error }}</small><br>
                                     {% endfor %}
                                 </div>
-                                <input type="text" class="form-control mt-2 outro-input"
-                                    id="fiscal_envio_fisico_outro"
-                                    name="{{ fiscal_form.envio_fisico_outro.name }}"
-                                    value="{{ fiscal_form.envio_fisico_outro.data or '' }}"
-                                    placeholder="Descreva outro" style="display: none;">
-                            </div>
-                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% if fiscal_form.envio_fisico.errors %}
-                                    <div class="text-danger mt-1">
-                                        {% for error in fiscal_form.envio_fisico.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -484,7 +469,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>
-                        {{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}
+                        {{ contabil_form.forma_movimento(class="form-select") }}
                         {% if contabil_form.forma_movimento.errors %}
                             <div class="text-danger mt-1">
                                 {% for error in contabil_form.forma_movimento.errors %}
@@ -506,58 +491,52 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div id="contabil_envio_digital">
-                            <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
-                            <div class="border rounded p-3 bg-light">
-                                <div class="row">
-                                    {% for value, label in contabil_form.envio_digital.choices %}
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}"
-                                                   value="{{ value }}" id="ced-{{ loop.index }}"
-                                                   {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}
-                                                   aria-label="{{ label }}">
-                                            <label class="form-check-label" for="ced-{{ loop.index }}">{{ label }}</label>
-                                        </div>
+                        <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in contabil_form.envio_digital.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital.name }}"
+                                               value="{{ value }}" id="ced-{{ loop.index }}"
+                                               {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="ced-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if contabil_form.envio_digital.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.envio_digital.errors %}
+                                        <small>{{ error }}</small><br>
                                     {% endfor %}
                                 </div>
-                                {% if contabil_form.envio_digital.errors %}
-                                    <div class="text-danger mt-1">
-                                        {% for error in contabil_form.envio_digital.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
-
-                        <div id="contabil_envio_fisico" class="mt-3">
-                            <label class="form-label fw-semibold">{{ contabil_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light"><div class="row">
-                                    {% for value, label in contabil_form.envio_fisico.choices %}
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil-ef-{{ loop.index }}" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
-                                            <label class="form-check-label" for="contabil-ef-{{ loop.index }}">{{ label }}</label>
-                                        </div>
+                        
+                        <label class="form-label fw-semibold mt-3">{{ contabil_form.envio_digital_fisico.label.text }}</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in contabil_form.envio_digital_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_digital_fisico.name }}"
+                                               value="{{ value }}" id="cedf-{{ loop.index }}"
+                                               {% if value in (contabil_form.envio_digital_fisico.data or []) %}checked{% endif %}
+                                               aria-label="{{ label }}">
+                                        <label class="form-check-label" for="cedf-{{ loop.index }}">{{ label }}</label>
                                     </div>
-                                    {% endfor %}
+                                </div>
+                                {% endfor %}
                             </div>
-                            <input type="text" class="form-control mt-2 outro-input" id="contabil_envio_fisico_outro" name="{{ contabil_form.envio_fisico_outro.name }}" value="{{ contabil_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
-                            </div>
-                        </div>
-                                    </div>
+                            {% if contabil_form.envio_digital_fisico.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in contabil_form.envio_digital_fisico.errors %}
+                                        <small>{{ error }}</small><br>
                                     {% endfor %}
                                 </div>
-                                {% if contabil_form.envio_fisico.errors %}
-                                    <div class="text-danger mt-1">
-                                        {% for error in contabil_form.envio_fisico.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-12">
@@ -784,7 +763,7 @@
         </div>
     </div>
 
-    <!-- Botão de Navegação -->
+    <!-- Botões de Navegação -->
     <div class="row">
         <div class="col-12">
             <div class="text-center">
@@ -800,7 +779,6 @@
 <script src="https://unpkg.com/imask"></script>
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
-<script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
@@ -811,13 +789,23 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Smooth scroll para navegação
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
 
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
-    setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
-    setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
-    setupFisicoOutro('fiscal_envio_fisico');
-    setupFisicoOutro('contabil_envio_fisico');
 
     // Feedback visual para checkboxes e radio buttons
     document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
