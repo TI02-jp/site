@@ -25,7 +25,6 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
               <option value="email" ${c.tipo === 'email' ? 'selected' : ''}>E-mail</option>
               <option value="telefone" ${c.tipo === 'telefone' ? 'selected' : ''}>Telefone</option>
               <option value="whatsapp" ${c.tipo === 'whatsapp' ? 'selected' : ''}>Whatsapp</option>
-              <option value="skype" ${c.tipo === 'skype' ? 'selected' : ''}>Skype</option>
               <option value="acessorias" ${c.tipo === 'acessorias' ? 'selected' : ''}>Acessórias</option>
             </select>
           </div>
@@ -88,7 +87,7 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
         enderecoInput.type = 'email';
       } else if (tipo === 'telefone' || tipo === 'whatsapp') {
         enderecoInput.type = 'tel';
-        enderecoInput.pattern = '\\d{10,11}';
+        enderecoInput.pattern = '\\(\\d{2}\\)\\s?\\d{4,5}-\\d{4}';
         handlePhoneInput();
         enderecoInput.addEventListener('input', handlePhoneInput);
       }
