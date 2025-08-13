@@ -102,7 +102,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
         ('nenhum', 'Não importa nada')], validators=[Optional()])
     links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
-    forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
+    forma_movimento = SelectField('Envio de Documento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
@@ -121,7 +121,7 @@ class DepartamentoContabilForm(DepartamentoForm):
     metodo_importacao = SelectField('Forma de Importação', choices=[
         ('', 'Selecione'), ('importado', 'Importado'), ('digitado', 'Digitado')
     ], validators=[Optional()])
-    forma_movimento = SelectField('Forma de Recebimento do Movimento', choices=[
+    forma_movimento = SelectField('Envio de Documento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
