@@ -1126,44 +1126,48 @@ Mensagem de login flutuante
 .btn-dept-blue {
     background-color: #0b288b;
     border-color: #0b288b;
-    color: #fff;
+    color: #e87429;
 }
 
 .btn-dept-blue:hover {
     background-color: #09206d;
     border-color: #09206d;
-    color: #fff;
+    color: #e87429;
 }
 
 .btn-dept-orange {
     background-color: #e87429;
     border-color: #e87429;
-    color: #fff;
+    color: #0b288b;
 }
 
 .btn-dept-orange:hover {
     background-color: #cf661f;
     border-color: #cf661f;
-    color: #fff;
+    color: #0b288b;
 }
 
 .btn-outline-dept-blue {
+    background-color: transparent;
     border-color: #0b288b;
-    color: #0b288b;
+    color: #e87429;
 }
 
 .btn-outline-dept-blue:hover {
     background-color: #0b288b;
-    color: #fff;
+    border-color: #0b288b;
+    color: #e87429;
 }
 
 .btn-outline-dept-orange {
+    background-color: transparent;
     border-color: #e87429;
-    color: #e87429;
+    color: #0b288b;
 }
 
 .btn-outline-dept-orange:hover {
     background-color: #e87429;
-    color: #fff;
+    border-color: #e87429;
+    color: #0b288b;
 }
 
