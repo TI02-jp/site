@@ -56,10 +56,6 @@
                             {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
-                        {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
-                    </div>
                 </div>
 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
@@ -76,7 +72,10 @@
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio Digital e Contato</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div id="fiscal_envio_digital">
+                        <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
+                        {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
+
+                        <div id="fiscal_envio_digital" class="mt-3">
                             <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
                             <div class="border rounded p-3 bg-light"><div class="row">
                                 {% for value, label in fiscal_form.envio_digital.choices %}
