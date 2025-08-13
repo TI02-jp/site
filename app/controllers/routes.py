@@ -17,6 +17,7 @@ import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from app.forms import DepartamentoFiscalForm, DepartamentoContabilForm, DepartamentoPessoalForm
+from sqlalchemy import or_
 
 @app.context_processor
 def inject_stats():
@@ -149,7 +150,19 @@ def cadastrar_empresa():
 @app.route('/listar_empresas')
 @login_required
 def listar_empresas():
-    empresas = Empresa.query.all()
+    search = request.args.get('q', '').strip()
+    query = Empresa.query
+
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Empresa.nome_empresa.ilike(like_pattern),
+                Empresa.codigo_empresa.ilike(like_pattern)
+            )
+        )
+
+    empresas = query.all()
 
     for empresa in empresas:
         if empresa.data_abertura and isinstance(empresa.data_abertura, str):
@@ -158,7 +171,7 @@ def listar_empresas():
             except ValueError:
                 empresa.data_abertura = None
 
-    return render_template('empresas/listar.html', empresas=empresas)
+    return render_template('empresas/listar.html', empresas=empresas, search=search)
 
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
