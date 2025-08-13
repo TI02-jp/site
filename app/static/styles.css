@@ -1171,3 +1171,9 @@ Mensagem de login flutuante
     color: #0b288b;
 }
 
+
+/* Left align and preserve line breaks for particularidades content */
+.editor-content {
+    text-align: left;
+    white-space: pre-line;
+}
