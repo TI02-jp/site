@@ -568,7 +568,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="row">
@@ -597,33 +597,7 @@
 
                 <!-- Observações -->
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 100px") }}
-                            {{ contabil_form.observacao_movimento.label(class="form-label") }}
-                            {% if contabil_form.observacao_movimento.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in contabil_form.observacao_movimento.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação Controle Relatórios", style="height: 100px") }}
-                            {{ contabil_form.observacao_controle_relatorios.label(class="form-label") }}
-                            {% if contabil_form.observacao_controle_relatorios.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in contabil_form.observacao_controle_relatorios.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-12">
+                    <div class="col-12">
                         <div class="form-floating">
                             {{ contabil_form.particularidades_texto(class="form-control", placeholder="Particularidades", style="height: 100px") }}
                             {{ contabil_form.particularidades_texto.label(class="form-label") }}

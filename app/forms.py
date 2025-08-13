@@ -129,14 +129,12 @@ class DepartamentoContabilForm(DepartamentoForm):
     envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
         ('email', 'Email'), ('whatsapp', 'Whatsapp'),
         ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
-    observacao_movimento = TextAreaField('Observação Movimento', validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),
         ('adiantamentos', 'Relatório de adiantamentos'), ('contas_pagas', 'Relatório de contas pagas'),
         ('contas_recebidas', 'Relatório de contas recebidas'),
         ('conferir_aplicacao', 'Conferir aplicação')], validators=[Optional()])
-    observacao_controle_relatorios = TextAreaField('Observação Relatórios', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 class DepartamentoPessoalForm(DepartamentoForm):

@@ -84,7 +84,6 @@ class Departamento(db.Model):
     observacao_movimento = db.Column(db.String(200))
     metodo_importacao = db.Column(db.String(20))
     controle_relatorios = db.Column(JsonString(255))
-    observacao_controle_relatorios = db.Column(db.String(200))
     contatos = db.Column(JsonString(255))
     data_envio = db.Column(db.String(100))
     registro_funcionarios = db.Column(db.String(200))

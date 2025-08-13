@@ -286,7 +286,7 @@
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
-                    <div class="col-lg-6 col-md-12">
+                    <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
@@ -296,19 +296,6 @@
                             <div class="info-item">
                                 <label class="info-label">Forma de Movimento</label>
                                 <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 col-md-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-chat-square-text me-2"></i>Observações</h6>
-                             <div class="info-item">
-                                <label class="info-label">Observação de Movimento</label>
-                                <div class="info-value">{% if contabil.observacao_movimento %}<div class="border rounded p-3 bg-light"><i class="bi bi-sticky me-2 text-dept-orange"></i>{{ contabil.observacao_movimento }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-chat-square fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">Observação de Relatórios</label>
-                                <div class="info-value">{% if contabil.observacao_controle_relatorios %}<div class="border rounded p-3 bg-light"><i class="bi bi-file-earmark-text me-2 text-dept-orange"></i>{{ contabil.observacao_controle_relatorios }}</div>{% else %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-file-earmark fs-3 mb-2"></i><p class="mb-0">Nenhuma observação</p></div>{% endif %}</div>
                             </div>
                         </div>
                     </div>
