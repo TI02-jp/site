@@ -249,7 +249,6 @@
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-inbox me-2"></i>Envio Físico</h6>
                              <div class="info-value">
                                 {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {% set fisico_list = fiscal.envio_fisico or [] %}
                                 {% set fisico_list = fiscal.envio_fisico %}
                                 {% if fisico_list is string %}
                                     {% set fisico_list = [fisico_list] %}
@@ -326,7 +325,6 @@
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-inbox me-2"></i>Envio Físico</h6>
                             <div class="info-value">
                                 {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                {% set cont_fisico = contabil.envio_fisico or [] %}
                                 {% set cont_fisico = contabil.envio_fisico %}
                                 {% if cont_fisico is string %}
                                     {% set cont_fisico = [cont_fisico] %}

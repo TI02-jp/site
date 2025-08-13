@@ -319,8 +319,6 @@ def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
 
-    fiscal = contabil = pessoal = administrativo = None
-
     if request.method == 'GET':
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if empresa.regime_lancamento:
@@ -348,10 +346,6 @@ def editar_empresa(id):
         'empresas/editar_empresa.html',
         empresa=empresa,
         empresa_form=empresa_form,
-        fiscal=fiscal,
-        contabil=contabil,
-        pessoal=pessoal,
-        administrativo=administrativo,
     )
 
 @app.route('/empresa/visualizar/<int:id>')
