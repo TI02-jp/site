@@ -58,7 +58,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
-                        {{ fiscal_form.forma_movimento(class="form-select") }}
+                        {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
                     </div>
                 </div>
 
@@ -76,38 +76,39 @@
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio Digital e Contato</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.envio_digital.choices %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ fiscal_form.envio_digital.name }}"
-                                        value="{{ value }}"
-                                        id="fiscal-fed-{{ loop.index }}"
-                                        {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
-                                    <label class="form-check-label" for="fiscal-fed-{{ loop.index }}">{{ label }}</label>
+                        <div id="fiscal_envio_digital">
+                            <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
+                            <div class="border rounded p-3 bg-light"><div class="row">
+                                {% for value, label in fiscal_form.envio_digital.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                            type="checkbox"
+                                            name="{{ fiscal_form.envio_digital.name }}"
+                                            value="{{ value }}"
+                                            id="fiscal-fed-{{ loop.index }}"
+                                            {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="fiscal-fed-{{ loop.index }}">{{ label }}</label>
+                                    </div>
                                 </div>
-                            </div>
-                            {% endfor %}
-                        </div></div>
-                        <label class="form-label fw-semibold mt-3">{{ fiscal_form.envio_digital_fisico.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.envio_digital_fisico.choices %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ fiscal_form.envio_digital_fisico.name }}"
-                                        value="{{ value }}"
-                                        id="fiscal-fedf-{{ loop.index }}"
-                                        {% if value in (fiscal_form.envio_digital_fisico.data or []) %}checked{% endif %}>
-                                    <label class="form-check-label" for="fiscal-fedf-{{ loop.index }}">{{ label }}</label>
+                                {% endfor %}
+                            </div></div>
+                        </div>
+                        <div id="fiscal_envio_fisico" class="mt-3">
+                            <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
+                            <div class="border rounded p-3 bg-light"><div class="row">
+                                {% for value, label in fiscal_form.envio_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal-ef-{{ loop.index }}" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
+                                    </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div></div>
+                            <input type="text" class="form-control mt-2 outro-input" id="fiscal_envio_fisico_outro" name="{{ fiscal_form.envio_fisico_outro.name }}" value="{{ fiscal_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
+                            </div>
+                        </div>
 
                     </div>
                     <div class="col-md-6">
@@ -151,42 +152,43 @@
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Forma de Envio</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
-                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(class="form-select") }}</div>
+                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}</div>
                 </div>
 
                 <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in contabil_form.envio_digital.choices %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ contabil_form.envio_digital.name }}"
-                                        value="{{ value }}"
-                                        id="contabil-fed-{{ loop.index }}"
-                                        {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
-                                    <label class="form-check-label" for="contabil-fed-{{ loop.index }}">{{ label }}</label>
+                        <div id="contabil_envio_digital">
+                            <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
+                            <div class="border rounded p-3 bg-light"><div class="row">
+                                {% for value, label in contabil_form.envio_digital.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                            type="checkbox"
+                                            name="{{ contabil_form.envio_digital.name }}"
+                                            value="{{ value }}"
+                                            id="contabil-fed-{{ loop.index }}"
+                                            {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="contabil-fed-{{ loop.index }}">{{ label }}</label>
+                                    </div>
                                 </div>
-                            </div>
-                            {% endfor %}
-                        </div></div>
-                        <label class="form-label fw-semibold mt-3">{{ contabil_form.envio_digital_fisico.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in contabil_form.envio_digital_fisico.choices %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ contabil_form.envio_digital_fisico.name }}"
-                                        value="{{ value }}"
-                                        id="contabil-fedf-{{ loop.index }}"
-                                        {% if value in (contabil_form.envio_digital_fisico.data or []) %}checked{% endif %}>
-                                    <label class="form-check-label" for="contabil-fedf-{{ loop.index }}">{{ label }}</label>
+                                {% endfor %}
+                            </div></div>
+                        </div>
+                        <div id="contabil_envio_fisico" class="mt-3">
+                            <label class="form-label fw-semibold">{{ contabil_form.envio_fisico.label.text }}</label>
+                            <div class="border rounded p-3 bg-light"><div class="row">
+                                {% for value, label in contabil_form.envio_fisico.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil-ef-{{ loop.index }}" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="contabil-ef-{{ loop.index }}">{{ label }}</label>
+                                    </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div></div>
+                            <input type="text" class="form-control mt-2 outro-input" id="contabil_envio_fisico_outro" name="{{ contabil_form.envio_fisico_outro.name }}" value="{{ contabil_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
+                            </div>
+                        </div>
                 </div>
 
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
@@ -332,11 +334,16 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
+    setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
+    setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
+    setupFisicoOutro('fiscal_envio_fisico');
+    setupFisicoOutro('contabil_envio_fisico');
 
     // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
     
