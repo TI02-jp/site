@@ -97,16 +97,6 @@ class DatabaseManager:
         result = self.fetch_one(query, (os.getenv('DB_NAME'), table_name))
         return result['count'] > 0 if result else False
 
-    def check_column_exists(self, table_name, column_name):
-        """Verifica se uma coluna existe em determinada tabela"""
-        query = """
-        SELECT COUNT(*) as count
-        FROM information_schema.columns
-        WHERE table_schema = %s AND table_name = %s AND column_name = %s
-        """
-        result = self.fetch_one(query, (os.getenv('DB_NAME'), table_name, column_name))
-        return result['count'] > 0 if result else False
-
     def close(self):
         """Fecha a conexão com o banco de dados"""
         if self.connection and self.connection.is_connected():
@@ -160,22 +150,6 @@ def main():
                 logger.warning("Falha ao adicionar Primary Key")
         else:
             logger.info("Primary Key já existe na tabela")
-
-        # 4. Garantir a existência da coluna links_prefeitura na tabela departamentos
-        if db.check_table_exists('departamentos'):
-            if not db.check_column_exists('departamentos', 'links_prefeitura'):
-                add_col_query = """
-                ALTER TABLE departamentos
-                ADD COLUMN links_prefeitura VARCHAR(255);
-                """
-                if db.execute_query(add_col_query):
-                    logger.info("Coluna links_prefeitura adicionada na tabela departamentos")
-                else:
-                    logger.warning("Falha ao adicionar coluna links_prefeitura")
-            else:
-                logger.info("Coluna links_prefeitura já existe na tabela departamentos")
-        else:
-            logger.warning("Tabela departamentos não encontrada")
 
     except Exception as e:
         logger.error(f"Erro durante as operações: {e}")
