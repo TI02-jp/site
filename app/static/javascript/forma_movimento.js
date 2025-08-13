@@ -24,3 +24,21 @@ function setupFormaMovimento(selectId, digitalId, fisicoId) {
     select.addEventListener('change', update);
     update();
 }
+
+function setupFisicoOutro(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const outroCheckbox = container.querySelector('input[value="outro"]');
+    const outroInput = container.querySelector('.outro-input');
+    if (!outroCheckbox || !outroInput) return;
+    function toggleOutro() {
+        if (outroCheckbox.checked) {
+            outroInput.style.display = '';
+        } else {
+            outroInput.style.display = 'none';
+            outroInput.value = '';
+        }
+    }
+    outroCheckbox.addEventListener('change', toggleOutro);
+    toggleOutro();
+}
