@@ -175,8 +175,8 @@
                                 <div class="row g-2 fw-semibold mb-1">
                                     <div class="col-md-3">Cidade</div>
                                     <div class="col-md-3">Link</div>
-                                    <div class="col-md-2">Usuário</div>
-                                    <div class="col-md-2">Senha</div>
+                                    <div class="col-md-3">Usuário</div>
+                                    <div class="col-md-3">Senha</div>
                                 </div>
                                 {% for acesso in fiscal.links_prefeitura %}
                                     <div class="row g-2 mb-2">
@@ -186,10 +186,10 @@
                                         <div class="col-md-3">
                                             <input type="text" class="form-control" value="{{ acesso.link or '' }}" readonly>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <input type="text" class="form-control" value="{{ acesso.usuario or '' }}" readonly>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <input type="text" class="form-control" value="{{ acesso.senha or '' }}" readonly>
                                         </div>
                                     </div>
