@@ -191,7 +191,7 @@
 
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
                             {% for value, label in contabil_form.controle_relatorios.choices %}
@@ -209,11 +209,6 @@
                             {% endfor %}
                         </div></div>
                     </div>
-                    <div class="col-md-6"><div class="form-floating">{{ contabil_form.observacao_controle_relatorios(class="form-control", placeholder="Observação", style="height: 100px") }}{{ contabil_form.observacao_controle_relatorios.label }}</div></div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-12"><div class="form-floating">{{ contabil_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ contabil_form.observacao_movimento.label }}</div></div>
                 </div>
 
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>

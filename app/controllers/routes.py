@@ -276,8 +276,6 @@ def processar_dados_contabil(request):
     descricao = request.form.get('descricao')
     metodo_importacao = request.form.get('metodo_importacao')
     forma_movimento = request.form.get('forma_movimento')
-    observacao_movimento = request.form.get('observacao_movimento')
-    observacao_controle_relatorios = request.form.get('observacao_controle_relatorios')
     particularidades = request.form.get('particularidades')
     envio_digital_json = request.form.get('envio_digital_json', '[]')
     envio_digital = json.loads(envio_digital_json) if envio_digital_json else []    
@@ -293,9 +291,7 @@ def processar_dados_contabil(request):
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_digital_fisico': envio_digital_fisico,
-        'observacao_movimento': observacao_movimento,
         'controle_relatorios': controle_relatorios,
-        'observacao_controle_relatorios': observacao_controle_relatorios,
         'particularidades_texto': particularidades
     }
 
