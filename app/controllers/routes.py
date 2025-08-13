@@ -318,67 +318,17 @@ def processar_dados_administrativo(request):
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
+<<<<<<< HEAD
+=======
+
+    # Placeholders to avoid NameError in legacy references; departments are not edited here
+    fiscal = contabil = pessoal = administrativo = None
+>>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
 
     if request.method == 'GET':
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
-
-        if fiscal:
-            fiscal_form.formas_importacao.data = fiscal.formas_importacao or []
-            fiscal_form.envio_digital.data = fiscal.envio_digital or []
-            fiscal_form.envio_digital_fisico.data = fiscal.envio_digital_fisico or []
-
-            if fiscal.links_prefeitura:
-                try:
-                    if isinstance(fiscal.links_prefeitura, str):
-                        prefeituras_list = json.loads(fiscal.links_prefeitura)
-                    else:
-                        prefeituras_list = fiscal.links_prefeitura
-                except Exception:
-                    prefeituras_list = []
-            else:
-                prefeituras_list = []
-            if not prefeituras_list and (
-                getattr(fiscal, 'link_prefeitura', None) or
-                getattr(fiscal, 'usuario_prefeitura', None) or
-                getattr(fiscal, 'senha_prefeitura', None)
-            ):
-                prefeituras_list = [{
-                    'cidade': '',
-                    'link': getattr(fiscal, 'link_prefeitura', '') or '',
-                    'usuario': getattr(fiscal, 'usuario_prefeitura', '') or '',
-                    'senha': getattr(fiscal, 'senha_prefeitura', '') or ''
-                }]
-            fiscal_form.links_prefeitura_json.data = json.dumps(prefeituras_list)
-
-            if fiscal.contatos:
-                try:
-                    if isinstance(fiscal.contatos, str):
-                        contatos_list = json.loads(fiscal.contatos)
-                    else:
-                        contatos_list = fiscal.contatos
-                except Exception:
-                    contatos_list = []
-            else:
-                contatos_list = []
-            contatos_list = normalize_contatos(contatos_list)
-            fiscal_form.contatos_json.data = json.dumps(contatos_list)
-            
-        if contabil:
-            contabil_form.envio_digital.data = contabil.envio_digital or []
-            contabil_form.envio_digital_fisico.data = contabil.envio_digital_fisico or []
-            contabil_form.controle_relatorios.data = contabil.controle_relatorios or []
-            
-        if pessoal:
-            pessoal_form.data_envio.data = pessoal.data_envio or ''
-            pessoal_form.registro_funcionarios.data = pessoal.registro_funcionarios or ''
-            pessoal_form.ponto_eletronico.data = pessoal.ponto_eletronico or ''
-            pessoal_form.pagamento_funcionario.data = pessoal.pagamento_funcionario or ''
-            
-        if administrativo:
-            administrativo_form.responsavel.data = administrativo.responsavel or ''
-            administrativo_form.descricao.data = administrativo.descricao or ''
 
     if request.method == 'POST':
         if empresa_form.validate():
@@ -402,6 +352,13 @@ def editar_empresa(id):
         'empresas/editar_empresa.html',
         empresa=empresa,
         empresa_form=empresa_form,
+<<<<<<< HEAD
+=======
+        fiscal=fiscal,
+        contabil=contabil,
+        pessoal=pessoal,
+        administrativo=administrativo,
+>>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
     )
 
 @app.route('/empresa/visualizar/<int:id>')
