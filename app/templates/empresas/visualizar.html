@@ -363,7 +363,7 @@
     <div id="pessoal">
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
-                <div class="card-header text-white py-3" style="background-color: #e87429;">
+                <div class="card-header text-white bg-primary py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
                         {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
@@ -373,7 +373,7 @@
                     <div class="row g-4">
                         <div class="col-lg-6 col-md-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                                <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2 text-warning"></i>Informações Básicas</h6>
                                 <div class="info-item">
                                     <label class="info-label">Responsável</label>
                                     <div class="info-value">{% if pessoal.responsavel %}<i class="bi bi-person-badge me-2 text-warning"></i><span class="fw-semibold">{{ pessoal.responsavel }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
@@ -390,7 +390,7 @@
                         </div>
                         <div class="col-lg-6 col-md-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
+                                <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-gear me-2 text-warning"></i>Controles e Sistemas</h6>
                                 <div class="row">
                                     <div class="col-md-4 text-center info-item">
                                         <label class="info-label">Registro de Funcionários</label>
@@ -431,7 +431,7 @@
                     <div class="row mt-4">
                         <div class="col-12">
                             <div class="info-group">
-                                <h6 class="text-warning mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                                <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2 text-warning"></i>Particularidades</h6>
                                 <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
                             </div>
                         </div>
@@ -440,9 +440,9 @@
                 </div>
             </div>
         {% else %}
-            <div class="card shadow-lg mb-5 border-warning">
-                <div class="card-header text-white py-3" style="background-color: #e87429;"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
-                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#pessoal" class="btn btn-warning"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card shadow-lg mb-5 border-primary">
+                <div class="card-header text-white bg-primary py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
+                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('editar_empresa', id=empresa.id) }}#pessoal" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
             </div>
         {% endif %}
         </div>

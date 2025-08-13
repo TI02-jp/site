@@ -84,8 +84,8 @@
     {% if current_user.role == 'admin' %}
     <div class="row mb-5">
         <div class="col-12">
-            <h3 class="text-danger border-bottom pb-2 mb-4">
-                <i class="bi bi-shield-lock me-2"></i>Área Administrativa
+            <h3 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-shield-lock me-2 text-warning"></i>Área Administrativa
             </h3>
         </div>
 
@@ -112,7 +112,7 @@
                 "title": "Configurações",
                 "desc": "Configure preferências e parâmetros do sistema",
                 "icon": "bi-gear",
-                "btn_class": "btn-warning",
+                "btn_class": "btn-primary",
                 "btn_text": "Em Breve",
                 "btn_icon": "bi-tools",
                 "url": None,
@@ -183,11 +183,8 @@
     margin: 0 auto;
 }
 .bg-primary-subtle { background-color: rgba(11, 40, 139, 0.1) !important; }
-.bg-success-subtle { background-color: rgba(25, 135, 84, 0.1) !important; }
-.bg-info-subtle { background-color: rgba(13, 202, 240, 0.1) !important; }
 .bg-warning-subtle { background-color: rgba(232, 116, 41, 0.1) !important; }
-.bg-dark-subtle { background-color: rgba(33, 37, 41, 0.1) !important; }
-.text-primary { color: #e87429 !important; }
+.text-primary { color: #0b288b !important; }
 </style>
 
 

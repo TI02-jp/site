@@ -66,11 +66,11 @@ Botões e Ações
     margin-top: 20px;
 }
 
-.btn, .btn-custom, .submit-btn {
+.btn-custom, .submit-btn {
     padding: 12px 20px;
     font-size: 1.1em;
     color: white;
-    background-color: #e87429;
+    background-color: #0b288b;
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -79,11 +79,11 @@ Botões e Ações
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.btn:hover, .btn-custom:hover, .submit-btn:hover {
-    background-color: #0b288b;
+.btn-custom:hover, .submit-btn:hover {
+    background-color: #e87429;
 }
 
-.btn:focus, .btn-custom:focus, .submit-btn:focus {
+.btn-custom:focus, .submit-btn:focus {
     outline: none;
     box-shadow: 0 0 0 0.2rem rgba(11, 40, 139, 0.4);
 }
@@ -160,7 +160,7 @@ td:nth-child(5) {
 Botões personalizados
 ----------------------------- */
 .btn-custom {
-    background-color: #e87429;
+    background-color: #0b288b;
     color: white;
     border-radius: 6px;
     padding: 6px 12px;
@@ -171,7 +171,7 @@ Botões personalizados
 }
 
 .btn-custom:hover {
-    background-color: #0b288b;
+    background-color: #e87429;
 }
 
 .btn-danger {
@@ -245,7 +245,7 @@ TELA DE LOGIN - ESTILOS ESPECÍFICOS
 
 /* Body da página de login com background especial */
 body.login-page {
-    background: linear-gradient(135deg, #0b288b, #e87429);
+    background: #fff;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -320,8 +320,8 @@ body.login-page {
 }
 
 .login-container .btn-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: #e87429;
+    border-color: #e87429;
     transform: translateY(-1px);
 }
 
@@ -391,8 +391,8 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
 }
 
 .btn-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: #e87429;
+    border-color: #e87429;
 }
 
 /* Checkboxes */
@@ -722,8 +722,8 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 }
 
 .btn-outline-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: #e87429;
+    border-color: #e87429;
 }
 
 .btn-outline-secondary {
