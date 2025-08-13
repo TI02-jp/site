@@ -172,28 +172,28 @@
                         <div class="info-group">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
                             {% if fiscal.links_prefeitura %}
-                                <ul class="list-unstyled mb-0">
+                                <div class="row g-2 fw-semibold mb-1">
+                                    <div class="col-md-3">Cidade</div>
+                                    <div class="col-md-3">Link</div>
+                                    <div class="col-md-2">Usuário</div>
+                                    <div class="col-md-2">Senha</div>
+                                </div>
                                 {% for acesso in fiscal.links_prefeitura %}
-                                    <li class="mb-3">
-                                        <div class="info-item">
-                                            <label class="info-label">Cidade</label>
-                                            <div class="info-value">{{ acesso.cidade or 'Não informada' }}</div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" value="{{ acesso.cidade or '' }}" readonly>
                                         </div>
-                                        <div class="info-item">
-                                            <label class="info-label">Link</label>
-                                            <div class="info-value">{% if acesso.link %}<a href="{{ acesso.link }}" target="_blank" class="text-decoration-none"><i class="bi bi-link-45deg me-1 text-dept-blue"></i>{{ acesso.link }}</a>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" value="{{ acesso.link or '' }}" readonly>
                                         </div>
-                                        <div class="info-item">
-                                            <label class="info-label">Usuário</label>
-                                            <div class="info-value">{% if acesso.usuario %}<div class="font-monospace clickable-copy border rounded p-2 bg-light"><i class="bi bi-person me-2 text-dept-blue"></i>{{ acesso.usuario }}<i class="bi bi-clipboard ms-2 text-muted" title="Clique para copiar"></i></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                        <div class="col-md-2">
+                                            <input type="text" class="form-control" value="{{ acesso.usuario or '' }}" readonly>
                                         </div>
-                                        <div class="info-item">
-                                            <label class="info-label">Senha</label>
-                                            <div class="info-value">{% if acesso.senha %}<div class="font-monospace border rounded p-2 bg-light">{{ acesso.senha }}</div>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                        <div class="col-md-2">
+                                            <input type="text" class="form-control" value="{{ acesso.senha or '' }}" readonly>
                                         </div>
-                                    </li>
+                                    </div>
                                 {% endfor %}
-                                </ul>
                             {% else %}
                                 <div class="info-item"><span class="text-muted">Não informado</span></div>
                             {% endif %}
