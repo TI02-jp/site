@@ -12,7 +12,7 @@
                     <i class="bi bi-building-gear me-3"></i>Editar Empresa
                 </h1>
                 <h2 class="h4 text-muted mb-3">{{ empresa.NomeEmpresa }}</h2>
-                <p class="text-muted">Edite os dados da empresa e configure seus departamentos</p>
+                <p class="text-muted">Edite os dados da empresa</p>
             </div>
         </div>
     </div>
@@ -30,33 +30,6 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Navegação entre Departamentos -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-3">
-                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-building me-1"></i>Empresa
-                        </a>
-                        <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm">
-                            <i class="bi bi-receipt me-1"></i>Fiscal
-                        </a>
-                        <a href="#contabil" class="btn btn-outline-dept-orange btn-sm">
-                            <i class="bi bi-calculator me-1"></i>Contábil
-                        </a>
-                        <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm">
-                            <i class="bi bi-people me-1"></i>Pessoal
-                        </a>
-                        <a href="#administrativo" class="btn btn-outline-dept-orange btn-sm">
-                            <i class="bi bi-gear me-1"></i>Administrativo
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Dados da Empresa -->
     <div class="card shadow-lg mb-5" id="dados-empresa">
         <div class="card-header bg-primary text-white py-3">
@@ -67,7 +40,6 @@
         <div class="card-body p-4">
             <form method="POST">
                 {{ empresa_form.hidden_tag() }}
-                <input type="hidden" name="form_type" value="empresa">
                 
                 <!-- Informações Básicas -->
                 <div class="row mb-4">
@@ -275,6 +247,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Departamento Fiscal -->
     <div class="card shadow-lg mb-5" id="fiscal">
         <div class="card-header bg-dept-blue text-white py-3">
@@ -805,14 +778,14 @@
     </div>
 
     <!-- Botões de Navegação -->
+=======
+    <!-- Botão de Navegação -->
+>>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
     <div class="row">
         <div class="col-12">
             <div class="text-center">
-                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4 me-3">
+                <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4">
                     <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
-                </a>
-                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-dept-blue px-4">
-                    <i class="bi bi-diagram-3 me-2"></i>Ver Departamentos
                 </a>
             </div>
         </div>
@@ -821,9 +794,12 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/imask"></script>
+<<<<<<< HEAD
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
+=======
+>>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
@@ -834,27 +810,16 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Smooth scroll para navegação
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
 
+<<<<<<< HEAD
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
     setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
     setupFisicoOutro('fiscal_envio_fisico');
     setupFisicoOutro('contabil_envio_fisico');
+=======
+>>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
 
     // Feedback visual para checkboxes e radio buttons
     document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
