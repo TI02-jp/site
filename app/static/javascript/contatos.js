@@ -11,31 +11,35 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
   function render() {
     container.innerHTML = '';
     contatos.forEach((c, idx) => {
-      const row = document.createElement('div');
-      row.className = 'row mb-2';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'mb-3 contato-item';
       const endereco = c.endereco || c.valor || '';
       const nome = c.nome || '';
-      row.innerHTML = `
-        <div class="col-md-4 mb-1 mb-md-0">
-          <input type="text" class="form-control contato-nome" value="${nome}" placeholder="Nome do contato">
+      wrapper.innerHTML = `
+        <div class="row g-2">
+          <div class="col-md-5 mb-1 mb-md-0">
+            <input type="text" class="form-control contato-nome" value="${nome}" placeholder="Nome do contato">
+          </div>
+          <div class="col-md-5 mb-1 mb-md-0">
+            <select class="form-select contato-tipo">
+              <option value="email" ${c.tipo === 'email' ? 'selected' : ''}>E-mail</option>
+              <option value="telefone" ${c.tipo === 'telefone' ? 'selected' : ''}>Telefone</option>
+              <option value="whatsapp" ${c.tipo === 'whatsapp' ? 'selected' : ''}>Whatsapp</option>
+              <option value="skype" ${c.tipo === 'skype' ? 'selected' : ''}>Skype</option>
+              <option value="acessorias" ${c.tipo === 'acessorias' ? 'selected' : ''}>Acessórias</option>
+            </select>
+          </div>
+          <div class="col-md-2 d-flex align-items-center">
+            <button type="button" class="btn btn-danger btn-sm w-100" data-idx="${idx}">Remover</button>
+          </div>
         </div>
-        <div class="col-md-4 mb-1 mb-md-0">
-          <select class="form-select contato-tipo">
-            <option value="email" ${c.tipo === 'email' ? 'selected' : ''}>E-mail</option>
-            <option value="telefone" ${c.tipo === 'telefone' ? 'selected' : ''}>Telefone</option>
-            <option value="whatsapp" ${c.tipo === 'whatsapp' ? 'selected' : ''}>Whatsapp</option>
-            <option value="skype" ${c.tipo === 'skype' ? 'selected' : ''}>Skype</option>
-            <option value="acessorias" ${c.tipo === 'acessorias' ? 'selected' : ''}>Acessórias</option>
-          </select>
-        </div>
-        <div class="col-md-3 mb-1 mb-md-0">
-          <input type="text" class="form-control contato-endereco" value="${endereco}" placeholder="Endereço do contato">
-        </div>
-        <div class="col-md-1 d-flex align-items-center">
-          <button type="button" class="btn btn-danger btn-sm" data-idx="${idx}">Remover</button>
+        <div class="row g-2 mt-1">
+          <div class="col-12">
+            <input type="text" class="form-control contato-endereco" value="${endereco}" placeholder="Endereço do contato">
+          </div>
         </div>`;
-      container.appendChild(row);
-      setupEnderecoField(row);
+      container.appendChild(wrapper);
+      setupEnderecoField(wrapper);
     });
     bindRemove();
     updateHidden();
@@ -50,10 +54,10 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
     });
   }
   function updateHidden() {
-    container.querySelectorAll('.row').forEach((row, idx) => {
-      const nome = row.querySelector('.contato-nome').value;
-      const tipo = row.querySelector('.contato-tipo').value;
-      const endereco = row.querySelector('.contato-endereco').value;
+    container.querySelectorAll('.contato-item').forEach((item, idx) => {
+      const nome = item.querySelector('.contato-nome').value;
+      const tipo = item.querySelector('.contato-tipo').value;
+      const endereco = item.querySelector('.contato-endereco').value;
       contatos[idx] = { nome, tipo, endereco };
     });
     hiddenInput.value = JSON.stringify(contatos);
