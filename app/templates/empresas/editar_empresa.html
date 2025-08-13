@@ -247,8 +247,6 @@
         </div>
     </div>
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     <!-- Departamento Fiscal -->
     <div class="card shadow-lg mb-5" id="fiscal">
         <div class="card-header bg-dept-blue text-white py-3">
@@ -360,17 +358,25 @@
 
                         <div id="fiscal_envio_fisico" class="mt-3">
                             <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light"><div class="row">
+                            <div class="border rounded p-3 bg-light">
+                                <div class="row">
                                     {% for value, label in fiscal_form.envio_fisico.choices %}
                                     <div class="col-md-6 mb-2">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal-ef-{{ loop.index }}" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
+                                            <input class="form-check-input" type="checkbox"
+                                                name="{{ fiscal_form.envio_fisico.name }}"
+                                                value="{{ value }}" id="fiscal-ef-{{ loop.index }}"
+                                                {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
                                             <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
                                         </div>
                                     </div>
                                     {% endfor %}
-                            </div>
-                            <input type="text" class="form-control mt-2 outro-input" id="fiscal_envio_fisico_outro" name="{{ fiscal_form.envio_fisico_outro.name }}" value="{{ fiscal_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
+                                </div>
+                                <input type="text" class="form-control mt-2 outro-input"
+                                    id="fiscal_envio_fisico_outro"
+                                    name="{{ fiscal_form.envio_fisico_outro.name }}"
+                                    value="{{ fiscal_form.envio_fisico_outro.data or '' }}"
+                                    placeholder="Descreva outro" style="display: none;">
                             </div>
                         </div>
                                     </div>
@@ -778,13 +784,7 @@
         </div>
     </div>
 
-    <!-- Botões de Navegação -->
-=======
     <!-- Botão de Navegação -->
->>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
-=======
-    <!-- Botão de Navegação -->
->>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
     <div class="row">
         <div class="col-12">
             <div class="text-center">
@@ -798,15 +798,9 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/imask"></script>
-<<<<<<< HEAD
-<<<<<<< HEAD
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
-=======
->>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
-=======
->>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
@@ -818,18 +812,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
     setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
     setupFisicoOutro('fiscal_envio_fisico');
     setupFisicoOutro('contabil_envio_fisico');
-=======
->>>>>>> qirb4v-codex/refactor-forma-de-recebimento-do-movimento
-=======
->>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
 
     // Feedback visual para checkboxes e radio buttons
     document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
