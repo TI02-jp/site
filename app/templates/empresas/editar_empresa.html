@@ -337,44 +337,13 @@
                 </div>
 
                 <div class="row g-4 mb-4">
-                    <div class="col-md-12">
-                        <div class="form-floating">
-                            {{ fiscal_form.link_prefeitura(class="form-control", placeholder="Link da Prefeitura") }}
-                            {{ fiscal_form.link_prefeitura.label(class="form-label") }}
-                            {% if fiscal_form.link_prefeitura.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in fiscal_form.link_prefeitura.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.usuario_prefeitura(class="form-control", placeholder="Usuário") }}
-                            {{ fiscal_form.usuario_prefeitura.label(class="form-label") }}
-                            {% if fiscal_form.usuario_prefeitura.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in fiscal_form.usuario_prefeitura.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ fiscal_form.senha_prefeitura(class="form-control", placeholder="Senha", type="password") }}
-                            {{ fiscal_form.senha_prefeitura.label(class="form-label") }}
-                            {% if fiscal_form.senha_prefeitura.errors %}
-                                <div class="text-danger mt-1">
-                                    {% for error in fiscal_form.senha_prefeitura.errors %}
-                                        <small>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Links da Prefeitura</label>
+                        <div id="links-prefeitura-container"></div>
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-prefeitura">
+                            <i class="bi bi-plus-circle"></i> Adicionar Link
+                        </button>
+                        {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
                     </div>
                 </div>
 
@@ -867,6 +836,7 @@
 {% block scripts %}
 <script src="https://unpkg.com/imask"></script>
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
@@ -893,6 +863,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
+    setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
 
     // Feedback visual para checkboxes e radio buttons
     document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
