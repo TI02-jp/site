@@ -202,7 +202,10 @@
                                 {% if fiscal.contatos_list %}
                                     <ul class="list-unstyled mb-0">
                                         {% for contato in fiscal.contatos_list %}
-                                            <li><span class="fw-semibold">{{ contato.tipo|capitalize }}:</span> {{ contato.endereco }}</li>
+                                            <li>
+                                                {% if contato.nome %}<span class="fw-semibold">{{ contato.nome }}</span> - {% endif %}
+                                                <span class="fw-semibold">{{ contato.tipo|capitalize }}:</span> {{ contato.endereco }}
+                                            </li>
                                         {% endfor %}
                                     </ul>
                                 {% else %}

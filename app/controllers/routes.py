@@ -36,6 +36,30 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+def format_phone(digits: str) -> str:
+    if len(digits) >= 11:
+        return f"({digits[:2]}) {digits[2:7]}-{digits[7:11]}"
+    if len(digits) >= 10:
+        return f"({digits[:2]}) {digits[2:6]}-{digits[6:10]}"
+    return digits
+
+
+def validate_contatos(contatos):
+    email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+    for c in contatos:
+        tipo = c.get('tipo')
+        endereco = c.get('endereco', '')
+        if tipo == 'email':
+            if not email_re.match(endereco):
+                raise ValueError(f"E-mail inválido: {endereco}")
+        elif tipo in ('telefone', 'whatsapp'):
+            digits = re.sub(r'\D', '', endereco)
+            if not digits:
+                raise ValueError(f"Número inválido: {endereco}")
+            c['endereco'] = format_phone(digits)
+    return contatos
+
     ## Rota para upload de imagens
 
 @app.route('/upload_image', methods=['POST'])
@@ -191,6 +215,8 @@ def processar_dados_fiscal(request):
     envio_digital_fisico = json.loads(envio_digital_fisico_json) if envio_digital_fisico_json else []
     contatos_json = request.form.get('contatos_json', 'null')
     contatos = json.loads(contatos_json) if contatos_json != 'null' else None
+    if contatos is not None:
+        contatos = validate_contatos(contatos)
     
     return {
         'responsavel': responsavel,
@@ -295,8 +321,12 @@ def editar_empresa(id):
             else:
                 contatos_list = []
             for c in contatos_list:
-                if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
-                    c['endereco'] = c.pop('valor')
+                if isinstance(c, dict):
+                    if 'valor' in c and 'endereco' not in c:
+                        c['endereco'] = c.pop('valor')
+                    if c.get('tipo') in ('telefone', 'whatsapp'):
+                        digits = re.sub(r'\D', '', c.get('endereco', ''))
+                        c['endereco'] = format_phone(digits)
             fiscal_form.contatos_json.data = json.dumps(contatos_list)
             
         if contabil:
@@ -334,7 +364,9 @@ def editar_empresa(id):
                 elif form_type == 'fiscal':
                     try:
                         contatos_data = json.loads(form.contatos_json.data or '[]')
-                    except Exception:
+                        contatos_data = validate_contatos(contatos_data)
+                    except Exception as e:
+                        flash(f'Erro nos contatos: {e}', 'danger')
                         contatos_data = []
                     obj.contatos = contatos_data
                     obj.senha_prefeitura = form.senha_prefeitura.data
@@ -386,8 +418,12 @@ def visualizar_empresa(id):
     else:
         contatos_list = []
     for c in contatos_list:
-        if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
-            c['endereco'] = c.pop('valor')
+        if isinstance(c, dict):
+            if 'valor' in c and 'endereco' not in c:
+                c['endereco'] = c.pop('valor')
+            if c.get('tipo') in ('telefone', 'whatsapp'):
+                digits = re.sub(r'\D', '', c.get('endereco', ''))
+                c['endereco'] = format_phone(digits)
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
@@ -442,8 +478,12 @@ def gerenciar_departamentos(empresa_id):
         else:
             contatos_list = []
         for c in contatos_list:
-            if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
-                c['endereco'] = c.pop('valor')
+            if isinstance(c, dict):
+                if 'valor' in c and 'endereco' not in c:
+                    c['endereco'] = c.pop('valor')
+                if c.get('tipo') in ('telefone', 'whatsapp'):
+                    digits = re.sub(r'\D', '', c.get('endereco', ''))
+                    c['endereco'] = format_phone(digits)
         fiscal_form.contatos_json.data = json.dumps(contatos_list)
         
         contabil_form = DepartamentoContabilForm(obj=contabil)
