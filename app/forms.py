@@ -108,10 +108,10 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), ('acessorias', 'Acessórias')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias')
     ], validators=[Optional()])
     envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), 
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'),
         ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
@@ -126,10 +126,10 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), ('acessorias', 'Acessórias')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias')
     ], validators=[Optional()])
     envio_digital_fisico = SelectMultipleField('Envio Digital e Físico', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('skype', 'Skype'), 
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'),
         ('acessorias', 'Acessórias'), ('malote', 'Malote')], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação Movimento', validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
