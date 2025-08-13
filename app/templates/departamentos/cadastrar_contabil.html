@@ -30,7 +30,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.forma_movimento.label.text }}</label>
-                        {{ form.forma_movimento(class="form-select") }}
+                        {{ form.forma_movimento(id="forma_movimento", class="form-select") }}
                     </div>
                 </div>
 
@@ -43,7 +43,7 @@
                 </div>
                 
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="envio_digital_container">
                         <label class="form-label fw-semibold">{{ form.envio_digital.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="row">
@@ -59,53 +59,20 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.envio_digital_fisico.label.text }}</label>
+                    <div class="col-md-6" id="envio_fisico_container">
+                        <label class="form-label fw-semibold">{{ form.envio_fisico.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="row">
-                                {% for value, label in form.envio_digital_fisico.choices %}
+                                {% for value, label in form.envio_fisico.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data) %}checked{% endif %}>
-                                        <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_fisico.name }}" value="{{ value }}" id="ef-{{ loop.index }}" {% if value in (form.envio_fisico.data) %}checked{% endif %}>
+                                        <label class="form-check-label" for="ef-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.envio_digital.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in form.envio_digital.choices %}
-                                <div class="col-md-4 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital.name }}" value="{{ value }}" id="ed-{{ loop.index }}" {% if value in (form.envio_digital.data) %}checked{% endif %}>
-                                        <label class="form-check-label" for="ed-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.envio_digital_fisico.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="row">
-                                {% for value, label in form.envio_digital_fisico.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_digital_fisico.name }}" value="{{ value }}" id="edf-{{ loop.index }}" {% if value in (form.envio_digital_fisico.data) %}checked{% endif %}>
-                                        <label class="form-check-label" for="edf-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
+                            <input type="text" class="form-control mt-2 outro-input" id="envio_fisico_outro" name="{{ form.envio_fisico_outro.name }}" placeholder="Descreva outro" value="{{ form.envio_fisico_outro.data or '' }}" style="display: none;">
                         </div>
                     </div>
                 </div>
@@ -199,6 +166,7 @@
 {% block scripts %}
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -269,6 +237,9 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
     });
+
+    setupFormaMovimento('forma_movimento', 'envio_digital_container', 'envio_fisico_container');
+    setupFisicoOutro('envio_fisico_container');
 
     document.querySelector('form').addEventListener('submit', function (e) {
         const particularidadesField = document.querySelector('#particularidades');
