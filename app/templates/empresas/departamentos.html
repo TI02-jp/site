@@ -69,7 +69,7 @@
                     </div>
                 </div>
 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio Digital e Contato</h5>
+                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
@@ -148,7 +148,7 @@
                 {{ contabil_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="contabil">
                 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Forma de Envio</h5>
+                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
                     <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}</div>
