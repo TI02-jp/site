@@ -1095,3 +1095,75 @@ Mensagem de login flutuante
   justify-content: center;
   align-items: center;
 }
+
+/* Department color utilities */
+.text-dept-blue {
+    color: #0b288b !important;
+}
+
+.text-dept-orange {
+    color: #e87429 !important;
+}
+
+.bg-dept-blue {
+    background-color: #0b288b !important;
+}
+
+.bg-dept-orange {
+    background-color: #e87429 !important;
+}
+
+.bg-dept-blue-subtle {
+    background-color: rgba(11, 40, 139, 0.1) !important;
+    color: #0b288b !important;
+}
+
+.bg-dept-orange-subtle {
+    background-color: rgba(232, 116, 41, 0.1) !important;
+    color: #e87429 !important;
+}
+
+.btn-dept-blue {
+    background-color: #0b288b;
+    border-color: #0b288b;
+    color: #fff;
+}
+
+.btn-dept-blue:hover {
+    background-color: #09206d;
+    border-color: #09206d;
+    color: #fff;
+}
+
+.btn-dept-orange {
+    background-color: #e87429;
+    border-color: #e87429;
+    color: #fff;
+}
+
+.btn-dept-orange:hover {
+    background-color: #cf661f;
+    border-color: #cf661f;
+    color: #fff;
+}
+
+.btn-outline-dept-blue {
+    border-color: #0b288b;
+    color: #0b288b;
+}
+
+.btn-outline-dept-blue:hover {
+    background-color: #0b288b;
+    color: #fff;
+}
+
+.btn-outline-dept-orange {
+    border-color: #e87429;
+    color: #e87429;
+}
+
+.btn-outline-dept-orange:hover {
+    background-color: #e87429;
+    color: #fff;
+}
+
