@@ -318,12 +318,8 @@ def processar_dados_administrativo(request):
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
-<<<<<<< HEAD
-=======
 
-    # Placeholders to avoid NameError in legacy references; departments are not edited here
     fiscal = contabil = pessoal = administrativo = None
->>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
 
     if request.method == 'GET':
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
@@ -352,13 +348,10 @@ def editar_empresa(id):
         'empresas/editar_empresa.html',
         empresa=empresa,
         empresa_form=empresa_form,
-<<<<<<< HEAD
-=======
         fiscal=fiscal,
         contabil=contabil,
         pessoal=pessoal,
         administrativo=administrativo,
->>>>>>> 1b5bj7-codex/refactor-forma-de-recebimento-do-movimento
     )
 
 @app.route('/empresa/visualizar/<int:id>')
