@@ -13,6 +13,7 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
     contatos.forEach((c, idx) => {
       const row = document.createElement('div');
       row.className = 'row mb-2';
+      const endereco = c.endereco || c.valor || '';
       row.innerHTML = `
         <div class="col-md-5">
           <select class="form-select contato-tipo">
@@ -24,7 +25,7 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
           </select>
         </div>
         <div class="col-md-5">
-          <input type="text" class="form-control contato-valor" value="${c.valor || ''}" placeholder="Informação do contato">
+          <input type="text" class="form-control contato-endereco" value="${endereco}" placeholder="Endereço do contato">
         </div>
         <div class="col-md-2 d-flex align-items-center">
           <button type="button" class="btn btn-danger btn-sm" data-idx="${idx}">Remover</button>
@@ -46,13 +47,13 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
   function updateHidden() {
     container.querySelectorAll('.row').forEach((row, idx) => {
       const tipo = row.querySelector('.contato-tipo').value;
-      const valor = row.querySelector('.contato-valor').value;
-      contatos[idx] = { tipo, valor };
+      const endereco = row.querySelector('.contato-endereco').value;
+      contatos[idx] = { tipo, endereco };
     });
     hiddenInput.value = JSON.stringify(contatos);
   }
   addBtn.addEventListener('click', function () {
-    contatos.push({ tipo: 'email', valor: '' });
+    contatos.push({ tipo: 'email', endereco: '' });
     render();
   });
   container.addEventListener('change', updateHidden);

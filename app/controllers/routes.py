@@ -294,6 +294,9 @@ def editar_empresa(id):
                     contatos_list = []
             else:
                 contatos_list = []
+            for c in contatos_list:
+                if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
+                    c['endereco'] = c.pop('valor')
             fiscal_form.contatos_json.data = json.dumps(contatos_list)
             
         if contabil:
@@ -382,6 +385,9 @@ def visualizar_empresa(id):
             contatos_list = []
     else:
         contatos_list = []
+    for c in contatos_list:
+        if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
+            c['endereco'] = c.pop('valor')
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
@@ -435,6 +441,9 @@ def gerenciar_departamentos(empresa_id):
                 contatos_list = []
         else:
             contatos_list = []
+        for c in contatos_list:
+            if isinstance(c, dict) and 'valor' in c and 'endereco' not in c:
+                c['endereco'] = c.pop('valor')
         fiscal_form.contatos_json.data = json.dumps(contatos_list)
         
         contabil_form = DepartamentoContabilForm(obj=contabil)
