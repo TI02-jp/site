@@ -386,7 +386,8 @@
 
                         <div id="fiscal_envio_fisico" class="mt-3">
                             <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light"><div class="row">
+                            <div class="border rounded p-3 bg-light">
+                                <div class="row">
                                     {% for value, label in fiscal_form.envio_fisico.choices %}
                                     <div class="col-md-6 mb-2">
                                         <div class="form-check">
@@ -395,13 +396,8 @@
                                         </div>
                                     </div>
                                     {% endfor %}
-                            </div>
-                            <input type="text" class="form-control mt-2 outro-input" id="fiscal_envio_fisico_outro" name="{{ fiscal_form.envio_fisico_outro.name }}" value="{{ fiscal_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
-                            </div>
-                        </div>
-                                    </div>
-                                    {% endfor %}
                                 </div>
+                                <input type="text" class="form-control mt-2 outro-input" id="fiscal_envio_fisico_outro" name="{{ fiscal_form.envio_fisico_outro.name }}" value="{{ fiscal_form.envio_fisico_outro.data or '' }}" placeholder="Descreva outro" style="display: none;">
                                 {% if fiscal_form.envio_fisico.errors %}
                                     <div class="text-danger mt-1">
                                         {% for error in fiscal_form.envio_fisico.errors %}
@@ -411,8 +407,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                    </div>
-                    
+                        </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Contatos</label>
                         <div id="contatos-container"></div>
