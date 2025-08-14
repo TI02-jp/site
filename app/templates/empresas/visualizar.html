@@ -183,7 +183,15 @@
                                     {% elif not fisico_list %}
                                         {% set fisico_list = [] %}
                                     {% endif %}
-                                    {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
+                                    {% set fisico_ns = namespace(items=[]) %}
+                                    {% for item in fisico_list %}
+                                        {% if item == 'malote' and fiscal.malote_coleta %}
+                                            {% set fisico_ns.items = fisico_ns.items + ['Malote - ' ~ fiscal.malote_coleta] %}
+                                        {% else %}
+                                            {% set fisico_ns.items = fisico_ns.items + [item] %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ render_badge_list(fisico_ns.items, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
                                 </div>
                             </div>
                         </div>
@@ -320,7 +328,15 @@
                                     {% elif not cont_fisico %}
                                         {% set cont_fisico = [] %}
                                     {% endif %}
-                                    {{ render_badge_list(cont_fisico, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
+                                    {% set cont_ns = namespace(items=[]) %}
+                                    {% for item in cont_fisico %}
+                                        {% if item == 'malote' and contabil.malote_coleta %}
+                                            {% set cont_ns.items = cont_ns.items + ['Malote - ' ~ contabil.malote_coleta] %}
+                                        {% else %}
+                                            {% set cont_ns.items = cont_ns.items + [item] %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ render_badge_list(cont_ns.items, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
                                 </div>
                             </div>
                         </div>
