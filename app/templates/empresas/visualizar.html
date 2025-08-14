@@ -177,15 +177,20 @@
                                 <label class="info-label">Envio Físico</label>
                                 <div class="info-value">
                                     {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {% set fisico_list = fiscal.envio_fisico %}
-                                    {% if fisico_list is string %}
-                                        {% set fisico_list = [fisico_list] %}
-                                    {% elif not fisico_list %}
-                                        {% set fisico_list = [] %}
+                                    {% set fisico_base = fiscal.envio_fisico %}
+                                    {% if fisico_base is string %}
+                                        {% set fisico_base = [fisico_base] %}
+                                    {% elif not fisico_base %}
+                                        {% set fisico_base = [] %}
                                     {% endif %}
-                                    {% if fiscal.envio_fisico_outro %}
-                                        {% set fisico_list = fisico_list + [fiscal.envio_fisico_outro] %}
-                                    {% endif %}
+                                    {% set fisico_list = [] %}
+                                    {% for item in fisico_base %}
+                                        {% if item == 'malote' and fiscal.envio_malote %}
+                                            {% set fisico_list = fisico_list + ['Malote - ' ~ fiscal.envio_malote] %}
+                                        {% else %}
+                                            {% set fisico_list = fisico_list + [item] %}
+                                        {% endif %}
+                                    {% endfor %}
                                     {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
                                 </div>
                             </div>
@@ -317,15 +322,20 @@
                                 <label class="info-label">Envio Físico</label>
                                 <div class="info-value">
                                     {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {% set cont_fisico = contabil.envio_fisico %}
-                                    {% if cont_fisico is string %}
-                                        {% set cont_fisico = [cont_fisico] %}
-                                    {% elif not cont_fisico %}
-                                        {% set cont_fisico = [] %}
+                                    {% set cont_base = contabil.envio_fisico %}
+                                    {% if cont_base is string %}
+                                        {% set cont_base = [cont_base] %}
+                                    {% elif not cont_base %}
+                                        {% set cont_base = [] %}
                                     {% endif %}
-                                    {% if contabil.envio_fisico_outro %}
-                                        {% set cont_fisico = cont_fisico + [contabil.envio_fisico_outro] %}
-                                    {% endif %}
+                                    {% set cont_fisico = [] %}
+                                    {% for item in cont_base %}
+                                        {% if item == 'malote' and contabil.envio_malote %}
+                                            {% set cont_fisico = cont_fisico + ['Malote - ' ~ contabil.envio_malote] %}
+                                        {% else %}
+                                            {% set cont_fisico = cont_fisico + [item] %}
+                                        {% endif %}
+                                    {% endfor %}
                                     {{ render_badge_list(cont_fisico, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
                                 </div>
                             </div>

@@ -75,7 +75,11 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            <input type="text" class="form-control mt-2 outro-input" id="envio_fisico_outro" name="{{ form.envio_fisico_outro.name }}" placeholder="Descreva outro" value="{{ form.envio_fisico_outro.data or '' }}" style="display: none;">
+                            <select class="form-select mt-2 malote-select" id="envio_malote" name="{{ form.envio_malote.name }}" style="display: none;">
+                                {% for value, label in form.envio_malote.choices %}
+                                <option value="{{ value }}" {% if form.envio_malote.data == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -242,7 +246,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setupFormaMovimento('forma_movimento', 'envio_digital_container', 'envio_fisico_container');
-    setupFisicoOutro('envio_fisico_container');
+    setupMaloteSelect('envio_fisico_container');
 
     document.querySelector('form').addEventListener('submit', function (e) {
         const particularidadesField = document.querySelector('#particularidades');

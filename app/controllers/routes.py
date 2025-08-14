@@ -249,7 +249,7 @@ def processar_dados_fiscal(request):
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
     envio_digital = request.form.getlist('envio_digital')
     envio_fisico = request.form.getlist('envio_fisico')
-    envio_fisico_outro = request.form.get('envio_fisico_outro')
+    envio_malote = request.form.get('envio_malote')
     contatos_json = request.form.get('contatos_json', 'null')
     contatos = json.loads(contatos_json) if contatos_json != 'null' else None
     if contatos is not None:
@@ -263,7 +263,7 @@ def processar_dados_fiscal(request):
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_fisico': envio_fisico,
-        'envio_fisico_outro': envio_fisico_outro,
+        'envio_malote': envio_malote,
         'observacao_movimento': observacao_movimento,
         'contatos': contatos,
         'particularidades_texto': particularidades
@@ -278,7 +278,7 @@ def processar_dados_contabil(request):
     particularidades = request.form.get('particularidades')
     envio_digital = request.form.getlist('envio_digital')
     envio_fisico = request.form.getlist('envio_fisico')
-    envio_fisico_outro = request.form.get('envio_fisico_outro')
+    envio_malote = request.form.get('envio_malote')
     controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
     controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
     
@@ -289,7 +289,7 @@ def processar_dados_contabil(request):
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_fisico': envio_fisico,
-        'envio_fisico_outro': envio_fisico_outro,
+        'envio_malote': envio_malote,
         'controle_relatorios': controle_relatorios,
         'particularidades_texto': particularidades
     }
@@ -471,7 +471,7 @@ def gerenciar_departamentos(empresa_id):
                 contabil_form.envio_fisico.data = json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
             except Exception:
                 contabil_form.envio_fisico.data = []
-            contabil_form.envio_fisico_outro.data = contabil.envio_fisico_outro
+            contabil_form.envio_malote.data = contabil.envio_malote
             
             try:
                 contabil_form.controle_relatorios.data = json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
@@ -509,7 +509,7 @@ def gerenciar_departamentos(empresa_id):
 
             contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
             contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])
-            contabil.envio_fisico_outro = contabil_form.envio_fisico_outro.data
+            contabil.envio_malote = contabil_form.envio_malote.data
             contabil.controle_relatorios = json.dumps(contabil_form.controle_relatorios.data or [])
             
             flash('Departamento Contábil salvo com sucesso!', 'success')

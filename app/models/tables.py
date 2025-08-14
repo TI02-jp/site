@@ -81,7 +81,7 @@ class Departamento(db.Model):
     forma_movimento = db.Column(db.String(20))
     envio_digital = db.Column(JsonString(200))
     envio_fisico = db.Column(JsonString(200))
-    envio_fisico_outro = db.Column(db.String(200))
+    envio_malote = db.Column(db.String(50))
     observacao_movimento = db.Column(db.String(200))
     metodo_importacao = db.Column(db.String(20))
     controle_relatorios = db.Column(JsonString(255))

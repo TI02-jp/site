@@ -10,6 +10,8 @@ function setupFormaMovimento(selectId, digitalId, fisicoId) {
         checkboxes.forEach(cb => cb.checked = false);
         const textInputs = container.querySelectorAll('input[type="text"]');
         textInputs.forEach(input => input.value = '');
+        const selects = container.querySelectorAll('select');
+        selects.forEach(sel => sel.value = '');
     }
 
     function update() {
@@ -37,20 +39,20 @@ function setupFormaMovimento(selectId, digitalId, fisicoId) {
     update();
 }
 
-function setupFisicoOutro(containerId) {
+function setupMaloteSelect(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const outroCheckbox = container.querySelector('input[value="outro"]');
-    const outroInput = container.querySelector('.outro-input');
-    if (!outroCheckbox || !outroInput) return;
-    function toggleOutro() {
-        if (outroCheckbox.checked) {
-            outroInput.style.display = '';
+    const maloteCheckbox = container.querySelector('input[value="malote"]');
+    const maloteSelect = container.querySelector('.malote-select');
+    if (!maloteCheckbox || !maloteSelect) return;
+    function toggleMalote() {
+        if (maloteCheckbox.checked) {
+            maloteSelect.style.display = '';
         } else {
-            outroInput.style.display = 'none';
-            outroInput.value = '';
+            maloteSelect.style.display = 'none';
+            maloteSelect.value = '';
         }
     }
-    outroCheckbox.addEventListener('change', toggleOutro);
-    toggleOutro();
+    maloteCheckbox.addEventListener('change', toggleMalote);
+    toggleMalote();
 }

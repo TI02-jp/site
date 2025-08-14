@@ -110,9 +110,13 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
-        ('malote', 'Malote'), ('outro', 'Outro')
+        ('malote', 'Malote')
     ], validators=[Optional()])
-    envio_fisico_outro = StringField('Outro', validators=[Optional()])
+    envio_malote = SelectField('Malote', choices=[
+        ('', 'Selecione'),
+        ('Eles Trazem', 'Eles Trazem'),
+        ('Nós Buscamos', 'Nós Buscamos')
+    ], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
@@ -130,9 +134,13 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
-        ('malote', 'Malote'), ('outro', 'Outro')
+        ('malote', 'Malote')
     ], validators=[Optional()])
-    envio_fisico_outro = StringField('Outro', validators=[Optional()])
+    envio_malote = SelectField('Malote', choices=[
+        ('', 'Selecione'),
+        ('Eles Trazem', 'Eles Trazem'),
+        ('Nós Buscamos', 'Nós Buscamos')
+    ], validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),
