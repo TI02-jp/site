@@ -113,7 +113,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('malote', 'Malote')
     ], validators=[Optional()])
     malote_coleta = SelectField('Coleta do Malote', choices=[
-        ('', 'Selecione'), ('Eles Trazem', 'Eles Trazem'), ('Nós Buscamos', 'Nós Buscamos')
+        ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
     ], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
@@ -135,7 +135,7 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('malote', 'Malote')
     ], validators=[Optional()])
     malote_coleta = SelectField('Coleta do Malote', choices=[
-        ('', 'Selecione'), ('Eles Trazem', 'Eles Trazem'), ('Nós Buscamos', 'Nós Buscamos')
+        ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
     ], validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
