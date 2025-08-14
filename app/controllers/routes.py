@@ -365,6 +365,35 @@ def visualizar_empresa(id):
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
 
+    # garante listas válidas para envios caso estejam salvos como string
+    if fiscal:
+        if isinstance(fiscal.envio_fisico, str):
+            try:
+                fiscal.envio_fisico = json.loads(fiscal.envio_fisico)
+            except Exception:
+                fiscal.envio_fisico = []
+        if isinstance(fiscal.envio_digital, str):
+            try:
+                fiscal.envio_digital = json.loads(fiscal.envio_digital)
+            except Exception:
+                fiscal.envio_digital = []
+    if contabil:
+        if isinstance(contabil.envio_fisico, str):
+            try:
+                contabil.envio_fisico = json.loads(contabil.envio_fisico)
+            except Exception:
+                contabil.envio_fisico = []
+        if isinstance(contabil.envio_digital, str):
+            try:
+                contabil.envio_digital = json.loads(contabil.envio_digital)
+            except Exception:
+                contabil.envio_digital = []
+        if isinstance(contabil.controle_relatorios, str):
+            try:
+                contabil.controle_relatorios = json.loads(contabil.controle_relatorios)
+            except Exception:
+                contabil.controle_relatorios = []
+
     # monta contatos_list
     if fiscal and getattr(fiscal, "contatos", None):
         try:
@@ -462,21 +491,10 @@ def gerenciar_departamentos(empresa_id):
 
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
-            try:
-                contabil_form.envio_digital.data = json.loads(contabil.envio_digital) if contabil.envio_digital else []
-            except Exception:
-                contabil_form.envio_digital.data = []
-            
-            try:
-                contabil_form.envio_fisico.data = json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
-            except Exception:
-                contabil_form.envio_fisico.data = []
+            contabil_form.envio_digital.data = contabil.envio_digital or []
+            contabil_form.envio_fisico.data = contabil.envio_fisico or []
             contabil_form.envio_malote.data = contabil.envio_malote
-            
-            try:
-                contabil_form.controle_relatorios.data = json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
-            except Exception:
-                contabil_form.controle_relatorios.data = []
+            contabil_form.controle_relatorios.data = contabil.controle_relatorios or []
 
     form_type = request.form.get('form_type')
 
@@ -504,14 +522,13 @@ def gerenciar_departamentos(empresa_id):
             if not contabil:
                 contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
                 db.session.add(contabil)
-            
-            contabil_form.populate_obj(contabil)
 
-            contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
-            contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])
+            contabil_form.populate_obj(contabil)
+            contabil.envio_digital = contabil_form.envio_digital.data or []
+            contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.envio_malote = contabil_form.envio_malote.data
-            contabil.controle_relatorios = json.dumps(contabil_form.controle_relatorios.data or [])
-            
+            contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
+
             flash('Departamento Contábil salvo com sucesso!', 'success')
             form_processed_successfully = True
 
