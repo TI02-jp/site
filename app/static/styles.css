@@ -101,7 +101,7 @@ Tabelas (Empresas e Usuários)
 
 .user-table, .table-empresas {
     width: 100%;
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
     border-collapse: collapse;
 }
@@ -131,6 +131,10 @@ Tabelas (Empresas e Usuários)
 }
 
 .cnpj-col {
+    width: 160px;
+}
+
+.tributacao-col {
     width: 160px;
 }
 
