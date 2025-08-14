@@ -5,8 +5,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
 from dotenv import load_dotenv
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone, timedelta
 from markupsafe import Markup
 
 load_dotenv()
@@ -23,7 +22,7 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-BRASILIA_TZ = ZoneInfo("America/Sao_Paulo")
+BRASILIA_TZ = timezone(timedelta(hours=-3))
 
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
