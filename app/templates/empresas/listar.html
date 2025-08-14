@@ -22,19 +22,6 @@
         </div>
     </div>
 
-    <!-- Mensagens Flash -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <!-- Barra de Pesquisa -->
     <form method="GET" class="d-flex mb-3">
         <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar empresa" value="{{ search or '' }}">

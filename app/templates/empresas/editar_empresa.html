@@ -17,19 +17,6 @@
         </div>
     </div>
 
-    <!-- Mensagens Flash -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category in ['error', 'danger'] else category }} alert-dismissible fade show" role="alert">
-                    <i class="bi bi-{{ 'exclamation-triangle' if category in ['error', 'danger'] else 'check-circle' }} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <!-- Dados da Empresa -->
     <div class="card shadow-lg mb-5" id="dados-empresa">
         <div class="card-header bg-primary text-white py-3">
