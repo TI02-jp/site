@@ -15,7 +15,11 @@
                     </h1>
                     <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
                 </div>
-                <div class="text-end">
+                <div class="d-flex align-items-center justify-content-end gap-3">
+                    <form method="get" class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label" for="showInactive">Mostrar inativos</label>
+                    </form>
                     <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary">
                         <i class="bi bi-person-plus me-1"></i>Novo Usuário
                     </a>
@@ -53,11 +57,13 @@
                     </thead>
                     <tbody>
                         {% for user in users %}
-                        <tr>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-person-circle me-2 text-muted"></i>
                                     <div class="fw-semibold">{{ user.name }}</div>
+                                    {% if not user.ativo %}
+                                        <span class="badge bg-secondary ms-2">Inativo</span>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
