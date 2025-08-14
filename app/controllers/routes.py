@@ -604,6 +604,8 @@ def test_connection():
 @admin_required
 def list_users():
     form = RegistrationForm()
+    show_inactive = request.args.get('show_inactive') in ('1', 'on')
+
     if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.username == form.username.data) | (User.email == form.email.data)
@@ -623,8 +625,11 @@ def list_users():
             flash('Novo usuário cadastrado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
-    users = User.query.all()
-    return render_template('list_users.html', users=users, form=form)
+    users_query = User.query
+    if not show_inactive:
+        users_query = users_query.filter_by(ativo=True)
+    users = users_query.all()
+    return render_template('list_users.html', users=users, form=form, show_inactive=show_inactive)
 
 @app.route('/novo_usuario', methods=['GET', 'POST'])
 @login_required
