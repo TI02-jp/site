@@ -25,22 +25,16 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-
-    <div class="row mb-4 sticky-top" style="top: 10px; z-index: 1000;">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-center flex-wrap gap-3">
-                        <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm px-3"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-outline-dept-orange btn-sm px-3"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm px-3"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-outline-dept-orange btn-sm px-3"><i class="bi bi-gear me-1"></i>Administrativo</a>
-                    </div>
-                </div>
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="list-group section-nav">
+                <a href="#fiscal" class="list-group-item list-group-item-action">Fiscal</a>
+                <a href="#contabil" class="list-group-item list-group-item-action">Contábil</a>
+                <a href="#pessoal" class="list-group-item list-group-item-action">Pessoal</a>
+                <a href="#administrativo" class="list-group-item list-group-item-action">Administrativo</a>
             </div>
         </div>
-    </div>
-
+        <div class="col-md-9">
     <div class="card shadow-lg mb-5" id="fiscal">
         <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
         <div class="card-body p-4">
@@ -335,6 +329,8 @@
             {% if administrativo and administrativo.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
+        </div>
+    </div>
 
     <div class="row mt-5">
         <div class="col-12"><div class="text-center"><a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista de Empresas</a></div></div>
@@ -466,7 +462,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     const sections = document.querySelectorAll('.card[id]');
-    const navButtons = document.querySelectorAll('.btn-outline-primary[href^="#"]');
+    const navButtons = document.querySelectorAll('.section-nav a[href^="#"]');
     function highlightActiveSection() {
         let currentSectionId = '';
         sections.forEach(section => {

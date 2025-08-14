@@ -60,22 +60,17 @@
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
-                        <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-outline-dept-orange btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-outline-dept-orange btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
-                    </div>
-                </div>
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="list-group section-nav">
+                <a href="#dados-empresa" class="list-group-item list-group-item-action">Dados da Empresa</a>
+                <a href="#fiscal" class="list-group-item list-group-item-action">Fiscal</a>
+                <a href="#contabil" class="list-group-item list-group-item-action">Contábil</a>
+                <a href="#pessoal" class="list-group-item list-group-item-action">Pessoal</a>
+                <a href="#administrativo" class="list-group-item list-group-item-action">Administrativo</a>
             </div>
         </div>
-    </div>
-
+        <div class="col-md-9">
     <div class="card shadow-lg mb-5" id="dados-empresa">
         <div class="card-header bg-primary text-white py-3">
             <h3 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Dados da Empresa</h3>
@@ -482,6 +477,8 @@
         </div>
     {% endif %}
     </div>
+        </div>
+    </div>
 
     <div class="row my-5">
         <div class="col-12">
@@ -562,8 +559,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (lastIntersectingId) {
-            document.querySelectorAll('.card-body .btn-sm').forEach(link => link.classList.remove('active'));
-            const activeLink = document.querySelector(`a[href="#${lastIntersectingId}"]`);
+            document.querySelectorAll('.section-nav a').forEach(link => link.classList.remove('active'));
+            const activeLink = document.querySelector(`.section-nav a[href="#${lastIntersectingId}"]`);
             if (activeLink) activeLink.classList.add('active');
         }
     }, observerOptions);

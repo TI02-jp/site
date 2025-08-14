@@ -1181,3 +1181,28 @@ Mensagem de login flutuante
     text-align: left;
     white-space: pre-line;
 }
+
+/* Lateral navigation for section blocks */
+.section-nav {
+    position: sticky;
+    top: 1rem;
+}
+
+.section-nav .list-group-item {
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+}
+
+.section-nav .list-group-item:hover {
+    border-left-color: var(--primary-color);
+    background-color: var(--sidebar-hover);
+    color: var(--primary-color);
+}
+
+.section-nav .list-group-item.active {
+    border-left-color: var(--primary-color);
+    background-color: var(--sidebar-active);
+    color: var(--primary-color);
+    font-weight: 600;
+}
