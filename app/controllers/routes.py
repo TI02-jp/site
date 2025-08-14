@@ -416,6 +416,10 @@ def visualizar_empresa(id):
 
     if contabil:
         contabil.envio_fisico = _prepare_envio_fisico(contabil)
+    if pessoal:
+        pessoal.envio_fisico = _prepare_envio_fisico(pessoal)
+    if administrativo:
+        administrativo.envio_fisico = _prepare_envio_fisico(administrativo)
 
     return render_template(
         'empresas/visualizar.html',
@@ -445,52 +449,60 @@ def gerenciar_departamentos(empresa_id):
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
-        if fiscal and fiscal.contatos:
-            try:
-                contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
-            except Exception:
-                contatos_list = []
-        else:
-            contatos_list = []
-        contatos_list = normalize_contatos(contatos_list)
-        fiscal_form.contatos_json.data = json.dumps(contatos_list)
+        if fiscal:
+            fiscal_form.envio_digital.data = (
+                fiscal.envio_digital if isinstance(fiscal.envio_digital, list)
+                else json.loads(fiscal.envio_digital) if fiscal.envio_digital else []
+            )
+            fiscal_form.envio_fisico.data = (
+                fiscal.envio_fisico if isinstance(fiscal.envio_fisico, list)
+                else json.loads(fiscal.envio_fisico) if fiscal.envio_fisico else []
+            )
 
-        if fiscal and fiscal.links_prefeitura:
-            try:
-                prefeituras_list = json.loads(fiscal.links_prefeitura) if isinstance(fiscal.links_prefeitura, str) else fiscal.links_prefeitura
-            except Exception:
+            if fiscal.contatos:
+                try:
+                    contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
+                except Exception:
+                    contatos_list = []
+            else:
+                contatos_list = []
+            contatos_list = normalize_contatos(contatos_list)
+            fiscal_form.contatos_json.data = json.dumps(contatos_list)
+
+            if fiscal.links_prefeitura:
+                try:
+                    prefeituras_list = json.loads(fiscal.links_prefeitura) if isinstance(fiscal.links_prefeitura, str) else fiscal.links_prefeitura
+                except Exception:
+                    prefeituras_list = []
+            else:
                 prefeituras_list = []
-        else:
-            prefeituras_list = []
-        if not prefeituras_list and (
-            getattr(fiscal, 'link_prefeitura', None) or
-            getattr(fiscal, 'usuario_prefeitura', None) or
-            getattr(fiscal, 'senha_prefeitura', None)
-        ):
-            prefeituras_list = [{
-                'cidade': '',
-                'link': getattr(fiscal, 'link_prefeitura', '') or '',
-                'usuario': getattr(fiscal, 'usuario_prefeitura', '') or '',
-                'senha': getattr(fiscal, 'senha_prefeitura', '') or ''
-            }]
-        fiscal_form.links_prefeitura_json.data = json.dumps(prefeituras_list)
+            if not prefeituras_list and (
+                getattr(fiscal, 'link_prefeitura', None) or
+                getattr(fiscal, 'usuario_prefeitura', None) or
+                getattr(fiscal, 'senha_prefeitura', None)
+            ):
+                prefeituras_list = [{
+                    'cidade': '',
+                    'link': getattr(fiscal, 'link_prefeitura', '') or '',
+                    'usuario': getattr(fiscal, 'usuario_prefeitura', '') or '',
+                    'senha': getattr(fiscal, 'senha_prefeitura', '') or ''
+                }]
+            fiscal_form.links_prefeitura_json.data = json.dumps(prefeituras_list)
 
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
-            try:
-                contabil_form.envio_digital.data = json.loads(contabil.envio_digital) if contabil.envio_digital else []
-            except Exception:
-                contabil_form.envio_digital.data = []
-            
-            try:
-                contabil_form.envio_fisico.data = json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
-            except Exception:
-                contabil_form.envio_fisico.data = []
-            
-            try:
-                contabil_form.controle_relatorios.data = json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
-            except Exception:
-                contabil_form.controle_relatorios.data = []
+            contabil_form.envio_digital.data = (
+                contabil.envio_digital if isinstance(contabil.envio_digital, list)
+                else json.loads(contabil.envio_digital) if contabil.envio_digital else []
+            )
+            contabil_form.envio_fisico.data = (
+                contabil.envio_fisico if isinstance(contabil.envio_fisico, list)
+                else json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
+            )
+            contabil_form.controle_relatorios.data = (
+                contabil.controle_relatorios if isinstance(contabil.controle_relatorios, list)
+                else json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
+            )
 
     form_type = request.form.get('form_type')
 
@@ -505,6 +517,8 @@ def gerenciar_departamentos(empresa_id):
             fiscal_form.populate_obj(fiscal)
             if 'malote' not in (fiscal_form.envio_fisico.data or []):
                 fiscal.malote_coleta = None
+            else:
+                fiscal.malote_coleta = fiscal_form.malote_coleta.data
             try:
                 fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
             except Exception:
@@ -520,14 +534,16 @@ def gerenciar_departamentos(empresa_id):
             if not contabil:
                 contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
                 db.session.add(contabil)
-            
+
             contabil_form.populate_obj(contabil)
             if 'malote' not in (contabil_form.envio_fisico.data or []):
                 contabil.malote_coleta = None
+            else:
+                contabil.malote_coleta = contabil_form.malote_coleta.data
 
-            contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
-            contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])
-            contabil.controle_relatorios = json.dumps(contabil_form.controle_relatorios.data or [])
+            contabil.envio_digital = contabil_form.envio_digital.data or []
+            contabil.envio_fisico = contabil_form.envio_fisico.data or []
+            contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
             
             flash('Departamento Contábil salvo com sucesso!', 'success')
             form_processed_successfully = True
