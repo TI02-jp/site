@@ -628,7 +628,7 @@ def list_users():
     users_query = User.query
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
-    users = users_query.all()
+    users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template('list_users.html', users=users, form=form, show_inactive=show_inactive)
 
 @app.route('/novo_usuario', methods=['GET', 'POST'])
