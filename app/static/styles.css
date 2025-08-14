@@ -666,9 +666,20 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 ----------------------------- */
 
-/* Itens de informação */
+/* Grupos e itens de informação */
+.info-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-group > h6,
+.info-group .row {
+    grid-column: 1 / -1;
+}
+
 .info-item {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
 }
 
 /* Labels dos campos de informação */
