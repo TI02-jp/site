@@ -42,95 +42,102 @@
                 {{ fiscal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="fiscal">
                 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
-                        </div></div>
-                    </div>
-                </div>
-
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <div id="links-prefeitura-container"></div>
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-prefeitura">
-                            <i class="bi bi-plus-circle"></i> Adicionar Link
-                        </button>
-                        {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
-                    </div>
-                </div>
-
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
-                        {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
-
-                        <div id="fiscal_envio_digital" class="mt-3">
-                            <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
+                <div class="dept-section">
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
                             <div class="border rounded p-3 bg-light"><div class="row">
-                                {% for value, label in fiscal_form.envio_digital.choices %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input"
-                                            type="checkbox"
-                                            name="{{ fiscal_form.envio_digital.name }}"
-                                            value="{{ value }}"
-                                            id="fiscal-fed-{{ loop.index }}"
-                                            {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fiscal-fed-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                </div>
-                                {% endfor %}
+                                {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                             </div></div>
                         </div>
-                        <div id="fiscal_envio_fisico" class="mt-3">
-                            <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light"><div class="row">
-                                {% for value, label in fiscal_form.envio_fisico.choices %}
-                                <div class="col-md-6 mb-2">
-                                    {% if value == 'malote' %}
-                                    <div class="form-check d-flex align-items-center">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal_malote_checkbox" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label ms-2 me-2" for="fiscal_malote_checkbox">{{ label }}</label>
-                                        {{ fiscal_form.malote_coleta(class="form-select form-select-sm", id="fiscal_malote_coleta", style="display:none;") }}
-                                    </div>
-                                    {% else %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal-ef-{{ loop.index }}" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endfor %}
-                            </div>
-                            </div>
+                    </div>
+                </div>
+
+                <div class="dept-section">
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div id="links-prefeitura-container"></div>
+                            <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-prefeitura">
+                                <i class="bi bi-plus-circle"></i> Adicionar Link
+                            </button>
+                            {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
                         </div>
-
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Contatos</label>
-                        <div id="contatos-container"></div>
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-contato">
-                            <i class="bi bi-plus-circle"></i> Adicionar Pessoa
-                        </button>
-                        {{ fiscal_form.contatos_json(id='contatos_json') }}
                     </div>
                 </div>
 
-                <div class="row g-4 mb-4">
-                    <div class="col-12"><div class="form-floating">{{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ fiscal_form.observacao_movimento.label }}</div></div>
+                <div class="dept-section">
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
+                            {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
+
+                            <div id="fiscal_envio_digital" class="mt-3">
+                                <label class="form-label fw-semibold">{{ fiscal_form.envio_digital.label.text }}</label>
+                                <div class="border rounded p-3 bg-light"><div class="row">
+                                    {% for value, label in fiscal_form.envio_digital.choices %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                type="checkbox"
+                                                name="{{ fiscal_form.envio_digital.name }}"
+                                                value="{{ value }}"
+                                                id="fiscal-fed-{{ loop.index }}"
+                                                {% if value in (fiscal_form.envio_digital.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="fiscal-fed-{{ loop.index }}">{{ label }}</label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div></div>
+                            </div>
+                            <div id="fiscal_envio_fisico" class="mt-3">
+                                <label class="form-label fw-semibold">{{ fiscal_form.envio_fisico.label.text }}</label>
+                                <div class="border rounded p-3 bg-light"><div class="row">
+                                    {% for value, label in fiscal_form.envio_fisico.choices %}
+                                    <div class="col-md-6 mb-2">
+                                        {% if value == 'malote' %}
+                                        <div class="form-check d-flex align-items-center">
+                                            <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal_malote_checkbox" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label ms-2 me-2" for="fiscal_malote_checkbox">{{ label }}</label>
+                                            {{ fiscal_form.malote_coleta(class="form-select form-select-sm", id="fiscal_malote_coleta", style="display:none;") }}
+                                        </div>
+                                        {% else %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal-ef-{{ loop.index }}" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contatos</label>
+                            <div id="contatos-container"></div>
+                            <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-contato">
+                                <i class="bi bi-plus-circle"></i> Adicionar Pessoa
+                            </button>
+                            {{ fiscal_form.contatos_json(id='contatos_json') }}
+                        </div>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-12"><div class="form-floating">{{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ fiscal_form.observacao_movimento.label }}</div></div>
+                    </div>
                 </div>
-                
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <div id="editor-fiscal" style="height: 250px;"></div>
-                        {{ fiscal_form.particularidades_texto(id="particularidades-fiscal", style="display:none;") }}
-                        <input type="file" id="image-input-fiscal" accept="image/*" style="display: none;">
+
+                <div class="dept-section">
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div id="editor-fiscal" style="height: 250px;"></div>
+                            {{ fiscal_form.particularidades_texto(id="particularidades-fiscal", style="display:none;") }}
+                            <input type="file" id="image-input-fiscal" accept="image/*" style="display: none;">
+                        </div>
                     </div>
                 </div>
                 
@@ -149,83 +156,90 @@
                 {{ contabil_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="contabil">
                 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
-                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}</div>
+                <div class="dept-section">
+                    <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
+                        <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}</div>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div id="contabil_envio_digital">
+                                <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
+                                <div class="border rounded p-3 bg-light"><div class="row">
+                                    {% for value, label in contabil_form.envio_digital.choices %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                type="checkbox"
+                                                name="{{ contabil_form.envio_digital.name }}"
+                                                value="{{ value }}"
+                                                id="contabil-fed-{{ loop.index }}"
+                                                {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="contabil-fed-{{ loop.index }}">{{ label }}</label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div></div>
+                            </div>
+                            <div id="contabil_envio_fisico" class="mt-3">
+                                <label class="form-label fw-semibold">{{ contabil_form.envio_fisico.label.text }}</label>
+                                <div class="border rounded p-3 bg-light"><div class="row">
+                                    {% for value, label in contabil_form.envio_fisico.choices %}
+                                    <div class="col-md-6 mb-2">
+                                        {% if value == 'malote' %}
+                                        <div class="form-check d-flex align-items-center">
+                                            <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil_malote_checkbox" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label ms-2 me-2" for="contabil_malote_checkbox">{{ label }}</label>
+                                            {{ contabil_form.malote_coleta(class="form-select form-select-sm", id="contabil_malote_coleta", style="display:none;") }}
+                                        </div>
+                                        {% else %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil-ef-{{ loop.index }}" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="contabil-ef-{{ loop.index }}">{{ label }}</label>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="col-md-6">
-                        <div id="contabil_envio_digital">
-                            <label class="form-label fw-semibold">{{ contabil_form.envio_digital.label.text }}</label>
+                <div class="dept-section">
+                    <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
                             <div class="border rounded p-3 bg-light"><div class="row">
-                                {% for value, label in contabil_form.envio_digital.choices %}
+                                {% for value, label in contabil_form.controle_relatorios.choices %}
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
                                         <input class="form-check-input"
                                             type="checkbox"
-                                            name="{{ contabil_form.envio_digital.name }}"
+                                            name="{{ contabil_form.controle_relatorios.name }}"
                                             value="{{ value }}"
-                                            id="contabil-fed-{{ loop.index }}"
-                                            {% if value in (contabil_form.envio_digital.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="contabil-fed-{{ loop.index }}">{{ label }}</label>
+                                            id="contabil-cr-{{ loop.index }}"
+                                            {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="contabil-cr-{{ loop.index }}">{{ label }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div></div>
                         </div>
-                        <div id="contabil_envio_fisico" class="mt-3">
-                            <label class="form-label fw-semibold">{{ contabil_form.envio_fisico.label.text }}</label>
-                            <div class="border rounded p-3 bg-light"><div class="row">
-                                {% for value, label in contabil_form.envio_fisico.choices %}
-                                <div class="col-md-6 mb-2">
-                                    {% if value == 'malote' %}
-                                    <div class="form-check d-flex align-items-center">
-                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil_malote_checkbox" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label ms-2 me-2" for="contabil_malote_checkbox">{{ label }}</label>
-                                        {{ contabil_form.malote_coleta(class="form-select form-select-sm", id="contabil_malote_coleta", style="display:none;") }}
-                                    </div>
-                                    {% else %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil-ef-{{ loop.index }}" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="contabil-ef-{{ loop.index }}">{{ label }}</label>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endfor %}
-                            </div>
-                            </div>
-                        </div>
-                </div>
-
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
-                        <div class="border rounded p-3 bg-light"><div class="row">
-                            {% for value, label in contabil_form.controle_relatorios.choices %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ contabil_form.controle_relatorios.name }}"
-                                        value="{{ value }}"
-                                        id="contabil-cr-{{ loop.index }}"
-                                        {% if value in (contabil_form.controle_relatorios.data or []) %}checked{% endif %}>
-                                    <label class="form-check-label" for="contabil-cr-{{ loop.index }}">{{ label }}</label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div></div>
                     </div>
                 </div>
 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                         <div id="editor-contabil" style="height: 250px;"></div>
-                         {{ contabil_form.particularidades_texto(id="particularidades-contabil", style="display:none;") }}
-                         <input type="file" id="image-input-contabil" accept="image/*" style="display: none;">
+                <div class="dept-section">
+                    <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                    <div class="row g-4">
+                        <div class="col-12">
+                             <div id="editor-contabil" style="height: 250px;"></div>
+                             {{ contabil_form.particularidades_texto(id="particularidades-contabil", style="display:none;") }}
+                             <input type="file" id="image-input-contabil" accept="image/*" style="display: none;">
+                        </div>
                     </div>
                 </div>
 
@@ -248,48 +262,52 @@
                 {{ pessoal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="pessoal">
 
-                <!-- Configurações -->
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3">
-                    <i class="bi bi-gear me-2"></i>Configurações
-                </h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
-                            {{ pessoal_form.data_envio.label }}
+                <div class="dept-section">
+                    <!-- Configurações -->
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3">
+                        <i class="bi bi-gear me-2"></i>Configurações
+                    </h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ pessoal_form.data_envio(class="form-control", placeholder="Data de Envio") }}
+                                {{ pessoal_form.data_envio.label }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
+                                {{ pessoal_form.registro_funcionarios.label }}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.registro_funcionarios(class="form-control", placeholder="Registro de Funcionários") }}
-                            {{ pessoal_form.registro_funcionarios.label }}
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
+                                {{ pessoal_form.ponto_eletronico.label }}
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.ponto_eletronico(class="form-control", placeholder="Ponto Eletrônico") }}
-                            {{ pessoal_form.ponto_eletronico.label }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
-                            {{ pessoal_form.pagamento_funcionario.label }}
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ pessoal_form.pagamento_funcionario(class="form-control", placeholder="Pagamento de Funcionário") }}
+                                {{ pessoal_form.pagamento_funcionario.label }}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Particularidades -->
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3">
-                    <i class="bi bi-pencil-square me-2"></i>Particularidades
-                </h5>
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <div id="editor-pessoal" style="height: 250px;"></div>
-                        {{ pessoal_form.particularidades_texto(id="particularidades-pessoal", style="display:none;") }}
-                        <input type="file" id="image-input-pessoal" accept="image/*" style="display: none;">
+                <div class="dept-section">
+                    <!-- Particularidades -->
+                    <h5 class="text-dept-blue border-bottom pb-2 mb-3">
+                        <i class="bi bi-pencil-square me-2"></i>Particularidades
+                    </h5>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div id="editor-pessoal" style="height: 250px;"></div>
+                            {{ pessoal_form.particularidades_texto(id="particularidades-pessoal", style="display:none;") }}
+                            <input type="file" id="image-input-pessoal" accept="image/*" style="display: none;">
+                        </div>
                     </div>
                 </div>
 

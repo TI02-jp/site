@@ -1206,3 +1206,17 @@ Mensagem de login flutuante
     color: var(--primary-color);
     font-weight: 600;
 }
+
+/* Department form sections */
+.dept-section {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.dept-section h5 {
+    margin-top: 0;
+}
