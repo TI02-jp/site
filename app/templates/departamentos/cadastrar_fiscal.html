@@ -98,10 +98,18 @@
                             <div class="row">
                                 {% for value, label in form.envio_fisico.choices %}
                                 <div class="col-md-6 mb-2">
+                                    {% if value == 'malote' %}
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input" type="checkbox" name="{{ form.envio_fisico.name }}" value="{{ value }}" id="malote_checkbox" {% if value in (form.envio_fisico.data) %}checked{% endif %}>
+                                        <label class="form-check-label ms-2 me-2" for="malote_checkbox">{{ label }}</label>
+                                        {{ form.malote_coleta(class="form-select form-select-sm", id="malote_coleta", style="display:none;") }}
+                                    </div>
+                                    {% else %}
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="{{ form.envio_fisico.name }}" value="{{ value }}" id="ef-{{ loop.index }}" {% if value in (form.envio_fisico.data) %}checked{% endif %}>
                                         <label class="form-check-label" for="ef-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -272,6 +280,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('forma_movimento', 'envio_digital_container', 'envio_fisico_container');
+    setupMalote('malote_checkbox', 'malote_coleta');
 
     document.querySelector('form').addEventListener('submit', function (e) {
         const particularidadesField = document.querySelector('#particularidades');

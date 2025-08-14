@@ -98,10 +98,18 @@
                             <div class="border rounded p-3 bg-light"><div class="row">
                                 {% for value, label in fiscal_form.envio_fisico.choices %}
                                 <div class="col-md-6 mb-2">
+                                    {% if value == 'malote' %}
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal_malote_checkbox" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label ms-2 me-2" for="fiscal_malote_checkbox">{{ label }}</label>
+                                        {{ fiscal_form.malote_coleta(class="form-select form-select-sm", id="fiscal_malote_coleta", style="display:none;") }}
+                                    </div>
+                                    {% else %}
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="{{ fiscal_form.envio_fisico.name }}" value="{{ value }}" id="fiscal-ef-{{ loop.index }}" {% if value in (fiscal_form.envio_fisico.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="fiscal-ef-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -177,10 +185,18 @@
                             <div class="border rounded p-3 bg-light"><div class="row">
                                 {% for value, label in contabil_form.envio_fisico.choices %}
                                 <div class="col-md-6 mb-2">
+                                    {% if value == 'malote' %}
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil_malote_checkbox" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label ms-2 me-2" for="contabil_malote_checkbox">{{ label }}</label>
+                                        {{ contabil_form.malote_coleta(class="form-select form-select-sm", id="contabil_malote_coleta", style="display:none;") }}
+                                    </div>
+                                    {% else %}
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="{{ contabil_form.envio_fisico.name }}" value="{{ value }}" id="contabil-ef-{{ loop.index }}" {% if value in (contabil_form.envio_fisico.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="contabil-ef-{{ loop.index }}">{{ label }}</label>
                                     </div>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -339,6 +355,8 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
     setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
+    setupMalote('fiscal_malote_checkbox', 'fiscal_malote_coleta');
+    setupMalote('contabil_malote_checkbox', 'contabil_malote_coleta');
 
     // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
     

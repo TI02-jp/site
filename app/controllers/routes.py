@@ -249,6 +249,7 @@ def processar_dados_fiscal(request):
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
     envio_digital = request.form.getlist('envio_digital')
     envio_fisico = request.form.getlist('envio_fisico')
+    malote_coleta = request.form.get('malote_coleta')
     contatos_json = request.form.get('contatos_json', 'null')
     contatos = json.loads(contatos_json) if contatos_json != 'null' else None
     if contatos is not None:
@@ -262,6 +263,7 @@ def processar_dados_fiscal(request):
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_fisico': envio_fisico,
+        'malote_coleta': malote_coleta,
         'observacao_movimento': observacao_movimento,
         'contatos': contatos,
         'particularidades_texto': particularidades
@@ -276,6 +278,7 @@ def processar_dados_contabil(request):
     particularidades = request.form.get('particularidades')
     envio_digital = request.form.getlist('envio_digital')
     envio_fisico = request.form.getlist('envio_fisico')
+    malote_coleta = request.form.get('malote_coleta')
     controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
     controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
     
@@ -286,6 +289,7 @@ def processar_dados_contabil(request):
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_fisico': envio_fisico,
+        'malote_coleta': malote_coleta,
         'controle_relatorios': controle_relatorios,
         'particularidades_texto': particularidades
     }
@@ -361,6 +365,17 @@ def visualizar_empresa(id):
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
 
+    def _prepare_envio_fisico(departamento):
+        if not departamento:
+            return []
+        try:
+            lista = json.loads(departamento.envio_fisico) if isinstance(departamento.envio_fisico, str) else (departamento.envio_fisico or [])
+        except Exception:
+            lista = []
+        if 'malote' in lista and getattr(departamento, 'malote_coleta', None):
+            lista = ['Malote - ' + departamento.malote_coleta if item == 'malote' else item for item in lista]
+        return lista
+
     # monta contatos_list
     if fiscal and getattr(fiscal, "contatos", None):
         try:
@@ -382,7 +397,7 @@ def visualizar_empresa(id):
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
-        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list, links_prefeitura=prefeituras_list)
+        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list, links_prefeitura=prefeituras_list, envio_fisico=[])
     else:
         fiscal_view = fiscal
         # normaliza formas_importacao
@@ -397,6 +412,10 @@ def visualizar_empresa(id):
         # injeta listas sem risco
         setattr(fiscal_view, "contatos_list", contatos_list)
         setattr(fiscal_view, "links_prefeitura", prefeituras_list)
+        setattr(fiscal_view, "envio_fisico", _prepare_envio_fisico(fiscal_view))
+
+    if contabil:
+        contabil.envio_fisico = _prepare_envio_fisico(contabil)
 
     return render_template(
         'empresas/visualizar.html',
@@ -484,6 +503,8 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(fiscal)
 
             fiscal_form.populate_obj(fiscal)
+            if 'malote' not in (fiscal_form.envio_fisico.data or []):
+                fiscal.malote_coleta = None
             try:
                 fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
             except Exception:
@@ -501,6 +522,8 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(contabil)
             
             contabil_form.populate_obj(contabil)
+            if 'malote' not in (contabil_form.envio_fisico.data or []):
+                contabil.malote_coleta = None
 
             contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
             contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])

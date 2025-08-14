@@ -36,3 +36,21 @@ function setupFormaMovimento(selectId, digitalId, fisicoId) {
     select.addEventListener('change', update);
     update();
 }
+
+function setupMalote(checkboxId, selectId) {
+    const checkbox = document.getElementById(checkboxId);
+    const select = document.getElementById(selectId);
+    if (!checkbox || !select) {
+        return;
+    }
+    function update() {
+        if (checkbox.checked) {
+            select.style.display = '';
+        } else {
+            select.value = '';
+            select.style.display = 'none';
+        }
+    }
+    checkbox.addEventListener('change', update);
+    update();
+}

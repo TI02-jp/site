@@ -112,6 +112,9 @@ class DepartamentoFiscalForm(DepartamentoForm):
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
         ('malote', 'Malote')
     ], validators=[Optional()])
+    malote_coleta = SelectField('Coleta do Malote', choices=[
+        ('', 'Selecione'), ('Eles Trazem', 'Eles Trazem'), ('Nós Buscamos', 'Nós Buscamos')
+    ], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
@@ -130,6 +133,9 @@ class DepartamentoContabilForm(DepartamentoForm):
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
         ('malote', 'Malote')
+    ], validators=[Optional()])
+    malote_coleta = SelectField('Coleta do Malote', choices=[
+        ('', 'Selecione'), ('Eles Trazem', 'Eles Trazem'), ('Nós Buscamos', 'Nós Buscamos')
     ], validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
