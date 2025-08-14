@@ -184,9 +184,9 @@
                                     {% endif %}
                                     {% if 'malote' in (fisico or []) %}
                                         {% if fiscal.malote_movimento == 'eles_trazem' %}
-                                            {% set fisico_list = ['Malote - Eles trazem'] %}
+                                            {% set fisico_list = ['Malote: Eles trazem'] %}
                                         {% elif fiscal.malote_movimento == 'nos_buscamos' %}
-                                            {% set fisico_list = ['Malote - Nós buscamos'] %}
+                                            {% set fisico_list = ['Malote: Nós buscamos'] %}
                                         {% else %}
                                             {% set fisico_list = ['Malote'] %}
                                         {% endif %}
@@ -329,9 +329,9 @@
                                     {% endif %}
                                     {% if 'malote' in (cont_fisico or []) %}
                                         {% if contabil.malote_movimento == 'eles_trazem' %}
-                                            {% set cont_fisico_list = ['Malote - Eles trazem'] %}
+                                            {% set cont_fisico_list = ['Malote: Eles trazem'] %}
                                         {% elif contabil.malote_movimento == 'nos_buscamos' %}
-                                            {% set cont_fisico_list = ['Malote - Nós buscamos'] %}
+                                            {% set cont_fisico_list = ['Malote: Nós buscamos'] %}
                                         {% else %}
                                             {% set cont_fisico_list = ['Malote'] %}
                                         {% endif %}
