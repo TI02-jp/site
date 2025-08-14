@@ -23,6 +23,8 @@
         --text-muted: #6c757d;
         --danger-color: #dc3545;
         --danger-hover: #c82333;
+        --sidebar-width: 280px;
+        --sidebar-spacing: 1.25rem;
       }
 
       body, html {
@@ -45,19 +47,23 @@
 
       /* Sidebar Principal */
       .sidebar {
-        width: 280px;
+        width: var(--sidebar-width);
+        min-width: var(--sidebar-width);
+        height: 100vh;
         background: var(--sidebar-bg);
         border-right: 1px solid var(--border-color);
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
         position: relative;
+        box-sizing: border-box;
+        flex-shrink: 0;
         transition: all 0.3s ease;
       }
 
       /* Header da Sidebar */
       .sidebar-header {
-        padding: 1.5rem 1.25rem;
+        padding: var(--sidebar-spacing);
         border-bottom: 1px solid var(--border-color);
         background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         color: white;
@@ -84,8 +90,8 @@
 
       .sidebar-header .logout-icon {
         position: absolute;
-        top: 1.5rem;
-        right: 1.25rem;
+        top: var(--sidebar-spacing);
+        right: var(--sidebar-spacing);
         color: inherit;
         font-size: 1.25rem;
         text-decoration: none;
@@ -111,12 +117,12 @@
       /* Navegação */
       .sidebar-nav {
         flex: 1;
-        padding: 1.25rem 0;
+        padding: var(--sidebar-spacing) 0;
         overflow-y: auto;
       }
 
       .nav-section {
-        margin-bottom: 1.5rem;
+        margin-bottom: var(--sidebar-spacing);
       }
 
       .nav-section-title {
@@ -125,15 +131,15 @@
         text-transform: uppercase;
         letter-spacing: 1px;
         color: var(--text-muted);
-        margin: 0 1.25rem 0.75rem;
-        padding-bottom: 0.5rem;
+        margin: 0 var(--sidebar-spacing) var(--sidebar-spacing);
+        padding-bottom: calc(var(--sidebar-spacing) / 2);
         border-bottom: 1px solid var(--border-color);
       }
 
       .sidebar .nav-link {
         color: var(--sidebar-text);
         font-weight: 500;
-        padding: 0.875rem 1.25rem;
+        padding: var(--sidebar-spacing);
         border-radius: 0;
         border-left: 3px solid transparent;
         transition: all 0.2s ease;
@@ -238,7 +244,8 @@
         .sidebar {
           position: fixed;
           top: 0;
-          left: -280px;
+          left: calc(-1 * var(--sidebar-width));
+          width: var(--sidebar-width);
           height: 100vh;
           z-index: 1040;
           transition: left 0.3s ease;
@@ -270,7 +277,7 @@
         }
 
         .sidebar .nav-link {
-          padding: 1rem 1.25rem;
+          padding: var(--sidebar-spacing);
           font-size: 0.95rem;
         }
       }
