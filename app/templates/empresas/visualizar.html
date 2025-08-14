@@ -183,9 +183,6 @@
                                     {% elif not fisico_list %}
                                         {% set fisico_list = [] %}
                                     {% endif %}
-                                    {% if fiscal.envio_fisico_outro %}
-                                        {% set fisico_list = fisico_list + [fiscal.envio_fisico_outro] %}
-                                    {% endif %}
                                     {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
                                 </div>
                             </div>
@@ -322,9 +319,6 @@
                                         {% set cont_fisico = [cont_fisico] %}
                                     {% elif not cont_fisico %}
                                         {% set cont_fisico = [] %}
-                                    {% endif %}
-                                    {% if contabil.envio_fisico_outro %}
-                                        {% set cont_fisico = cont_fisico + [contabil.envio_fisico_outro] %}
                                     {% endif %}
                                     {{ render_badge_list(cont_fisico, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
                                 </div>
