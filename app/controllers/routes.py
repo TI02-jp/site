@@ -416,6 +416,10 @@ def visualizar_empresa(id):
 
     if contabil:
         contabil.envio_fisico = _prepare_envio_fisico(contabil)
+    if pessoal:
+        pessoal.envio_fisico = _prepare_envio_fisico(pessoal)
+    if administrativo:
+        administrativo.envio_fisico = _prepare_envio_fisico(administrativo)
 
     return render_template(
         'empresas/visualizar.html',
@@ -505,6 +509,8 @@ def gerenciar_departamentos(empresa_id):
             fiscal_form.populate_obj(fiscal)
             if 'malote' not in (fiscal_form.envio_fisico.data or []):
                 fiscal.malote_coleta = None
+            else:
+                fiscal.malote_coleta = fiscal_form.malote_coleta.data
             try:
                 fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
             except Exception:
@@ -520,10 +526,12 @@ def gerenciar_departamentos(empresa_id):
             if not contabil:
                 contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
                 db.session.add(contabil)
-            
+
             contabil_form.populate_obj(contabil)
             if 'malote' not in (contabil_form.envio_fisico.data or []):
                 contabil.malote_coleta = None
+            else:
+                contabil.malote_coleta = contabil_form.malote_coleta.data
 
             contabil.envio_digital = json.dumps(contabil_form.envio_digital.data or [])
             contabil.envio_fisico = json.dumps(contabil_form.envio_fisico.data or [])
