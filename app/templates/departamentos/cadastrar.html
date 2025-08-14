@@ -75,7 +75,7 @@
                     <div class="alert alert-info d-flex align-items-center" role="alert">
                         <i class="bi bi-clock me-2"></i>
                         <div>
-                            <strong>Última atualização:</strong> {{ departamento.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                            <strong>Última atualização:</strong> {{ departamento.updated_at|format_brasilia }}
                         </div>
                     </div>
                 </div>

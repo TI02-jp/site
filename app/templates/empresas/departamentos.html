@@ -137,7 +137,7 @@
                     <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal</button>
                 </div>
             </form>
-            {% if fiscal and fiscal.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
+            {% if fiscal and fiscal.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ fiscal.updated_at|format_brasilia }}</div></div></div>{% endif %}
         </div>
     </div>
 
@@ -225,7 +225,7 @@
                     <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil</button>
                 </div>
             </form>
-            {% if contabil and contabil.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
+            {% if contabil and contabil.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ contabil.updated_at|format_brasilia }}</div></div></div>{% endif %}
         </div>
     </div>
 
@@ -299,7 +299,7 @@
                 <div class="alert alert-secondary d-flex align-items-center" role="alert">
                     <i class="bi bi-clock me-2"></i>
                     <div>
-                        <strong>Última atualização:</strong> {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}
+                        <strong>Última atualização:</strong> {{ pessoal.updated_at|format_brasilia }}
                     </div>
                 </div>
             </div>
@@ -318,7 +318,7 @@
                     <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
                 </div>
             </form>
-            {% if administrativo and administrativo.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
+            {% if administrativo and administrativo.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ administrativo.updated_at|format_brasilia }}</div></div></div>{% endif %}
         </div>
     </div>
 

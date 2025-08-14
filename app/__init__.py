@@ -5,7 +5,8 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from markupsafe import Markup
 
 load_dotenv()
@@ -22,6 +23,8 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+BRASILIA_TZ = ZoneInfo("America/Sao_Paulo")
+
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
 from app.controllers import routes
@@ -33,7 +36,15 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    return {'now': datetime.now}
+    return {'now': lambda: datetime.now(BRASILIA_TZ)}
+
+@app.template_filter("format_brasilia")
+def format_brasilia(value, fmt='%d/%m/%Y às %H:%M'):
+    if not value:
+        return ''
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(BRASILIA_TZ).strftime(fmt)
 
 @app.template_global()
 def render_badge_list(items, classes, icon, placeholder):
