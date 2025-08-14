@@ -162,38 +162,75 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
-                            <div class="info-item">
-                                <label class="info-label">Envio de Documento</label>
-                                <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-blue"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
+                            {% set digital_list = [] %}
+                            {% set digital_raw = fiscal.envio_digital %}
+                            {% if digital_raw is iterable and digital_raw is not string %}
+                                {% for item in digital_raw if item and item|string and item|string|trim %}
+                                    {% set digital_list = digital_list + [item|string] %}
+                                {% endfor %}
+                            {% elif digital_raw is string %}
+                                {% set temp_str = digital_raw.strip() %}
+                                {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                    {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                {% endif %}
+                                {% for item in temp_str.split(',') %}
+                                    {% if item and item.strip() %}
+                                        {% set digital_list = digital_list + [item.strip()] %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif digital_raw %}
+                                {% set digital_list = [digital_raw|string] %}
+                            {% endif %}
+
+                            {% set fisico_list = [] %}
+                            {% set fisico_raw = fiscal.envio_fisico %}
+                            {% set fisico_items = [] %}
+                            {% if fisico_raw is iterable and fisico_raw is not string %}
+                                {% set fisico_items = fisico_raw %}
+                            {% elif fisico_raw is string %}
+                                {% set temp_str = fisico_raw.strip() %}
+                                {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                    {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                {% endif %}
+                                {% for item in temp_str.split(',') %}
+                                    {% if item and item.strip() %}
+                                        {% set fisico_items = fisico_items + [item.strip()] %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif fisico_raw %}
+                                {% set fisico_items = [fisico_raw|string] %}
+                            {% endif %}
+                            {% for item in fisico_items %}
+                                {% if item == 'malote' %}
+                                    {% if fiscal.malote_movimento == 'eles_trazem' %}
+                                        {% set fisico_list = fisico_list + ['Malote: Eles trazem'] %}
+                                    {% elif fiscal.malote_movimento == 'nos_buscamos' %}
+                                        {% set fisico_list = fisico_list + ['Malote: Nós buscamos'] %}
+                                    {% else %}
+                                        {% set fisico_list = fisico_list + ['Malote'] %}
+                                    {% endif %}
+                                {% else %}
+                                    {% set fisico_list = fisico_list + [item] %}
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if digital_list %}
                             <div class="info-item">
                                 <label class="info-label">Envio Digital</label>
-                                <div class="info-value">
-                                    {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {{ render_badge_list(fiscal.envio_digital, 'bg-dept-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
-                                </div>
+                                <div class="info-value">{{ render_badge_list(digital_list, 'bg-dept-blue-subtle', 'bi-cloud-check', '') }}</div>
                             </div>
+                            {% endif %}
+                            {% if fisico_list %}
                             <div class="info-item">
                                 <label class="info-label">Envio Físico</label>
-                                <div class="info-value">
-                                    {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {% set fisico_list = [] %}
-                                    {% set fisico = fiscal.envio_fisico %}
-                                    {% if fisico is string %}
-                                        {% set fisico = [fisico] %}
-                                    {% endif %}
-                                    {% if 'malote' in (fisico or []) %}
-                                        {% if fiscal.malote_movimento == 'eles_trazem' %}
-                                            {% set fisico_list = ['Malote: Eles trazem'] %}
-                                        {% elif fiscal.malote_movimento == 'nos_buscamos' %}
-                                            {% set fisico_list = ['Malote: Nós buscamos'] %}
-                                        {% else %}
-                                            {% set fisico_list = ['Malote'] %}
-                                        {% endif %}
-                                    {% endif %}
-                                    {{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
-                                </div>
+                                <div class="info-value">{{ render_badge_list(fisico_list, 'bg-dept-blue-subtle', 'bi-inbox', '') }}</div>
                             </div>
+                            {% endif %}
+                            {% if not digital_list and not fisico_list %}
+                            <div class="info-item">
+                                <div class="info-value"><span class="text-muted">Não há envio de documentos</span></div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -307,38 +344,75 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
-                            <div class="info-item">
-                                <label class="info-label">Envio de Documento</label>
-                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
-                            </div>
+                            {% set digital_list = [] %}
+                            {% set digital_raw = contabil.envio_digital %}
+                            {% if digital_raw is iterable and digital_raw is not string %}
+                                {% for item in digital_raw if item and item|string and item|string|trim %}
+                                    {% set digital_list = digital_list + [item|string] %}
+                                {% endfor %}
+                            {% elif digital_raw is string %}
+                                {% set temp_str = digital_raw.strip() %}
+                                {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                    {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                {% endif %}
+                                {% for item in temp_str.split(',') %}
+                                    {% if item and item.strip() %}
+                                        {% set digital_list = digital_list + [item.strip()] %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif digital_raw %}
+                                {% set digital_list = [digital_raw|string] %}
+                            {% endif %}
+
+                            {% set fisico_list = [] %}
+                            {% set fisico_raw = contabil.envio_fisico %}
+                            {% set fisico_items = [] %}
+                            {% if fisico_raw is iterable and fisico_raw is not string %}
+                                {% set fisico_items = fisico_raw %}
+                            {% elif fisico_raw is string %}
+                                {% set temp_str = fisico_raw.strip() %}
+                                {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                    {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                {% endif %}
+                                {% for item in temp_str.split(',') %}
+                                    {% if item and item.strip() %}
+                                        {% set fisico_items = fisico_items + [item.strip()] %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif fisico_raw %}
+                                {% set fisico_items = [fisico_raw|string] %}
+                            {% endif %}
+                            {% for item in fisico_items %}
+                                {% if item == 'malote' %}
+                                    {% if contabil.malote_movimento == 'eles_trazem' %}
+                                        {% set fisico_list = fisico_list + ['Malote: Eles trazem'] %}
+                                    {% elif contabil.malote_movimento == 'nos_buscamos' %}
+                                        {% set fisico_list = fisico_list + ['Malote: Nós buscamos'] %}
+                                    {% else %}
+                                        {% set fisico_list = fisico_list + ['Malote'] %}
+                                    {% endif %}
+                                {% else %}
+                                    {% set fisico_list = fisico_list + [item] %}
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if digital_list %}
                             <div class="info-item">
                                 <label class="info-label">Envio Digital</label>
-                                <div class="info-value">
-                                    {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {{ render_badge_list(contabil.envio_digital, 'bg-dept-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
-                                </div>
+                                <div class="info-value">{{ render_badge_list(digital_list, 'bg-dept-orange-subtle', 'bi-cloud-check', '') }}</div>
                             </div>
+                            {% endif %}
+                            {% if fisico_list %}
                             <div class="info-item">
                                 <label class="info-label">Envio Físico</label>
-                                <div class="info-value">
-                                    {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {% set cont_fisico_list = [] %}
-                                    {% set cont_fisico = contabil.envio_fisico %}
-                                    {% if cont_fisico is string %}
-                                        {% set cont_fisico = [cont_fisico] %}
-                                    {% endif %}
-                                    {% if 'malote' in (cont_fisico or []) %}
-                                        {% if contabil.malote_movimento == 'eles_trazem' %}
-                                            {% set cont_fisico_list = ['Malote: Eles trazem'] %}
-                                        {% elif contabil.malote_movimento == 'nos_buscamos' %}
-                                            {% set cont_fisico_list = ['Malote: Nós buscamos'] %}
-                                        {% else %}
-                                            {% set cont_fisico_list = ['Malote'] %}
-                                        {% endif %}
-                                    {% endif %}
-                                    {{ render_badge_list(cont_fisico_list, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
-                                </div>
+                                <div class="info-value">{{ render_badge_list(fisico_list, 'bg-dept-orange-subtle', 'bi-inbox', '') }}</div>
                             </div>
+                            {% endif %}
+                            {% if not digital_list and not fisico_list %}
+                            <div class="info-item">
+                                <div class="info-value"><span class="text-muted">Não há envio de documentos</span></div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
