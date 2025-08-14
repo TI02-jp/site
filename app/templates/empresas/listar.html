@@ -3,7 +3,7 @@
 {% block title %}Empresas Cadastradas{% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 1000px;">
+<div class="container mt-4" style="max-width: 1200px;">
     <!-- Cabeçalho da Página -->
     <div class="row mb-4">
         <div class="col-12">
@@ -53,7 +53,7 @@
                             <th class="codigo-col">Código</th>
                             <th>Nome da Empresa</th>
                             <th class="cnpj-col">CNPJ</th>
-                            <th>Data Abertura</th>
+                            <th class="tributacao-col">Tributação</th>
                             <th class="acao-col">Ações</th>
                         </tr>
                     </thead>
@@ -79,10 +79,12 @@
                             <td class="cnpj-col">
                                 <span class="font-monospace cnpj-formatted">{{ empresa.cnpj }}</span>
                             </td>
-                            <td>
-                                <span class="text-muted">
-                                    {{ empresa.data_abertura.strftime('%d/%m/%Y') if empresa.data_abertura else 'N/A' }}
-                                </span>
+                            <td class="tributacao-col">
+                                {% if empresa.tributacao %}
+                                <span class="badge bg-success-subtle text-success">{{ empresa.tributacao }}</span>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
                             </td>
                             <td class="acao-col">
                                 <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" 

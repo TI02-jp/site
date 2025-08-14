@@ -12,7 +12,6 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-from datetime import datetime
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
@@ -223,13 +222,6 @@ def listar_empresas():
         )
 
     empresas = query.all()
-
-    for empresa in empresas:
-        if empresa.data_abertura and isinstance(empresa.data_abertura, str):
-            try:
-                empresa.data_abertura = datetime.strptime(empresa.data_abertura, '%d-%m-%Y')
-            except ValueError:
-                empresa.data_abertura = None
 
     return render_template('empresas/listar.html', empresas=empresas, search=search)
 
