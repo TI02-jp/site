@@ -15,7 +15,11 @@
                     </h1>
                     <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
                 </div>
-                <div class="text-end">
+                <div class="d-flex align-items-center justify-content-end gap-3">
+                    <form method="get" class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label" for="showInactive">Mostrar inativos</label>
+                    </form>
                     <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary">
                         <i class="bi bi-person-plus me-1"></i>Novo Usuário
                     </a>
@@ -44,7 +48,6 @@
                 <table class="table table-bordered table-hover mb-0">
                     <thead class="table-primary">
                         <tr>
-                            <th style="width: 80px;">ID</th>
                             <th>Nome</th>
                             <th style="width: 300px;">Email</th>
                             <th style="width: 150px;">Usuário</th>
@@ -54,16 +57,14 @@
                     </thead>
                     <tbody>
                         {% for user in users %}
-                        <tr>
-                            <td>
-                                <span class="badge bg-primary-subtle text-primary fw-semibold">
-                                    {{ user.id }}
-                                </span>
-                            </td>
+                        <tr {% if not user.ativo %}class="table-secondary"{% endif %}>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-person-circle me-2 text-muted"></i>
                                     <div class="fw-semibold">{{ user.name }}</div>
+                                    {% if not user.ativo %}
+                                        <span class="badge bg-secondary ms-2">Inativo</span>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
@@ -82,8 +83,8 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <a href="{{ url_for('edit_user', user_id=user.id) }}" 
-                                   class="btn btn-sm btn-outline-primary" 
+                                <a href="{{ url_for('edit_user', user_id=user.id) }}"
+                                   class="btn btn-sm btn-outline-primary"
                                    title="Editar usuário">
                                     <i class="bi bi-pencil"></i>
                                 </a>
@@ -91,7 +92,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5">
+                            <td colspan="5" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-person-slash fs-1 d-block mb-3"></i>
                                     <h5>Nenhum usuário cadastrado</h5>
