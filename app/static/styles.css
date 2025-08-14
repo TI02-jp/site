@@ -674,7 +674,8 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 }
 
 .info-group > h6,
-.info-group .row {
+.info-group .row,
+.info-group > .editor-content {
     grid-column: 1 / -1;
 }
 
