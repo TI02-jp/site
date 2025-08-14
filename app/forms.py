@@ -106,7 +106,8 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias'),
+        ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
         ('malote', 'Malote'), ('outro', 'Outro')
@@ -125,7 +126,8 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
     envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias')
+        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias'),
+        ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
         ('malote', 'Malote'), ('outro', 'Outro')

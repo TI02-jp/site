@@ -41,6 +41,7 @@ function setupContatos(containerId, addBtnId, hiddenInputId) {
                 <option value="email" ${m.tipo === 'email' ? 'selected' : ''}>E-mail</option>
                 <option value="telefone" ${m.tipo === 'telefone' ? 'selected' : ''}>Telefone</option>
                 <option value="whatsapp" ${m.tipo === 'whatsapp' ? 'selected' : ''}>Whatsapp</option>
+                <option value="google_chat" ${m.tipo === 'google_chat' ? 'selected' : ''}>Google Chat</option>
                 <option value="acessorias" ${m.tipo === 'acessorias' ? 'selected' : ''}>Acessórias</option>
               </select>
             </div>
