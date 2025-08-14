@@ -37,20 +37,25 @@ function setupFormaMovimento(selectId, digitalId, fisicoId) {
     update();
 }
 
-function setupFisicoOutro(containerId) {
+function setupMaloteMovimento(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const outroCheckbox = container.querySelector('input[value="outro"]');
-    const outroInput = container.querySelector('.outro-input');
-    if (!outroCheckbox || !outroInput) return;
-    function toggleOutro() {
-        if (outroCheckbox.checked) {
-            outroInput.style.display = '';
+    const maloteCheckbox = container.querySelector('input[value="malote"]');
+    const movimentoField = container.querySelector('.malote-movimento-field');
+    if (!maloteCheckbox || !movimentoField) return;
+    const movimentoSelect = movimentoField.querySelector('select');
+    function toggleMovimento() {
+        if (maloteCheckbox.checked) {
+            movimentoField.style.display = '';
+            if (movimentoSelect) movimentoSelect.setAttribute('required', 'required');
         } else {
-            outroInput.style.display = 'none';
-            outroInput.value = '';
+            movimentoField.style.display = 'none';
+            if (movimentoSelect) {
+                movimentoSelect.value = '';
+                movimentoSelect.removeAttribute('required');
+            }
         }
     }
-    outroCheckbox.addEventListener('change', toggleOutro);
-    toggleOutro();
+    maloteCheckbox.addEventListener('change', toggleMovimento);
+    toggleMovimento();
 }

@@ -110,9 +110,20 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
-        ('malote', 'Malote'), ('outro', 'Outro')
+        ('malote', 'Malote')
     ], validators=[Optional()])
-    envio_fisico_outro = StringField('Outro', validators=[Optional()])
+    malote_movimento = SelectField(
+        'Movimento Físico',
+        choices=[
+            ('', 'Selecione'),
+            ('eles_trazem', 'Eles trazem'),
+            ('nos_buscamos', 'Nós buscamos')
+        ],
+        validators=[Optional()]
+    )
+    def validate_malote_movimento(form, field):
+        if 'malote' in (form.envio_fisico.data or []) and not field.data:
+            raise ValidationError('Selecione uma opção para o malote')
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
@@ -130,9 +141,20 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('google_chat', 'Google Chat')
     ], validators=[Optional()])
     envio_fisico = SelectMultipleField('Envio Físico', choices=[
-        ('malote', 'Malote'), ('outro', 'Outro')
+        ('malote', 'Malote')
     ], validators=[Optional()])
-    envio_fisico_outro = StringField('Outro', validators=[Optional()])
+    malote_movimento = SelectField(
+        'Movimento Físico',
+        choices=[
+            ('', 'Selecione'),
+            ('eles_trazem', 'Eles trazem'),
+            ('nos_buscamos', 'Nós buscamos')
+        ],
+        validators=[Optional()]
+    )
+    def validate_malote_movimento(form, field):
+        if 'malote' in (form.envio_fisico.data or []) and not field.data:
+            raise ValidationError('Selecione uma opção para o malote')
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),

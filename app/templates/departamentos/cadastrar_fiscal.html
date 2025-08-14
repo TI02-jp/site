@@ -105,7 +105,10 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            <input type="text" class="form-control mt-2 outro-input" id="envio_fisico_outro" name="{{ form.envio_fisico_outro.name }}" placeholder="Descreva outro" value="{{ form.envio_fisico_outro.data or '' }}" style="display: none;">
+                            <div class="malote-movimento-field mt-3" style="display:none;">
+                                <label class="form-label fw-semibold">{{ form.malote_movimento.label.text }}</label>
+                                {{ form.malote_movimento(class="form-select malote-movimento") }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -273,7 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
     setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('forma_movimento', 'envio_digital_container', 'envio_fisico_container');
-    setupFisicoOutro('envio_fisico_container');
+    setupMaloteMovimento('envio_fisico_container');
 
     document.querySelector('form').addEventListener('submit', function (e) {
         const particularidadesField = document.querySelector('#particularidades');
