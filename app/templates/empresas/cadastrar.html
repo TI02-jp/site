@@ -60,9 +60,12 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div class="form-floating">
+                        <label for="cnpj" class="form-label fw-semibold">{{ form.cnpj.label.text }}</label>
+                        <div class="input-group">
                             {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00", **{'aria-describedby': 'cnpjHelp'}) }}
-                            {{ form.cnpj.label(class="form-label") }}
+                            <button class="btn btn-outline-secondary" type="button" id="buscar-cnpj" title="Buscar CNPJ">
+                                <i class="bi bi-search"></i>
+                            </button>
                         </div>
                         {% if form.cnpj.errors %}
                             {% for error in form.cnpj.errors %}

@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   const cnpjInput = document.getElementById('cnpj');
+  const buscarBtn = document.getElementById('buscar-cnpj');
   if (!cnpjInput) return;
 
   let lastCnpj = null;
 
-  cnpjInput.addEventListener('blur', async () => {
+  async function buscarDados() {
     const cnpj = cnpjInput.value.replace(/\D/g, '');
     if (cnpj.length !== 14 || cnpj === lastCnpj) return;
     lastCnpj = cnpj;
@@ -39,5 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('Erro ao buscar CNPJ:', err);
     }
-  });
+  }
+
+  cnpjInput.addEventListener('blur', buscarDados);
+  if (buscarBtn) {
+    buscarBtn.addEventListener('click', buscarDados);
+  }
 });
