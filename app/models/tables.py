@@ -2,7 +2,7 @@ import json
 from sqlalchemy.types import TypeDecorator, String
 from app import db
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -91,7 +91,11 @@ class Departamento(db.Model):
     ponto_eletronico = db.Column(db.String(200))
     pagamento_funcionario = db.Column(db.String(200))
     particularidades_texto = db.Column(db.Text)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
     def __repr__(self):

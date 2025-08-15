@@ -5,7 +5,8 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from markupsafe import Markup
 
 load_dotenv()
@@ -34,6 +35,14 @@ def load_user(user_id):
 @app.context_processor
 def inject_now():
     return {'now': datetime.now}
+
+@app.template_filter('format_datetime_br')
+def format_datetime_br(value, fmt='%d/%m/%Y às %H:%M'):
+    if not value:
+        return ''
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(ZoneInfo('America/Sao_Paulo')).strftime(fmt)
 
 @app.template_global()
 def render_badge_list(items, classes, icon, placeholder):

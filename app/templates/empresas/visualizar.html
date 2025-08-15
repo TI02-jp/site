@@ -154,7 +154,7 @@
             <div class="card-header bg-dept-blue text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
-                    {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                    {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at|format_datetime_br }}</small>{% endif %}
                 </div>
             </div>
             <div class="card-body p-4">
@@ -288,7 +288,7 @@
             <div class="card-header bg-dept-orange text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
-                    {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                    {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at|format_datetime_br }}</small>{% endif %}
                 </div>
             </div>
             <div class="card-body p-4">
@@ -380,7 +380,7 @@
                 <div class="card-header bg-dept-blue text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
-                        {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                        {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at|format_datetime_br }}</small>{% endif %}
                     </div>
                 </div>
                 <div class="card-body p-4">
@@ -459,7 +459,7 @@
             <div class="card-header bg-dept-orange text-white py-3">
                  <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
-                    {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
+                    {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at|format_datetime_br }}</small>{% endif %}
                 </div>
             </div>
             <div class="card-body p-4">
