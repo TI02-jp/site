@@ -53,6 +53,8 @@
         flex-direction: column;
         position: relative;
         transition: all 0.3s ease;
+        height: 100vh;
+        overflow-y: hidden;
       }
 
       /* Header da Sidebar */
@@ -112,7 +114,11 @@
       .sidebar-nav {
         flex: 1;
         padding: 1.25rem 0;
-        overflow-y: auto;
+        overflow-y: hidden;
+      }
+
+      .sidebar .nav .nav .nav-link {
+        padding-left: 2.5rem;
       }
 
       .nav-section {
@@ -367,12 +373,14 @@
                                 Empresas
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'cadastrar_empresa' %}active{% endif %}" href="{{ url_for('cadastrar_empresa') }}">
-                                <i class="bi bi-building-add"></i>
-                                Nova Empresa
-                            </a>
+                            <ul class="nav flex-column ms-4">
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint == 'cadastrar_empresa' %}active{% endif %}" href="{{ url_for('cadastrar_empresa') }}">
+                                        <i class="bi bi-building-add"></i>
+                                        Nova Empresa
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
