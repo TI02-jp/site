@@ -2,9 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const cnpjInput = document.getElementById('cnpj');
   if (!cnpjInput) return;
 
+  let lastCnpj = null;
+
   cnpjInput.addEventListener('blur', async () => {
     const cnpj = cnpjInput.value.replace(/\D/g, '');
-    if (cnpj.length !== 14) return;
+    if (cnpj.length !== 14 || cnpj === lastCnpj) return;
+    lastCnpj = cnpj;
     try {
       const resp = await fetch(`/api/buscar_cnpj/${cnpj}`);
       if (!resp.ok) return;

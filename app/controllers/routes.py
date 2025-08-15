@@ -1,6 +1,6 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, Flask
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
 from functools import wraps
-from flask_login import current_user, login_required, login_user, logout_user, current_user
+from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
