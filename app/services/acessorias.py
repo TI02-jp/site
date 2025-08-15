@@ -120,5 +120,6 @@ def buscar_empresa_por_cnpj(cnpj: str) -> Optional[Dict]:
     )
     if atividade:
         resultado["atividade_principal"] = atividade
-
+    # remove empty fields so callers can map only available data
+    resultado = {k: v for k, v in resultado.items() if v}
     return resultado or None

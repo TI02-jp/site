@@ -177,7 +177,10 @@ def api_buscar_cnpj(cnpj):
     dados = buscar_empresa_por_cnpj(cnpj)
     if not dados:
         return jsonify({'error': 'Dados não encontrados'}), 404
-    return jsonify(dados)
+    # garante que apenas campos existentes no formulário sejam retornados
+    form_fields = set(EmpresaForm()._fields.keys())
+    dados_validos = {k: v for k, v in dados.items() if k in form_fields}
+    return jsonify(dados_validos)
 
     ## Rota para cadastrar uma nova empresa
 
