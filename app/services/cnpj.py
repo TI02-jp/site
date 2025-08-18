@@ -220,11 +220,13 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         return None
 
     payload = mapear_para_form(dados)
+    acessorias_payload = mapear_para_acessorias(dados)
+
     base = get_acessorias_company(cnpj)
     if not base:
-        # cria a empresa caso não exista e busca novamente para obter o ID
-        upsert_acessorias_company(mapear_para_acessorias(dados))
-        base = get_acessorias_company(cnpj)
+        # cria a empresa caso não exista e usa a resposta para obter o ID
+        base = upsert_acessorias_company(acessorias_payload) or get_acessorias_company(cnpj)
+
     if base:
         keys = {
             "id",
@@ -238,6 +240,11 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
             "company_id",
         }
         codigo = deep_pick(base, {k.lower() for k in keys})
+        if codigo in ("", None):
+            criado = upsert_acessorias_company(acessorias_payload)
+            if criado:
+                codigo = deep_pick(criado, {k.lower() for k in keys})
+                base = base or criado
         if codigo not in ("", None):
             payload["codigo_empresa"] = str(codigo)
         trib = regime_to_tributacao(
