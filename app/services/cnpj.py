@@ -47,6 +47,23 @@ def pick(d: dict, *keys):
     return ""
 
 
+def deep_pick(obj, keys: set[str]):
+    """Busca recursivamente o primeiro valor encontrado para qualquer uma das chaves informadas."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k.lower() in keys and v not in (None, "", [], {}):
+                return v
+            res = deep_pick(v, keys)
+            if res not in (None, "", [], {}):
+                return res
+    elif isinstance(obj, list):
+        for item in obj:
+            res = deep_pick(item, keys)
+            if res not in (None, "", [], {}):
+                return res
+    return ""
+
+
 def mapear_para_acessorias(d: dict) -> dict:
     """Converte dados de CNPJ para o payload do POST /companies."""
     payload = {
@@ -183,7 +200,18 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     if not base:
         base = get_acessorias_company(cnpj)
     if base:
-        codigo = pick(base, "id", "codigo", "cod", "code")
+        keys = {
+            "id",
+            "codigo",
+            "cod",
+            "code",
+            "empresa_id",
+            "empresaId",
+            "empresaID",
+            "id_empresa",
+            "company_id",
+        }
+        codigo = deep_pick(base, {k.lower() for k in keys})
         if codigo:
             payload["codigo_empresa"] = str(codigo)
     return payload
