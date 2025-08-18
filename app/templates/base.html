@@ -203,7 +203,7 @@
       .content-area {
         flex-grow: 1;
         overflow-y: auto;
-        background-color: #f8f9fa;
+        background-color: var(--body-bg);
         position: relative;
       }
 
@@ -214,7 +214,7 @@
 
       /* Breadcrumb */
       .content-breadcrumb {
-        background: white;
+        background: var(--sidebar-bg);
         padding: 1rem 2rem;
         border-bottom: 1px solid var(--border-color);
         margin-bottom: 0;
@@ -248,11 +248,21 @@
 
       /* Footer */
       footer {
-        background: white;
+        background: var(--sidebar-bg);
         border-top: 1px solid var(--border-color);
         color: var(--text-muted);
         font-size: 0.85rem;
         padding: 1rem 0;
+      }
+
+      .card {
+        background-color: var(--sidebar-bg);
+        color: var(--sidebar-text);
+        border: 1px solid var(--border-color);
+      }
+
+      .card-header {
+        border-bottom: 1px solid var(--border-color);
       }
 
       /* Responsivo */
