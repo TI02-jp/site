@@ -60,9 +60,14 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div class="form-floating">
-                            {{ form.cnpj(class="form-control", id="cnpj", placeholder="00.000.000/0000-00", **{'aria-describedby': 'cnpjHelp'}) }}
-                            {{ form.cnpj.label(class="form-label") }}
+                        <div class="input-group">
+                            <div class="form-floating flex-grow-1">
+                                {{ form.cnpj(class='form-control', id='cnpj', placeholder='00.000.000/0000-00', **{'aria-describedby': 'cnpjHelp'}) }}
+                                {{ form.cnpj.label(class='form-label') }}
+                            </div>
+                            <button type='button' class='btn btn-outline-secondary' id='buscar-cnpj' title='Consultar CNPJ'>
+                                <i class='bi bi-search'></i>
+                            </button>
                         </div>
                         {% if form.cnpj.errors %}
                             {% for error in form.cnpj.errors %}
@@ -271,6 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
+    const buscarCnpjBtn = document.getElementById('buscar-cnpj');
     if (cnpjField) {
         cnpjField.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
@@ -296,8 +302,47 @@ document.addEventListener("DOMContentLoaded", function () {
             cnpjField.value = initialValue;
             validateField(cnpjField); // Validate on load if pre-filled
         }
-    }
 
+        if (buscarCnpjBtn) {
+            const cnpjApi = '{{ url_for("api_cnpj", cnpj="") }}';
+            buscarCnpjBtn.addEventListener('click', function () {
+                const cnpj = cnpjField.value.replace(/\D/g, '');
+                if (!cnpj) {
+                    alert('Informe um CNPJ válido.');
+                    return;
+                }
+                fetch(cnpjApi + cnpj, { credentials: 'same-origin' })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+
+                        Object.entries(data).forEach(([key, value]) => {
+                            if (!value) return;
+                            const el = document.getElementById(key);
+                            if (el) {
+                                if (key !== 'codigo_empresa' || !el.value) {
+                                    el.value = value;
+                                }
+                                validateField(el);
+                            }
+                        });
+
+                        const trib = data.tributacao;
+                        if (trib) {
+                            const radio = document.querySelector(`input[name="tributacao"][value="${trib}"]`);
+                            if (radio) {
+                                radio.checked = true;
+                                radio.dispatchEvent(new Event('change'));
+                            }
+                        }
+                    })
+                    .catch(() => alert('Erro ao consultar CNPJ'));
+            });
+        }
+    }
     // Função genérica de validação de campo para Bootstrap
     function validateField(field) {
         const value = field.value.trim();
