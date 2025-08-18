@@ -271,6 +271,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
+
+    async function fetchCNPJData(cnpj) {
+        try {
+            const resp = await fetch(`/api/cnpj/${cnpj}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const payload = data.payload || {};
+            const externo = data.externo || {};
+            const nomeField = document.querySelector('#nome_empresa');
+            const aberturaField = document.querySelector('#data_abertura');
+            const atividadeField = document.querySelector('#atividade_principal');
+            if (payload.nome && nomeField && !nomeField.value) {
+                nomeField.value = payload.nome;
+                validateField(nomeField);
+            }
+            if (payload.dtabertura && aberturaField && !aberturaField.value) {
+                aberturaField.value = payload.dtabertura;
+                validateField(aberturaField);
+            }
+            if (externo.cnae_fiscal_descricao && atividadeField && !atividadeField.value) {
+                atividadeField.value = externo.cnae_fiscal_descricao;
+                validateField(atividadeField);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
     if (cnpjField) {
         cnpjField.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
@@ -287,6 +315,13 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         // Pre-fill CNPJ with mask if data exists (for edit scenarios)
+        cnpjField.addEventListener('blur', function() {
+            const clean = cnpjField.value.replace(/\D/g, '');
+            if (clean.length === 14) {
+                fetchCNPJData(clean);
+            }
+        });
+
         if (cnpjField.value) {
             let initialValue = cnpjField.value.replace(/\D/g, '');
             initialValue = initialValue.replace(/^(\d{2})(\d)/, '$1.$2');

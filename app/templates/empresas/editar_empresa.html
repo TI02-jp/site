@@ -251,9 +251,40 @@
 document.addEventListener("DOMContentLoaded", function () {
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
+
+    async function fetchCNPJData(cnpj) {
+        try {
+            const resp = await fetch(`/api/cnpj/${cnpj}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const payload = data.payload || {};
+            const externo = data.externo || {};
+            const nomeField = document.querySelector('#nome_empresa');
+            const aberturaField = document.querySelector('#data_abertura');
+            const atividadeField = document.querySelector('#atividade_principal');
+            if (payload.nome && nomeField && !nomeField.value) {
+                nomeField.value = payload.nome;
+            }
+            if (payload.dtabertura && aberturaField && !aberturaField.value) {
+                aberturaField.value = payload.dtabertura;
+            }
+            if (externo.cnae_fiscal_descricao && atividadeField && !atividadeField.value) {
+                atividadeField.value = externo.cnae_fiscal_descricao;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
     if (cnpjField) {
         IMask(cnpjField, {
             mask: '00.000.000/0000-00'
+        });
+        cnpjField.addEventListener('blur', function() {
+            const clean = cnpjField.value.replace(/\D/g, '');
+            if (clean.length === 14) {
+                fetchCNPJData(clean);
+            }
         });
     }
 

@@ -13,6 +13,7 @@ from app.forms import (
     DepartamentoPessoalForm,
 )
 import os, json, re
+from app.services.cnpj import consultar_cnpj
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -169,6 +170,15 @@ def login():
 @login_required
 def dashboard():
     return render_template('dashboard.html')
+
+
+@app.route('/api/cnpj/<cnpj>')
+@login_required
+def api_consultar_cnpj(cnpj):
+    data = consultar_cnpj(cnpj)
+    if not data or not data.get('externo'):
+        return jsonify({'error': 'CNPJ não encontrado'}), 404
+    return jsonify(data)
 
     ## Rota para cadastrar uma nova empresa
 
