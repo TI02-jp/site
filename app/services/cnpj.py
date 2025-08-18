@@ -224,18 +224,21 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     if not base:
         base = upsert_acessorias_company(mapear_para_acessorias(dados))
     if base:
-        keys = {
-            "id",
-            "codigo",
-            "cod",
-            "code",
-            "empresa_id",
-            "empresaId",
-            "empresaID",
-            "id_empresa",
-            "company_id",
-        }
-        codigo = deep_pick(base, {k.lower() for k in keys})
+        # Prefer the top-level "id" field from the API response
+        codigo = base.get("id")
+        if not codigo:
+            keys = {
+                "id",
+                "codigo",
+                "cod",
+                "code",
+                "empresa_id",
+                "empresaId",
+                "empresaID",
+                "id_empresa",
+                "company_id",
+            }
+            codigo = deep_pick(base, {k.lower() for k in keys})
         if codigo:
             payload["codigo_empresa"] = str(codigo)
         trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
