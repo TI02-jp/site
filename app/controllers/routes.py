@@ -1,6 +1,6 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, Flask
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
 from functools import wraps
-from flask_login import current_user, login_required, login_user, logout_user, current_user
+from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
@@ -602,7 +602,6 @@ def gerenciar_departamentos(empresa_id):
     )
 
 @app.route('/relatorios')
-@login_required
 @admin_required
 def relatorios():
     return render_template('admin/relatorios.html')
@@ -625,7 +624,6 @@ def test_connection():
     ## Rota para listar usuários
 
 @app.route('/users', methods=['GET', 'POST'])
-@login_required
 @admin_required
 def list_users():
     form = RegistrationForm()
@@ -657,7 +655,6 @@ def list_users():
     return render_template('list_users.html', users=users, form=form, show_inactive=show_inactive)
 
 @app.route('/novo_usuario', methods=['GET', 'POST'])
-@login_required
 @admin_required
 def novo_usuario():
     form = RegistrationForm()
@@ -682,7 +679,6 @@ def novo_usuario():
     return render_template('admin/novo_usuario.html', form=form)
 
 @app.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
-@login_required
 @admin_required
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)

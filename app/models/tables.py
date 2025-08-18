@@ -41,6 +41,11 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
+    @property
+    def is_active(self):
+        """Return True if the user is marked as active."""
+        return self.ativo
+
 class Post(db.Model):
     __tablename__ = "posts"
     id = db.Column(db.Integer, primary_key=True)
