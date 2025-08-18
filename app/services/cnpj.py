@@ -137,10 +137,13 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         dados = get_receitaws_cnpj(cnpj)
     if not dados:
         return None
+
     payload = mapear_para_form(dados)
+    payload["codigo_empresa"] = cnpj  # padrão: usa CNPJ limpo como código
+
     base = get_acessorias_company(cnpj)
     if base:
-        codigo = pick(base, "codigo", "cod", "id", "code")
+        codigo = pick(base, "id", "codigo", "cod", "code")
         if codigo:
             payload["codigo_empresa"] = str(codigo)
     return payload

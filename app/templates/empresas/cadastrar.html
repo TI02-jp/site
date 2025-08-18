@@ -323,9 +323,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             if (!value) return;
                             const el = document.getElementById(key);
                             if (el) {
-                                if (key !== 'codigo_empresa' || !el.value) {
-                                    el.value = value;
-                                }
+                                el.value = value;
                                 validateField(el);
                             }
                         });
