@@ -304,13 +304,14 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (buscarCnpjBtn) {
+            const cnpjApi = '{{ url_for("api_cnpj", cnpj="") }}';
             buscarCnpjBtn.addEventListener('click', function () {
                 const cnpj = cnpjField.value.replace(/\D/g, '');
                 if (!cnpj) {
                     alert('Informe um CNPJ válido.');
                     return;
                 }
-                fetch(`/api/cnpj/${cnpj}`, { credentials: 'same-origin' })
+                fetch(cnpjApi + cnpj, { credentials: 'same-origin' })
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.error) {
@@ -318,36 +319,20 @@ document.addEventListener("DOMContentLoaded", function () {
                             return;
                         }
 
-                        const fieldIds = [
-                            'codigo_empresa',
-                            'nome_empresa',
-                            'data_abertura',
-                            'atividade_principal',
-                            'socio_administrador',
-                            'telefone',
-                            'cep',
-                            'logradouro',
-                            'numero',
-                            'complemento',
-                            'bairro',
-                            'municipio',
-                            'uf'
-                        ];
-
-                        fieldIds.forEach(id => {
-                            if (data[id]) {
-                                const el = document.getElementById(id);
-                                if (el) {
-                                    if (id !== 'codigo_empresa' || !el.value) {
-                                        el.value = data[id];
-                                    }
-                                    validateField(el);
+                        Object.entries(data).forEach(([key, value]) => {
+                            if (!value) return;
+                            const el = document.getElementById(key);
+                            if (el) {
+                                if (key !== 'codigo_empresa' || !el.value) {
+                                    el.value = value;
                                 }
+                                validateField(el);
                             }
                         });
 
-                        if (data.tributacao) {
-                            const radio = document.querySelector(`input[name="tributacao"][value="${data.tributacao}"]`);
+                        const trib = data.tributacao;
+                        if (trib) {
+                            const radio = document.querySelector(`input[name="tributacao"][value="${trib}"]`);
                             if (radio) {
                                 radio.checked = true;
                                 radio.dispatchEvent(new Event('change'));
