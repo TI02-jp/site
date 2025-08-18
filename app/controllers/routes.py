@@ -16,6 +16,7 @@ import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
+from app.services.cnpj import consultar_cnpj
 
 @app.context_processor
 def inject_stats():
@@ -169,6 +170,14 @@ def login():
 @login_required
 def dashboard():
     return render_template('dashboard.html')
+
+@app.route('/api/cnpj/<cnpj>')
+@login_required
+def api_cnpj(cnpj):
+    dados = consultar_cnpj(cnpj)
+    if not dados:
+        return jsonify({'error': 'CNPJ não encontrado'}), 404
+    return jsonify(dados)
 
     ## Rota para cadastrar uma nova empresa
 
