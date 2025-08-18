@@ -1,6 +1,24 @@
+import os
 import re
 import requests
 from datetime import datetime
+
+ACESSORIAS_BASE = "https://api.acessorias.com"
+ACESSORIAS_TOKEN = os.getenv("ACESSORIAS_TOKEN")
+
+
+def get_acessorias_company(cnpj: str) -> dict | None:
+    if not ACESSORIAS_TOKEN:
+        return None
+    url = f"{ACESSORIAS_BASE}/companies/{cnpj}"
+    headers = {"Authorization": f"Bearer {ACESSORIAS_TOKEN}", "Accept": "application/json"}
+    r = requests.get(url, headers=headers, timeout=20, proxies={"http": None, "https": None})
+    if r.status_code == 200:
+        try:
+            return r.json()
+        except Exception:
+            return None
+    return None
 
 
 def somente_numeros(s: str) -> str:
@@ -97,11 +115,6 @@ def mapear_para_form(d: dict) -> dict:
     if tributacao:
         payload["tributacao"] = tributacao
 
-    # Usa o próprio CNPJ como código da empresa por padrão
-    cnpj_limpo = somente_numeros(pick(d, "cnpj", "identificador"))
-    if cnpj_limpo:
-        payload["codigo_empresa"] = cnpj_limpo
-
     # Campos adicionais para possível preenchimento automático
     payload.update({
         "telefone": pick(d, "telefone"),
@@ -124,4 +137,10 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         dados = get_receitaws_cnpj(cnpj)
     if not dados:
         return None
-    return mapear_para_form(dados)
+    payload = mapear_para_form(dados)
+    base = get_acessorias_company(cnpj)
+    if base:
+        codigo = pick(base, "codigo", "cod", "id", "code")
+        if codigo:
+            payload["codigo_empresa"] = str(codigo)
+    return payload
