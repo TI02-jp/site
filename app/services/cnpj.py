@@ -228,25 +228,14 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         base = upsert_acessorias_company(acessorias_payload) or get_acessorias_company(cnpj)
 
     if base:
-        keys = {
-            "id",
-            "codigo",
-            "cod",
-            "code",
-            "empresa_id",
-            "empresaId",
-            "empresaID",
-            "id_empresa",
-            "company_id",
-        }
-        codigo = deep_pick(base, {k.lower() for k in keys})
-        if codigo in ("", None):
+        empresa_id = base.get("id")
+        if not empresa_id:
             criado = upsert_acessorias_company(acessorias_payload)
             if criado:
-                codigo = deep_pick(criado, {k.lower() for k in keys})
+                empresa_id = criado.get("id")
                 base = base or criado
-        if codigo not in ("", None):
-            payload["codigo_empresa"] = str(codigo)
+        if empresa_id is not None:
+            payload["codigo_empresa"] = empresa_id
         trib = regime_to_tributacao(
             deep_pick(base, {"regime", "regime_tributario", "tributacao"})
         )
