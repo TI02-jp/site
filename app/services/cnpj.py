@@ -149,16 +149,29 @@ def get_receitaws_cnpj(cnpj: str) -> dict | None:
     return None
 
 
+def extract_atividade_principal(d: dict) -> str:
+    """Tenta encontrar a descrição da atividade principal em várias estruturas."""
+    ap = deep_pick(
+        d,
+        {
+            "atividade_principal",
+            "descricao_atividade_principal",
+            "cnae_principal",
+            "cnae",
+        },
+    )
+    if isinstance(ap, list) and ap:
+        return pick(ap[0], "text", "descricao", "descricaoCNAE", "desc") or ""
+    if isinstance(ap, dict):
+        return pick(ap, "text", "descricao", "descricaoCNAE", "desc") or ""
+    if isinstance(ap, str):
+        return ap
+    return ""
+
+
 def mapear_para_form(d: dict) -> dict:
     # Atividade principal
-    atividade = ""
-    ap = pick(d, "atividade_principal", "descricao_atividade_principal")
-    if isinstance(ap, list) and ap:
-        atividade = pick(ap[0], "text", "descricao") or ""
-    elif isinstance(ap, dict):
-        atividade = pick(ap, "text", "descricao") or ""
-    elif isinstance(ap, str):
-        atividade = ap
+    atividade = extract_atividade_principal(d)
 
     # Sócios administradores
     socio = ""
@@ -236,6 +249,9 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
                 base = base or criado
         if empresa_id is not None:
             payload["codigo_empresa"] = empresa_id
+        atividade = extract_atividade_principal(base)
+        if atividade:
+            payload["atividade_principal"] = atividade
         trib = regime_to_tributacao(
             deep_pick(base, {"regime", "regime_tributario", "tributacao"})
         )
