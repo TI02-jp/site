@@ -18,9 +18,20 @@ def ymd(d: str) -> str | None:
     return None
 
 
+def pick(d: dict, *keys):
+    """Retorna o primeiro valor não vazio encontrado nas chaves fornecidas."""
+    if not isinstance(d, dict):
+        return ""
+    for key in keys:
+        v = d.get(key)
+        if v not in (None, "", [], {}):
+            return v
+    return ""
+
+
 def get_brasilapi_cnpj(cnpj: str) -> dict | None:
     url = f"https://brasilapi.com.br/api/cnpj/v1/{cnpj}"
-    r = requests.get(url, timeout=20)
+    r = requests.get(url, timeout=20, proxies={"http": None, "https": None})
     if r.status_code == 200:
         return r.json()
     return None
@@ -28,7 +39,7 @@ def get_brasilapi_cnpj(cnpj: str) -> dict | None:
 
 def get_receitaws_cnpj(cnpj: str) -> dict | None:
     url = f"https://www.receitaws.com.br/v1/cnpj/{cnpj}"
-    r = requests.get(url, timeout=20)
+    r = requests.get(url, timeout=20, proxies={"http": None, "https": None})
     if r.status_code == 200:
         try:
             data = r.json()
@@ -41,19 +52,24 @@ def get_receitaws_cnpj(cnpj: str) -> dict | None:
 
 
 def mapear_para_form(d: dict) -> dict:
+    # Atividade principal
     atividade = ""
-    if isinstance(d.get("atividade_principal"), list) and d["atividade_principal"]:
-        atividade = d["atividade_principal"][0].get("text") or d["atividade_principal"][0].get("descricao") or ""
-    else:
-        atividade = d.get("descricao_atividade_principal") or d.get("atividade_principal") or ""
+    ap = pick(d, "atividade_principal", "descricao_atividade_principal")
+    if isinstance(ap, list) and ap:
+        atividade = pick(ap[0], "text", "descricao") or ""
+    elif isinstance(ap, dict):
+        atividade = pick(ap, "text", "descricao") or ""
+    elif isinstance(ap, str):
+        atividade = ap
 
+    # Sócios administradores
     socio = ""
-    qsa = d.get("qsa") or d.get("quadro_societario")
+    qsa = pick(d, "qsa", "quadro_societario")
     if isinstance(qsa, list):
         admins = []
         for s in qsa:
-            nome = s.get("nome") or s.get("nome_socio") or s.get("nome_rep_legal")
-            qual = (s.get("qualificacao") or s.get("qualificacao_socio") or "").upper()
+            nome = pick(s, "nome", "nome_socio", "nome_rep_legal")
+            qual = (pick(s, "qualificacao", "qualificacao_socio", "qualificacao_rep_legal") or "").upper()
             if "ADMIN" in qual or "SÓCIO" in qual:
                 if nome:
                     admins.append(nome)
@@ -61,19 +77,19 @@ def mapear_para_form(d: dict) -> dict:
             socio = ", ".join(admins)
 
     payload = {
-        "nome_empresa": d.get("razao_social") or d.get("nome_fantasia") or "",
-        "data_abertura": ymd(d.get("data_inicio_atividade") or d.get("abertura")),
+        "nome_empresa": pick(d, "razao_social", "nome", "razao", "nome_fantasia"),
+        "data_abertura": ymd(pick(d, "data_inicio_atividade", "abertura", "data_abertura")),
         "atividade_principal": atividade,
         "socio_administrador": socio,
     }
 
     # Tributação (Simples Nacional) quando possível
     tributacao = ""
-    if d.get("opcao_pelo_simples") in (True, "SIM", "Sim", "S"):
+    if pick(d, "opcao_pelo_simples") in (True, "SIM", "Sim", "S"):
         tributacao = "Simples Nacional"
     else:
-        simples = d.get("simples") or {}
-        optante = simples.get("optante") or simples.get("optanteSimples") or simples.get("optante_simples")
+        simples = pick(d, "simples") or {}
+        optante = pick(simples, "optante", "optanteSimples", "optante_simples")
         if isinstance(optante, str):
             optante = optante.upper() in ("SIM", "S", "ATIVO", "ATIVA")
         if optante:
@@ -82,9 +98,21 @@ def mapear_para_form(d: dict) -> dict:
         payload["tributacao"] = tributacao
 
     # Usa o próprio CNPJ como código da empresa por padrão
-    cnpj_limpo = somente_numeros(d.get("cnpj") or "")
+    cnpj_limpo = somente_numeros(pick(d, "cnpj", "identificador"))
     if cnpj_limpo:
         payload["codigo_empresa"] = cnpj_limpo
+
+    # Campos adicionais para possível preenchimento automático
+    payload.update({
+        "telefone": pick(d, "telefone"),
+        "cep": somente_numeros(pick(d, "cep")),
+        "logradouro": pick(d, "logradouro", "descricao_tipo_de_logradouro"),
+        "numero": pick(d, "numero"),
+        "complemento": pick(d, "complemento"),
+        "bairro": pick(d, "bairro"),
+        "municipio": pick(d, "municipio", "cidade"),
+        "uf": pick(d, "uf", "estado"),
+    })
 
     return {k: v for k, v in payload.items() if v not in ("", None)}
 

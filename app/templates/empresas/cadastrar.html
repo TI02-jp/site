@@ -311,33 +311,42 @@ document.addEventListener("DOMContentLoaded", function () {
                     alert('Informe um CNPJ válido.');
                     return;
                 }
-                fetch(`/api/cnpj/${cnpj}`)
+                fetch(`/api/cnpj/${cnpj}`, { credentials: 'same-origin' })
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.error) {
                             alert(data.error);
                             return;
                         }
-                        if (!document.getElementById('codigo_empresa').value) {
-                            document.getElementById('codigo_empresa').value = cnpj;
-                            validateField(document.getElementById('codigo_empresa'));
-                        }
-                        if (data.nome_empresa) {
-                            document.getElementById('nome_empresa').value = data.nome_empresa;
-                            validateField(document.getElementById('nome_empresa'));
-                        }
-                        if (data.data_abertura) {
-                            document.getElementById('data_abertura').value = data.data_abertura;
-                            validateField(document.getElementById('data_abertura'));
-                        }
-                        if (data.atividade_principal) {
-                            document.getElementById('atividade_principal').value = data.atividade_principal;
-                            validateField(document.getElementById('atividade_principal'));
-                        }
-                        if (data.socio_administrador) {
-                            document.getElementById('socio_administrador').value = data.socio_administrador;
-                            validateField(document.getElementById('socio_administrador'));
-                        }
+
+                        const fieldIds = [
+                            'codigo_empresa',
+                            'nome_empresa',
+                            'data_abertura',
+                            'atividade_principal',
+                            'socio_administrador',
+                            'telefone',
+                            'cep',
+                            'logradouro',
+                            'numero',
+                            'complemento',
+                            'bairro',
+                            'municipio',
+                            'uf'
+                        ];
+
+                        fieldIds.forEach(id => {
+                            if (data[id]) {
+                                const el = document.getElementById(id);
+                                if (el) {
+                                    if (id !== 'codigo_empresa' || !el.value) {
+                                        el.value = data[id];
+                                    }
+                                    validateField(el);
+                                }
+                            }
+                        });
+
                         if (data.tributacao) {
                             const radio = document.querySelector(`input[name="tributacao"][value="${data.tributacao}"]`);
                             if (radio) {
