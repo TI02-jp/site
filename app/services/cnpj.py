@@ -66,6 +66,26 @@ def mapear_para_form(d: dict) -> dict:
         "atividade_principal": atividade,
         "socio_administrador": socio,
     }
+
+    # Tributação (Simples Nacional) quando possível
+    tributacao = ""
+    if d.get("opcao_pelo_simples") in (True, "SIM", "Sim", "S"):
+        tributacao = "Simples Nacional"
+    else:
+        simples = d.get("simples") or {}
+        optante = simples.get("optante") or simples.get("optanteSimples") or simples.get("optante_simples")
+        if isinstance(optante, str):
+            optante = optante.upper() in ("SIM", "S", "ATIVO", "ATIVA")
+        if optante:
+            tributacao = "Simples Nacional"
+    if tributacao:
+        payload["tributacao"] = tributacao
+
+    # Usa o próprio CNPJ como código da empresa por padrão
+    cnpj_limpo = somente_numeros(d.get("cnpj") or "")
+    if cnpj_limpo:
+        payload["codigo_empresa"] = cnpj_limpo
+
     return {k: v for k, v in payload.items() if v not in ("", None)}
 
 

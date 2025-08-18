@@ -318,6 +318,10 @@ document.addEventListener("DOMContentLoaded", function () {
                             alert(data.error);
                             return;
                         }
+                        if (!document.getElementById('codigo_empresa').value) {
+                            document.getElementById('codigo_empresa').value = cnpj;
+                            validateField(document.getElementById('codigo_empresa'));
+                        }
                         if (data.nome_empresa) {
                             document.getElementById('nome_empresa').value = data.nome_empresa;
                             validateField(document.getElementById('nome_empresa'));
@@ -333,6 +337,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         if (data.socio_administrador) {
                             document.getElementById('socio_administrador').value = data.socio_administrador;
                             validateField(document.getElementById('socio_administrador'));
+                        }
+                        if (data.tributacao) {
+                            const radio = document.querySelector(`input[name="tributacao"][value="${data.tributacao}"]`);
+                            if (radio) {
+                                radio.checked = true;
+                                radio.dispatchEvent(new Event('change'));
+                            }
                         }
                     })
                     .catch(() => alert('Erro ao consultar CNPJ'));
