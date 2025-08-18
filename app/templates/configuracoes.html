@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Configurações{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Configurações</li>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    Tema
+  </div>
+  <div class="card-body">
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="darkModeToggle">
+      <label class="form-check-label" for="darkModeToggle">Ativar tema escuro</label>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('darkModeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
+      toggle.checked = true;
+    }
+    toggle.addEventListener('change', function() {
+      const theme = this.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-bs-theme', theme);
+      localStorage.setItem('theme', theme);
+    });
+  });
+</script>
+{% endblock %}

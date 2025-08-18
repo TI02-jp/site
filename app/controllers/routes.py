@@ -170,6 +170,11 @@ def login():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/configuracoes')
+@login_required
+def configuracoes():
+    return render_template('configuracoes.html')
+
     ## Rota para cadastrar uma nova empresa
 
 @app.route('/cadastrar_empresa', methods=['GET', 'POST'])
