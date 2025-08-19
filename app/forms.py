@@ -138,7 +138,7 @@ class DepartamentoContabilForm(DepartamentoForm):
         ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
     ], validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
-        ('forn_cli_cota_unica', 'Fornecedor e clientes cota única'),
+        ('forn_cli_cota_unica', 'Fornecedor e clientes conta única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),
         ('adiantamentos', 'Relatório de adiantamentos'), ('contas_pagas', 'Relatório de contas pagas'),
         ('contas_recebidas', 'Relatório de contas recebidas'),
