@@ -15,8 +15,9 @@ from app.forms import (
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.services.cnpj import consultar_cnpj
+import plotly.graph_objects as go
 
 @app.context_processor
 def inject_stats():
@@ -623,6 +624,18 @@ def gerenciar_departamentos(empresa_id):
 @admin_required
 def relatorios():
     return render_template('admin/relatorios.html')
+
+
+@app.route('/relatorio_usuarios')
+@admin_required
+def relatorio_usuarios():
+    data = db.session.query(User.role, func.count(User.id)).group_by(User.role).all()
+    roles = [r for r, _ in data]
+    counts = [c for _, c in data]
+    fig = go.Figure(data=[go.Pie(labels=roles, values=counts, hole=0.4)])
+    fig.update_layout(title_text='Usuários por tipo')
+    chart_div = fig.to_html(full_html=False)
+    return render_template('admin/relatorio_usuarios.html', chart_div=chart_div)
 
 @app.route('/logout', methods=['GET'])
 @login_required
