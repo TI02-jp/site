@@ -7,7 +7,7 @@ ACESSORIAS_BASE = "https://api.acessorias.com"
 ACESSORIAS_TOKEN = os.getenv("ACESSORIAS_TOKEN")
 
 
-def get_acessorias_company(cnpj: str) -> dict | None:
+def get_acessorias_company(cnpj: str) -> dict | bool | None:
     if not ACESSORIAS_TOKEN:
         return None
     url = f"{ACESSORIAS_BASE}/companies/{cnpj}"
@@ -18,6 +18,8 @@ def get_acessorias_company(cnpj: str) -> dict | None:
             return r.json()
         except Exception:
             return None
+    if r.status_code == 404:
+        return False
     return None
 
 
@@ -221,26 +223,27 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
 
     payload = mapear_para_form(dados)
     base = get_acessorias_company(cnpj)
-    if not base:
+    if base is False and ACESSORIAS_TOKEN:
         base = upsert_acessorias_company(mapear_para_acessorias(dados))
-    if not base:
-        raise ValueError("Empresa não encontrada ou CNPJ não está na base da Acessorias")
+        if not base:
+            raise ValueError("Empresa não encontrada ou CNPJ não está na base da Acessorias")
 
-    keys = {
-        "id",
-        "codigo",
-        "cod",
-        "code",
-        "empresa_id",
-        "empresaId",
-        "empresaID",
-        "id_empresa",
-        "company_id",
-    }
-    codigo = deep_pick(base, {k.lower() for k in keys})
-    if codigo:
-        payload["codigo_empresa"] = str(codigo)
-    trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
-    if trib:
-        payload["tributacao"] = trib
+    if base:
+        keys = {
+            "id",
+            "codigo",
+            "cod",
+            "code",
+            "empresa_id",
+            "empresaId",
+            "empresaID",
+            "id_empresa",
+            "company_id",
+        }
+        codigo = deep_pick(base, {k.lower() for k in keys})
+        if codigo:
+            payload["codigo_empresa"] = str(codigo)
+        trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
+        if trib:
+            payload["tributacao"] = trib
     return payload
