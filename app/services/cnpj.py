@@ -228,7 +228,7 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     if base is False and ACESSORIAS_TOKEN:
         base = upsert_acessorias_company(mapear_para_acessorias(dados))
         if not base:
-            raise ValueError("Empresa não encontrada ou CNPJ não está na base da Acessorias")
+            raise ValueError("CNPJ não está cadastrado")
 
     if base:
         keys = {
