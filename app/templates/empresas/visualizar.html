@@ -348,7 +348,33 @@
                              <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
                              <div class="info-value">
                                 {% set placeholder_relatorios %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-earmark-x fs-2 mb-2"></i><p class="mb-0">Nenhum controle de relatório configurado</p></div>{% endset %}
-                                {{ render_badge_list(contabil.controle_relatorios, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
+                                {% set cr_raw = contabil.controle_relatorios %}
+                                {% set cr_items = [] %}
+                                {% if cr_raw is iterable and cr_raw is not string %}
+                                    {% set cr_items = cr_raw %}
+                                {% elif cr_raw is string and cr_raw.strip() %}
+                                    {% set temp_str = cr_raw.strip() %}
+                                    {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                        {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                    {% endif %}
+                                    {% set cr_items = temp_str.split(',') %}
+                                {% elif cr_raw %}
+                                    {% set cr_items = [cr_raw|string] %}
+                                {% endif %}
+                                {% set cr_map = {
+                                    'forn_cli_cota_unica': 'Fornecedor e clientes conta única',
+                                    'saldo_final_mes': 'Relatório com saldo final do mês',
+                                    'adiantamentos': 'Relatório de adiantamentos',
+                                    'contas_pagas': 'Relatório de contas pagas',
+                                    'contas_recebidas': 'Relatório de contas recebidas',
+                                    'conferir_aplicacao': 'Conferir aplicação'
+                                } %}
+                                {% set cr_ns = namespace(items=[]) %}
+                                {% for item in cr_items if item and item.strip() %}
+                                    {% set trimmed = item.strip() %}
+                                    {% set cr_ns.items = cr_ns.items + [cr_map.get(trimmed, trimmed)] %}
+                                {% endfor %}
+                                {{ render_badge_list(cr_ns.items, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
                             </div>
                         </div>
                     </div>
