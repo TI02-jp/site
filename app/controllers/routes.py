@@ -632,6 +632,21 @@ def relatorio_departamentos():
     departamentos = Departamento.query.filter_by(tipo=tipo).all()
     return render_template('admin/relatorio_departamentos.html', departamentos=departamentos, tipo=tipo)
 
+
+@app.route('/relatorios/fiscal')
+@admin_required
+def relatorio_fiscal():
+    forma = request.args.get('forma')
+    departamentos = Departamento.query.filter_by(tipo='fiscal').all()
+    form_counts = {}
+    for dep in departamentos:
+        for f in dep.formas_importacao or []:
+            form_counts[f] = form_counts.get(f, 0) + 1
+    empresas = []
+    if forma:
+        empresas = [dep.empresa for dep in departamentos if dep.formas_importacao and forma in dep.formas_importacao]
+    return render_template('admin/relatorio_fiscal.html', form_counts=form_counts, forma=forma, empresas=empresas)
+
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():

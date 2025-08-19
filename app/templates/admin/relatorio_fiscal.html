@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório Fiscal{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-primary">Relatório Fiscal</h1>
+        </div>
+    </div>
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label for="forma" class="form-label">Forma de Importação</label>
+            <select id="forma" name="forma" class="form-select" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                {% for f in form_counts.keys() %}
+                <option value="{{ f }}" {% if forma == f %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <canvas id="importChart"></canvas>
+        </div>
+    </div>
+    {% if forma %}
+    <h3>Empresas que utilizam {{ forma }} ({{ empresas|length }})</h3>
+    <ul class="list-group">
+        {% for emp in empresas %}
+        <li class="list-group-item">{{ emp.nome_empresa }}</li>
+        {% else %}
+        <li class="list-group-item text-muted">Nenhuma empresa encontrada.</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('importChart').getContext('2d');
+    const chartData = {
+        labels: {{ form_counts.keys()|list|tojson }},
+        datasets: [{
+            label: 'Empresas por Forma de Importação',
+            data: {{ form_counts.values()|list|tojson }},
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgb(54, 162, 235)',
+            borderWidth: 1
+        }]
+    };
+    new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endblock %}
