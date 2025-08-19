@@ -173,21 +173,14 @@ def extract_empresa_id(d: dict) -> str:
     """Retorna o ID da empresa, varrendo em profundidade se necessário."""
     if not isinstance(d, dict):
         return ""
-    direct = pick(
-        d,
-        "id",
-        "ID",
-        "Id",
-        "codigo_empresa",
-        "codigo",
-        "Codigo",
-    )
-    if direct not in (None, "", [], {}):
-        return str(direct)
-    nested = deep_pick(
-        d,
-        {"id", "ID", "Id", "codigo_empresa", "codigo", "Codigo"},
-    )
+    for key in ("id", "ID", "Id"):
+        val = d.get(key)
+        if val not in (None, "", [], {}):
+            try:
+                return str(int(val))
+            except (ValueError, TypeError):
+                return str(val)
+    nested = deep_pick(d, {"id", "ID", "Id"})
     return str(nested) if nested not in (None, "", [], {}) else ""
 
 
