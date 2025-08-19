@@ -184,23 +184,34 @@ def extract_empresa_id(d: dict) -> str:
     return str(nested) if nested not in (None, "", [], {}) else ""
 
 
-def mapear_para_form(d: dict) -> dict:
-    # Atividade principal
-    atividade = extract_atividade_principal(d)
-
-    # Sócios administradores
-    socio = ""
-    qsa = pick(d, "qsa", "quadro_societario")
+def extract_socio_administrador(d: dict) -> str:
+    """Retorna os nomes dos sócios administradores."""
+    socio = deep_pick(d, {"socio_administrador", "socioAdministrador"})
+    if isinstance(socio, str) and socio:
+        return socio
+    qsa = deep_pick(d, {"qsa", "quadro_societario"})
     if isinstance(qsa, list):
         admins = []
         for s in qsa:
-            nome = pick(s, "nome", "nome_socio", "nome_rep_legal")
-            qual = (pick(s, "qualificacao", "qualificacao_socio", "qualificacao_rep_legal") or "").upper()
-            if "ADMIN" in qual or "SÓCIO" in qual:
+            qual = pick(
+                s,
+                "qualificacao",
+                "qualificacao_socio",
+                "qualificacao_rep_legal",
+            )
+            if isinstance(qual, str) and "ADMINISTRADOR" in qual.upper():
+                nome = pick(s, "nome", "nome_socio", "nome_rep_legal")
                 if nome:
                     admins.append(nome)
         if admins:
-            socio = ", ".join(admins)
+            return ", ".join(admins)
+    return ""
+
+
+def mapear_para_form(d: dict) -> dict:
+    # Atividade principal
+    atividade = extract_atividade_principal(d)
+    socio = extract_socio_administrador(d)
 
     payload = {
         "nome_empresa": pick(d, "razao_social", "nome", "razao", "nome_fantasia"),
@@ -262,6 +273,9 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         atividade = extract_atividade_principal(base)
         if atividade:
             payload["atividade_principal"] = atividade
+        socio = extract_socio_administrador(base)
+        if socio:
+            payload["socio_administrador"] = socio
         trib = regime_to_tributacao(
             deep_pick(base, {"regime", "regime_tributario", "tributacao"})
         )
