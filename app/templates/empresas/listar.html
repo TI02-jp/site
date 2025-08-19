@@ -25,6 +25,8 @@
     <!-- Barra de Pesquisa -->
     <form method="GET" class="d-flex mb-3">
         <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar empresa" value="{{ search or '' }}">
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="order" value="{{ order }}">
         <button class="btn btn-outline-secondary" type="submit">
             <i class="bi bi-search"></i>
         </button>
@@ -37,8 +39,24 @@
                 <table class="table-empresas">
                     <thead>
                         <tr>
-                            <th class="codigo-col">Código</th>
-                            <th>Nome da Empresa</th>
+                            <th class="codigo-col">
+                                Código
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='asc') }}" class="text-white ms-1" title="Código crescente">
+                                    <i class="bi bi-sort-numeric-down"></i>
+                                </a>
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='desc') }}" class="text-white" title="Código decrescente">
+                                    <i class="bi bi-sort-numeric-up"></i>
+                                </a>
+                            </th>
+                            <th>
+                                Nome da Empresa
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc') }}" class="text-white ms-1" title="Nome A-Z">
+                                    <i class="bi bi-sort-alpha-down"></i>
+                                </a>
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='desc') }}" class="text-white" title="Nome Z-A">
+                                    <i class="bi bi-sort-alpha-up"></i>
+                                </a>
+                            </th>
                             <th class="cnpj-col">CNPJ</th>
                             <th class="tributacao-col">Tributação</th>
                             <th class="acao-col">Ações</th>
