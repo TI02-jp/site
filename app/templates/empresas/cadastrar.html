@@ -12,6 +12,7 @@
         </div>
         
         <div class="card-body p-4">
+            <div class="flash-messages-container"></div>
             <form method="POST" action="{{ url_for('cadastrar_empresa') }}" novalidate>
                 {{ form.hidden_tag() }}
 
@@ -263,16 +264,27 @@
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Auto-dismiss alerts
-    const alerts = document.querySelectorAll('.flash-messages-container .alert-dismissible');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            if (alert && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+    // Auto-dismiss existing alerts
+    const autoDismiss = (alertEl) => {
+        setTimeout(() => {
+            if (alertEl && bootstrap.Alert) {
+                bootstrap.Alert.getOrCreateInstance(alertEl).close();
             }
         }, 5000);
-    });
+    };
+    document.querySelectorAll('.alert-dismissible').forEach(autoDismiss);
+
+    function showFlashMessage(message, category = 'danger') {
+        const container = document.querySelector('.flash-messages-container');
+        if (!container) return;
+        const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>`;
+        container.appendChild(alertDiv);
+        autoDismiss(alertDiv);
+    }
 
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
@@ -323,7 +335,7 @@ document.addEventListener("DOMContentLoaded", function () {
             buscarCnpjBtn.addEventListener('click', function () {
                 const cnpj = cnpjField.value.replace(/\D/g, '');
                 if (cnpj.length !== 14) {
-                    alert('Informe um CNPJ válido.');
+                    showFlashMessage('Informe um CNPJ válido.');
                     clearCnpjFields();
                     return;
                 }
@@ -331,7 +343,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.error) {
-                            alert(data.error);
+                            showFlashMessage(data.error);
                             clearCnpjFields();
                             return;
                         }
@@ -355,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         }
                     })
                     .catch(() => {
-                        alert('Erro ao consultar CNPJ');
+                        showFlashMessage('Erro ao consultar CNPJ');
                         clearCnpjFields();
                     });
             });
@@ -515,7 +527,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (!formIsValid) {
                 e.preventDefault(); // Impede a submissão se houver erros
-                alert('Por favor, corrija os erros no formulário antes de continuar.'); // Alerta genérico
+                showFlashMessage('Por favor, corrija os erros no formulário antes de continuar.');
                 // Foca no primeiro campo inválido
                 const firstInvalidField = document.querySelector('.is-invalid');
                 if (firstInvalidField) {
