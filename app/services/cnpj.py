@@ -215,6 +215,8 @@ def mapear_para_form(d: dict) -> dict:
 
 def consultar_cnpj(cnpj_input: str) -> dict | None:
     cnpj = somente_numeros(cnpj_input)
+    if len(cnpj) != 14:
+        raise ValueError("CNPJ inválido")
     dados = get_brasilapi_cnpj(cnpj)
     if not dados:
         dados = get_receitaws_cnpj(cnpj)
