@@ -170,8 +170,10 @@ def extract_atividade_principal(d: dict) -> str:
 
 
 def extract_empresa_id(d: dict) -> str:
-    """Retorna o ID da empresa considerando variações de chave."""
-    return pick(
+    """Retorna o ID da empresa, varrendo em profundidade se necessário."""
+    if not isinstance(d, dict):
+        return ""
+    direct = pick(
         d,
         "id",
         "ID",
@@ -180,6 +182,13 @@ def extract_empresa_id(d: dict) -> str:
         "codigo",
         "Codigo",
     )
+    if direct not in (None, "", [], {}):
+        return str(direct)
+    nested = deep_pick(
+        d,
+        {"id", "ID", "Id", "codigo_empresa", "codigo", "Codigo"},
+    )
+    return str(nested) if nested not in (None, "", [], {}) else ""
 
 
 def mapear_para_form(d: dict) -> dict:
@@ -250,16 +259,11 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
 
     base = get_acessorias_company(cnpj)
     if not base:
-        # cria a empresa caso não exista e usa a resposta para obter o ID
-        base = upsert_acessorias_company(acessorias_payload) or get_acessorias_company(cnpj)
+        upsert_acessorias_company(acessorias_payload)
+        base = get_acessorias_company(cnpj)
 
     if base:
         empresa_id = extract_empresa_id(base)
-        if not empresa_id:
-            criado = upsert_acessorias_company(acessorias_payload)
-            if criado:
-                empresa_id = extract_empresa_id(criado)
-                base = base or criado
         if empresa_id:
             payload["codigo_empresa"] = empresa_id
         atividade = extract_atividade_principal(base)
