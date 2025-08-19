@@ -169,6 +169,19 @@ def extract_atividade_principal(d: dict) -> str:
     return ""
 
 
+def extract_empresa_id(d: dict) -> str:
+    """Retorna o ID da empresa considerando variações de chave."""
+    return pick(
+        d,
+        "id",
+        "ID",
+        "Id",
+        "codigo_empresa",
+        "codigo",
+        "Codigo",
+    )
+
+
 def mapear_para_form(d: dict) -> dict:
     # Atividade principal
     atividade = extract_atividade_principal(d)
@@ -241,13 +254,13 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         base = upsert_acessorias_company(acessorias_payload) or get_acessorias_company(cnpj)
 
     if base:
-        empresa_id = base.get("id")
+        empresa_id = extract_empresa_id(base)
         if not empresa_id:
             criado = upsert_acessorias_company(acessorias_payload)
             if criado:
-                empresa_id = criado.get("id")
+                empresa_id = extract_empresa_id(criado)
                 base = base or criado
-        if empresa_id is not None:
+        if empresa_id:
             payload["codigo_empresa"] = empresa_id
         atividade = extract_atividade_principal(base)
         if atividade:
