@@ -277,6 +277,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function showFlashMessage(message, category = 'danger') {
         const container = document.querySelector('.flash-messages-container');
         if (!container) return;
+        container.innerHTML = '';
         const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
