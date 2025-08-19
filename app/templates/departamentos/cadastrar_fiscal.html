@@ -40,6 +40,15 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-importacao">
+                            <i class="bi bi-plus-circle"></i> Adicionar Observação
+                        </button>
+                        <div id="obs-importacao-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_importacao(class="form-control", id="observacao_importacao", placeholder="Observação", style="height: 120px") }}
+                            {{ form.observacao_importacao.label(class="form-label") }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row mb-4">
@@ -57,6 +66,13 @@
                             <i class="bi bi-plus-circle"></i> Adicionar Link
                         </button>
                         {{ form.links_prefeitura_json(id='links_prefeitura_json') }}
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-prefeitura">
+                            <i class="bi bi-plus-circle"></i> Adicionar Observação
+                        </button>
+                        <div id="obs-prefeitura-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_prefeitura(class="form-control", id="observacao_prefeitura", placeholder="Observação", style="height: 120px") }}
+                            {{ form.observacao_prefeitura.label(class="form-label") }}
+                        </div>
                     </div>
                 </div>
 
@@ -117,6 +133,18 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-obs-envio">
+                            <i class="bi bi-plus-circle"></i> Adicionar Observação
+                        </button>
+                        <div id="obs-envio-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_movimento(class="form-control", id="observacao_movimento", placeholder="Observação", style="height: 120px") }}
+                            {{ form.observacao_movimento.label(class="form-label") }}
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
@@ -134,11 +162,13 @@
                         </button>
                         {{ form.contatos_json(id='contatos_json') }}
                     </div>
-
                     <div class="col-md-6">
-                        <div class="form-floating mb-3">
-                            {{ form.observacao_movimento(class="form-control", placeholder="Observação", style="height: 120px") }}
-                            {{ form.observacao_movimento.label(class="form-label") }}
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-contato">
+                            <i class="bi bi-plus-circle"></i> Adicionar Observação
+                        </button>
+                        <div id="obs-contato-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_contato(class="form-control", id="observacao_contato", placeholder="Observação", style="height: 120px") }}
+                            {{ form.observacao_contato.label(class="form-label") }}
                         </div>
                     </div>
                 </div>
@@ -205,10 +235,16 @@
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function () {
     
+    setupObservacao('add-obs-importacao', 'obs-importacao-container', 'observacao_importacao');
+    setupObservacao('add-obs-prefeitura', 'obs-prefeitura-container', 'observacao_prefeitura');
+    setupObservacao('add-obs-envio', 'obs-envio-container', 'observacao_movimento');
+    setupObservacao('add-obs-contato', 'obs-contato-container', 'observacao_contato');
+
     // Função de upload de imagem
     function uploadImage(file) {
         return new Promise((resolve, reject) => {
