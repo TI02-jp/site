@@ -179,11 +179,13 @@ def api_cnpj(cnpj):
     except ValueError as e:
         msg = str(e)
         status = 400 if 'inválido' in msg.lower() or 'invalido' in msg.lower() else 404
+        if status == 404:
+            msg = 'CNPJ não está cadastrado'
         return jsonify({'error': msg}), status
     except Exception:
         return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
     if not dados:
-        return jsonify({'error': 'CNPJ não encontrado'}), 404
+        return jsonify({'error': 'CNPJ não está cadastrado'}), 404
     return jsonify(dados)
 
     ## Rota para cadastrar uma nova empresa
