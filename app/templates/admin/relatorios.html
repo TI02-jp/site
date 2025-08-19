@@ -72,10 +72,10 @@
                         Análise detalhada dos dados fiscais, obrigações tributárias e configurações de envio digital das empresas.
                     </p>
                     <div class="mb-3">
-                        <span class="badge bg-warning-subtle text-warning">
-                            <i class="bi bi-clock me-1"></i>Em desenvolvimento
-                        </span>
-                    </div>
+        <span class="badge bg-primary-subtle text-primary">
+            <i class="bi bi-check-circle me-1"></i>Disponível
+        </span>
+    </div>
                     <ul class="list-unstyled small text-muted mb-3">
                         <li><i class="bi bi-hourglass me-2 text-warning"></i>Obrigações fiscais por empresa</li>
                         <li><i class="bi bi-hourglass me-2 text-warning"></i>Cronograma de entregas</li>
@@ -83,9 +83,9 @@
                     </ul>
                 </div>
                 <div class="card-footer bg-transparent border-0">
-                    <button class="btn btn-success w-100 disabled" disabled>
-                        <i class="bi bi-tools me-2"></i>Em Breve
-                    </button>
+                    <a href="{{ url_for('relatorio_fiscal_importacoes') }}" class="btn btn-success w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
                 </div>
             </div>
         </div>

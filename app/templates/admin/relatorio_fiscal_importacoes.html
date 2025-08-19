@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Relatório Fiscal - Importações{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="text-primary mb-4"><i class="bi bi-pie-chart me-2"></i>Importações - Departamento Fiscal</h1>
+    <div id="import-chart"></div>
+    <div id="selected-count" class="mt-3 text-center fw-bold"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    var graphs = {{ graphJSON | safe }};
+    var chartDiv = document.getElementById('import-chart');
+    Plotly.newPlot(chartDiv, graphs.data, graphs.layout);
+    chartDiv.on('plotly_click', function(data){
+        var label = data.points[0].label;
+        var value = data.points[0].value;
+        document.getElementById('selected-count').innerHTML = label + ': ' + value + ' empresas';
+    });
+</script>
+{% endblock %}

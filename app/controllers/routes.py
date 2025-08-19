@@ -17,6 +17,9 @@ from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
+from collections import Counter
+import plotly
+import plotly.graph_objs as go
 
 @app.context_processor
 def inject_stats():
@@ -713,3 +716,32 @@ def edit_user(user_id):
         return redirect(url_for('list_users'))
 
     return render_template('edit_user.html', form=form)
+
+@app.route('/relatorios/fiscal/importacoes')
+@admin_required
+def relatorio_fiscal_importacoes():
+    fiscal_departments = Departamento.query.filter_by(tipo='fiscal').all()
+    counts = Counter()
+    for dept in fiscal_departments:
+        formas = dept.formas_importacao or []
+        for forma in formas:
+            counts[forma] += 1
+    label_map = {
+        'entradas_sped': 'Entradas por Sped',
+        'entradas_xml': 'Entradas por XML',
+        'entradas_sat': 'Entradas pelo SAT',
+        'entradas_sieg': 'Entradas pelo Sieg',
+        'saidas_sped': 'Saídas por Sped',
+        'saidas_xml': 'Saídas por XML',
+        'saidas_sieg': 'Saídas pelo SIEG',
+        'nfce_sped': 'NFCe por Sped',
+        'nfce_xml_sieg': 'NFCe por XML - Sieg',
+        'nfce_xml_cliente': 'NFCe por XML - Copiado do cliente',
+        'nenhum': 'Não importa nada',
+    }
+    labels = [label_map.get(k, k) for k in counts.keys()]
+    values = [counts[k] for k in counts.keys()]
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
+    fig.update_layout(title_text='Formas de Importação - Departamento Fiscal')
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('admin/relatorio_fiscal_importacoes.html', graphJSON=graphJSON)
