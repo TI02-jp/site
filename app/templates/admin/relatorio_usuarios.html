@@ -5,8 +5,28 @@
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Usuários por Tipo e Status</h1>
-    <div>
+    <div id="chart-container">
         {{ chart_div|safe }}
     </div>
+    <div id="user-list" class="mt-4"></div>
 </div>
+<script>
+    const usersBySlice = {{ users_by_slice|tojson }};
+    const chart = document.getElementById('user-role-chart');
+    if (chart) {
+        chart.on('plotly_click', function(data){
+            const label = data.points[0].label;
+            const users = usersBySlice[label] || [];
+            const container = document.getElementById('user-list');
+            if (!users.length) {
+                container.innerHTML = '<p>Nenhum usuário encontrado.</p>';
+                return;
+            }
+            let html = '<ul>';
+            users.forEach(name => { html += `<li>${name}</li>`; });
+            html += '</ul>';
+            container.innerHTML = html;
+        });
+    }
+</script>
 {% endblock %}

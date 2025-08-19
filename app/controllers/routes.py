@@ -15,7 +15,7 @@ from app.forms import (
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_, func
+from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 
@@ -629,23 +629,26 @@ def relatorios():
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
-    data = (
-        db.session
-        .query(User.role, User.ativo, func.count(User.id))
-        .group_by(User.role, User.ativo)
-        .all()
-    )
+    users = User.query.with_entities(User.username, User.role, User.ativo).all()
+    grouped = {}
     labels = []
     counts = []
-    for role, ativo, count in data:
+    for username, role, ativo in users:
         tipo = 'Admin' if role == 'admin' else 'Usuário'
         status = 'Ativo' if ativo else 'Inativo'
-        labels.append(f'{tipo} {status}')
-        counts.append(count)
+        label = f'{tipo} {status}'
+        grouped.setdefault(label, []).append(username)
+    for label, nomes in grouped.items():
+        labels.append(label)
+        counts.append(len(nomes))
     fig = go.Figure(data=[go.Pie(labels=labels, values=counts, hole=0.4)])
     fig.update_layout(title_text='Usuários por tipo e status')
-    chart_div = fig.to_html(full_html=False)
-    return render_template('admin/relatorio_usuarios.html', chart_div=chart_div)
+    chart_div = fig.to_html(full_html=False, div_id='user-role-chart')
+    return render_template(
+        'admin/relatorio_usuarios.html',
+        chart_div=chart_div,
+        users_by_slice=grouped,
+    )
 
 @app.route('/logout', methods=['GET'])
 @login_required
