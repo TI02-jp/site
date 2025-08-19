@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Departamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-primary">Relatório de Departamentos</h1>
+        </div>
+    </div>
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label for="tipo" class="form-label">Tipo de Departamento</label>
+            <select id="tipo" name="tipo" class="form-select" onchange="this.form.submit()">
+                {% for t in ['fiscal', 'contabil', 'pessoal', 'administrativo'] %}
+                <option value="{{ t }}" {% if t == tipo %}selected{% endif %}>{{ t.capitalize() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Formas de Importação</th>
+                    <th>Envio Digital</th>
+                    <th>Envio Físico</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dep in departamentos %}
+                <tr>
+                    <td>{{ dep.empresa.nome_empresa }}</td>
+                    <td>{{ dep.formas_importacao|join(', ') if dep.formas_importacao else '-' }}</td>
+                    <td>{{ dep.envio_digital|join(', ') if dep.envio_digital else '-' }}</td>
+                    <td>{{ dep.envio_fisico|join(', ') if dep.envio_fisico else '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">Nenhum departamento encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

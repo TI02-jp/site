@@ -624,6 +624,14 @@ def gerenciar_departamentos(empresa_id):
 def relatorios():
     return render_template('admin/relatorios.html')
 
+
+@app.route('/relatorios/departamentos')
+@admin_required
+def relatorio_departamentos():
+    tipo = request.args.get('tipo', 'fiscal')
+    departamentos = Departamento.query.filter_by(tipo=tipo).all()
+    return render_template('admin/relatorio_departamentos.html', departamentos=departamentos, tipo=tipo)
+
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
