@@ -343,7 +343,7 @@ def editar_empresa(id):
             try:
                 db.session.commit()
                 flash('Dados da Empresa salvos com sucesso!', 'success')
-                return redirect(url_for('editar_empresa', id=id))
+                return redirect(url_for('visualizar_empresa', id=id) + '#dados-empresa')
             except Exception as e:
                 db.session.rollback()
                 flash(f'Erro ao salvar: {str(e)}', 'danger')
