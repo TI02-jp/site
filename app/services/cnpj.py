@@ -259,8 +259,8 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
 
     base = get_acessorias_company(cnpj)
     if not base:
-        upsert_acessorias_company(acessorias_payload)
-        base = get_acessorias_company(cnpj)
+        created = upsert_acessorias_company(acessorias_payload)
+        base = created or get_acessorias_company(cnpj)
 
     if base:
         empresa_id = extract_empresa_id(base)
