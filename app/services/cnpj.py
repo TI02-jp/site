@@ -223,22 +223,24 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     base = get_acessorias_company(cnpj)
     if not base:
         base = upsert_acessorias_company(mapear_para_acessorias(dados))
-    if base:
-        keys = {
-            "id",
-            "codigo",
-            "cod",
-            "code",
-            "empresa_id",
-            "empresaId",
-            "empresaID",
-            "id_empresa",
-            "company_id",
-        }
-        codigo = deep_pick(base, {k.lower() for k in keys})
-        if codigo:
-            payload["codigo_empresa"] = str(codigo)
-        trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
-        if trib:
-            payload["tributacao"] = trib
+    if not base:
+        raise ValueError("Empresa não encontrada ou CNPJ não está na base da Acessorias")
+
+    keys = {
+        "id",
+        "codigo",
+        "cod",
+        "code",
+        "empresa_id",
+        "empresaId",
+        "empresaID",
+        "id_empresa",
+        "company_id",
+    }
+    codigo = deep_pick(base, {k.lower() for k in keys})
+    if codigo:
+        payload["codigo_empresa"] = str(codigo)
+    trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
+    if trib:
+        payload["tributacao"] = trib
     return payload

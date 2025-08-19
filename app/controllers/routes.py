@@ -174,7 +174,12 @@ def dashboard():
 @app.route('/api/cnpj/<cnpj>')
 @login_required
 def api_cnpj(cnpj):
-    dados = consultar_cnpj(cnpj)
+    try:
+        dados = consultar_cnpj(cnpj)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception:
+        return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
     if not dados:
         return jsonify({'error': 'CNPJ não encontrado'}), 404
     return jsonify(dados)
