@@ -629,11 +629,21 @@ def relatorios():
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
-    data = db.session.query(User.role, func.count(User.id)).group_by(User.role).all()
-    roles = [r for r, _ in data]
-    counts = [c for _, c in data]
-    fig = go.Figure(data=[go.Pie(labels=roles, values=counts, hole=0.4)])
-    fig.update_layout(title_text='Usuários por tipo')
+    data = (
+        db.session
+        .query(User.role, User.ativo, func.count(User.id))
+        .group_by(User.role, User.ativo)
+        .all()
+    )
+    labels = []
+    counts = []
+    for role, ativo, count in data:
+        tipo = 'Admin' if role == 'admin' else 'Usuário'
+        status = 'Ativo' if ativo else 'Inativo'
+        labels.append(f'{tipo} {status}')
+        counts.append(count)
+    fig = go.Figure(data=[go.Pie(labels=labels, values=counts, hole=0.4)])
+    fig.update_layout(title_text='Usuários por tipo e status')
     chart_div = fig.to_html(full_html=False)
     return render_template('admin/relatorio_usuarios.html', chart_div=chart_div)
 
