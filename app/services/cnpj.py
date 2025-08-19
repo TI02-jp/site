@@ -208,17 +208,49 @@ def extract_socio_administrador(d: dict) -> str:
     return ""
 
 
-def mapear_para_form(d: dict) -> dict:
-    # Atividade principal
-    atividade = extract_atividade_principal(d)
-    socio = extract_socio_administrador(d)
+def mapear_para_form(d: dict | None) -> dict:
+    """Monta o payload do formulário, retornando chaves vazias quando não houver dados."""
 
     payload = {
-        "nome_empresa": pick(d, "razao_social", "nome", "razao", "nome_fantasia"),
-        "data_abertura": ymd(pick(d, "data_inicio_atividade", "abertura", "data_abertura")),
-        "atividade_principal": atividade,
-        "socio_administrador": socio,
+        "nome_empresa": "",
+        "data_abertura": "",
+        "atividade_principal": "",
+        "socio_administrador": "",
+        "tributacao": "",
+        "telefone": "",
+        "cep": "",
+        "logradouro": "",
+        "numero": "",
+        "complemento": "",
+        "bairro": "",
+        "municipio": "",
+        "uf": "",
+        "codigo_empresa": "",
     }
+
+    if not isinstance(d, dict):
+        return payload
+
+    # Atividade principal e sócio administrador
+    payload["atividade_principal"] = extract_atividade_principal(d)
+    payload["socio_administrador"] = extract_socio_administrador(d)
+
+    payload.update(
+        {
+            "nome_empresa": pick(d, "razao_social", "nome", "razao", "nome_fantasia"),
+            "data_abertura": ymd(
+                pick(d, "data_inicio_atividade", "abertura", "data_abertura")
+            ),
+            "telefone": pick(d, "telefone"),
+            "cep": somente_numeros(pick(d, "cep")),
+            "logradouro": pick(d, "logradouro", "descricao_tipo_de_logradouro"),
+            "numero": pick(d, "numero"),
+            "complemento": pick(d, "complemento"),
+            "bairro": pick(d, "bairro"),
+            "municipio": pick(d, "municipio", "cidade"),
+            "uf": pick(d, "uf", "estado"),
+        }
+    )
 
     # Tributação
     tributacao = regime_to_tributacao(pick(d, "regime", "regime_tributario", "tributacao"))
@@ -235,34 +267,18 @@ def mapear_para_form(d: dict) -> dict:
     if tributacao:
         payload["tributacao"] = tributacao
 
-    # Campos adicionais para possível preenchimento automático
-    payload.update({
-        "telefone": pick(d, "telefone"),
-        "cep": somente_numeros(pick(d, "cep")),
-        "logradouro": pick(d, "logradouro", "descricao_tipo_de_logradouro"),
-        "numero": pick(d, "numero"),
-        "complemento": pick(d, "complemento"),
-        "bairro": pick(d, "bairro"),
-        "municipio": pick(d, "municipio", "cidade"),
-        "uf": pick(d, "uf", "estado"),
-    })
-
-    return {k: v for k, v in payload.items() if v not in ("", None)}
+    return payload
 
 
-def consultar_cnpj(cnpj_input: str) -> dict | None:
+def consultar_cnpj(cnpj_input: str) -> dict:
     cnpj = somente_numeros(cnpj_input)
-    dados = get_brasilapi_cnpj(cnpj)
-    if not dados:
-        dados = get_receitaws_cnpj(cnpj)
-    if not dados:
-        return None
+    dados = get_brasilapi_cnpj(cnpj) or get_receitaws_cnpj(cnpj)
 
     payload = mapear_para_form(dados)
-    acessorias_payload = mapear_para_acessorias(dados)
+    acessorias_payload = mapear_para_acessorias(dados) if isinstance(dados, dict) else {}
 
     base = get_acessorias_company(cnpj)
-    if not base:
+    if not base and acessorias_payload:
         created = upsert_acessorias_company(acessorias_payload)
         base = created or get_acessorias_company(cnpj)
 
