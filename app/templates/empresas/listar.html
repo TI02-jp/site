@@ -35,9 +35,8 @@
     <!-- Tabela de Empresas -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table-empresas">
-                    <thead>
+            <table class="table-empresas">
+                <thead>
                         <tr>
                             <th class="codigo-col">
                                 Código
@@ -61,71 +60,65 @@
                             <th class="tributacao-col">Tributação</th>
                             <th class="acao-col">Ações</th>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {% for empresa in empresas %}
-                        <tr>
-                            <td class="codigo-col">
-                                <span class="badge bg-primary-subtle text-primary fw-semibold">
-                                    {{ empresa.codigo_empresa }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-building me-2 text-muted"></i>
-                                    <div>
-                                        <div class="fw-semibold">{{ empresa.nome_empresa }}</div>
-                                        {% if empresa.socio_administrador %}
-                                        <small class="text-muted">{{ empresa.socio_administrador }}</small>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="cnpj-col">
-                                <span class="font-monospace cnpj-formatted">{{ empresa.cnpj }}</span>
-                            </td>
-                            <td class="tributacao-col">
-                                {% if empresa.tributacao %}
-                                <span class="badge bg-success-subtle text-success">{{ empresa.tributacao }}</span>
-                                {% else %}
-                                <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td class="acao-col">
-                                <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" 
-                                   class="btn btn-custom btn-sm" 
-                                   title="Gerenciar Departamentos">
-                                    <i class="bi bi-diagram-3"></i>
+                </thead>
+                <tbody>
+                    {% for empresa in empresas %}
+                    <tr>
+                        <td class="codigo-col">
+                            <span class="badge bg-primary-subtle text-primary fw-semibold">
+                                {{ empresa.codigo_empresa }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-building me-2 text-muted"></i>
+                                <div class="fw-semibold">{{ empresa.nome_empresa }}</div>
+                            </div>
+                        </td>
+                        <td class="cnpj-col">
+                            <span class="font-monospace cnpj-formatted">{{ empresa.cnpj }}</span>
+                        </td>
+                        <td class="tributacao-col">
+                            {% if empresa.tributacao %}
+                            <span class="badge bg-success-subtle text-success">{{ empresa.tributacao }}</span>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="acao-col">
+                            <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}"
+                               class="btn btn-custom btn-sm"
+                               title="Gerenciar Departamentos">
+                                <i class="bi bi-diagram-3"></i>
+                            </a>
+                            <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}"
+                               class="btn btn-custom btn-sm"
+                               title="Visualizar Empresa">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('editar_empresa', id=empresa.id) }}"
+                               class="btn btn-custom btn-sm"
+                               title="Editar Empresa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
+                                <h5>Nenhuma empresa cadastrada</h5>
+                                <p class="mb-3">Comece cadastrando sua primeira empresa</p>
+                                <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
+                                    <i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira Empresa
                                 </a>
-                                <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}" 
-                                   class="btn btn-custom btn-sm" 
-                                   title="Visualizar Empresa">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ url_for('editar_empresa', id=empresa.id) }}" 
-                                   class="btn btn-custom btn-sm" 
-                                   title="Editar Empresa">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
-                                    <h5>Nenhuma empresa cadastrada</h5>
-                                    <p class="mb-3">Comece cadastrando sua primeira empresa</p>
-                                    <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
-                                        <i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira Empresa
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
