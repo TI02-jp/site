@@ -238,7 +238,38 @@
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
                             <div class="info-value">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
-                                {{ render_badge_list(fiscal.formas_importacao, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
+                                {% set fi_raw = fiscal.formas_importacao %}
+                                {% set fi_items = [] %}
+                                {% if fi_raw is iterable and fi_raw is not string %}
+                                    {% set fi_items = fi_raw %}
+                                {% elif fi_raw is string and fi_raw.strip() %}
+                                    {% set temp_str = fi_raw.strip() %}
+                                    {% if temp_str.startswith('[') and temp_str.endswith(']') %}
+                                        {% set temp_str = temp_str[1:-1]|replace('"', '')|replace("'", '') %}
+                                    {% endif %}
+                                    {% set fi_items = temp_str.split(',') %}
+                                {% elif fi_raw %}
+                                    {% set fi_items = [fi_raw|string] %}
+                                {% endif %}
+                                {% set fi_map = {
+                                    'entradas_sped': 'Entradas por Sped',
+                                    'entradas_xml': 'Entradas por XML',
+                                    'entradas_sat': 'Entradas pelo SAT',
+                                    'entradas_sieg': 'Entradas pelo Sieg',
+                                    'saidas_sped': 'Saídas por Sped',
+                                    'saidas_xml': 'Saídas por XML',
+                                    'saidas_sieg': 'Saídas pelo SIEG',
+                                    'nfce_sped': 'NFCe por Sped',
+                                    'nfce_xml_sieg': 'NFCe por XML - Sieg',
+                                    'nfce_xml_cliente': 'NFCe por XML - Copiado do cliente',
+                                    'nenhum': 'Não importa nada'
+                                } %}
+                                {% set fi_ns = namespace(items=[]) %}
+                                {% for item in fi_items if item and item.strip() %}
+                                    {% set trimmed = item.strip() %}
+                                    {% set fi_ns.items = fi_ns.items + [fi_map.get(trimmed, trimmed)] %}
+                                {% endfor %}
+                                {{ render_badge_list(fi_ns.items, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                         </div>
                         <div class="info-group mt-4">
