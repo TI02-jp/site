@@ -149,30 +149,69 @@ def get_receitaws_cnpj(cnpj: str) -> dict | None:
     return None
 
 
-def mapear_para_form(d: dict) -> dict:
-    # Atividade principal
-    atividade = ""
-    ap = pick(d, "atividade_principal", "descricao_atividade_principal")
+def extract_atividade_principal(d: dict) -> str:
+    """Tenta encontrar a descrição da atividade principal em várias estruturas."""
+    ap = deep_pick(
+        d,
+        {
+            "atividade_principal",
+            "descricao_atividade_principal",
+            "cnae_principal",
+            "cnae",
+        },
+    )
     if isinstance(ap, list) and ap:
-        atividade = pick(ap[0], "text", "descricao") or ""
-    elif isinstance(ap, dict):
-        atividade = pick(ap, "text", "descricao") or ""
-    elif isinstance(ap, str):
-        atividade = ap
+        return pick(ap[0], "text", "descricao", "descricaoCNAE", "desc") or ""
+    if isinstance(ap, dict):
+        return pick(ap, "text", "descricao", "descricaoCNAE", "desc") or ""
+    if isinstance(ap, str):
+        return ap
+    return ""
 
-    # Sócios administradores
-    socio = ""
-    qsa = pick(d, "qsa", "quadro_societario")
+
+def extract_empresa_id(d: dict) -> str:
+    """Retorna o ID da empresa, varrendo em profundidade se necessário."""
+    if not isinstance(d, dict):
+        return ""
+    for key in ("id", "ID", "Id"):
+        val = d.get(key)
+        if val not in (None, "", [], {}):
+            try:
+                return str(int(val))
+            except (ValueError, TypeError):
+                return str(val)
+    nested = deep_pick(d, {"id", "ID", "Id"})
+    return str(nested) if nested not in (None, "", [], {}) else ""
+
+
+def extract_socio_administrador(d: dict) -> str:
+    """Retorna os nomes dos sócios administradores."""
+    socio = deep_pick(d, {"socio_administrador", "socioAdministrador"})
+    if isinstance(socio, str) and socio:
+        return socio
+    qsa = deep_pick(d, {"qsa", "quadro_societario"})
     if isinstance(qsa, list):
         admins = []
         for s in qsa:
-            nome = pick(s, "nome", "nome_socio", "nome_rep_legal")
-            qual = (pick(s, "qualificacao", "qualificacao_socio", "qualificacao_rep_legal") or "").upper()
-            if "ADMIN" in qual or "SÓCIO" in qual:
+            qual = pick(
+                s,
+                "qualificacao",
+                "qualificacao_socio",
+                "qualificacao_rep_legal",
+            )
+            if isinstance(qual, str) and "ADMINISTRADOR" in qual.upper():
+                nome = pick(s, "nome", "nome_socio", "nome_rep_legal")
                 if nome:
                     admins.append(nome)
         if admins:
-            socio = ", ".join(admins)
+            return ", ".join(admins)
+    return ""
+
+
+def mapear_para_form(d: dict) -> dict:
+    # Atividade principal
+    atividade = extract_atividade_principal(d)
+    socio = extract_socio_administrador(d)
 
     payload = {
         "nome_empresa": pick(d, "razao_social", "nome", "razao", "nome_fantasia"),
@@ -220,25 +259,26 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
         return None
 
     payload = mapear_para_form(dados)
+    acessorias_payload = mapear_para_acessorias(dados)
+
     base = get_acessorias_company(cnpj)
     if not base:
-        base = upsert_acessorias_company(mapear_para_acessorias(dados))
+        created = upsert_acessorias_company(acessorias_payload)
+        base = created or get_acessorias_company(cnpj)
+
     if base:
-        keys = {
-            "id",
-            "codigo",
-            "cod",
-            "code",
-            "empresa_id",
-            "empresaId",
-            "empresaID",
-            "id_empresa",
-            "company_id",
-        }
-        codigo = deep_pick(base, {k.lower() for k in keys})
-        if codigo:
-            payload["codigo_empresa"] = str(codigo)
-        trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
+        empresa_id = extract_empresa_id(base)
+        if empresa_id:
+            payload["codigo_empresa"] = empresa_id
+        atividade = extract_atividade_principal(base)
+        if atividade:
+            payload["atividade_principal"] = atividade
+        socio = extract_socio_administrador(base)
+        if socio:
+            payload["socio_administrador"] = socio
+        trib = regime_to_tributacao(
+            deep_pick(base, {"regime", "regime_tributario", "tributacao"})
+        )
         if trib:
             payload["tributacao"] = trib
     return payload
