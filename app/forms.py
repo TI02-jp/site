@@ -102,7 +102,9 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('saidas_sieg', 'Saídas pelo SIEG'), ('nfce_sped', 'NFCe por Sped'),
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
         ('nenhum', 'Não importa nada')], validators=[Optional()])
+    observacao_importacao = TextAreaField('Observação', validators=[Optional()])
     links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
+    observacao_prefeitura = TextAreaField('Observação', validators=[Optional()])
     forma_movimento = SelectField('Envio de Documento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])
@@ -117,6 +119,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
     ], validators=[Optional()])
     observacao_movimento = TextAreaField('Observação', validators=[Optional()])
+    observacao_contato = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
@@ -138,12 +141,14 @@ class DepartamentoContabilForm(DepartamentoForm):
     malote_coleta = SelectField('Coleta do Malote', choices=[
         ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
     ], validators=[Optional()])
+    observacao_movimento = TextAreaField('Observação', validators=[Optional()])
     controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
         ('forn_cli_cota_unica', 'Fornecedor e clientes conta única'),
         ('saldo_final_mes', 'Relatório com saldo final do mês'),
         ('adiantamentos', 'Relatório de adiantamentos'), ('contas_pagas', 'Relatório de contas pagas'),
         ('contas_recebidas', 'Relatório de contas recebidas'),
         ('conferir_aplicacao', 'Conferir aplicação')], validators=[Optional()])
+    observacao_controle_relatorios = TextAreaField('Observação', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 class DepartamentoPessoalForm(DepartamentoForm):

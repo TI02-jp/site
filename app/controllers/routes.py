@@ -278,6 +278,9 @@ def processar_dados_fiscal(request):
         links_prefeitura = []
     forma_movimento = request.form.get('forma_movimento')
     observacao_movimento = request.form.get('observacao_movimento')
+    observacao_importacao = request.form.get('observacao_importacao')
+    observacao_prefeitura = request.form.get('observacao_prefeitura')
+    observacao_contato = request.form.get('observacao_contato')
     particularidades = request.form.get('particularidades')
     formas_importacao_json = request.form.get('formas_importacao_json', '[]')
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
@@ -299,6 +302,9 @@ def processar_dados_fiscal(request):
         'envio_fisico': envio_fisico,
         'malote_coleta': malote_coleta,
         'observacao_movimento': observacao_movimento,
+        'observacao_importacao': observacao_importacao,
+        'observacao_prefeitura': observacao_prefeitura,
+        'observacao_contato': observacao_contato,
         'contatos': contatos,
         'particularidades_texto': particularidades
     }
@@ -315,6 +321,8 @@ def processar_dados_contabil(request):
     malote_coleta = request.form.get('malote_coleta')
     controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
     controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
+    observacao_movimento = request.form.get('observacao_movimento')
+    observacao_controle_relatorios = request.form.get('observacao_controle_relatorios')
     
     return {
         'responsavel': responsavel,
@@ -325,6 +333,8 @@ def processar_dados_contabil(request):
         'envio_fisico': envio_fisico,
         'malote_coleta': malote_coleta,
         'controle_relatorios': controle_relatorios,
+        'observacao_movimento': observacao_movimento,
+        'observacao_controle_relatorios': observacao_controle_relatorios,
         'particularidades_texto': particularidades
     }
 

@@ -44,6 +44,13 @@
                             {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_importacao"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="fiscal_obs_importacao_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_importacao(class="form-control", id="fiscal_observacao_importacao", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_importacao.label }}
+                        </div>
+                    </div>
                 </div>
 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
@@ -54,6 +61,11 @@
                             <i class="bi bi-plus-circle"></i> Adicionar Link
                         </button>
                         {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_prefeitura"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="fiscal_obs_prefeitura_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_prefeitura.label }}
+                        </div>
                     </div>
                 </div>
 
@@ -103,6 +115,11 @@
                             </div>
                             </div>
                         </div>
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="fiscal_obs_envio_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_movimento.label }}
+                        </div>
 
                     </div>
                     <div class="col-md-6">
@@ -112,11 +129,12 @@
                             <i class="bi bi-plus-circle"></i> Adicionar Pessoa
                         </button>
                         {{ fiscal_form.contatos_json(id='contatos_json') }}
+                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_contato"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="fiscal_obs_contato_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_contato(class="form-control", id="fiscal_observacao_contato", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_contato.label }}
+                        </div>
                     </div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-12"><div class="form-floating">{{ fiscal_form.observacao_movimento(class="form-control", placeholder="Observação do Movimento", style="height: 100px") }}{{ fiscal_form.observacao_movimento.label }}</div></div>
                 </div>
                 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
@@ -190,8 +208,13 @@
                             </div>
                             </div>
                         </div>
+                        <button type="button" class="btn btn-outline-dept-orange btn-sm mt-2" id="contabil_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="contabil_obs_envio_container" class="form-floating mt-2" style="display:none;">
+                            {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação", style="height: 100px") }}
+                            {{ contabil_form.observacao_movimento.label }}
+                        </div>
                 </div>
-
+                
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
@@ -211,6 +234,16 @@
                             </div>
                             {% endfor %}
                         </div></div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-outline-dept-orange btn-sm" id="contabil_add_obs_controle_relatorios"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <div id="contabil_obs_controle_relatorios_container" class="form-floating mt-2" style="display:none;">
+                            {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação", style="height: 100px") }}
+                            {{ contabil_form.observacao_controle_relatorios.label }}
+                        </div>
                     </div>
                 </div>
 
@@ -336,6 +369,7 @@
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -345,6 +379,12 @@ document.addEventListener("DOMContentLoaded", function () {
     setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
     setupMalote('fiscal_malote_checkbox', 'fiscal_malote_coleta');
     setupMalote('contabil_malote_checkbox', 'contabil_malote_coleta');
+    setupObservacao('fiscal_add_obs_importacao', 'fiscal_obs_importacao_container', 'fiscal_observacao_importacao');
+    setupObservacao('fiscal_add_obs_prefeitura', 'fiscal_obs_prefeitura_container', 'fiscal_observacao_prefeitura');
+    setupObservacao('fiscal_add_obs_envio', 'fiscal_obs_envio_container', 'fiscal_observacao_movimento');
+    setupObservacao('fiscal_add_obs_contato', 'fiscal_obs_contato_container', 'fiscal_observacao_contato');
+    setupObservacao('contabil_add_obs_envio', 'contabil_obs_envio_container', 'contabil_observacao_movimento');
+    setupObservacao('contabil_add_obs_controle_relatorios', 'contabil_obs_controle_relatorios_container', 'contabil_observacao_controle_relatorios');
 
     // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
     
