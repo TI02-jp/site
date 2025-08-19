@@ -177,7 +177,9 @@ def api_cnpj(cnpj):
     try:
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 404
+        msg = str(e)
+        status = 400 if 'inválido' in msg.lower() or 'invalido' in msg.lower() else 404
+        return jsonify({'error': msg}), status
     except Exception:
         return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
     if not dados:

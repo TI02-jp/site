@@ -303,12 +303,28 @@ document.addEventListener("DOMContentLoaded", function () {
             validateField(cnpjField); // Validate on load if pre-filled
         }
 
+        function clearCnpjFields() {
+            const ids = ['codigo_empresa','nome_empresa','cnpj','data_abertura','socio_administrador','atividade_principal','sistema_utilizado'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '';
+                    el.classList.remove('is-valid','is-invalid');
+                    const parent = el.closest('.form-floating') || el.parentElement;
+                    const feedback = parent ? parent.querySelector('.invalid-feedback.js-validation-feedback') : null;
+                    if (feedback) feedback.remove();
+                }
+            });
+            document.querySelectorAll('input[name="tributacao"]').forEach(r => { r.checked = false; });
+        }
+
         if (buscarCnpjBtn) {
             const cnpjApi = '{{ url_for("api_cnpj", cnpj="") }}';
             buscarCnpjBtn.addEventListener('click', function () {
                 const cnpj = cnpjField.value.replace(/\D/g, '');
-                if (!cnpj) {
+                if (cnpj.length !== 14) {
                     alert('Informe um CNPJ válido.');
+                    clearCnpjFields();
                     return;
                 }
                 fetch(cnpjApi + cnpj, { credentials: 'same-origin' })
@@ -316,6 +332,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     .then(data => {
                         if (data.error) {
                             alert(data.error);
+                            clearCnpjFields();
                             return;
                         }
 
@@ -337,7 +354,10 @@ document.addEventListener("DOMContentLoaded", function () {
                             }
                         }
                     })
-                    .catch(() => alert('Erro ao consultar CNPJ'));
+                    .catch(() => {
+                        alert('Erro ao consultar CNPJ');
+                        clearCnpjFields();
+                    });
             });
         }
     }
