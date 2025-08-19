@@ -629,18 +629,22 @@ def relatorios():
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
-    users = User.query.with_entities(User.username, User.role, User.ativo).all()
+    users = User.query.with_entities(
+        User.username, User.name, User.email, User.role, User.ativo
+    ).all()
     grouped = {}
     labels = []
     counts = []
-    for username, role, ativo in users:
+    for username, name, email, role, ativo in users:
         tipo = 'Admin' if role == 'admin' else 'Usuário'
         status = 'Ativo' if ativo else 'Inativo'
         label = f'{tipo} {status}'
-        grouped.setdefault(label, []).append(username)
-    for label, nomes in grouped.items():
+        grouped.setdefault(label, []).append(
+            {"username": username, "name": name, "email": email}
+        )
+    for label, usuarios in grouped.items():
         labels.append(label)
-        counts.append(len(nomes))
+        counts.append(len(usuarios))
     fig = go.Figure(data=[go.Pie(labels=labels, values=counts, hole=0.4)])
     fig.update_layout(title_text='Usuários por tipo e status')
     chart_div = fig.to_html(full_html=False, div_id='user-role-chart')

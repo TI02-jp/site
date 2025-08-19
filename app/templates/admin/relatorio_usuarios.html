@@ -8,7 +8,7 @@
     <div id="chart-container">
         {{ chart_div|safe }}
     </div>
-    <div id="user-list" class="mt-4"></div>
+    <div id="user-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
 <script>
     const usersBySlice = {{ users_by_slice|tojson }};
@@ -19,12 +19,12 @@
             const users = usersBySlice[label] || [];
             const container = document.getElementById('user-list');
             if (!users.length) {
-                container.innerHTML = '<p>Nenhum usuário encontrado.</p>';
+                container.innerHTML = '<p class="text-center">Nenhum usuário encontrado.</p>';
                 return;
             }
-            let html = '<ul>';
-            users.forEach(name => { html += `<li>${name}</li>`; });
-            html += '</ul>';
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Nome</th><th>Email</th><th>Usuário</th></tr></thead><tbody>';
+            users.forEach(u => { html += `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.username}</td></tr>`; });
+            html += '</tbody></table></div>';
             container.innerHTML = html;
         });
     }
