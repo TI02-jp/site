@@ -229,6 +229,8 @@ def cadastrar_empresa():
 @login_required
 def listar_empresas():
     search = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
     query = Empresa.query
 
     if search:
@@ -253,9 +255,17 @@ def listar_empresas():
     else:
         query = query.order_by(order_column.asc())
 
-    empresas = query.all()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    empresas = pagination.items
 
-    return render_template('empresas/listar.html', empresas=empresas, search=search, sort=sort, order=order)
+    return render_template(
+        'empresas/listar.html',
+        empresas=empresas,
+        pagination=pagination,
+        search=search,
+        sort=sort,
+        order=order,
+    )
 
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""

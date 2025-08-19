@@ -11,7 +11,7 @@
                 <div>
                     <h1 class="text-primary mb-1">
                         <i class="bi bi-buildings me-2"></i>Empresas Cadastradas
-                        <span class="badge bg-primary ms-2">{{ empresas|length }}</span>
+                        <span class="badge bg-primary ms-2">{{ pagination.total }}</span>
                     </h1>
                     <p class="text-muted mb-0">Gerencie as empresas e seus departamentos</p>
                 </div>
@@ -40,19 +40,19 @@
                         <tr>
                             <th class="codigo-col">
                                 Código
-                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='asc') }}" class="text-white ms-1" title="Código crescente">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='asc', page=pagination.page) }}" class="text-white ms-1" title="Código crescente">
                                     <i class="bi bi-sort-numeric-down"></i>
                                 </a>
-                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='desc') }}" class="text-white" title="Código decrescente">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='desc', page=pagination.page) }}" class="text-white" title="Código decrescente">
                                     <i class="bi bi-sort-numeric-up"></i>
                                 </a>
                             </th>
                             <th>
                                 Nome da Empresa
-                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc') }}" class="text-white ms-1" title="Nome A-Z">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc', page=pagination.page) }}" class="text-white ms-1" title="Nome A-Z">
                                     <i class="bi bi-sort-alpha-down"></i>
                                 </a>
-                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='desc') }}" class="text-white" title="Nome Z-A">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='desc', page=pagination.page) }}" class="text-white" title="Nome Z-A">
                                     <i class="bi bi-sort-alpha-up"></i>
                                 </a>
                             </th>
@@ -121,6 +121,31 @@
             </table>
         </div>
     </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <p class="text-muted mb-0">Página {{ pagination.page }} de {{ pagination.pages }}</p>
+        <nav aria-label="Page navigation">
+            <ul class="pagination mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, page=pagination.prev_num) }}">Anterior</a>
+                </li>
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, page=p) }}">{{ p }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, page=pagination.next_num) }}">Próximo</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
 </div>
 
 {% block scripts %}
