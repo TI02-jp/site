@@ -240,9 +240,22 @@ def listar_empresas():
             )
         )
 
+    sort = request.args.get('sort', 'nome')
+    order = request.args.get('order', 'asc')
+
+    if sort == 'codigo':
+        order_column = Empresa.codigo_empresa
+    else:
+        order_column = Empresa.nome_empresa
+
+    if order == 'desc':
+        query = query.order_by(order_column.desc())
+    else:
+        query = query.order_by(order_column.asc())
+
     empresas = query.all()
 
-    return render_template('empresas/listar.html', empresas=empresas, search=search)
+    return render_template('empresas/listar.html', empresas=empresas, search=search, sort=sort, order=order)
 
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
