@@ -97,6 +97,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
     formas_importacao = SelectMultipleField('Formas de Importação', choices=[
         ('entradas_sped', 'Entradas por Sped'), ('entradas_xml', 'Entradas por XML'),
         ('entradas_sat', 'Entradas pelo SAT'), ('entradas_sieg', 'Entradas pelo Sieg'),
+        ('entradas_webservice', 'Entradas pelo Web Service'),
         ('saidas_sped', 'Saídas por Sped'), ('saidas_xml', 'Saídas por XML'),
         ('saidas_sieg', 'Saídas pelo SIEG'), ('nfce_sped', 'NFCe por Sped'),
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
