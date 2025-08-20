@@ -18,6 +18,7 @@ from uuid import uuid4
 from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
+import plotly.express as px
 
 @app.context_processor
 def inject_stats():
@@ -678,12 +679,45 @@ def relatorio_usuarios():
     for label, usuarios in grouped.items():
         labels.append(label)
         counts.append(len(usuarios))
-    fig = go.Figure(data=[go.Pie(labels=labels, values=counts, hole=0.4)])
-    fig.update_layout(title_text='Usuários por tipo e status')
-    chart_div = fig.to_html(full_html=False, div_id='user-role-chart')
+    pie_fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=counts,
+                hole=0.5,
+                marker=dict(
+                    colors=px.colors.qualitative.Pastel,
+                    line=dict(color="#ffffff", width=2),
+                ),
+                pull=[0.05] * len(labels),
+            )
+        ]
+    )
+    pie_fig.update_traces(textinfo='percent+label', textfont_size=14)
+    pie_fig.update_layout(title_text='Usuários por tipo e status', template='plotly_white')
+    chart_div = pie_fig.to_html(full_html=False, div_id='user-role-chart')
+
+    bar_fig = go.Figure(
+        data=[
+            go.Bar(
+                x=labels,
+                y=counts,
+                marker_color=px.colors.qualitative.Pastel,
+            )
+        ]
+    )
+    bar_fig.update_layout(
+        title_text='Distribuição de Usuários',
+        xaxis_title='Tipo/Status',
+        yaxis_title='Quantidade',
+        template='plotly_white',
+    )
+    bar_chart_div = bar_fig.to_html(full_html=False, div_id='user-role-bar')
+
     return render_template(
         'admin/relatorio_usuarios.html',
         chart_div=chart_div,
+        bar_chart_div=bar_chart_div,
         users_by_slice=grouped,
     )
 

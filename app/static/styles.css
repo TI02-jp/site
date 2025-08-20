@@ -1199,3 +1199,15 @@ Mensagem de login flutuante
     text-align: left;
     white-space: pre-line;
 }
+
+/* Relatório de usuários */
+#chart-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+#chart-container > div {
+    flex: 1 1 400px;
+}

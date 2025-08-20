@@ -5,8 +5,9 @@
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Usuários por Tipo e Status</h1>
-    <div id="chart-container">
+    <div id="chart-container" class="d-flex flex-wrap justify-content-around">
         {{ chart_div|safe }}
+        {{ bar_chart_div|safe }}
     </div>
     <div id="user-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
@@ -23,7 +24,7 @@
                 return;
             }
             let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Nome</th><th>Email</th><th>Usuário</th></tr></thead><tbody>';
-            users.forEach(u => { html += `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.username}</td></tr>`; });
+            users.forEach(u => { html += `<tr><td>${u.name.toUpperCase()}</td><td>${u.email.toLowerCase()}</td><td>${u.username.toLowerCase()}</td></tr>`; });
             html += '</tbody></table></div>';
             container.innerHTML = html;
         });
