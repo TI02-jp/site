@@ -37,24 +37,24 @@
                 <input type="hidden" name="form_type" value="fiscal">
                 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
-                <div class="row g-4 mb-4">
+                <div class="row g-4 mb-4 align-items-stretch">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
                         <div class="border rounded p-3 bg-light"><div class="row">
                             {% for value, label in fiscal_form.formas_importacao.choices %}<div class="col-md-6 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ loop.index }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}><label class="form-check-label" for="fi-{{ loop.index }}">{{ label }}</label></div></div>{% endfor %}
                         </div></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 d-flex flex-column">
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_importacao"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="fiscal_obs_importacao_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_importacao(class="form-control", id="fiscal_observacao_importacao", placeholder="Observação", style="height: 100px") }}
+                        <div id="fiscal_obs_importacao_container" class="form-floating mt-2 flex-grow-1" style="display:none;">
+                            {{ fiscal_form.observacao_importacao(class="form-control h-100", id="fiscal_observacao_importacao", placeholder="Observação") }}
                             {{ fiscal_form.observacao_importacao.label }}
                         </div>
                     </div>
                 </div>
 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
-                <div class="row g-4 mb-4">
+                <div class="row g-4 mb-4 align-items-stretch">
                     <div class="col-12">
                         <div id="links-prefeitura-container"></div>
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-prefeitura">
@@ -63,14 +63,14 @@
                         {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_prefeitura"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_prefeitura_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação") }}
                             {{ fiscal_form.observacao_prefeitura.label }}
                         </div>
                     </div>
                 </div>
 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
-                <div class="row g-4 mb-4">
+                <div class="row g-4 mb-4 align-items-stretch">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
                         {{ fiscal_form.forma_movimento(id="fiscal_forma_movimento", class="form-select") }}
@@ -117,12 +117,12 @@
                         </div>
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_envio_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação", style="height: 100px") }}
+                            {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação") }}
                             {{ fiscal_form.observacao_movimento.label }}
                         </div>
 
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 d-flex flex-column">
                         <label class="form-label fw-semibold">Contatos</label>
                         <div id="contatos-container"></div>
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-contato">
@@ -130,8 +130,8 @@
                         </button>
                         {{ fiscal_form.contatos_json(id='contatos_json') }}
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_contato"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="fiscal_obs_contato_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_contato(class="form-control", id="fiscal_observacao_contato", placeholder="Observação", style="height: 100px") }}
+                        <div id="fiscal_obs_contato_container" class="form-floating mt-2 flex-grow-1" style="display:none;">
+                            {{ fiscal_form.observacao_contato(class="form-control h-100", id="fiscal_observacao_contato", placeholder="Observação") }}
                             {{ fiscal_form.observacao_contato.label }}
                         </div>
                     </div>
@@ -210,7 +210,7 @@
                         </div>
                         <button type="button" class="btn btn-outline-dept-orange btn-sm mt-2" id="contabil_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_envio_container" class="form-floating mt-2" style="display:none;">
-                            {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação", style="height: 100px") }}
+                            {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação") }}
                             {{ contabil_form.observacao_movimento.label }}
                         </div>
                 </div>
@@ -241,7 +241,7 @@
                     <div class="col-12">
                         <button type="button" class="btn btn-outline-dept-orange btn-sm" id="contabil_add_obs_controle_relatorios"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_controle_relatorios_container" class="form-floating mt-2" style="display:none;">
-                            {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação", style="height: 100px") }}
+                            {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação") }}
                             {{ contabil_form.observacao_controle_relatorios.label }}
                         </div>
                     </div>
