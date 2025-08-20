@@ -303,10 +303,10 @@
                                 {% if fiscal.contatos_list %}
                                     <ul class="list-unstyled mb-0">
                                         {% for contato in fiscal.contatos_list %}
-                                            <li class="mb-2">
-                                                {% if contato.nome %}<div class="fw-semibold">{{ contato.nome }}</div>{% endif %}
+                                            <li class="mb-3">
+                                                {% if contato.nome %}<div class="fw-semibold text-center">{{ contato.nome }}</div>{% endif %}
                                                 {% for meio in contato.meios %}
-                                                    <div><span class="fw-semibold">{{ meio.tipo|capitalize }}</span> - {{ meio.endereco }}</div>
+                                                    <div class="text-start text-break"><span class="fw-semibold">{{ meio.tipo|capitalize }}</span> - {{ meio.endereco }}</div>
                                                 {% endfor %}
                                             </li>
                                         {% endfor %}
