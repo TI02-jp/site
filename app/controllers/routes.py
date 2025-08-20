@@ -665,6 +665,38 @@ def relatorios():
     return render_template('admin/relatorios.html')
 
 
+@app.route('/relatorio_empresas')
+@admin_required
+def relatorio_empresas():
+    empresas = Empresa.query.with_entities(
+        Empresa.nome_empresa, Empresa.cnpj, Empresa.codigo_empresa, Empresa.tributacao
+    ).all()
+    categorias = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
+    grouped = {cat: [] for cat in categorias}
+    for nome, cnpj, codigo, trib in empresas:
+        label = trib if trib in categorias else 'Outros'
+        grouped.setdefault(label, []).append(
+            {"nome": nome, "cnpj": cnpj, "codigo": codigo}
+        )
+    labels = list(grouped.keys())
+    counts = [len(grouped[l]) for l in labels]
+    fig = go.Figure(
+        data=[go.Bar(x=labels, y=counts, marker_color=qualitative.Pastel)]
+    )
+    fig.update_layout(
+        title_text="Empresas por regime de tributação",
+        template="seaborn",
+        xaxis_title="Regime",
+        yaxis_title="Quantidade",
+    )
+    chart_div = fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+    return render_template(
+        'admin/relatorio_empresas.html',
+        chart_div=chart_div,
+        empresas_por_slice=grouped,
+    )
+
+
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
