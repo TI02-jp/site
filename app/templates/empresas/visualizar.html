@@ -194,6 +194,14 @@
                                     {{ render_badge_list(fisico_ns.items, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
                                 </div>
                             </div>
+                            {% if fiscal.observacao_movimento %}
+                            <div class="info-item">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_movimento }}</textarea>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -227,6 +235,14 @@
                                 {% endfor %}
                             {% else %}
                                 <div class="info-item"><span class="text-muted">Não informado</span></div>
+                            {% endif %}
+                            {% if fiscal.observacao_prefeitura %}
+                            <div class="info-item mt-2">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_prefeitura }}</textarea>
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
                     </div>
@@ -272,6 +288,14 @@
                                 {% endfor %}
                                 {{ render_badge_list(fi_ns.items, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
                             </div>
+                            {% if fiscal.observacao_importacao %}
+                            <div class="info-item mt-2">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_importacao }}</textarea>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="info-group mt-4">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
@@ -291,6 +315,14 @@
                                     <span class="text-muted">Não informado</span>
                                 {% endif %}
                             </div>
+                            {% if fiscal.observacao_contato %}
+                            <div class="info-item mt-2">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_contato }}</textarea>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -371,6 +403,14 @@
                                     {{ render_badge_list(cont_ns.items, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
                                 </div>
                             </div>
+                            {% if contabil.observacao_movimento %}
+                            <div class="info-item">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ contabil.observacao_movimento }}</textarea>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -408,6 +448,14 @@
                                 {% endfor %}
                                 {{ render_badge_list(cr_ns.items, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
                             </div>
+                            {% if contabil.observacao_controle_relatorios %}
+                            <div class="info-item mt-2">
+                                <label class="info-label">Observação</label>
+                                <div class="info-value">
+                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ contabil.observacao_controle_relatorios }}</textarea>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
