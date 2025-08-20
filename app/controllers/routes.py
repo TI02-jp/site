@@ -314,7 +314,7 @@ def processar_dados_contabil(request):
     """Função auxiliar para processar dados do departamento contábil"""
     responsavel = request.form.get('responsavel')
     descricao = request.form.get('descricao')
-    metodo_importacao = request.form.get('metodo_importacao')
+    metodo_importacao = request.form.getlist('metodo_importacao')
     forma_movimento = request.form.get('forma_movimento')
     particularidades = request.form.get('particularidades')
     envio_digital = request.form.getlist('envio_digital')
@@ -536,6 +536,10 @@ def gerenciar_departamentos(empresa_id):
 
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
+            contabil_form.metodo_importacao.data = (
+                contabil.metodo_importacao if isinstance(contabil.metodo_importacao, list)
+                else json.loads(contabil.metodo_importacao) if contabil.metodo_importacao else []
+            )
             contabil_form.envio_digital.data = (
                 contabil.envio_digital if isinstance(contabil.envio_digital, list)
                 else json.loads(contabil.envio_digital) if contabil.envio_digital else []
@@ -586,6 +590,7 @@ def gerenciar_departamentos(empresa_id):
             else:
                 contabil.malote_coleta = contabil_form.malote_coleta.data
 
+            contabil.metodo_importacao = contabil_form.metodo_importacao.data or []
             contabil.envio_digital = contabil_form.envio_digital.data or []
             contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.controle_relatorios = contabil_form.controle_relatorios.data or []

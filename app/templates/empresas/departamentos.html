@@ -163,7 +163,19 @@
                 
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>{{ contabil_form.metodo_importacao(class="form-select") }}</div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>
+                        <div class="border rounded p-3 bg-light"><div class="row">
+                            {% for value, label in contabil_form.metodo_importacao.choices %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="{{ contabil_form.metodo_importacao.name }}" value="{{ value }}" id="contabil-mi-{{ loop.index }}" {% if value in (contabil_form.metodo_importacao.data or []) %}checked{% endif %}>
+                                    <label class="form-check-label" for="contabil-mi-{{ loop.index }}">{{ label }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div></div>
+                    </div>
                     <div class="col-md-6"><label class="form-label fw-semibold">{{ contabil_form.forma_movimento.label.text }}</label>{{ contabil_form.forma_movimento(id="contabil_forma_movimento", class="form-select") }}</div>
                 </div>
 
