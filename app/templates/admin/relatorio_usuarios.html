@@ -23,7 +23,12 @@
                 return;
             }
             let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Nome</th><th>Email</th><th>Usuário</th></tr></thead><tbody>';
-            users.forEach(u => { html += `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.username}</td></tr>`; });
+            users.forEach(u => {
+                const name = u.name ? u.name.toUpperCase() : '';
+                const email = u.email ? u.email.toLowerCase() : '';
+                const username = u.username ? u.username.toLowerCase() : '';
+                html += `<tr><td>${name}</td><td>${email}</td><td>${username}</td></tr>`;
+            });
             html += '</tbody></table></div>';
             container.innerHTML = html;
         });

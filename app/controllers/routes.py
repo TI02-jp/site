@@ -18,6 +18,7 @@ from uuid import uuid4
 from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
+from plotly.colors import qualitative
 
 @app.context_processor
 def inject_stats():
@@ -678,8 +679,22 @@ def relatorio_usuarios():
     for label, usuarios in grouped.items():
         labels.append(label)
         counts.append(len(usuarios))
-    fig = go.Figure(data=[go.Pie(labels=labels, values=counts, hole=0.4)])
-    fig.update_layout(title_text='Usuários por tipo e status')
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=counts,
+                hole=0.4,
+                marker=dict(colors=qualitative.Pastel, line=dict(color="#FFFFFF", width=2)),
+                textinfo="label+percent",
+            )
+        ]
+    )
+    fig.update_layout(
+        title_text="Usuários por tipo e status",
+        template="seaborn",
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
+    )
     chart_div = fig.to_html(full_html=False, div_id='user-role-chart')
     return render_template(
         'admin/relatorio_usuarios.html',
