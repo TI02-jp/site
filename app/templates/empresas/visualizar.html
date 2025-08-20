@@ -224,7 +224,9 @@
                                         </div>
                                         <div class="col-md-3">
                                             {% if acesso.link %}
-                                                <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control text-primary text-decoration-underline">{{ acesso.link }}</a>
+                                                <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer"
+                                                   class="form-control d-block text-primary text-decoration-underline text-truncate"
+                                                   title="{{ acesso.link }}">{{ acesso.link }}</a>
                                             {% else %}
                                                 <input type="text" class="form-control" value="" readonly>
                                             {% endif %}
