@@ -41,11 +41,11 @@
                         </div>
                     </div>
                     <div class="col-md-6 d-flex flex-column">
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-importacao">
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2 align-self-start" id="add-obs-importacao">
                             <i class="bi bi-plus-circle"></i> Adicionar Observação
                         </button>
-                        <div id="obs-importacao-container" class="form-floating mt-2" style="display:none;">
-                            {{ form.observacao_importacao(class="form-control", id="observacao_importacao", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
+                        <div id="obs-importacao-container" class="form-floating mt-2 flex-grow-1" style="display:none;">
+                            {{ form.observacao_importacao(class="form-control h-100", id="observacao_importacao", placeholder="Observação", style="overflow-y: auto;") }}
                             {{ form.observacao_importacao.label(class="form-label") }}
                         </div>
                     </div>
