@@ -46,8 +46,8 @@
                     </div>
                     <div class="col-md-6 d-flex flex-column">
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_importacao"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="fiscal_obs_importacao_container" class="form-floating mt-2 flex-grow-1" style="display:none;">
-                            {{ fiscal_form.observacao_importacao(class="form-control h-100", id="fiscal_observacao_importacao", placeholder="Observação") }}
+                        <div id="fiscal_obs_importacao_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_importacao(class="form-control", id="fiscal_observacao_importacao", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_importacao.label }}
                         </div>
                     </div>
@@ -63,7 +63,7 @@
                         {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_prefeitura"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_prefeitura_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação") }}
+                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_prefeitura.label }}
                         </div>
                     </div>
@@ -117,7 +117,7 @@
                         </div>
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_envio_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação") }}
+                            {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_movimento.label }}
                         </div>
 
@@ -130,8 +130,8 @@
                         </button>
                         {{ fiscal_form.contatos_json(id='contatos_json') }}
                         <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_contato"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="fiscal_obs_contato_container" class="form-floating mt-2 flex-grow-1" style="display:none;">
-                            {{ fiscal_form.observacao_contato(class="form-control h-100", id="fiscal_observacao_contato", placeholder="Observação") }}
+                        <div id="fiscal_obs_contato_container" class="form-floating mt-2" style="display:none;">
+                            {{ fiscal_form.observacao_contato(class="form-control", id="fiscal_observacao_contato", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_contato.label }}
                         </div>
                     </div>
@@ -210,7 +210,7 @@
                         </div>
                         <button type="button" class="btn btn-outline-dept-orange btn-sm mt-2" id="contabil_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_envio_container" class="form-floating mt-2" style="display:none;">
-                            {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação") }}
+                            {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ contabil_form.observacao_movimento.label }}
                         </div>
                 </div>
@@ -241,7 +241,7 @@
                     <div class="col-12">
                         <button type="button" class="btn btn-outline-dept-orange btn-sm" id="contabil_add_obs_controle_relatorios"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_controle_relatorios_container" class="form-floating mt-2" style="display:none;">
-                            {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação") }}
+                            {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ contabil_form.observacao_controle_relatorios.label }}
                         </div>
                     </div>
