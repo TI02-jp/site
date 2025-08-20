@@ -44,8 +44,8 @@
                         <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-importacao">
                             <i class="bi bi-plus-circle"></i> Adicionar Observação
                         </button>
-                        <div id="obs-importacao-container" class="form-floating mt-2 flex-grow-1" style="display:none;">
-                            {{ form.observacao_importacao(class="form-control h-100", id="observacao_importacao", placeholder="Observação") }}
+                        <div id="obs-importacao-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_importacao(class="form-control", id="observacao_importacao", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ form.observacao_importacao.label(class="form-label") }}
                         </div>
                     </div>
@@ -70,7 +70,7 @@
                             <i class="bi bi-plus-circle"></i> Adicionar Observação
                         </button>
                         <div id="obs-prefeitura-container" class="form-floating mt-2" style="display:none;">
-                            {{ form.observacao_prefeitura(class="form-control", id="observacao_prefeitura", placeholder="Observação") }}
+                            {{ form.observacao_prefeitura(class="form-control", id="observacao_prefeitura", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ form.observacao_prefeitura.label(class="form-label") }}
                         </div>
                     </div>
@@ -139,7 +139,7 @@
                             <i class="bi bi-plus-circle"></i> Adicionar Observação
                         </button>
                         <div id="obs-envio-container" class="form-floating mt-2" style="display:none;">
-                            {{ form.observacao_movimento(class="form-control", id="observacao_movimento", placeholder="Observação") }}
+                            {{ form.observacao_movimento(class="form-control", id="observacao_movimento", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ form.observacao_movimento.label(class="form-label") }}
                         </div>
                     </div>
@@ -166,8 +166,8 @@
                         <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-obs-contato">
                             <i class="bi bi-plus-circle"></i> Adicionar Observação
                         </button>
-                        <div id="obs-contato-container" class="form-floating mt-2 flex-grow-1" style="display:none;">
-                            {{ form.observacao_contato(class="form-control h-100", id="observacao_contato", placeholder="Observação") }}
+                        <div id="obs-contato-container" class="form-floating mt-2" style="display:none;">
+                            {{ form.observacao_contato(class="form-control", id="observacao_contato", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ form.observacao_contato.label(class="form-label") }}
                         </div>
                     </div>
