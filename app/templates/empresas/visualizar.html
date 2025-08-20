@@ -223,7 +223,11 @@
                                             <input type="text" class="form-control" value="{{ acesso.cidade or '' }}" readonly>
                                         </div>
                                         <div class="col-md-3">
-                                            <input type="text" class="form-control" value="{{ acesso.link or '' }}" readonly>
+                                            {% if acesso.link %}
+                                                <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control text-primary text-decoration-underline">{{ acesso.link }}</a>
+                                            {% else %}
+                                                <input type="text" class="form-control" value="" readonly>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-3">
                                             <input type="text" class="form-control" value="{{ acesso.usuario or '' }}" readonly>
