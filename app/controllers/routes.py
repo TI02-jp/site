@@ -696,28 +696,9 @@ def relatorio_usuarios():
     pie_fig.update_traces(textinfo='percent+label', textfont_size=14)
     pie_fig.update_layout(title_text='Usuários por tipo e status', template='plotly_white')
     chart_div = pie_fig.to_html(full_html=False, div_id='user-role-chart')
-
-    bar_fig = go.Figure(
-        data=[
-            go.Bar(
-                x=labels,
-                y=counts,
-                marker_color=px.colors.qualitative.Pastel,
-            )
-        ]
-    )
-    bar_fig.update_layout(
-        title_text='Distribuição de Usuários',
-        xaxis_title='Tipo/Status',
-        yaxis_title='Quantidade',
-        template='plotly_white',
-    )
-    bar_chart_div = bar_fig.to_html(full_html=False, div_id='user-role-bar')
-
     return render_template(
         'admin/relatorio_usuarios.html',
         chart_div=chart_div,
-        bar_chart_div=bar_chart_div,
         users_by_slice=grouped,
     )
 
