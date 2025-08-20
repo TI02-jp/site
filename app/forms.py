@@ -125,8 +125,8 @@ class DepartamentoFiscalForm(DepartamentoForm):
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
-    metodo_importacao = SelectField('Forma de Importação', choices=[
-        ('', 'Selecione'), ('importado', 'Importado'), ('digitado', 'Digitado')
+    metodo_importacao = SelectMultipleField('Formas de Importação', choices=[
+        ('importado', 'Importado'), ('digitado', 'Digitado')
     ], validators=[Optional()])
     forma_movimento = SelectField('Envio de Documento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')

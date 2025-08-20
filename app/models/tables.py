@@ -94,7 +94,7 @@ class Departamento(db.Model):
     observacao_importacao = db.Column(db.String(200))
     observacao_prefeitura = db.Column(db.String(200))
     observacao_contato = db.Column(db.String(200))
-    metodo_importacao = db.Column(db.String(20))
+    metodo_importacao = db.Column(JsonString(255))
     controle_relatorios = db.Column(JsonString(255))
     observacao_controle_relatorios = db.Column(db.String(200))
     contatos = db.Column(JsonString(255))

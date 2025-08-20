@@ -26,7 +26,18 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.metodo_importacao.label.text }}</label>
-                        {{ form.metodo_importacao(class="form-select") }}
+                        <div class="border rounded p-3 bg-light">
+                            <div class="row">
+                                {% for value, label in form.metodo_importacao.choices %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="{{ form.metodo_importacao.name }}" value="{{ value }}" id="mi-{{ loop.index }}" {% if value in (form.metodo_importacao.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="mi-{{ loop.index }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

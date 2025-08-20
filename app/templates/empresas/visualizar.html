@@ -362,7 +362,19 @@
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                             <div class="info-item">
                                 <label class="info-label">Método de Importação</label>
-                                <div class="info-value">{% if contabil.metodo_importacao %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-download me-1 text-dept-orange"></i>{{ contabil.metodo_importacao }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                                {% set placeholder_metodo %}<span class="text-muted">Não informado</span>{% endset %}
+                                {% set mi_map = {'importado': 'Importado', 'digitado': 'Digitado'} %}
+                                {% set mi_items = [] %}
+                                {% if contabil.metodo_importacao is iterable and contabil.metodo_importacao is not string %}
+                                    {% set mi_items = contabil.metodo_importacao %}
+                                {% elif contabil.metodo_importacao %}
+                                    {% set mi_items = [contabil.metodo_importacao] %}
+                                {% endif %}
+                                {% set mi_ns = namespace(items=[]) %}
+                                {% for item in mi_items %}
+                                    {% set mi_ns.items = mi_ns.items + [mi_map.get(item, item)] %}
+                                {% endfor %}
+                                <div class="info-value">{{ render_badge_list(mi_ns.items, 'badge bg-dept-orange-subtle text-dept-orange fs-6', 'bi-download', placeholder_metodo) }}</div>
                             </div>
                         </div>
                     </div>
