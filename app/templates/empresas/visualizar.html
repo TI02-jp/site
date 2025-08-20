@@ -252,7 +252,7 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
-                            <div class="info-value">
+                            <div class="info-value" style="grid-column: 1 / -1;">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {% set fi_raw = fiscal.formas_importacao %}
                                 {% set fi_items = [] %}
@@ -289,10 +289,10 @@
                                 {{ render_badge_list(fi_ns.items, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                             {% if fiscal.observacao_importacao %}
-                            <div class="info-item mt-2">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
-                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_importacao }}</textarea>
+                            <div class="info-item mt-2" style="grid-column: 1 / -1;">
+                                <label class="info-label text-center w-100">Observação</label>
+                                <div class="info-value d-flex justify-content-center">
+                                    <textarea class="form-control form-control-sm w-75" readonly style="height:80px;">{{ fiscal.observacao_importacao }}</textarea>
                                 </div>
                             </div>
                             {% endif %}
