@@ -121,17 +121,23 @@
                                     <span class="input-group-text">
                                         <i class="bi bi-lock"></i>
                                     </span>
-                                    <input type="password" name="new_password" class="form-control" placeholder="Digite a nova senha">
+                                    <input type="password" name="new_password" class="form-control" placeholder="Digite a nova senha" id="new_password">
+                                    <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#new_password">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
                                 </div>
                             </div>
-                            
+
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold">Confirmar Nova Senha</label>
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="bi bi-lock-fill"></i>
                                     </span>
-                                    <input type="password" name="confirm_new_password" class="form-control" placeholder="Confirme a nova senha">
+                                    <input type="password" name="confirm_new_password" class="form-control" placeholder="Confirme a nova senha" id="confirm_new_password">
+                                    <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#confirm_new_password">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -154,7 +160,6 @@
 
 {% block scripts %}
 <script>
-// Auto-dismiss alerts
 document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(function(alert) {
@@ -164,6 +169,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 bsAlert.close();
             }
         }, 5000);
+    });
+
+    document.querySelectorAll('.toggle-password').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const target = document.querySelector(this.getAttribute('data-target'));
+            if (target) {
+                const type = target.getAttribute('type') === 'password' ? 'text' : 'password';
+                target.setAttribute('type', type);
+                const icon = this.querySelector('i');
+                icon.classList.toggle('bi-eye');
+                icon.classList.toggle('bi-eye-slash');
+            }
+        });
     });
 });
 </script>
