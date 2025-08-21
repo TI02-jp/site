@@ -145,6 +145,51 @@
                     </div>
                 </div>
             </div>
+            <div class="row g-4 mt-2">
+                <div class="col-12">
+                    <div class="info-group">
+                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
+                        {% if empresa.links_prefeitura %}
+                            <div class="row g-2 fw-semibold mb-1">
+                                <div class="col-md-3">Cidade</div>
+                                <div class="col-md-3">Link</div>
+                                <div class="col-md-3">Usuário</div>
+                                <div class="col-md-3">Senha</div>
+                            </div>
+                            {% for acesso in empresa.links_prefeitura %}
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" value="{{ acesso.cidade or '' }}" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {% if acesso.link %}
+                                            <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control d-block text-primary text-decoration-underline text-truncate" title="{{ acesso.link }}">{{ acesso.link }}</a>
+                                        {% else %}
+                                            <input type="text" class="form-control" value="" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" value="{{ acesso.usuario or '' }}" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" value="{{ acesso.senha or '' }}" readonly>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="info-item"><span class="text-muted">Não informado</span></div>
+                        {% endif %}
+                        {% if empresa.observacao_prefeitura %}
+                        <div class="info-item mt-2">
+                            <label class="info-label">Observação</label>
+                            <div class="info-value">
+                                <textarea class="form-control form-control-sm" readonly style="height:80px">{{ empresa.observacao_prefeitura }}</textarea>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -206,53 +251,6 @@
                     </div>
                 </div>
 
-                <div class="row g-4 mt-2">
-                    <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
-                            {% if fiscal.links_prefeitura %}
-                                <div class="row g-2 fw-semibold mb-1">
-                                    <div class="col-md-3">Cidade</div>
-                                    <div class="col-md-3">Link</div>
-                                    <div class="col-md-3">Usuário</div>
-                                    <div class="col-md-3">Senha</div>
-                                </div>
-                                {% for acesso in fiscal.links_prefeitura %}
-                                    <div class="row g-2 mb-2">
-                                        <div class="col-md-3">
-                                            <input type="text" class="form-control" value="{{ acesso.cidade or '' }}" readonly>
-                                        </div>
-                                        <div class="col-md-3">
-                                            {% if acesso.link %}
-                                                <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer"
-                                                   class="form-control d-block text-primary text-decoration-underline text-truncate"
-                                                   title="{{ acesso.link }}">{{ acesso.link }}</a>
-                                            {% else %}
-                                                <input type="text" class="form-control" value="" readonly>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-3">
-                                            <input type="text" class="form-control" value="{{ acesso.usuario or '' }}" readonly>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <input type="text" class="form-control" value="{{ acesso.senha or '' }}" readonly>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="info-item"><span class="text-muted">Não informado</span></div>
-                            {% endif %}
-                            {% if fiscal.observacao_prefeitura %}
-                            <div class="info-item mt-2">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
-                                    <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_prefeitura }}</textarea>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
 
                 <div class="row g-4 mt-2">
                     <div class="col-12">

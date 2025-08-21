@@ -77,6 +77,8 @@ class EmpresaForm(FlaskForm):
         ('QUESTOR_NET', 'Questor Net'), ('SIEG', 'Sieg'), ('SIEG_TAG', 'Sieg - Utiliza TAGs')
     ], validators=[Optional()])
     sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
+    links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
+    observacao_prefeitura = TextAreaField('Observação', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
 
 class EditUserForm(FlaskForm):
@@ -103,8 +105,6 @@ class DepartamentoFiscalForm(DepartamentoForm):
         ('nfce_xml_sieg', 'NFCe por XML - Sieg'), ('nfce_xml_cliente', 'NFCe por XML - Copiado do cliente'),
         ('nenhum', 'Não importa nada')], validators=[Optional()])
     observacao_importacao = TextAreaField('Observação', validators=[Optional()])
-    links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
-    observacao_prefeitura = TextAreaField('Observação', validators=[Optional()])
     forma_movimento = SelectField('Envio de Documento', choices=[
         ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
     ], validators=[Optional()])

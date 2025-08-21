@@ -72,6 +72,8 @@ class Empresa(db.Model):
     regime_lancamento = db.Column(db.Enum(RegimeLancamento), nullable=False)
     sistemas_consultorias = db.Column(JsonString(255))
     sistema_utilizado = db.Column(db.String(150))
+    links_prefeitura = db.Column(JsonString(255))
+    observacao_prefeitura = db.Column(db.String(200))
     codigo_empresa = db.Column(db.String(100), nullable=False)
 
     def __repr__(self):
@@ -85,14 +87,12 @@ class Departamento(db.Model):
     responsavel = db.Column(db.String(100))
     descricao = db.Column(db.String(200))
     formas_importacao = db.Column(JsonString(255))
-    links_prefeitura = db.Column(JsonString(255))
     forma_movimento = db.Column(db.String(20))
     envio_digital = db.Column(JsonString(200))
     envio_fisico = db.Column(JsonString(200))
     malote_coleta = db.Column(db.String(20))
     observacao_movimento = db.Column(db.String(200))
     observacao_importacao = db.Column(db.String(200))
-    observacao_prefeitura = db.Column(db.String(200))
     observacao_contato = db.Column(db.String(200))
     metodo_importacao = db.Column(JsonString(255))
     controle_relatorios = db.Column(JsonString(255))

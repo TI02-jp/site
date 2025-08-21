@@ -201,6 +201,11 @@ def cadastrar_empresa():
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
+            links_prefeitura_json = form.links_prefeitura_json.data or '[]'
+            try:
+                links_prefeitura = json.loads(links_prefeitura_json) if links_prefeitura_json else []
+            except Exception:
+                links_prefeitura = []
             nova_empresa = Empresa(
                 codigo_empresa=form.codigo_empresa.data,
                 nome_empresa=form.nome_empresa.data,
@@ -211,7 +216,9 @@ def cadastrar_empresa():
                 regime_lancamento=form.regime_lancamento.data,
                 atividade_principal=form.atividade_principal.data,
                 sistemas_consultorias=form.sistemas_consultorias.data,
-                sistema_utilizado=form.sistema_utilizado.data
+                sistema_utilizado=form.sistema_utilizado.data,
+                links_prefeitura=links_prefeitura,
+                observacao_prefeitura=form.observacao_prefeitura.data
             )
             db.session.add(nova_empresa)
             db.session.commit()
@@ -368,12 +375,19 @@ def editar_empresa(id):
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
+        empresa_form.links_prefeitura_json.data = json.dumps(empresa.links_prefeitura or [])
+        empresa_form.observacao_prefeitura.data = empresa.observacao_prefeitura
 
     if request.method == 'POST':
         if empresa_form.validate():
             empresa_form.populate_obj(empresa)
             empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
+            try:
+                empresa.links_prefeitura = json.loads(empresa_form.links_prefeitura_json.data or '[]')
+            except Exception:
+                empresa.links_prefeitura = []
+            empresa.observacao_prefeitura = empresa_form.observacao_prefeitura.data
             db.session.add(empresa)
             try:
                 db.session.commit()
@@ -431,18 +445,9 @@ def visualizar_empresa(id):
         contatos_list = []
     contatos_list = normalize_contatos(contatos_list)
 
-    # monta links_prefeitura
-    if fiscal and getattr(fiscal, "links_prefeitura", None):
-        try:
-            prefeituras_list = json.loads(fiscal.links_prefeitura) if isinstance(fiscal.links_prefeitura, str) else fiscal.links_prefeitura
-        except Exception:
-            prefeituras_list = []
-    else:
-        prefeituras_list = []
-
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
-        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list, links_prefeitura=prefeituras_list, envio_fisico=[])
+        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list, envio_fisico=[])
     else:
         fiscal_view = fiscal
         # normaliza formas_importacao
@@ -456,7 +461,6 @@ def visualizar_empresa(id):
             fiscal_view.formas_importacao = []
         # injeta listas sem risco
         setattr(fiscal_view, "contatos_list", contatos_list)
-        setattr(fiscal_view, "links_prefeitura", prefeituras_list)
         setattr(fiscal_view, "envio_fisico", _prepare_envio_fisico(fiscal_view))
 
     if contabil:
@@ -514,25 +518,6 @@ def gerenciar_departamentos(empresa_id):
             contatos_list = normalize_contatos(contatos_list)
             fiscal_form.contatos_json.data = json.dumps(contatos_list)
 
-            if fiscal.links_prefeitura:
-                try:
-                    prefeituras_list = json.loads(fiscal.links_prefeitura) if isinstance(fiscal.links_prefeitura, str) else fiscal.links_prefeitura
-                except Exception:
-                    prefeituras_list = []
-            else:
-                prefeituras_list = []
-            if not prefeituras_list and (
-                getattr(fiscal, 'link_prefeitura', None) or
-                getattr(fiscal, 'usuario_prefeitura', None) or
-                getattr(fiscal, 'senha_prefeitura', None)
-            ):
-                prefeituras_list = [{
-                    'cidade': '',
-                    'link': getattr(fiscal, 'link_prefeitura', '') or '',
-                    'usuario': getattr(fiscal, 'usuario_prefeitura', '') or '',
-                    'senha': getattr(fiscal, 'senha_prefeitura', '') or ''
-                }]
-            fiscal_form.links_prefeitura_json.data = json.dumps(prefeituras_list)
 
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
@@ -572,10 +557,6 @@ def gerenciar_departamentos(empresa_id):
                 fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
             except Exception:
                 fiscal.contatos = []
-            try:
-                fiscal.links_prefeitura = json.loads(fiscal_form.links_prefeitura_json.data or '[]')
-            except Exception:
-                fiscal.links_prefeitura = []
             flash('Departamento Fiscal salvo com sucesso!', 'success')
             form_processed_successfully = True
 
