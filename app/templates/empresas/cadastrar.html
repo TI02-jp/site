@@ -82,8 +82,10 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="data_abertura" class="form-label fw-semibold">{{ form.data_abertura.label.text }}</label>
-                        {{ form.data_abertura(class="form-control", id="data_abertura", type="date", **{'aria-describedby': 'dataAberturaHelp'}) }}
+                        <div class="form-floating">
+                            {{ form.data_abertura(class="form-control", id="data_abertura", type="date", placeholder="Data de Abertura", **{'aria-describedby': 'dataAberturaHelp'}) }}
+                            {{ form.data_abertura.label(class="form-label") }}
+                        </div>
                         {% if form.data_abertura.errors %}
                             {% for error in form.data_abertura.errors %}
                                 <div class="invalid-feedback d-block">

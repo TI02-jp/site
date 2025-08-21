@@ -81,15 +81,17 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ empresa_form.data_abertura.label.text }}</label>
-                        {{ empresa_form.data_abertura(class="form-control", type="date") }}
-                        {% if empresa_form.data_abertura.errors %}
-                            <div class="text-danger mt-1">
-                                {% for error in empresa_form.data_abertura.errors %}
-                                    <small>{{ error }}</small><br>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <div class="form-floating">
+                            {{ empresa_form.data_abertura(class="form-control", type="date", placeholder="Data de Abertura") }}
+                            {{ empresa_form.data_abertura.label(class="form-label") }}
+                            {% if empresa_form.data_abertura.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in empresa_form.data_abertura.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -143,7 +145,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ empresa_form.tributacao.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tributacao">
                             {# Este loop simples resolve tudo! #}
                             {% for subfield in empresa_form.tributacao %}
                             <div class="form-check mb-2">
@@ -156,7 +158,7 @@
                     
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ empresa_form.regime_lancamento.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="regime_lancamento">
                             {# O mesmo loop para o outro campo #}
                             {% for subfield in empresa_form.regime_lancamento %}
                             <div class="form-check mb-2">
@@ -198,7 +200,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <label class="form-label fw-semibold">{{ empresa_form.sistemas_consultorias.label.text }}</label>
-                        <div class="border rounded p-3 bg-light">
+                        <div class="border rounded p-3 bg-light checkbox-group-container">
                             <div class="row">
                                 {% for value, label in empresa_form.sistemas_consultorias.choices %}
                                 <div class="col-md-4 mb-2">
@@ -280,22 +282,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-    // Feedback visual para checkboxes e radio buttons
-    document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
-        input.addEventListener('change', function() {
-            if (this.checked) {
-                this.closest('.form-check').style.fontWeight = '600';
-                this.closest('.form-check').style.color = '#0558c5';
-            } else {
-                this.closest('.form-check').style.fontWeight = 'normal';
-                this.closest('.form-check').style.color = '';
+    // Feedback visual para radio buttons
+    document.querySelectorAll('.radio-group-container input[type="radio"]').forEach(function(radio) {
+        const updateRadioContainerStyle = (r) => {
+            const container = r.closest('.radio-group-container');
+            if (container) {
+                document.querySelectorAll(`input[name="${r.name}"]`).forEach(otherRadio => {
+                    const otherContainer = otherRadio.closest('.radio-group-container');
+                    if (otherContainer) {
+                        otherContainer.classList.remove('border-primary', 'bg-info-subtle', 'text-primary');
+                    }
+                });
+
+                if (r.checked) {
+                    container.classList.add('border-primary', 'bg-info-subtle', 'text-primary');
+                }
             }
-        });
-        
-        if (input.checked) {
-            input.closest('.form-check').style.fontWeight = '600';
-            input.closest('.form-check').style.color = '#0558c5';
+        };
+        radio.addEventListener('change', () => updateRadioContainerStyle(radio));
+        if (radio.checked) {
+            updateRadioContainerStyle(radio);
         }
+    });
+
+    // Feedback visual para checkboxes
+    document.querySelectorAll('.checkbox-group-container input[type="checkbox"]').forEach(function(checkbox) {
+        const updateCheckboxStyle = (chk) => {
+            const formCheckDiv = chk.closest('.form-check');
+            if (formCheckDiv) {
+                if (chk.checked) {
+                    formCheckDiv.classList.add('text-primary', 'fw-semibold');
+                } else {
+                    formCheckDiv.classList.remove('text-primary', 'fw-semibold');
+                }
+            }
+        };
+        checkbox.addEventListener('change', () => updateCheckboxStyle(checkbox));
+        updateCheckboxStyle(checkbox);
     });
 
     // Toggle para senhas
