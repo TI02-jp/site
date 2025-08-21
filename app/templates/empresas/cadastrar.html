@@ -196,11 +196,11 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-12">
-                        <div id="links-prefeitura-container"></div>
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-prefeitura">
-                            <i class="bi bi-plus-circle"></i> Adicionar Link
+                        <div id="acessos-container"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-acesso">
+                            <i class="bi bi-plus-circle"></i> Adicionar Acesso
                         </button>
-                        {{ form.links_prefeitura_json(id='links_prefeitura_json') }}
+                        {{ form.acessos_json(id='acessos_json') }}
                     </div>
                 </div>
 
@@ -280,11 +280,11 @@
 </div>
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/acessos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
+    setupAcessos('acessos-container', 'add-acesso', 'acessos_json');
     // Auto-dismiss existing alerts
     const autoDismiss = (alertEl) => {
         setTimeout(() => {

@@ -201,11 +201,11 @@ def cadastrar_empresa():
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
-            links_prefeitura_json = form.links_prefeitura_json.data or '[]'
+            acessos_json = form.acessos_json.data or '[]'
             try:
-                links_prefeitura = json.loads(links_prefeitura_json) if links_prefeitura_json else []
+                acessos = json.loads(acessos_json) if acessos_json else []
             except Exception:
-                links_prefeitura = []
+                acessos = []
             nova_empresa = Empresa(
                 codigo_empresa=form.codigo_empresa.data,
                 nome_empresa=form.nome_empresa.data,
@@ -217,7 +217,7 @@ def cadastrar_empresa():
                 atividade_principal=form.atividade_principal.data,
                 sistemas_consultorias=form.sistemas_consultorias.data,
                 sistema_utilizado=form.sistema_utilizado.data,
-                links_prefeitura=links_prefeitura
+                acessos=acessos
             )
             db.session.add(nova_empresa)
             db.session.commit()
@@ -278,11 +278,11 @@ def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
     responsavel = request.form.get('responsavel')
     descricao = request.form.get('descricao')
-    links_prefeitura_json = request.form.get('links_prefeitura_json', '[]')
+    acessos_json = request.form.get('acessos_json', '[]')
     try:
-        links_prefeitura = json.loads(links_prefeitura_json) if links_prefeitura_json else []
+        acessos = json.loads(acessos_json) if acessos_json else []
     except Exception:
-        links_prefeitura = []
+        acessos = []
     forma_movimento = request.form.get('forma_movimento')
     observacao_movimento = request.form.get('observacao_movimento')
     observacao_importacao = request.form.get('observacao_importacao')
@@ -302,7 +302,7 @@ def processar_dados_fiscal(request):
         'responsavel': responsavel,
         'descricao': descricao,
         'formas_importacao': formas_importacao,
-        'links_prefeitura': links_prefeitura,
+        'acessos': acessos,
         'forma_movimento': forma_movimento,
         'envio_digital': envio_digital,
         'envio_fisico': envio_fisico,
@@ -372,7 +372,7 @@ def editar_empresa(id):
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
-        empresa_form.links_prefeitura_json.data = json.dumps(empresa.links_prefeitura or [])
+        empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
 
     if request.method == 'POST':
         if empresa_form.validate():
@@ -380,9 +380,9 @@ def editar_empresa(id):
             empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
             try:
-                empresa.links_prefeitura = json.loads(empresa_form.links_prefeitura_json.data or '[]')
+                empresa.acessos = json.loads(empresa_form.acessos_json.data or '[]')
             except Exception:
-                empresa.links_prefeitura = []
+                empresa.acessos = []
             db.session.add(empresa)
             try:
                 db.session.commit()

@@ -77,7 +77,7 @@ class EmpresaForm(FlaskForm):
         ('QUESTOR_NET', 'Questor Net'), ('SIEG', 'Sieg'), ('SIEG_TAG', 'Sieg - Utiliza TAGs')
     ], validators=[Optional()])
     sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
-    links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
+    acessos_json = HiddenField('Acessos', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
 
 class EditUserForm(FlaskForm):
