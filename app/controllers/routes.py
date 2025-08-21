@@ -217,8 +217,7 @@ def cadastrar_empresa():
                 atividade_principal=form.atividade_principal.data,
                 sistemas_consultorias=form.sistemas_consultorias.data,
                 sistema_utilizado=form.sistema_utilizado.data,
-                links_prefeitura=links_prefeitura,
-                observacao_prefeitura=form.observacao_prefeitura.data
+                links_prefeitura=links_prefeitura
             )
             db.session.add(nova_empresa)
             db.session.commit()
@@ -287,7 +286,6 @@ def processar_dados_fiscal(request):
     forma_movimento = request.form.get('forma_movimento')
     observacao_movimento = request.form.get('observacao_movimento')
     observacao_importacao = request.form.get('observacao_importacao')
-    observacao_prefeitura = request.form.get('observacao_prefeitura')
     observacao_contato = request.form.get('observacao_contato')
     particularidades = request.form.get('particularidades')
     formas_importacao_json = request.form.get('formas_importacao_json', '[]')
@@ -311,7 +309,6 @@ def processar_dados_fiscal(request):
         'malote_coleta': malote_coleta,
         'observacao_movimento': observacao_movimento,
         'observacao_importacao': observacao_importacao,
-        'observacao_prefeitura': observacao_prefeitura,
         'observacao_contato': observacao_contato,
         'contatos': contatos,
         'particularidades_texto': particularidades
@@ -376,7 +373,6 @@ def editar_empresa(id):
         if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
         empresa_form.links_prefeitura_json.data = json.dumps(empresa.links_prefeitura or [])
-        empresa_form.observacao_prefeitura.data = empresa.observacao_prefeitura
 
     if request.method == 'POST':
         if empresa_form.validate():
@@ -387,7 +383,6 @@ def editar_empresa(id):
                 empresa.links_prefeitura = json.loads(empresa_form.links_prefeitura_json.data or '[]')
             except Exception:
                 empresa.links_prefeitura = []
-            empresa.observacao_prefeitura = empresa_form.observacao_prefeitura.data
             db.session.add(empresa)
             try:
                 db.session.commit()

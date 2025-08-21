@@ -78,7 +78,6 @@ class EmpresaForm(FlaskForm):
     ], validators=[Optional()])
     sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
     links_prefeitura_json = HiddenField('Links Prefeitura', validators=[Optional()])
-    observacao_prefeitura = TextAreaField('Observação', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
 
 class EditUserForm(FlaskForm):
