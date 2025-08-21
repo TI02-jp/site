@@ -122,21 +122,11 @@
           </div>
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            <div class="input-group">
-              {{ form.password(class="form-control", id="modal_password") }}
-              <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#modal_password">
-                <i class="bi bi-eye"></i>
-              </button>
-            </div>
+            {{ form.password(class="form-control", id="modal_password") }}
           </div>
           <div class="mb-3">
             {{ form.confirm_password.label(class="form-label") }}
-            <div class="input-group">
-              {{ form.confirm_password(class="form-control", id="modal_confirm_password") }}
-              <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#modal_confirm_password">
-                <i class="bi bi-eye"></i>
-              </button>
-            </div>
+            {{ form.confirm_password(class="form-control", id="modal_confirm_password") }}
           </div>
           <div class="mb-3">
             {{ form.role.label(class="form-label") }}
@@ -182,19 +172,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Toggle de visualização de senha no modal
-    document.querySelectorAll('.toggle-password').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const target = document.querySelector(this.getAttribute('data-target'));
-            if (target) {
-                const type = target.getAttribute('type') === 'password' ? 'text' : 'password';
-                target.setAttribute('type', type);
-                const icon = this.querySelector('i');
-                icon.classList.toggle('bi-eye');
-                icon.classList.toggle('bi-eye-slash');
-            }
-        });
-    });
 });
 
 function confirmarExclusao(userId) {
