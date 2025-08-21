@@ -104,9 +104,6 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
                             {{ form.password(class="form-control", placeholder="Senha", type="password", id="password") }}
-                            <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#password">
-                                <i class="bi bi-eye"></i>
-                            </button>
                         </div>
                         {% for error in form.password.errors %}
                             <div class="form-text text-danger">
@@ -120,9 +117,6 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                             {{ form.confirm_password(class="form-control", placeholder="Confirme a senha", type="password", id="confirmPassword") }}
-                            <button type="button" class="btn btn-outline-secondary toggle-password" data-target="#confirmPassword">
-                                <i class="bi bi-eye"></i>
-                            </button>
                         </div>
                         {% for error in form.confirm_password.errors %}
                             <div class="form-text text-danger">
@@ -180,20 +174,6 @@ document.addEventListener('DOMContentLoaded', function () {
         passwordField.addEventListener('input', validatePasswordMatch);
         confirmPasswordField.addEventListener('input', validatePasswordMatch);
     }
-
-    // Toggle de visualização de senha
-    document.querySelectorAll('.toggle-password').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const target = document.querySelector(this.getAttribute('data-target'));
-            if (target) {
-                const type = target.getAttribute('type') === 'password' ? 'text' : 'password';
-                target.setAttribute('type', type);
-                const icon = this.querySelector('i');
-                icon.classList.toggle('bi-eye');
-                icon.classList.toggle('bi-eye-slash');
-            }
-        });
-    });
 
     // Validação de username em tempo real
     const usernameField = document.querySelector('#username');
