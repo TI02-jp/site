@@ -201,6 +201,11 @@ def cadastrar_empresa():
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
+            links_prefeitura_json = form.links_prefeitura_json.data or '[]'
+            try:
+                links_prefeitura = json.loads(links_prefeitura_json) if links_prefeitura_json else []
+            except Exception:
+                links_prefeitura = []
             nova_empresa = Empresa(
                 codigo_empresa=form.codigo_empresa.data,
                 nome_empresa=form.nome_empresa.data,
@@ -211,7 +216,9 @@ def cadastrar_empresa():
                 regime_lancamento=form.regime_lancamento.data,
                 atividade_principal=form.atividade_principal.data,
                 sistemas_consultorias=form.sistemas_consultorias.data,
-                sistema_utilizado=form.sistema_utilizado.data
+                sistema_utilizado=form.sistema_utilizado.data,
+                links_prefeitura=links_prefeitura,
+                observacao_prefeitura=form.observacao_prefeitura.data
             )
             db.session.add(nova_empresa)
             db.session.commit()
@@ -368,12 +375,19 @@ def editar_empresa(id):
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         if empresa.regime_lancamento:
             empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
+        empresa_form.links_prefeitura_json.data = json.dumps(empresa.links_prefeitura or [])
+        empresa_form.observacao_prefeitura.data = empresa.observacao_prefeitura
 
     if request.method == 'POST':
         if empresa_form.validate():
             empresa_form.populate_obj(empresa)
             empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
+            try:
+                empresa.links_prefeitura = json.loads(empresa_form.links_prefeitura_json.data or '[]')
+            except Exception:
+                empresa.links_prefeitura = []
+            empresa.observacao_prefeitura = empresa_form.observacao_prefeitura.data
             db.session.add(empresa)
             try:
                 db.session.commit()
