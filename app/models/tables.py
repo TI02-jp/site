@@ -72,8 +72,7 @@ class Empresa(db.Model):
     regime_lancamento = db.Column(db.Enum(RegimeLancamento), nullable=False)
     sistemas_consultorias = db.Column(JsonString(255))
     sistema_utilizado = db.Column(db.String(150))
-    links_prefeitura = db.Column(JsonString(255))
-    observacao_prefeitura = db.Column(db.String(200))
+    acessos = db.Column('links_prefeitura', JsonString(255))
     codigo_empresa = db.Column(db.String(100), nullable=False)
 
     def __repr__(self):

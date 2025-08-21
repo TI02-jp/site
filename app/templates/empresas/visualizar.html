@@ -148,18 +148,18 @@
             <div class="row g-4 mt-2">
                 <div class="col-12">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h6>
-                        {% if empresa.links_prefeitura %}
+                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
+                        {% if empresa.acessos %}
                             <div class="row g-2 fw-semibold mb-1">
-                                <div class="col-md-3">Cidade</div>
+                                <div class="col-md-3">Acesso</div>
                                 <div class="col-md-3">Link</div>
                                 <div class="col-md-3">Usuário</div>
                                 <div class="col-md-3">Senha</div>
                             </div>
-                            {% for acesso in empresa.links_prefeitura %}
+                            {% for acesso in empresa.acessos %}
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-3">
-                                        <input type="text" class="form-control" value="{{ acesso.cidade or '' }}" readonly>
+                                        <input type="text" class="form-control" value="{{ acesso.acesso or '' }}" readonly>
                                     </div>
                                     <div class="col-md-3">
                                         {% if acesso.link %}
@@ -174,18 +174,15 @@
                                     <div class="col-md-3">
                                         <input type="text" class="form-control" value="{{ acesso.senha or '' }}" readonly>
                                     </div>
+                                    {% if acesso.observacao %}
+                                    <div class="col-12 mt-2">
+                                        <textarea class="form-control form-control-sm" readonly style="height:80px">{{ acesso.observacao }}</textarea>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             {% endfor %}
                         {% else %}
                             <div class="info-item"><span class="text-muted">Não informado</span></div>
-                        {% endif %}
-                        {% if empresa.observacao_prefeitura %}
-                        <div class="info-item mt-2">
-                            <label class="info-label">Observação</label>
-                            <div class="info-value">
-                                <textarea class="form-control form-control-sm" readonly style="height:80px">{{ empresa.observacao_prefeitura }}</textarea>
-                            </div>
-                        </div>
                         {% endif %}
                     </div>
                 </div>

@@ -171,23 +171,18 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-building me-2"></i>Acesso à Prefeitura
+                            <i class="bi bi-building me-2"></i>Acessos do Cliente
                         </h5>
                     </div>
                 </div>
 
                 <div class="row g-4 mb-4">
                     <div class="col-12">
-                        <div id="links-prefeitura-container"></div>
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-prefeitura">
-                            <i class="bi bi-plus-circle"></i> Adicionar Link
+                        <div id="acessos-container"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-acesso">
+                            <i class="bi bi-plus-circle"></i> Adicionar Acesso
                         </button>
-                        {{ empresa_form.links_prefeitura_json(id='links_prefeitura_json') }}
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add_obs_prefeitura"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="obs_prefeitura_container" class="form-floating mt-2" style="display:none;">
-                            {{ empresa_form.observacao_prefeitura(class="form-control", id="observacao_prefeitura", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
-                            {{ empresa_form.observacao_prefeitura.label }}
-                        </div>
+                        {{ empresa_form.acessos_json(id='acessos_json') }}
                     </div>
                 </div>
 
@@ -269,13 +264,12 @@
 </div>
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
+<script src="{{ url_for('static', filename='javascript/acessos.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 <script src="https://unpkg.com/imask"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
-    setupObservacao('add_obs_prefeitura', 'obs_prefeitura_container', 'observacao_prefeitura');
+    setupAcessos('acessos-container', 'add-acesso', 'acessos_json');
     // Máscara para CNPJ
     const cnpjField = document.querySelector('#cnpj');
     if (cnpjField) {
