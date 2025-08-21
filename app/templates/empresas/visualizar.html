@@ -41,17 +41,17 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="text-primary mb-2">
+                    <h1 class="text-dept-blue mb-2">
                         <i class="bi bi-building-gear me-3"></i>{{ empresa.nome_empresa }}
                     </h1>
                     <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
                 </div>
                 <div class="text-end">
-                    <div class="badge bg-primary-subtle text-primary px-3 py-2 mb-2">
+                    <div class="badge bg-dept-blue-subtle px-3 py-2 mb-2">
                         Código: {{ empresa.codigo_empresa or 'N/A' }}
                     </div>
                     <div class="d-block">
-                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom btn-sm">
                             <i class="bi bi-pencil me-1"></i>Editar
                         </a>
                     </div>
@@ -65,7 +65,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-empresa" class="btn btn-outline-primary btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
+                        <a href="#dados-empresa" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
                         <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
                         <a href="#contabil" class="btn btn-outline-dept-orange btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
                         <a href="#pessoal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
@@ -77,21 +77,21 @@
     </div>
 
     <div class="card shadow-lg mb-5" id="dados-empresa">
-        <div class="card-header bg-primary text-white py-3">
+        <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Dados da Empresa</h3>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
                  <div class="col-lg-4 col-md-6">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
+                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
                         <div class="info-item">
                             <label class="info-label">Código da Empresa</label>
-                            <div class="info-value"><span class="badge bg-primary-subtle text-primary fs-6">{{ empresa.codigo_empresa or 'Não informado' }}</span></div>
+                            <div class="info-value"><span class="badge bg-dept-blue-subtle fs-6">{{ empresa.codigo_empresa or 'Não informado' }}</span></div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Nome da Empresa</label>
-                            <div class="info-value fw-semibold text-primary">{{ empresa.nome_empresa or 'Não informado' }}</div>
+                            <div class="info-value fw-semibold text-dept-blue">{{ empresa.nome_empresa or 'Não informado' }}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">CNPJ</label>
@@ -102,17 +102,17 @@
                         <div class="info-item">
                             <label class="info-label">Data de Abertura</label>
                             <div class="info-value">
-                                {% if empresa.data_abertura %}<span class="badge bg-info-subtle text-info">{{ empresa.data_abertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}
+                                {% if empresa.data_abertura %}<span class="badge bg-dept-blue-subtle">{{ empresa.data_abertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
                  <div class="col-lg-4 col-md-6">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
+                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
                         <div class="info-item">
                             <label class="info-label">Sócio Administrador</label>
-                            <div class="info-value">{% if empresa.socio_administrador %}<i class="bi bi-person-check me-2 text-primary"></i>{{ empresa.socio_administrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.socio_administrador %}<i class="bi bi-person-check me-2 text-dept-blue"></i>{{ empresa.socio_administrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Atividade Principal</label>
@@ -120,20 +120,20 @@
                         </div>
                         <div class="info-item">
                             <label class="info-label">Tributação</label>
-                            <div class="info-value">{% if empresa.tributacao %}<span class="badge bg-success-subtle text-success fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.tributacao %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Regime de Lançamento</label>
-                            <div class="info-value">{% if empresa.regime_lancamento %}<span class="badge bg-warning-subtle text-warning fs-6"><i class="bi bi-journal-text me-1"></i>{{ empresa.regime_lancamento.value }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.regime_lancamento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-journal-text me-1"></i>{{ empresa.regime_lancamento.value }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-12">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
+                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
                         <div class="info-item">
                             <label class="info-label">Sistema Utilizado</label>
-                            <div class="info-value">{% if empresa.sistema_utilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-primary"></i><span class="badge bg-primary-subtle text-primary">{{ empresa.sistema_utilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                            <div class="info-value">{% if empresa.sistema_utilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-dept-blue"></i><span class="badge bg-dept-blue-subtle">{{ empresa.sistema_utilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
                         <div class="info-item">
                             <label class="info-label">Sistemas/Consultorias</label>
@@ -148,7 +148,7 @@
             <div class="row g-4 mt-2">
                 <div class="col-12">
                     <div class="info-group">
-                        <h6 class="text-primary mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
+                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
                         {% if empresa.acessos %}
                             <div class="row g-2 fw-semibold mb-1">
                                 <div class="col-md-3">Portal</div>
@@ -163,7 +163,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         {% if acesso.link %}
-                                            <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control d-block text-primary text-decoration-underline text-truncate" title="{{ acesso.link }}">{{ acesso.link }}</a>
+                                            <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control d-block text-dept-blue text-decoration-underline text-truncate" title="{{ acesso.link }}">{{ acesso.link }}</a>
                                         {% else %}
                                             <input type="text" class="form-control" value="" readonly>
                                         {% endif %}
@@ -287,7 +287,7 @@
                                     {% set trimmed = item.strip() %}
                                     {% set fi_ns.items = fi_ns.items + [fi_map.get(trimmed, trimmed)] %}
                                 {% endfor %}
-                                {{ render_badge_list(fi_ns.items, 'bg-primary-subtle text-primary', 'bi-check-circle', placeholder_importacao) }}
+                                {{ render_badge_list(fi_ns.items, 'bg-dept-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                             {% if fiscal.observacao_importacao %}
                             <div class="info-item mt-2" style="grid-column: 1 / -1;">
@@ -606,7 +606,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista</a>
-                <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-primary px-4"><i class="bi bi-pencil me-2"></i>Editar Empresa</a>
+                <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom px-4"><i class="bi bi-pencil me-2"></i>Editar Empresa</a>
                 <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}" class="btn btn-outline-info px-4"><i class="bi bi-diagram-3 me-2"></i>Gerenciar Departamentos</a>
             </div>
         </div>
