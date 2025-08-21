@@ -49,9 +49,6 @@
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-lock"></i></span>
                     {{ form.password(class="form-control", id="password", placeholder="Digite sua senha") }}
-                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                        <i class="fas fa-eye"></i>
-                    </button>
                 </div>
                 {% for error in form.password.errors %}
                     <div class="text-danger small mt-1">{{ error }}</div>
@@ -73,23 +70,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const togglePassword = document.getElementById('togglePassword');
-            const password = document.getElementById('password');
-
-            if (togglePassword && password) {
-                togglePassword.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-                    password.setAttribute('type', type);
-
-                    const icon = this.querySelector('i');
-                    if (icon) {
-                        icon.classList.toggle('fa-eye');
-                        icon.classList.toggle('fa-eye-slash');
-                    }
-                });
-            }
-
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function (alert) {
                 setTimeout(function () {

@@ -122,9 +122,6 @@
                                         <i class="bi bi-lock"></i>
                                     </span>
                                     <input type="password" name="new_password" class="form-control" placeholder="Digite a nova senha">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
                                 </div>
                             </div>
                             
@@ -135,9 +132,6 @@
                                         <i class="bi bi-lock-fill"></i>
                                     </span>
                                     <input type="password" name="confirm_new_password" class="form-control" placeholder="Confirme a nova senha">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword(this)">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -160,22 +154,6 @@
 
 {% block scripts %}
 <script>
-// Toggle para mostrar/ocultar senha
-function togglePassword(button) {
-    const input = button.previousElementSibling;
-    const icon = button.querySelector('i');
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('bi-eye');
-        icon.classList.add('bi-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('bi-eye-slash');
-        icon.classList.add('bi-eye');
-    }
-}
-
 // Auto-dismiss alerts
 document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert-dismissible');
