@@ -53,21 +53,6 @@
                     </div>
                 </div>
 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-building me-2"></i>Acesso à Prefeitura</h5>
-                <div class="row g-4 mb-4 align-items-stretch">
-                    <div class="col-12">
-                        <div id="links-prefeitura-container"></div>
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-prefeitura">
-                            <i class="bi bi-plus-circle"></i> Adicionar Link
-                        </button>
-                        {{ fiscal_form.links_prefeitura_json(id='links_prefeitura_json') }}
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_prefeitura"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
-                        <div id="fiscal_obs_prefeitura_container" class="form-floating mt-2" style="display:none;">
-                            {{ fiscal_form.observacao_prefeitura(class="form-control", id="fiscal_observacao_prefeitura", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
-                            {{ fiscal_form.observacao_prefeitura.label }}
-                        </div>
-                    </div>
-                </div>
 
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
                 <div class="row g-4 mb-4 align-items-stretch">
@@ -379,20 +364,17 @@
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
-<script src="{{ url_for('static', filename='javascript/prefeituras.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/forma_movimento.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
-    setupPrefeituras('links-prefeitura-container', 'add-prefeitura', 'links_prefeitura_json');
     setupFormaMovimento('fiscal_forma_movimento', 'fiscal_envio_digital', 'fiscal_envio_fisico');
     setupFormaMovimento('contabil_forma_movimento', 'contabil_envio_digital', 'contabil_envio_fisico');
     setupMalote('fiscal_malote_checkbox', 'fiscal_malote_coleta');
     setupMalote('contabil_malote_checkbox', 'contabil_malote_coleta');
     setupObservacao('fiscal_add_obs_importacao', 'fiscal_obs_importacao_container', 'fiscal_observacao_importacao');
-    setupObservacao('fiscal_add_obs_prefeitura', 'fiscal_obs_prefeitura_container', 'fiscal_observacao_prefeitura');
     setupObservacao('fiscal_add_obs_envio', 'fiscal_obs_envio_container', 'fiscal_observacao_movimento');
     setupObservacao('fiscal_add_obs_contato', 'fiscal_obs_contato_container', 'fiscal_observacao_contato');
     setupObservacao('contabil_add_obs_envio', 'contabil_obs_envio_container', 'contabil_observacao_movimento');
