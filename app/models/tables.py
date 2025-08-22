@@ -69,7 +69,7 @@ class Empresa(db.Model):
     data_abertura = db.Column(db.Date, nullable=False)
     socio_administrador = db.Column(db.String(100))
     tributacao = db.Column(db.String(50))
-    regime_lancamento = db.Column(db.Enum(RegimeLancamento), nullable=False)
+    regime_lancamento = db.Column(JsonString(50), nullable=False)
     sistemas_consultorias = db.Column(JsonString(255))
     sistema_utilizado = db.Column(db.String(150))
     acessos = db.Column(JsonString(255))

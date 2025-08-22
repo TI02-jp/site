@@ -65,10 +65,10 @@ class EmpresaForm(FlaskForm):
     socio_administrador = StringField('Sócio Administrador', validators=[Optional()])
     atividade_principal = StringField('Atividade Principal', validators=[Optional()])
     tributacao = RadioField('Tributação', choices=[
-        ('Simples Nacional', 'Simples Nacional'), 
-        ('Lucro Presumido', 'Lucro Presumido'), 
+        ('Simples Nacional', 'Simples Nacional'),
+        ('Lucro Presumido', 'Lucro Presumido'),
         ('Lucro Real', 'Lucro Real')], validators=[DataRequired()])
-    regime_lancamento = RadioField('Regime de Lançamento', choices=[
+    regime_lancamento = SelectMultipleField('Regime de Lançamento', choices=[
         (e.value, e.value) for e in RegimeLancamento
     ], validators=[DataRequired()])
     sistemas_consultorias = SelectMultipleField('Sistemas e Consultorias', choices=[
