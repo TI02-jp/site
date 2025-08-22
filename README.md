@@ -23,7 +23,7 @@ Este projeto é uma aplicação Web desenvolvida em **Flask** para gerenciar usu
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install Flask Flask-Login SQLAlchemy mysql-connector-python python-dotenv
 ```
 
 3. Crie o banco de dados MySQL chamado `cadastro_empresas`:
