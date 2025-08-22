@@ -170,10 +170,10 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.regime_lancamento.label.text }}</label>
-                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="regime_lancamento">
+                        <div class="border rounded p-3 bg-light radio-group-container checkbox-group-container" data-field-name="regime_lancamento">
                             {% for value, label in form.regime_lancamento.choices %}
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if form.regime_lancamento.data == value %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if value in form.regime_lancamento.data %}checked{% endif %}>
                                     <label class="form-check-label" for="regime-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}

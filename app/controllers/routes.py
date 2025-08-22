@@ -383,8 +383,7 @@ def editar_empresa(id):
 
     if request.method == 'GET':
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
-        if empresa.regime_lancamento:
-            empresa_form.regime_lancamento.data = empresa.regime_lancamento.value
+        empresa_form.regime_lancamento.data = empresa.regime_lancamento or []
         empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
 
     if request.method == 'POST':
@@ -422,10 +421,8 @@ def visualizar_empresa(id):
 
     empresa = Empresa.query.get_or_404(id)
 
-    # display para enum (ou None)
-    empresa.regime_lancamento_display = (
-        empresa.regime_lancamento.value if empresa.regime_lancamento else None
-    )
+    # display para regime de lançamento
+    empresa.regime_lancamento_display = empresa.regime_lancamento or []
 
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
