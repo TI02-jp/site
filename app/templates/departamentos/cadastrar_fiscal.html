@@ -46,12 +46,6 @@
                                         <label class="form-check-label" for="imp-{{ value }}">{{ label }}</label>
                                     </div>
                                     {% endfor %}
-                                    {% for value, label in form.formas_importacao.choices if value == 'nenhum' %}
-                                    <div class="form-check mt-2 d-flex justify-content-center align-items-center">
-                                        <input class="form-check-input me-1" type="checkbox" name="{{ form.formas_importacao.name }}" value="{{ value }}" id="imp-{{ value }}" {% if value in (form.formas_importacao.data) %}checked{% endif %}>
-                                        <label class="form-check-label mb-0" for="imp-{{ value }}">{{ label }}</label>
-                                    </div>
-                                    {% endfor %}
                                 </div>
                                 <div class="col-md-4">
                                     <h6 class="fw-semibold">NFCe</h6>
@@ -63,6 +57,12 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% for value, label in form.formas_importacao.choices if value == 'nenhum' %}
+                            <div class="form-check mt-3 d-flex justify-content-center align-items-center">
+                                <input class="form-check-input me-1" type="checkbox" name="{{ form.formas_importacao.name }}" value="{{ value }}" id="imp-{{ value }}" {% if value in (form.formas_importacao.data) %}checked{% endif %}>
+                                <label class="form-check-label mb-0" for="imp-{{ value }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
                             </div>
                         </div>
                     <div class="col-md-6 d-flex flex-column">
