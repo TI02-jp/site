@@ -129,7 +129,8 @@ def upload_image():
             file.save(file_path)
             print("SUCESSO: file.save() executado sem erros!")
 
-            file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+            # Return a relative URL so uploaded images work in any environment
+            file_url = url_for('static', filename=f'uploads/{unique_name}')
             return jsonify({'image_url': file_url})
 
         except Exception as e:
