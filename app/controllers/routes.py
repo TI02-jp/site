@@ -211,6 +211,7 @@ def cadastrar_empresa():
     form = EmpresaForm()
     if request.method == 'GET':
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
+        form.regime_lancamento.data = form.regime_lancamento.data or []
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
