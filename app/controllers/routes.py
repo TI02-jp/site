@@ -673,6 +673,83 @@ def relatorio_empresas():
     )
 
 
+@app.route('/relatorio_fiscal')
+@admin_required
+def relatorio_fiscal():
+    departamentos = (
+        Departamento.query.filter_by(tipo='Departamento Fiscal')
+        .join(Empresa)
+        .with_entities(
+            Empresa.nome_empresa,
+            Empresa.codigo_empresa,
+            Departamento.formas_importacao,
+            Departamento.forma_movimento,
+        )
+        .all()
+    )
+    fiscal_form = DepartamentoFiscalForm()
+    choice_map = dict(fiscal_form.formas_importacao.choices)
+    import_grouped = {}
+    envio_grouped = {}
+    for nome, codigo, formas, envio in departamentos:
+        formas_list = (
+            json.loads(formas)
+            if isinstance(formas, str)
+            else (formas or [])
+        )
+        for f in formas_list:
+            label = choice_map.get(f, f)
+            import_grouped.setdefault(label, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
+        label_envio = envio if envio else 'Não informado'
+        envio_grouped.setdefault(label_envio, []).append(
+            {"nome": nome, "codigo": codigo}
+        )
+    labels_imp = list(import_grouped.keys())
+    counts_imp = [len(import_grouped[l]) for l in labels_imp]
+    fig_imp = go.Figure(
+        data=[go.Bar(x=labels_imp, y=counts_imp, marker_color=qualitative.Pastel)]
+    )
+    fig_imp.update_layout(
+        title_text="Formas de Importação (Fiscal)",
+        template="seaborn",
+        xaxis_title="Forma",
+        yaxis_title="Quantidade",
+    )
+    import_chart = fig_imp.to_html(
+        full_html=False, div_id='fiscal-importacao-chart'
+    )
+    labels_env = list(envio_grouped.keys())
+    counts_env = [len(envio_grouped[l]) for l in labels_env]
+    fig_env = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels_env,
+                values=counts_env,
+                hole=0.4,
+                marker=dict(
+                    colors=qualitative.Pastel,
+                    line=dict(color="#FFFFFF", width=2),
+                ),
+                textinfo="label+percent",
+            )
+        ]
+    )
+    fig_env.update_layout(
+        title_text="Envio de Documentos (Fiscal)",
+        template="seaborn",
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
+    )
+    envio_chart = fig_env.to_html(full_html=False, div_id='fiscal-envio-chart')
+    return render_template(
+        'admin/relatorio_fiscal.html',
+        importacao_chart=import_chart,
+        envio_chart=envio_chart,
+        empresas_por_import=import_grouped,
+        empresas_por_envio=envio_grouped,
+    )
+
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
