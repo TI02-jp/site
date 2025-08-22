@@ -290,27 +290,12 @@
                                     'nfce_xml_cliente': 'NFCe por XML - Copiado do cliente',
                                     'nenhum': 'Não importa nada'
                                 } %}
-                                {% set fi_entradas = [] %}
-                                {% set fi_saidas = [] %}
+                                {% set fi_ns = namespace(items=[]) %}
                                 {% for item in fi_items if item and item.strip() %}
                                     {% set trimmed = item.strip() %}
-                                    {% set label = fi_map.get(trimmed, trimmed) %}
-                                    {% if trimmed.startswith('entradas') %}
-                                        {% set fi_entradas = fi_entradas + [label] %}
-                                    {% elif trimmed.startswith('saidas') or trimmed.startswith('nfce') %}
-                                        {% set fi_saidas = fi_saidas + [label] %}
-                                    {% endif %}
+                                    {% set fi_ns.items = fi_ns.items + [fi_map.get(trimmed, trimmed)] %}
                                 {% endfor %}
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="info-label d-block">Entradas</label>
-                                        {{ render_badge_list(fi_entradas, 'bg-dept-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="info-label d-block">Saídas</label>
-                                        {{ render_badge_list(fi_saidas, 'bg-dept-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
-                                    </div>
-                                </div>
+                                {{ render_badge_list(fi_ns.items, 'bg-dept-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                             {% if fiscal.observacao_importacao %}
                             <div class="info-item mt-2" style="grid-column: 1 / -1;">
