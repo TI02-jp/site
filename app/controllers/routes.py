@@ -645,15 +645,28 @@ def relatorios():
 @admin_required
 def relatorio_empresas():
     empresas = Empresa.query.with_entities(
-        Empresa.nome_empresa, Empresa.cnpj, Empresa.codigo_empresa, Empresa.tributacao
+        Empresa.nome_empresa,
+        Empresa.cnpj,
+        Empresa.codigo_empresa,
+        Empresa.tributacao,
+        Empresa.sistema_utilizado,
     ).all()
+
     categorias = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
     grouped = {cat: [] for cat in categorias}
-    for nome, cnpj, codigo, trib in empresas:
+    grouped_sistemas = {}
+
+    for nome, cnpj, codigo, trib, sistema in empresas:
         label = trib if trib in categorias else 'Outros'
         grouped.setdefault(label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
+
+        sistema_label = sistema.strip() if sistema else 'Não informado'
+        grouped_sistemas.setdefault(sistema_label, []).append(
+            {"nome": nome, "cnpj": cnpj, "codigo": codigo}
+        )
+
     labels = list(grouped.keys())
     counts = [len(grouped[l]) for l in labels]
     fig = go.Figure(
@@ -666,10 +679,28 @@ def relatorio_empresas():
         yaxis_title="Quantidade",
     )
     chart_div = fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+
+    sistema_labels = list(grouped_sistemas.keys())
+    sistema_counts = [len(grouped_sistemas[l]) for l in sistema_labels]
+    fig_sistemas = go.Figure(
+        data=[go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)]
+    )
+    fig_sistemas.update_layout(
+        title_text="Empresas por sistema utilizado",
+        template="seaborn",
+        xaxis_title="Sistema",
+        yaxis_title="Quantidade",
+    )
+    chart_div_sistema = fig_sistemas.to_html(
+        full_html=False, div_id='empresa-sistema-chart'
+    )
+
     return render_template(
         'admin/relatorio_empresas.html',
         chart_div=chart_div,
         empresas_por_slice=grouped,
+        chart_div_sistema=chart_div_sistema,
+        empresas_por_sistema=grouped_sistemas,
     )
 
 
