@@ -42,7 +42,7 @@
                         <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="row">
-                                <div class="col-6">
+                                <div class="col-md-4">
                                     <h6 class="fw-semibold">Entrada</h6>
                                     {% for value, label in fiscal_form.formas_importacao.choices if value.startswith('entradas') %}
                                     <div class="form-check mb-2">
@@ -51,9 +51,18 @@
                                     </div>
                                     {% endfor %}
                                 </div>
-                                <div class="col-6">
+                                <div class="col-md-4">
                                     <h6 class="fw-semibold">Saída</h6>
-                                    {% for value, label in fiscal_form.formas_importacao.choices if not value.startswith('entradas') %}
+                                    {% for value, label in fiscal_form.formas_importacao.choices if value.startswith('saidas') %}
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ value }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="fi-{{ value }}">{{ label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="fw-semibold">NFCe</h6>
+                                    {% for value, label in fiscal_form.formas_importacao.choices if value.startswith('nfce') %}
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ value }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
                                         <label class="form-check-label" for="fi-{{ value }}">{{ label }}</label>
@@ -61,6 +70,12 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% for value, label in fiscal_form.formas_importacao.choices if value == 'nenhum' %}
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ value }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
+                                <label class="form-check-label" for="fi-{{ value }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-6 d-flex flex-column">
