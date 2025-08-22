@@ -26,7 +26,14 @@ login_manager.login_view = 'login'
 def apply_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    csp = (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.quilljs.com 'unsafe-inline'; "
+        "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.quilljs.com 'unsafe-inline'; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net;"
+    )
+    response.headers['Content-Security-Policy'] = csp
     return response
 
 # Importa rotas e modelos depois da criação do db
