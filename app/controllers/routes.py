@@ -13,7 +13,7 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-import os, json, re, imghdr
+import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
