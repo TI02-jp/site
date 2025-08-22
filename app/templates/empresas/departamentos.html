@@ -71,9 +71,9 @@
                                 </div>
                             </div>
                             {% for value, label in fiscal_form.formas_importacao.choices if value == 'nenhum' %}
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ value }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
-                                <label class="form-check-label" for="fi-{{ value }}">{{ label }}</label>
+                            <div class="form-check mt-2 ps-0">
+                                <input class="form-check-input ms-0 me-1" type="checkbox" name="{{ fiscal_form.formas_importacao.name }}" value="{{ value }}" id="fi-{{ value }}" {% if value in (fiscal_form.formas_importacao.data or []) %}checked{% endif %}>
+                                <label class="form-check-label mb-0" for="fi-{{ value }}">{{ label }}</label>
                             </div>
                             {% endfor %}
                         </div>
