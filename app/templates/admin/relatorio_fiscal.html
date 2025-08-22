@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório Fiscal{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Relatório Fiscal</h1>
+
+    <h3 class="mt-4">Formas de Importação</h3>
+    <div id="chart-importacao">
+        {{ importacao_chart|safe }}
+    </div>
+    <div id="importacao-list" class="mt-4 d-flex justify-content-center"></div>
+
+    <h3 class="mt-5">Envio de Documentos</h3>
+    <div id="chart-envio">
+        {{ envio_chart|safe }}
+    </div>
+    <div id="envio-list" class="mt-4 d-flex justify-content-center"></div>
+    <h4 class="mt-5">Coleta do Malote</h4>
+    <div id="chart-malote">
+        {{ malote_chart|safe }}
+    </div>
+    <div id="malote-list" class="mt-4 d-flex justify-content-center"></div>
+</div>
+<script>
+    const empresasPorImport = {{ empresas_por_import|tojson }};
+    const importChart = document.getElementById('fiscal-importacao-chart');
+    if(importChart){
+        importChart.on('plotly_click', function(data){
+            const label = data.points[0].x || data.points[0].label;
+            const empresas = empresasPorImport[label] || [];
+            const container = document.getElementById('importacao-list');
+            if(!empresas.length){
+                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th></tr></thead><tbody>';
+            empresas.forEach(e => {
+                const nome = e.nome ? e.nome.toUpperCase() : '';
+                const codigo = e.codigo || '';
+                html += `<tr><td>${codigo}</td><td>${nome}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        });
+    }
+    const empresasPorEnvio = {{ empresas_por_envio|tojson }};
+    const envioChart = document.getElementById('fiscal-envio-chart');
+    if(envioChart){
+        envioChart.on('plotly_click', function(data){
+            const label = data.points[0].label || data.points[0].x;
+            const empresas = empresasPorEnvio[label] || [];
+            const container = document.getElementById('envio-list');
+            if(!empresas.length){
+                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th></tr></thead><tbody>';
+            empresas.forEach(e => {
+                const nome = e.nome ? e.nome.toUpperCase() : '';
+                const codigo = e.codigo || '';
+                html += `<tr><td>${codigo}</td><td>${nome}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        });
+    }
+    const empresasPorMalote = {{ empresas_por_malote|tojson }};
+    const maloteChart = document.getElementById('fiscal-malote-chart');
+    if(maloteChart){
+        maloteChart.on('plotly_click', function(data){
+            const label = data.points[0].x || data.points[0].label;
+            const empresas = empresasPorMalote[label] || [];
+            const container = document.getElementById('malote-list');
+            if(!empresas.length){
+                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th></tr></thead><tbody>';
+            empresas.forEach(e => {
+                const nome = e.nome ? e.nome.toUpperCase() : '';
+                const codigo = e.codigo || '';
+                html += `<tr><td>${codigo}</td><td>${nome}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        });
+    }
+</script>
+{% endblock %}
