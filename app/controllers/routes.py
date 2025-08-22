@@ -98,7 +98,14 @@ def validate_contatos(contatos):
         c.pop('endereco', None)
     return contatos
 
-    ## Rota para upload de imagens
+
+def make_static_urls_relative(html: str) -> str:
+    if not html:
+        return html
+    return re.sub(r'src=["\']https?://[^/]+(/static/uploads/[^"\']+)["\']', r'src="\1"', html)
+
+
+## Rota para upload de imagens
 
 @app.route('/upload_image', methods=['POST'])
 @login_required
@@ -419,6 +426,10 @@ def visualizar_empresa(id):
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+
+    for dept in (fiscal, contabil, pessoal, administrativo):
+        if dept and getattr(dept, 'particularidades_texto', None):
+            dept.particularidades_texto = make_static_urls_relative(dept.particularidades_texto)
 
     def _prepare_envio_fisico(departamento):
         if not departamento:
