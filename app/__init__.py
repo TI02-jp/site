@@ -1,12 +1,13 @@
 import os
-from flask import Flask
+from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
 from dotenv import load_dotenv
 from datetime import datetime
-from markupsafe import Markup
+from markupsafe import Markup, escape
+from app.utils.security import sanitize_html
 
 load_dotenv()
 
@@ -15,12 +16,33 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+
+@app.before_request
+def _enforce_https():
+    if not (app.debug or app.testing) and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+
+
+@app.after_request
+def _set_security_headers(response):
+    if request.headers.get('X-Forwarded-Proto', request.scheme) == 'https':
+        response.headers.setdefault(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains',
+        )
+    return response
 
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
@@ -39,8 +61,17 @@ def inject_now():
 def render_badge_list(items, classes, icon, placeholder):
     if not items or not isinstance(items, (list, tuple)):
         return Markup(placeholder)
-    badges = [f'<span class="{classes}"><i class="bi {icon} me-1"></i>{item}</span>' for item in items]
+    badges = [
+        f'<span class="{classes}"><i class="bi {icon} me-1"></i>{escape(item)}</span>'
+        for item in items
+    ]
     return Markup(' '.join(badges))
+
+
+@app.template_filter('sanitize')
+def _sanitize_filter(value):
+    """Jinja filter to strip unsafe HTML and mark the result safe."""
+    return Markup(sanitize_html(value))
 
 with app.app_context():
     db.create_all()

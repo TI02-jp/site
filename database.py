@@ -3,6 +3,7 @@ from mysql.connector import errorcode
 import logging
 from dotenv import load_dotenv
 import os
+import re
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +17,7 @@ class DatabaseManager:
     def __init__(self):
         self.connection = None
         self.cursor = None
+        self._param_pattern = re.compile(r"%s")
         
     def connect(self):
         """Estabelece conexão com o banco de dados"""
@@ -57,14 +59,20 @@ class DatabaseManager:
                 logger.error(f"Erro de conexão: {err}")
             return False
 
+    def _ensure_safe_params(self, query, params):
+        """Evita execução de queries sem parâmetros quando placeholders estão presentes"""
+        if self._param_pattern.search(query) and params is None:
+            raise ValueError("Parâmetros devem ser fornecidos separadamente para evitar SQL Injection")
+
     def execute_query(self, query, params=None):
         """Executa uma query SQL de modificação (INSERT, UPDATE, DELETE, ALTER)"""
         try:
+            self._ensure_safe_params(query, params)
             self.cursor.execute(query, params or ())
             self.connection.commit()
             logger.info("Query executada com sucesso")
             return True
-        except mysql.connector.Error as err:
+        except (mysql.connector.Error, ValueError) as err:
             self.connection.rollback()
             logger.error(f"Erro na query: {err}\nQuery: {query}")
             return False
@@ -72,18 +80,20 @@ class DatabaseManager:
     def fetch_one(self, query, params=None):
         """Executa uma query SQL de consulta e retorna uma linha"""
         try:
+            self._ensure_safe_params(query, params)
             self.cursor.execute(query, params or ())
             return self.cursor.fetchone()
-        except mysql.connector.Error as err:
+        except (mysql.connector.Error, ValueError) as err:
             logger.error(f"Erro na query: {err}\nQuery: {query}")
             return None
 
     def fetch_all(self, query, params=None):
         """Executa uma query SQL de consulta e retorna todas as linhas"""
         try:
+            self._ensure_safe_params(query, params)
             self.cursor.execute(query, params or ())
             return self.cursor.fetchall()
-        except mysql.connector.Error as err:
+        except (mysql.connector.Error, ValueError) as err:
             logger.error(f"Erro na query: {err}\nQuery: {query}")
             return None
 
