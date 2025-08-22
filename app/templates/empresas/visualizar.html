@@ -31,7 +31,7 @@
             {% endfor %}
         </div>
     {% else %}
-        {{ placeholder_html|safe }}
+        {{ placeholder_html|sanitize }}
     {% endif %}
 {% endmacro %}
 
@@ -332,7 +332,7 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                            <div class="border rounded p-4 bg-white editor-content">{{ fiscal.particularidades_texto|safe }}</div>
+                            <div class="border rounded p-4 bg-white editor-content">{{ fiscal.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -478,7 +478,7 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                            <div class="border rounded p-4 bg-white editor-content">{{ contabil.particularidades_texto|safe }}</div>
+                              <div class="border rounded p-4 bg-white editor-content">{{ contabil.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -557,7 +557,7 @@
                         <div class="col-12">
                             <div class="info-group">
                                 <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                                <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|safe }}</div>
+                                  <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|sanitize }}</div>
                             </div>
                         </div>
                     </div>
@@ -587,7 +587,7 @@
                     <div class="col-12">
                         <div class="info-group">
                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                            <div class="border rounded p-4 bg-white editor-content">{{ administrativo.particularidades_texto|safe }}</div>
+                              <div class="border rounded p-4 bg-white editor-content">{{ administrativo.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,7 @@ from flask import render_template, redirect, url_for, flash, request, abort, jso
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
+from app.utils.security import sanitize_html
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
 from app.forms import (
@@ -12,13 +13,14 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-import os, json, re
+import os, json, re, imghdr
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
+from werkzeug.exceptions import RequestEntityTooLarge
 
 @app.context_processor
 def inject_stats():
@@ -36,6 +38,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_large_file(e):
+    return jsonify({'error': 'Arquivo excede o tamanho permitido'}), 413
 
 
 def format_phone(digits: str) -> str:
@@ -117,6 +124,12 @@ def upload_image():
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
+        header = file.read(512)
+        file.seek(0)
+        if imghdr.what(None, header) not in ALLOWED_EXTENSIONS:
+            print("ERRO: Conteúdo não reconhecido como imagem.")
+            return jsonify({'error': 'Arquivo inválido ou corrompido'}), 400
+
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
         
@@ -129,7 +142,7 @@ def upload_image():
             file.save(file_path)
             print("SUCESSO: file.save() executado sem erros!")
 
-            file_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+            file_url = url_for('static', filename=f'uploads/{unique_name}')
             return jsonify({'image_url': file_url})
 
         except Exception as e:
@@ -287,7 +300,7 @@ def processar_dados_fiscal(request):
     observacao_movimento = request.form.get('observacao_movimento')
     observacao_importacao = request.form.get('observacao_importacao')
     observacao_contato = request.form.get('observacao_contato')
-    particularidades = request.form.get('particularidades')
+    particularidades = sanitize_html(request.form.get('particularidades'))
     formas_importacao_json = request.form.get('formas_importacao_json', '[]')
     formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
     envio_digital = request.form.getlist('envio_digital')
@@ -320,7 +333,7 @@ def processar_dados_contabil(request):
     descricao = request.form.get('descricao')
     metodo_importacao = request.form.getlist('metodo_importacao')
     forma_movimento = request.form.get('forma_movimento')
-    particularidades = request.form.get('particularidades')
+    particularidades = sanitize_html(request.form.get('particularidades'))
     envio_digital = request.form.getlist('envio_digital')
     envio_fisico = request.form.getlist('envio_fisico')
     malote_coleta = request.form.get('malote_coleta')
@@ -352,7 +365,7 @@ def processar_dados_pessoal(request):
         'registro_funcionarios': request.form.get('registro_funcionarios'),
         'ponto_eletronico': request.form.get('ponto_eletronico'),
         'pagamento_funcionario': request.form.get('pagamento_funcionario'),
-        'particularidades_texto': request.form.get('particularidades')
+        'particularidades_texto': sanitize_html(request.form.get('particularidades'))
     }
 
 def processar_dados_administrativo(request):

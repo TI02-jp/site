@@ -30,7 +30,7 @@
                             <i class="bi bi-image me-1"></i>Editor de Particularidades
                         </label>
                         <div id="editor" style="height: 300px; border: 1px solid #dee2e6; border-radius: 0.375rem;">
-                            {{ form.particularidades.data|safe }}
+                              {{ form.particularidades.data|sanitize }}
                         </div>
                         {{ form.particularidades(id="particularidades", style="display:none;") }}
                         <small class="text-muted">
