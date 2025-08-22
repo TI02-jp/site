@@ -813,6 +813,120 @@ def relatorio_fiscal():
         empresas_por_malote=malote_grouped,
     )
 
+
+@app.route('/relatorio_contabil')
+@admin_required
+def relatorio_contabil():
+    departamentos = (
+        Departamento.query.filter_by(tipo='Departamento Contábil')
+        .join(Empresa)
+        .with_entities(
+            Empresa.nome_empresa,
+            Empresa.codigo_empresa,
+            Departamento.metodo_importacao,
+            Departamento.forma_movimento,
+            Departamento.malote_coleta,
+            Departamento.controle_relatorios,
+        )
+        .all()
+    )
+    contabil_form = DepartamentoContabilForm()
+    metodo_map = dict(contabil_form.metodo_importacao.choices)
+    relatorio_map = dict(contabil_form.controle_relatorios.choices)
+    import_grouped = {}
+    envio_grouped = {}
+    malote_grouped = {}
+    relatorios_grouped = {}
+    for nome, codigo, metodo, envio, malote, relatorios in departamentos:
+        metodo_list = (
+            json.loads(metodo) if isinstance(metodo, str) else (metodo or [])
+        )
+        for m in metodo_list:
+            label = metodo_map.get(m, m)
+            import_grouped.setdefault(label, []).append({"nome": nome, "codigo": codigo})
+        label_envio = envio if envio else 'Não informado'
+        envio_grouped.setdefault(label_envio, []).append({"nome": nome, "codigo": codigo})
+        if envio in ('Fisico', 'Digital e Físico'):
+            label_malote = malote if malote else 'Não informado'
+            malote_grouped.setdefault(label_malote, []).append({"nome": nome, "codigo": codigo})
+        rel_list = (
+            json.loads(relatorios) if isinstance(relatorios, str) else (relatorios or [])
+        )
+        for r in rel_list:
+            label = relatorio_map.get(r, r)
+            relatorios_grouped.setdefault(label, []).append({"nome": nome, "codigo": codigo})
+    labels_imp = list(import_grouped.keys())
+    counts_imp = [len(import_grouped[l]) for l in labels_imp]
+    fig_imp = go.Figure(
+        data=[go.Bar(x=labels_imp, y=counts_imp, marker_color=qualitative.Pastel)]
+    )
+    fig_imp.update_layout(
+        title_text="Métodos de Importação (Contábil)",
+        template="seaborn",
+        xaxis_title="Método",
+        yaxis_title="Quantidade",
+    )
+    import_chart = fig_imp.to_html(
+        full_html=False, div_id='contabil-importacao-chart'
+    )
+    labels_env = list(envio_grouped.keys())
+    counts_env = [len(envio_grouped[l]) for l in labels_env]
+    fig_env = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels_env,
+                values=counts_env,
+                hole=0.4,
+                marker=dict(
+                    colors=qualitative.Pastel,
+                    line=dict(color="#FFFFFF", width=2),
+                ),
+                textinfo="label+percent",
+            )
+        ]
+    )
+    fig_env.update_layout(
+        title_text="Envio de Documentos (Contábil)",
+        template="seaborn",
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
+    )
+    envio_chart = fig_env.to_html(full_html=False, div_id='contabil-envio-chart')
+    labels_mal = list(malote_grouped.keys())
+    counts_mal = [len(malote_grouped[l]) for l in labels_mal]
+    fig_mal = go.Figure(
+        data=[go.Bar(x=labels_mal, y=counts_mal, marker_color=qualitative.Pastel)]
+    )
+    fig_mal.update_layout(
+        title_text="Coleta de Malote (Envio Físico)",
+        template="seaborn",
+        xaxis_title="Coleta",
+        yaxis_title="Quantidade",
+    )
+    malote_chart = fig_mal.to_html(full_html=False, div_id='contabil-malote-chart')
+    labels_rel = list(relatorios_grouped.keys())
+    counts_rel = [len(relatorios_grouped[l]) for l in labels_rel]
+    fig_rel = go.Figure(
+        data=[go.Bar(x=labels_rel, y=counts_rel, marker_color=qualitative.Pastel)]
+    )
+    fig_rel.update_layout(
+        title_text="Controle de Relatórios (Contábil)",
+        template="seaborn",
+        xaxis_title="Relatório",
+        yaxis_title="Quantidade",
+    )
+    relatorios_chart = fig_rel.to_html(full_html=False, div_id='contabil-relatorios-chart')
+    return render_template(
+        'admin/relatorio_contabil.html',
+        importacao_chart=import_chart,
+        envio_chart=envio_chart,
+        malote_chart=malote_chart,
+        relatorios_chart=relatorios_chart,
+        empresas_por_import=import_grouped,
+        empresas_por_envio=envio_grouped,
+        empresas_por_malote=malote_grouped,
+        empresas_por_relatorios=relatorios_grouped,
+    )
+
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
