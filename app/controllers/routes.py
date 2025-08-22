@@ -98,6 +98,13 @@ def validate_contatos(contatos):
         c.pop('endereco', None)
     return contatos
 
+
+def escape_like(term: str) -> str:
+    """Escapes wildcard characters used in SQL LIKE statements."""
+    if not term:
+        return term
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
     ## Rota para upload de imagens
 
 @app.route('/upload_image', methods=['POST'])
@@ -241,11 +248,12 @@ def listar_empresas():
     query = Empresa.query
 
     if search:
-        like_pattern = f"%{search}%"
+        safe_term = escape_like(search)
+        like_pattern = f"%{safe_term}%"
         query = query.filter(
             or_(
-                Empresa.nome_empresa.ilike(like_pattern),
-                Empresa.codigo_empresa.ilike(like_pattern)
+                Empresa.nome_empresa.ilike(like_pattern, escape='\\'),
+                Empresa.codigo_empresa.ilike(like_pattern, escape='\\')
             )
         )
 
@@ -672,6 +680,104 @@ def relatorio_empresas():
         empresas_por_slice=grouped,
     )
 
+
+@app.route('/relatorio_fiscal')
+@admin_required
+def relatorio_fiscal():
+    departamentos = (
+        Departamento.query.filter_by(tipo='Departamento Fiscal')
+        .join(Empresa)
+        .with_entities(
+            Empresa.nome_empresa,
+            Empresa.codigo_empresa,
+            Departamento.formas_importacao,
+            Departamento.forma_movimento,
+            Departamento.malote_coleta,
+        )
+        .all()
+    )
+    fiscal_form = DepartamentoFiscalForm()
+    choice_map = dict(fiscal_form.formas_importacao.choices)
+    import_grouped = {}
+    envio_grouped = {}
+    malote_grouped = {}
+    for nome, codigo, formas, envio, malote in departamentos:
+        formas_list = (
+            json.loads(formas)
+            if isinstance(formas, str)
+            else (formas or [])
+        )
+        for f in formas_list:
+            label = choice_map.get(f, f)
+            import_grouped.setdefault(label, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
+        label_envio = envio if envio else 'Não informado'
+        envio_grouped.setdefault(label_envio, []).append(
+            {"nome": nome, "codigo": codigo}
+        )
+        if envio in ('Fisico', 'Digital e Físico'):
+            label_malote = malote if malote else 'Não informado'
+            malote_grouped.setdefault(label_malote, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
+    labels_imp = list(import_grouped.keys())
+    counts_imp = [len(import_grouped[l]) for l in labels_imp]
+    fig_imp = go.Figure(
+        data=[go.Bar(x=labels_imp, y=counts_imp, marker_color=qualitative.Pastel)]
+    )
+    fig_imp.update_layout(
+        title_text="Formas de Importação (Fiscal)",
+        template="seaborn",
+        xaxis_title="Forma",
+        yaxis_title="Quantidade",
+    )
+    import_chart = fig_imp.to_html(
+        full_html=False, div_id='fiscal-importacao-chart'
+    )
+    labels_env = list(envio_grouped.keys())
+    counts_env = [len(envio_grouped[l]) for l in labels_env]
+    fig_env = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels_env,
+                values=counts_env,
+                hole=0.4,
+                marker=dict(
+                    colors=qualitative.Pastel,
+                    line=dict(color="#FFFFFF", width=2),
+                ),
+                textinfo="label+percent",
+            )
+        ]
+    )
+    fig_env.update_layout(
+        title_text="Envio de Documentos (Fiscal)",
+        template="seaborn",
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
+    )
+    envio_chart = fig_env.to_html(full_html=False, div_id='fiscal-envio-chart')
+    labels_mal = list(malote_grouped.keys())
+    counts_mal = [len(malote_grouped[l]) for l in labels_mal]
+    fig_mal = go.Figure(
+        data=[go.Bar(x=labels_mal, y=counts_mal, marker_color=qualitative.Pastel)]
+    )
+    fig_mal.update_layout(
+        title_text="Coleta de Malote (Envio Físico)",
+        template="seaborn",
+        xaxis_title="Coleta",
+        yaxis_title="Quantidade",
+    )
+    malote_chart = fig_mal.to_html(full_html=False, div_id='fiscal-malote-chart')
+    return render_template(
+        'admin/relatorio_fiscal.html',
+        importacao_chart=import_chart,
+        envio_chart=envio_chart,
+        malote_chart=malote_chart,
+        empresas_por_import=import_grouped,
+        empresas_por_envio=envio_grouped,
+        empresas_por_malote=malote_grouped,
+    )
 
 @app.route('/relatorio_usuarios')
 @admin_required
