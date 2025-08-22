@@ -645,13 +645,22 @@ def relatorios():
 @admin_required
 def relatorio_empresas():
     empresas = Empresa.query.with_entities(
-        Empresa.nome_empresa, Empresa.cnpj, Empresa.codigo_empresa, Empresa.tributacao
+        Empresa.nome_empresa,
+        Empresa.cnpj,
+        Empresa.codigo_empresa,
+        Empresa.tributacao,
+        Empresa.sistema_utilizado,
     ).all()
     categorias = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
     grouped = {cat: [] for cat in categorias}
-    for nome, cnpj, codigo, trib in empresas:
+    sistemas_grouped = {}
+    for nome, cnpj, codigo, trib, sistema in empresas:
         label = trib if trib in categorias else 'Outros'
         grouped.setdefault(label, []).append(
+            {"nome": nome, "cnpj": cnpj, "codigo": codigo}
+        )
+        sistema_label = sistema or 'Não informado'
+        sistemas_grouped.setdefault(sistema_label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
     labels = list(grouped.keys())
@@ -666,10 +675,25 @@ def relatorio_empresas():
         yaxis_title="Quantidade",
     )
     chart_div = fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+
+    sistema_labels = list(sistemas_grouped.keys())
+    sistema_counts = [len(sistemas_grouped[l]) for l in sistema_labels]
+    fig_sistema = go.Figure(
+        data=[go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)]
+    )
+    fig_sistema.update_layout(
+        title_text="Empresas por sistema utilizado",
+        template="seaborn",
+        xaxis_title="Sistema",
+        yaxis_title="Quantidade",
+    )
+    chart_sistema = fig_sistema.to_html(full_html=False, div_id='empresa-sistema-chart')
     return render_template(
         'admin/relatorio_empresas.html',
         chart_div=chart_div,
         empresas_por_slice=grouped,
+        chart_sistema=chart_sistema,
+        empresas_por_sistema=sistemas_grouped,
     )
 
 

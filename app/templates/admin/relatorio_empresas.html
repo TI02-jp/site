@@ -8,29 +8,43 @@
     <div id="chart-container">
         {{ chart_div|safe }}
     </div>
+    <h2 class="mt-5 mb-4">Empresas por Sistema Utilizado</h2>
+    <div id="chart-sistema-container">
+        {{ chart_sistema|safe }}
+    </div>
     <div id="empresa-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
 <script>
     const empresasBySlice = {{ empresas_por_slice|tojson }};
-    const chart = document.getElementById('empresa-tributacao-chart');
-    if (chart) {
-        chart.on('plotly_click', function(data){
+    const empresasPorSistema = {{ empresas_por_sistema|tojson }};
+    const chartTrib = document.getElementById('empresa-tributacao-chart');
+    const chartSis = document.getElementById('empresa-sistema-chart');
+    const container = document.getElementById('empresa-list');
+    function renderEmpresas(empresas) {
+        if (!empresas.length) {
+            container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
+            return;
+        }
+        let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th><th>CNPJ</th></tr></thead><tbody>';
+        empresas.forEach(e => {
+            const nome = e.nome ? e.nome.toUpperCase() : '';
+            const cnpj = e.cnpj || '';
+            const codigo = e.codigo || '';
+            html += `<tr><td>${codigo}</td><td>${nome}</td><td>${cnpj}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    if (chartTrib) {
+        chartTrib.on('plotly_click', function(data){
             const label = data.points[0].x || data.points[0].label;
-            const empresas = empresasBySlice[label] || [];
-            const container = document.getElementById('empresa-list');
-            if (!empresas.length) {
-                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
-                return;
-            }
-            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th><th>CNPJ</th></tr></thead><tbody>';
-            empresas.forEach(e => {
-                const nome = e.nome ? e.nome.toUpperCase() : '';
-                const cnpj = e.cnpj || '';
-                const codigo = e.codigo || '';
-                html += `<tr><td>${codigo}</td><td>${nome}</td><td>${cnpj}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
-            container.innerHTML = html;
+            renderEmpresas(empresasBySlice[label] || []);
+        });
+    }
+    if (chartSis) {
+        chartSis.on('plotly_click', function(data){
+            const label = data.points[0].x || data.points[0].label;
+            renderEmpresas(empresasPorSistema[label] || []);
         });
     }
 </script>
