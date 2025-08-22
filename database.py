@@ -3,6 +3,7 @@ from mysql.connector import errorcode
 import logging
 from dotenv import load_dotenv
 import os
+import re
 
 logging.basicConfig(
     level=logging.INFO,
@@ -57,10 +58,20 @@ class DatabaseManager:
                 logger.error(f"Erro de conexão: {err}")
             return False
 
+    def _sanitize_params(self, params):
+        """Sanitiza parametros para prevenir SQL injection simples."""
+        sanitized = []
+        for p in params or ():
+            if isinstance(p, str):
+                p = re.sub(r"['\";--]", "", p)
+            sanitized.append(p)
+        return tuple(sanitized)
+
     def execute_query(self, query, params=None):
         """Executa uma query SQL de modificação (INSERT, UPDATE, DELETE, ALTER)"""
         try:
-            self.cursor.execute(query, params or ())
+            safe_params = self._sanitize_params(params)
+            self.cursor.execute(query, safe_params)
             self.connection.commit()
             logger.info("Query executada com sucesso")
             return True
@@ -72,7 +83,8 @@ class DatabaseManager:
     def fetch_one(self, query, params=None):
         """Executa uma query SQL de consulta e retorna uma linha"""
         try:
-            self.cursor.execute(query, params or ())
+            safe_params = self._sanitize_params(params)
+            self.cursor.execute(query, safe_params)
             return self.cursor.fetchone()
         except mysql.connector.Error as err:
             logger.error(f"Erro na query: {err}\nQuery: {query}")
@@ -81,7 +93,8 @@ class DatabaseManager:
     def fetch_all(self, query, params=None):
         """Executa uma query SQL de consulta e retorna todas as linhas"""
         try:
-            self.cursor.execute(query, params or ())
+            safe_params = self._sanitize_params(params)
+            self.cursor.execute(query, safe_params)
             return self.cursor.fetchall()
         except mysql.connector.Error as err:
             logger.error(f"Erro na query: {err}\nQuery: {query}")
