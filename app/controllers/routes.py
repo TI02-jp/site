@@ -645,31 +645,57 @@ def relatorios():
 @admin_required
 def relatorio_empresas():
     empresas = Empresa.query.with_entities(
-        Empresa.nome_empresa, Empresa.cnpj, Empresa.codigo_empresa, Empresa.tributacao
+        Empresa.nome_empresa,
+        Empresa.cnpj,
+        Empresa.codigo_empresa,
+        Empresa.tributacao,
+        Empresa.sistema_utilizado,
     ).all()
     categorias = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
-    grouped = {cat: [] for cat in categorias}
-    for nome, cnpj, codigo, trib in empresas:
-        label = trib if trib in categorias else 'Outros'
-        grouped.setdefault(label, []).append(
+    trib_grouped = {cat: [] for cat in categorias}
+    sistemas_grouped = {}
+    for nome, cnpj, codigo, trib, sistema in empresas:
+        trib_label = trib if trib in categorias else 'Outros'
+        trib_grouped.setdefault(trib_label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
-    labels = list(grouped.keys())
-    counts = [len(grouped[l]) for l in labels]
-    fig = go.Figure(
-        data=[go.Bar(x=labels, y=counts, marker_color=qualitative.Pastel)]
+        sistema_label = sistema or 'Não informado'
+        sistemas_grouped.setdefault(sistema_label, []).append(
+            {"nome": nome, "cnpj": cnpj, "codigo": codigo}
+        )
+
+    trib_labels = list(trib_grouped.keys())
+    trib_counts = [len(trib_grouped[l]) for l in trib_labels]
+    trib_fig = go.Figure(
+        data=[go.Bar(x=trib_labels, y=trib_counts, marker_color=qualitative.Pastel)]
     )
-    fig.update_layout(
+    trib_fig.update_layout(
         title_text="Empresas por regime de tributação",
         template="seaborn",
         xaxis_title="Regime",
         yaxis_title="Quantidade",
     )
-    chart_div = fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+    chart_div = trib_fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+
+    sistema_labels = list(sistemas_grouped.keys())
+    sistema_counts = [len(sistemas_grouped[l]) for l in sistema_labels]
+    sistema_fig = go.Figure(
+        data=[go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)]
+    )
+    sistema_fig.update_layout(
+        title_text="Empresas por sistema utilizado",
+        template="seaborn",
+        xaxis_title="Sistema",
+        yaxis_title="Quantidade",
+    )
+    sistemas_chart_div = sistema_fig.to_html(full_html=False, div_id='empresa-sistemas-chart')
+
     return render_template(
         'admin/relatorio_empresas.html',
         chart_div=chart_div,
-        empresas_por_slice=grouped,
+        empresas_por_slice=trib_grouped,
+        sistemas_chart_div=sistemas_chart_div,
+        empresas_por_sistema=sistemas_grouped,
     )
 
 
