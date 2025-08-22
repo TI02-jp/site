@@ -13,7 +13,11 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo, ValidationError
 import re
-from app.models.tables import RegimeLancamento
+
+REGIME_LANCAMENTO_CHOICES = [
+    ('Caixa', 'Caixa'),
+    ('Competência', 'Competência')
+]
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
@@ -68,9 +72,11 @@ class EmpresaForm(FlaskForm):
         ('Simples Nacional', 'Simples Nacional'),
         ('Lucro Presumido', 'Lucro Presumido'),
         ('Lucro Real', 'Lucro Real')], validators=[DataRequired()])
-    regime_lancamento = SelectMultipleField('Regime de Lançamento', choices=[
-        (e.value, e.value) for e in RegimeLancamento
-    ], validators=[DataRequired()])
+    regime_lancamento = SelectMultipleField(
+        'Regime de Lançamento',
+        choices=REGIME_LANCAMENTO_CHOICES,
+        validators=[DataRequired()]
+    )
     sistemas_consultorias = SelectMultipleField('Sistemas e Consultorias', choices=[
         ('IOB', 'IOB'), ('ACESSORIAS', 'Acessórias'), ('ACESSO_AO_SAT', 'Acesso ao SAT'),
         ('ITC', 'ITC'), ('QUESTOR', 'Questor'), ('ECONET', 'Econet'),

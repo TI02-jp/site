@@ -1,7 +1,6 @@
 import json
 from sqlalchemy.types import TypeDecorator, String
 from app import db
-from enum import Enum
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -55,10 +54,6 @@ class Post(db.Model):
     content = db.Column(db.Text, nullable=False)
     id_user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
-
-class RegimeLancamento(Enum):
-    CAIXA = 'Caixa'
-    COMPETENCIA = 'Competência'
 
 class Empresa(db.Model):
     __tablename__ = 'tbl_empresas'
