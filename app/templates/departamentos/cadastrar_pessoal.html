@@ -208,7 +208,9 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    
+
+    const csrfToken = "{{ csrf_token() }}";
+
     // Função de upload de imagem
     function uploadImage(file) {
         return new Promise((resolve, reject) => {
@@ -219,6 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch('/upload_image', {
                 method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
                 body: formData
             })
             .then(response => response.json())
