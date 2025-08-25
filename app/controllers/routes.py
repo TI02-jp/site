@@ -40,6 +40,18 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+@app.errorhandler(404)
+def not_found(e):
+    current_app.logger.warning(f"Página não encontrada: {request.path}")
+    return "Página não encontrada", 404
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    current_app.logger.error(f"Erro interno: {e}", exc_info=e)
+    return "Erro interno do servidor", 500
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
     return jsonify({'error': 'Arquivo excede o tamanho permitido'}), 413
@@ -186,12 +198,15 @@ def login():
         if user and user.check_password(form.password.data):
             if not user.ativo:
                 flash('Seu usuário está inativo. Contate o administrador.', 'danger')
+                current_app.logger.warning(f"Login para usuário inativo: {form.username.data}")
                 return redirect(url_for('login'))
             login_user(user, remember=form.remember_me.data)
+            current_app.logger.info(f"Usuário {user.username} realizou login")
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
         else:
             flash('Credenciais inválidas', 'danger')
+            current_app.logger.warning(f"Falha no login para usuário: {form.username.data}")
     return render_template('login.html', form=form)
 
 @app.route('/dashboard')
@@ -985,7 +1000,9 @@ def relatorio_usuarios():
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
+    username = current_user.username
     logout_user()
+    current_app.logger.info(f"Usuário {username} realizou logout")
     return redirect(url_for('home'))
 
 @app.route('/test_connection')
@@ -1021,6 +1038,7 @@ def list_users():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            current_app.logger.info(f"Usuário {current_user.username} criou o usuário {user.username}")
             flash('Novo usuário cadastrado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
@@ -1050,6 +1068,7 @@ def novo_usuario():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            current_app.logger.info(f"Usuário {current_user.username} criou o usuário {user.username}")
             flash('Novo usuário cadastrado com sucesso!', 'success')
             return redirect(url_for('list_users'))
     return render_template('admin/novo_usuario.html', form=form)
@@ -1067,6 +1086,7 @@ def edit_user(user_id):
         user.role = form.role.data
         user.ativo = form.ativo.data
         db.session.commit()
+        current_app.logger.info(f"Usuário {current_user.username} editou o usuário {user.username}")
         flash('Usuário atualizado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 

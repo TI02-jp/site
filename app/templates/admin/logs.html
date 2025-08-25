@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Logs{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Logs da Aplicação</h1>
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-5">
+      <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Buscar...">
+    </div>
+    <div class="col-md-3">
+      <select name="level" class="form-select">
+        <option value="">Todos</option>
+        {% for lvl in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] %}
+        <option value="{{ lvl }}" {% if request.args.get('level')==lvl %}selected{% endif %}>{{ lvl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select name="format" class="form-select">
+        <option value="txt" {% if request.args.get('format')!='csv' %}selected{% endif %}>TXT</option>
+        <option value="csv" {% if request.args.get('format')=='csv' %}selected{% endif %}>CSV</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+    </div>
+  </form>
+  <div class="mb-3">
+    <a class="btn btn-secondary" href="{{ url_for('logs.export_logs', q=request.args.get('q'), level=request.args.get('level'), format=request.args.get('format','txt')) }}">Exportar</a>
+  </div>
+  <pre style="background:#1e1e1e;color:#00ff00;padding:1rem;font-family:monospace;white-space:pre-wrap;">
+{% for entry in logs %}{{ entry.time }} {{ entry.level }} [{{ entry.module }}] {{ entry.message }}\n{% endfor %}
+  </pre>
+</div>
+{% endblock %}

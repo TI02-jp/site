@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -8,8 +9,11 @@ from dotenv import load_dotenv
 from datetime import datetime
 from markupsafe import Markup, escape
 from app.utils.security import sanitize_html
+from log_config import setup_logging
 
 load_dotenv()
+
+setup_logging()
 
 app = Flask(__name__)
 
@@ -27,6 +31,8 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+app.logger.info('Aplicação iniciada')
 
 
 @app.before_request
@@ -48,6 +54,9 @@ def _set_security_headers(response):
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
 from app.controllers import routes
+from app.logs import logs_bp
+
+app.register_blueprint(logs_bp)
 
 @login_manager.user_loader
 def load_user(user_id):
