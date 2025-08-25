@@ -3,6 +3,13 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
+from app.utils.logging_utils import (
+    log_acesso_dados,
+    log_autenticacao,
+    log_alteracao_dados,
+    log_erro_execucao,
+    log_acao_administrativa,
+)
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
 from app.forms import (
@@ -20,7 +27,7 @@ from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
-from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.exceptions import RequestEntityTooLarge, HTTPException
 
 @app.context_processor
 def inject_stats():
@@ -188,9 +195,11 @@ def login():
                 flash('Seu usuário está inativo. Contate o administrador.', 'danger')
                 return redirect(url_for('login'))
             login_user(user, remember=form.remember_me.data)
+            log_autenticacao(request.remote_addr, user.username, 'sucesso')
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
         else:
+            log_autenticacao(request.remote_addr, form.username.data, 'falha')
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
 
@@ -248,6 +257,12 @@ def cadastrar_empresa():
             )
             db.session.add(nova_empresa)
             db.session.commit()
+            detalhes = {
+                'codigo_empresa': nova_empresa.codigo_empresa,
+                'nome_empresa': nova_empresa.nome_empresa,
+                'cnpj': nova_empresa.cnpj,
+            }
+            log_alteracao_dados(current_user.id, nova_empresa.id, detalhes, 'create')
             flash('Empresa cadastrada com sucesso!', 'success')
             return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
         except Exception as e:
@@ -402,6 +417,7 @@ def editar_empresa(id):
 
     if request.method == 'POST':
         if empresa_form.validate():
+            old_data = {field: getattr(empresa, field) for field in empresa_form._fields}
             empresa_form.populate_obj(empresa)
             empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
@@ -412,6 +428,12 @@ def editar_empresa(id):
             db.session.add(empresa)
             try:
                 db.session.commit()
+                changes = {
+                    k: {'from': old_data[k], 'to': getattr(empresa, k)}
+                    for k in old_data
+                    if old_data[k] != getattr(empresa, k)
+                }
+                log_alteracao_dados(current_user.id, empresa.id, changes, 'update')
                 flash('Dados da Empresa salvos com sucesso!', 'success')
                 return redirect(url_for('visualizar_empresa', id=id) + '#dados-empresa')
             except Exception as e:
@@ -434,6 +456,7 @@ def visualizar_empresa(id):
     from types import SimpleNamespace
 
     empresa = Empresa.query.get_or_404(id)
+    log_acesso_dados(current_user.id, id, 'empresa')
 
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
@@ -985,6 +1008,7 @@ def relatorio_usuarios():
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
+    log_autenticacao(request.remote_addr, current_user.username, 'logout')
     logout_user()
     return redirect(url_for('home'))
 
@@ -1021,6 +1045,7 @@ def list_users():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            log_acao_administrativa(current_user.id, f'Criou usuário {user.id}')
             flash('Novo usuário cadastrado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
@@ -1050,6 +1075,7 @@ def novo_usuario():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            log_acao_administrativa(current_user.id, f'Criou usuário {user.id}')
             flash('Novo usuário cadastrado com sucesso!', 'success')
             return redirect(url_for('list_users'))
     return render_template('admin/novo_usuario.html', form=form)
@@ -1067,7 +1093,31 @@ def edit_user(user_id):
         user.role = form.role.data
         user.ativo = form.ativo.data
         db.session.commit()
+        log_acao_administrativa(current_user.id, f'Editou usuário {user.id}')
         flash('Usuário atualizado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
     return render_template('edit_user.html', form=form)
+
+
+@app.route('/admin/logs')
+@admin_required
+def admin_logs():
+    log_path = os.path.join(current_app.root_path, '..', 'logs', 'app.log')
+    try:
+        with open(log_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()[-200:]
+        logs = ''.join(lines)
+    except FileNotFoundError:
+        logs = None
+    log_acao_administrativa(current_user.id, 'Visualizou logs')
+    return render_template('admin/logs.html', logs=logs)
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    user_id = current_user.get_id() if current_user.is_authenticated else None
+    log_erro_execucao(e, request.path, user_id)
+    if isinstance(e, HTTPException):
+        return e
+    return "Erro interno do servidor", 500

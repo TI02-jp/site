@@ -2,6 +2,9 @@ import os
 import re
 import requests
 from datetime import datetime
+from requests import RequestException
+
+from app.utils.logging_utils import log_integracao_externa
 
 ACESSORIAS_BASE = "https://api.acessorias.com"
 ACESSORIAS_TOKEN = os.getenv("ACESSORIAS_TOKEN")
@@ -12,7 +15,12 @@ def get_acessorias_company(cnpj: str) -> dict | bool | None:
         return None
     url = f"{ACESSORIAS_BASE}/companies/{cnpj}"
     headers = {"Authorization": f"Bearer {ACESSORIAS_TOKEN}", "Accept": "application/json"}
-    r = requests.get(url, headers=headers, timeout=20, proxies={"http": None, "https": None})
+    try:
+        r = requests.get(url, headers=headers, timeout=20, proxies={"http": None, "https": None})
+        log_integracao_externa({"cnpj": cnpj}, r.status_code, cnpj)
+    except RequestException as e:
+        log_integracao_externa({"cnpj": cnpj, "erro": str(e)}, 'exception', cnpj)
+        return None
     if r.status_code == 200:
         try:
             return r.json()
@@ -121,7 +129,12 @@ def upsert_acessorias_company(payload: dict) -> dict | None:
         "Authorization": f"Bearer {ACESSORIAS_TOKEN}",
         "Accept": "application/json",
     }
-    r = requests.post(url, headers=headers, json=payload, timeout=30, proxies={"http": None, "https": None})
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=30, proxies={"http": None, "https": None})
+        log_integracao_externa(payload, r.status_code, payload.get('cnpj'))
+    except RequestException as e:
+        log_integracao_externa({**payload, 'erro': str(e)}, 'exception', payload.get('cnpj'))
+        return None
     try:
         data = r.json()
     except Exception:

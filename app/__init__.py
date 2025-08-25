@@ -8,8 +8,10 @@ from dotenv import load_dotenv
 from datetime import datetime
 from markupsafe import Markup, escape
 from app.utils.security import sanitize_html
+from app.logging_config import setup_logging
 
 load_dotenv()
+setup_logging()
 
 app = Flask(__name__)
 

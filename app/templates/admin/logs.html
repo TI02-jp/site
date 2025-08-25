@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Logs do Sistema{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Logs do Sistema</h1>
+    {% if logs %}
+    <div class="bg-dark text-light p-3" style="height: 600px; overflow-y: scroll;">
+        <pre class="text-light">{{ logs }}</pre>
+    </div>
+    {% else %}
+    <p>Arquivo de log não encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}
