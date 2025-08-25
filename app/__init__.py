@@ -17,10 +17,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
-is_production = not app.debug and not app.testing
-app.config['SESSION_COOKIE_SECURE'] = is_production
-app.config['REMEMBER_COOKIE_SECURE'] = is_production
-app.config['PREFERRED_URL_SCHEME'] = 'https' if is_production else 'http'
+app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
+app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
+app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
+app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)
@@ -31,14 +31,14 @@ login_manager.login_view = 'login'
 
 @app.before_request
 def _enforce_https():
-    if not (app.debug or app.testing) and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
+    if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
 
 @app.after_request
 def _set_security_headers(response):
-    if request.headers.get('X-Forwarded-Proto', request.scheme) == 'https':
+    if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) == 'https':
         response.headers.setdefault(
             'Strict-Transport-Security',
             'max-age=31536000; includeSubDomains',
