@@ -1206,3 +1206,10 @@ Mensagem de login flutuante
     text-align: left;
     white-space: pre-line;
 }
+
+/* Ensure images inside particularidades are responsive and clickable */
+.editor-content img {
+    max-width: 100%;
+    height: auto;
+    cursor: pointer;
+}
