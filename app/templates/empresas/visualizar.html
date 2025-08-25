@@ -439,7 +439,7 @@
                     <div class="col-12">
                         <div class="info-group">
                              <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
-                             <div class="info-value">
+                             <div class="info-value" style="grid-column: 1 / -1;">
                                 {% set placeholder_relatorios %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-earmark-x fs-2 mb-2"></i><p class="mb-0">Nenhum controle de relatório configurado</p></div>{% endset %}
                                 {% set cr_raw = contabil.controle_relatorios %}
                                 {% set cr_items = [] %}
@@ -470,7 +470,7 @@
                                 {{ render_badge_list(cr_ns.items, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
                             </div>
                             {% if contabil.observacao_controle_relatorios %}
-                            <div class="info-item mt-2">
+                            <div class="info-item mt-2" style="grid-column: 1 / -1;">
                                 <label class="info-label">Observação</label>
                                 <div class="info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px">{{ contabil.observacao_controle_relatorios }}</textarea>
