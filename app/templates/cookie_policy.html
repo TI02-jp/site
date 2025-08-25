@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Política de Cookies{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Política de Cookies</h1>
+  <p>Utilizamos cookies essenciais para o funcionamento do site e cookies para lembrar a sua preferência de consentimento. Nenhum cookie de terceiros é utilizado para fins de marketing.</p>
+  <p>Você pode revogar seu consentimento a qualquer momento clicando no link abaixo. Isso removerá o cookie de preferência e exibirá novamente o banner de consentimento.</p>
+  <p><a href="{{ url_for('revoke_cookies') }}" class="btn btn-sm btn-warning">Revogar consentimento</a></p>
+</div>
+{% endblock %}
