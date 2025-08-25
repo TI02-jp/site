@@ -14,6 +14,7 @@ from app.forms import (
     DepartamentoPessoalForm,
 )
 import os, json, re
+from collections import deque
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -662,6 +663,18 @@ def gerenciar_departamentos(empresa_id):
 @admin_required
 def relatorios():
     return render_template('admin/relatorios.html')
+
+
+@app.route('/logs')
+@admin_required
+def view_logs():
+    log_path = os.path.join(current_app.root_path, '..', 'logs', 'app.log')
+    logs = ''
+    if os.path.exists(log_path):
+        with open(log_path, 'r', encoding='utf-8') as log_file:
+            lines = deque(log_file, maxlen=200)
+            logs = ''.join(lines)
+    return render_template('admin/logs.html', logs=logs)
 
 
 @app.route('/relatorio_empresas')
