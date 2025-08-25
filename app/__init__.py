@@ -17,9 +17,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['REMEMBER_COOKIE_SECURE'] = True
-app.config['PREFERRED_URL_SCHEME'] = 'https'
+is_production = not app.debug and not app.testing
+app.config['SESSION_COOKIE_SECURE'] = is_production
+app.config['REMEMBER_COOKIE_SECURE'] = is_production
+app.config['PREFERRED_URL_SCHEME'] = 'https' if is_production else 'http'
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)

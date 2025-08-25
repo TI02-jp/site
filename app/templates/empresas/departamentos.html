@@ -414,13 +414,19 @@ document.addEventListener("DOMContentLoaded", function () {
     setupObservacao('contabil_add_obs_envio', 'contabil_obs_envio_container', 'contabil_observacao_movimento');
     setupObservacao('contabil_add_obs_controle_relatorios', 'contabil_obs_controle_relatorios_container', 'contabil_observacao_controle_relatorios');
 
+    const csrfToken = "{{ csrf_token() }}";
+
     // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
     
     function uploadImage(file) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('image', file);
-            fetch('/upload_image', { method: 'POST', body: formData })
+            fetch('/upload_image', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            })
             .then(response => response.json())
             .then(result => {
                 if (result.image_url) {

@@ -216,6 +216,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    const csrfToken = "{{ csrf_token() }}";
     setupObservacao('add-obs-envio-contabil', 'obs-envio-contabil-container', 'observacao_movimento');
     setupObservacao('add-obs-controle-relatorios', 'obs-controle-relatorios-container', 'observacao_controle_relatorios');
 
@@ -226,6 +227,7 @@ document.addEventListener("DOMContentLoaded", function () {
             formData.append('image', file);
             fetch('/upload_image', {
                 method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
                 body: formData
             })
             .then(response => response.json())
