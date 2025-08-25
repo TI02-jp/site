@@ -110,46 +110,46 @@ def validate_contatos(contatos):
 @app.route('/upload_image', methods=['POST'])
 @login_required
 def upload_image():
-    print("--- Rota /upload_image foi chamada! ---")
+    current_app.logger.info("Rota /upload_image foi chamada")
 
     if 'image' not in request.files:
-        print("ERRO: 'image' não está no request.files.")
+        current_app.logger.error("'image' não está no request.files")
         return jsonify({'error': 'Nenhuma imagem enviada'}), 400
 
     file = request.files['image']
-    print(f"Arquivo recebido: {file.filename}")
+    current_app.logger.info("Arquivo recebido: %s", file.filename)
 
     if file.filename == '':
-        print("ERRO: Nome de arquivo vazio.")
+        current_app.logger.error("Nome de arquivo vazio")
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
         header = file.read(512)
         file.seek(0)
         if imghdr.what(None, header) not in ALLOWED_EXTENSIONS:
-            print("ERRO: Conteúdo não reconhecido como imagem.")
+            current_app.logger.error("Conteúdo não reconhecido como imagem")
             return jsonify({'error': 'Arquivo inválido ou corrompido'}), 400
 
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
-        
+
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
         file_path = os.path.join(upload_folder, unique_name)
-        print(f"Tentando salvar em: {file_path}")
+        current_app.logger.info("Tentando salvar em: %s", file_path)
 
         try:
             os.makedirs(upload_folder, exist_ok=True)
             file.save(file_path)
-            print("SUCESSO: file.save() executado sem erros!")
+            current_app.logger.info("file.save() executado sem erros")
 
             file_url = url_for('static', filename=f'uploads/{unique_name}')
             return jsonify({'image_url': file_url})
 
         except Exception as e:
-            print(f"!!! ERRO AO SALVAR O ARQUIVO: {e} !!!")
+            current_app.logger.exception("Erro ao salvar o arquivo: %s", e)
             return jsonify({'error': f'Erro no servidor ao salvar: {e}'}), 500
 
-    print(f"ERRO: Arquivo não permitido. Nome: {file.filename}")
+    current_app.logger.warning("Arquivo não permitido: %s", file.filename)
     return jsonify({'error': 'Arquivo inválido ou não permitido'}), 400
 
 def admin_required(f):
@@ -254,8 +254,7 @@ def cadastrar_empresa():
             db.session.rollback()
             flash(f'Erro ao cadastrar empresa: {e}', 'danger')
     else:
-        print("Formulário não validado:")
-        print(form.errors)
+        current_app.logger.warning("Formulário não validado: %s", form.errors)
 
     return render_template('empresas/cadastrar.html', form=form)
 

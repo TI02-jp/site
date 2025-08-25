@@ -1,9 +1,12 @@
-from app import app, db, User # Importe o app, db e o modelo User do seu arquivo principal
+from app import app, db, User  # Importe o app, db e o modelo User do seu arquivo principal
 import getpass
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def main():
     """Função principal para criar o usuário administrador."""
-    print("--- Criar Usuário Admin ---")
+    logging.info("Criar Usuário Admin")
     
     # Pede as informações do novo usuário
     name = input("Nome completo: ")
@@ -26,7 +29,7 @@ def main():
     db.session.add(new_user)
     db.session.commit()
     
-    print(f"\n✅ Usuário '{username}' criado com sucesso com a role de 'admin'!")
+    logging.info("Usuário '%s' criado com sucesso com a role de 'admin'!", username)
 
 if __name__ == '__main__':
     # Executa a função 'main' dentro do contexto da aplicação Flask
