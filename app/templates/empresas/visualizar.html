@@ -620,6 +620,17 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para exibição ampliada de imagens -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-body p-0">
+                <img src="" id="modalImage" class="img-fluid w-100" alt="Imagem ampliada">
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -669,13 +680,24 @@ document.addEventListener("DOMContentLoaded", function () {
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     const icon = this.querySelector('.bi-clipboard');
                     if (icon) icon.classList.replace('bi-clipboard', 'bi-clipboard-check-fill');
-                    
+
                     setTimeout(() => {
                         if (icon) icon.classList.replace('bi-clipboard-check-fill', 'bi-clipboard');
                     }, 1500);
                 }).catch(err => console.error('Erro ao copiar: ', err));
             });
         }
+    });
+
+    // Clique em imagens das particularidades para ampliar
+    document.querySelectorAll('.editor-content img').forEach(img => {
+        img.classList.add('img-fluid');
+        img.addEventListener('click', function() {
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = this.src;
+            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        });
     });
 
     // Highlighting da seção ativa durante scroll
