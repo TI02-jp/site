@@ -165,6 +165,19 @@ def admin_required(f):
 def home():
     return render_template('home.html')
 
+
+@app.route('/cookies')
+def cookies():
+    return render_template('cookie_policy.html')
+
+
+@app.route('/cookies/revoke')
+def revoke_cookies():
+    resp = redirect(url_for('home'))
+    resp.delete_cookie('cookie_consent')
+    flash('Consentimento de cookies revogado.', 'info')
+    return resp
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
