@@ -322,7 +322,8 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: var(--sidebar-bg);
+        background: var(--primary-dark);
+        color: #fff;
         border-top: 1px solid var(--border-color);
         padding: 1rem;
         display: none;
@@ -335,6 +336,11 @@
 
       .cookie-banner p {
         margin: 0;
+      }
+
+      .cookie-banner a {
+        color: #fff;
+        text-decoration: underline;
       }
     </style>
 </head>
@@ -496,7 +502,7 @@
 </div>
 
 <div id="cookie-banner" class="cookie-banner">
-    <p>Utilizamos cookies para melhorar sua experiência. <a href="{{ url_for('cookies') }}">Saiba mais</a>.</p>
+    <p>Utilizamos cookies para analisar o tráfego e melhorar sua experiência. Você pode aceitar ou rejeitar o uso de cookies não essenciais. <a href="{{ url_for('cookies') }}">Saiba mais</a>.</p>
     <div class="d-flex gap-2">
         <button id="accept-cookies" class="btn btn-primary btn-sm">Aceitar</button>
         <button id="reject-cookies" class="btn btn-secondary btn-sm">Rejeitar</button>
