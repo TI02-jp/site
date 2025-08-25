@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, send_file
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -13,7 +13,10 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-import os, json, re
+import os, json, re, imghdr
+from io import BytesIO
+import pandas as pd
+from fpdf import FPDF
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -300,6 +303,81 @@ def listar_empresas():
         sort=sort,
         order=order,
     )
+
+
+@app.route('/export_empresas/<string:filetype>')
+@login_required
+def export_empresas(filetype):
+    search = request.args.get('q', '').strip()
+    sort = request.args.get('sort', 'nome')
+    order = request.args.get('order', 'asc')
+
+    query = Empresa.query
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Empresa.nome_empresa.ilike(like_pattern),
+                Empresa.codigo_empresa.ilike(like_pattern)
+            )
+        )
+
+    order_column = Empresa.codigo_empresa if sort == 'codigo' else Empresa.nome_empresa
+    if order == 'desc':
+        query = query.order_by(order_column.desc())
+    else:
+        query = query.order_by(order_column.asc())
+
+    empresas = query.all()
+    data = [
+        {
+            'Código': e.codigo_empresa,
+            'Nome': e.nome_empresa,
+            'CNPJ': e.cnpj,
+            'Tributação': e.tributacao or ''
+        }
+        for e in empresas
+    ]
+
+    if filetype == 'excel':
+        df = pd.DataFrame(data)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Empresas')
+        output.seek(0)
+        return send_file(
+            output,
+            download_name='empresas.xlsx',
+            as_attachment=True,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+    if filetype == 'pdf':
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 12)
+        headers = ['Código', 'Nome', 'CNPJ', 'Tributação']
+        col_widths = [25, 80, 40, 40]
+        for w, header in zip(col_widths, headers):
+            pdf.cell(w, 10, header, border=1)
+        pdf.ln()
+        pdf.set_font('Arial', '', 10)
+        for row in data:
+            pdf.cell(col_widths[0], 8, str(row['Código']), border=1)
+            pdf.cell(col_widths[1], 8, row['Nome'][:40], border=1)
+            pdf.cell(col_widths[2], 8, row['CNPJ'], border=1)
+            pdf.cell(col_widths[3], 8, row['Tributação'], border=1)
+            pdf.ln()
+        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        output = BytesIO(pdf_bytes)
+        return send_file(
+            output,
+            download_name='empresas.pdf',
+            as_attachment=True,
+            mimetype='application/pdf'
+        )
+
+    abort(400)
 
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
