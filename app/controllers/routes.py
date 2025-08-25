@@ -13,12 +13,13 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-import os, json, re, imghdr
+import os, json, re
 from io import BytesIO
 import pandas as pd
 from fpdf import FPDF
 from werkzeug.utils import secure_filename
 from uuid import uuid4
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import or_
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
@@ -127,9 +128,10 @@ def upload_image():
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
-        header = file.read(512)
-        file.seek(0)
-        if imghdr.what(None, header) not in ALLOWED_EXTENSIONS:
+        try:
+            Image.open(file.stream).verify()
+            file.stream.seek(0)
+        except (UnidentifiedImageError, OSError):
             print("ERRO: Conteúdo não reconhecido como imagem.")
             return jsonify({'error': 'Arquivo inválido ou corrompido'}), 400
 
