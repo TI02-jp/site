@@ -65,7 +65,27 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    return {'now': datetime.now}
+    """Inject current UTC time into templates as ``now()``."""
+    return {'now': datetime.utcnow}
+
+
+@app.template_filter('time_since')
+def _time_since(value):
+    """Return human-readable time elapsed since ``value``.
+
+    If less than a minute has passed, returns ``agora``; otherwise returns
+    ``X minuto(s) atrás`` with proper pluralization.
+    """
+    if not value:
+        return 'agora'
+    delta = datetime.utcnow() - value
+    seconds = int(delta.total_seconds())
+    if seconds < 60:
+        return 'agora'
+    minutes = seconds // 60
+    if minutes == 1:
+        return '1 minuto atrás'
+    return f'{minutes} minutos atrás'
 
 @app.template_global()
 def render_badge_list(items, classes, icon, placeholder):
