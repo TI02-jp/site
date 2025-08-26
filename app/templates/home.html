@@ -25,6 +25,13 @@
             background-color: #f0f2f5; /* Cor de fundo da página */
             font-family: 'Inter', sans-serif; /* Consistente com base.html */
             color: #333; /* Cor padrão do texto */
+            min-height: 100vh; /* Permite que o footer fique no final */
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1; /* Ocupa o espaço disponível empurrando o footer para baixo */
         }
 
         .header-bg-primary {
@@ -38,9 +45,9 @@
             margin: 40px auto; /* Centraliza a div */
         }
 
-        /* Footer com margem superior */
+        /* Footer sempre ao final da página */
         .app-footer {
-            margin-top: 60px;
+            margin-top: auto;
         }
 
         /* Estilo para botões de ação na página inicial */
