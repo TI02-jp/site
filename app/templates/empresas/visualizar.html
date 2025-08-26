@@ -648,6 +648,36 @@
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // Fixa a barra de navegação quando alcança o topo
+    const companyNav = document.querySelector('.company-nav');
+    if (companyNav) {
+        const navOffset = companyNav.getBoundingClientRect().top + window.scrollY;
+        const placeholder = document.createElement('div');
+        placeholder.style.height = `${companyNav.offsetHeight}px`;
+
+        const updateNav = () => {
+            const contentRect = document.querySelector('.content-area').getBoundingClientRect();
+            if (window.scrollY >= navOffset) {
+                if (!companyNav.classList.contains('fixed')) {
+                    companyNav.classList.add('fixed');
+                    companyNav.parentNode.insertBefore(placeholder, companyNav);
+                }
+                companyNav.style.left = `${contentRect.left}px`;
+                companyNav.style.width = `${contentRect.width}px`;
+            } else {
+                if (companyNav.classList.contains('fixed')) {
+                    companyNav.classList.remove('fixed');
+                    if (placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+                }
+                companyNav.style.left = '';
+                companyNav.style.width = '';
+            }
+        };
+
+        window.addEventListener('scroll', updateNav);
+        window.addEventListener('resize', updateNav);
+        updateNav();
+    }
     // Smooth scroll para navegação com offset para o cabeçalho
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
