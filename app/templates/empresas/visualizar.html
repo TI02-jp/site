@@ -62,7 +62,7 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm company-nav">
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
                         <a href="#dados-empresa" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
@@ -76,7 +76,7 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5" id="dados-empresa">
+    <div class="card shadow-lg mb-5 section-anchor" id="dados-empresa">
         <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Dados da Empresa</h3>
         </div>
@@ -198,7 +198,7 @@
         </div>
     </div>
 
-    <div id="fiscal">
+    <div id="fiscal" class="section-anchor">
     {% if fiscal %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-blue text-white py-3">
@@ -358,7 +358,7 @@
     {% endif %}
     </div>
 
-    <div id="contabil">
+    <div id="contabil" class="section-anchor">
     {% if contabil %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-orange text-white py-3">
@@ -507,7 +507,7 @@
     {% endif %}
     </div>
 
-    <div id="pessoal">
+    <div id="pessoal" class="section-anchor">
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
                 <div class="card-header bg-dept-blue text-white py-3">
@@ -589,7 +589,7 @@
         {% endif %}
         </div>
 
-    <div id="administrativo">
+    <div id="administrativo" class="section-anchor">
     {% if administrativo %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-orange text-white py-3">
