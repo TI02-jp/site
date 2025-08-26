@@ -14,6 +14,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     
     <style>
+        :root {
+            --primary-color: #e87429;
+            --primary-color-hover: #cf661f;
+            --primary-dark: #0b288b;
+            --primary-dark-hover: #09206d;
+        }
         /* Estes estilos seriam idealmente movidos para styles.css */
         body {
             background-color: #f0f2f5; /* Cor de fundo da página */
@@ -22,7 +28,7 @@
         }
 
         .header-bg-primary {
-            background-color: #0b288b; /* Azul personalizado */
+            background-color: var(--primary-dark); /* Azul padrão */
         }
 
         /* Seções de conteúdo para espaçamento e centralização */
@@ -42,14 +48,14 @@
             padding: 12px 25px;
             font-size: 1.1rem;
             border-radius: 30px; /* Botões arredondados */
-            background-color: #e87429; /* Laranja personalizado */
+            background-color: var(--primary-color); /* Laranja padrão */
             color: #fff;
             border: none;
             transition: background-color 0.2s ease;
         }
 
         .action-btn .btn:hover {
-            background-color: #cf661f; /* Laranja um pouco mais escuro no hover */
+            background-color: var(--primary-color-hover); /* Hover laranja */
         }
     </style>
 
