@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página Inicial - Sistema JP Contábil</title>
+    <title>Home - Sistema JP Contábil</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -25,6 +25,13 @@
             background-color: #f0f2f5; /* Cor de fundo da página */
             font-family: 'Inter', sans-serif; /* Consistente com base.html */
             color: #333; /* Cor padrão do texto */
+            min-height: 100vh; /* Permite que o footer fique no final */
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1; /* Ocupa o espaço disponível empurrando o footer para baixo */
         }
 
         .header-bg-primary {
@@ -38,9 +45,9 @@
             margin: 40px auto; /* Centraliza a div */
         }
 
-        /* Footer com margem superior */
+        /* Footer sempre ao final da página */
         .app-footer {
-            margin-top: 60px;
+            margin-top: auto;
         }
 
         /* Estilo para botões de ação na página inicial */
@@ -61,21 +68,20 @@
 
 </head>
 <body>
-    <header class="py-5 text-white text-center header-bg-primary"> {# Ajustado para usar classes Bootstrap e a custom #}
-        <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>Procedimentos das Empresas</h1> {# display-4 para título grande #}
+    <header class="py-5 text-white text-center header-bg-primary">
+        <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>Sistemas JP Contábil</h1>
     </header>
-    
+
     <main>
-        <section class="intro card shadow-sm intro-section"> {# Usando card, shadow, e a classe custom intro-section #}
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Sobre o Sistema</h2> {# card-title, text-center, mb-4 #}
-                <p class="card-text text-center lead"> {# card-text, text-center, lead para texto maior #}
-                    Este sistema é dedicado ao uso interno da JP Contábil. Ele centraliza os <strong>procedimentos operacionais</strong>
-                    que antes estavam dispersos no Google Drive.
-                </p>
-                <div class="actions text-center mt-4"> {# text-center para centralizar, mt-4 para margem #}
-                    <div class="action-btn d-inline-block mx-2"> {# d-inline-block e mx-2 para espaçamento #}
-                        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg shadow">Entrar</a> {# btn-lg para botão maior #}
+        <section class="intro card shadow-sm intro-section">
+            <div class="card-body text-center">
+                <h2 class="card-title mb-4">Escolha uma opção</h2>
+                <div class="actions d-flex justify-content-center gap-3">
+                    <div class="action-btn">
+                        <a href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg shadow">Acessórias</a>
+                    </div>
+                    <div class="action-btn">
+                        <a href="https://auth.sieg.com/login" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg shadow">Sieg</a>
                     </div>
                 </div>
             </div>
