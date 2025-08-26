@@ -182,7 +182,11 @@ def login():
             if not user.ativo:
                 flash('Seu usuário está inativo. Contate o administrador.', 'danger')
                 return redirect(url_for('login'))
-            login_user(user, remember=form.remember_me.data)
+            login_user(
+                user,
+                remember=form.remember_me.data,
+                duration=timedelta(days=30),
+            )
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
         else:
