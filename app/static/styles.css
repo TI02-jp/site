@@ -35,11 +35,14 @@ Navbar (fixa com sombra leve)
 Barra de navegação fixa na visualização da empresa
 ----------------------------- */
 .company-nav {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
     background-color: #ffffff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.company-nav.fixed {
+    position: fixed;
+    top: 0;
+    z-index: 1020;
 }
 
 /* Garante espaço ao navegar por âncoras com barra fixa */
