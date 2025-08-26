@@ -27,7 +27,7 @@
                         {% for user in users %}
                         <tr>
                             <td>{{ user.name }}</td>
-                            <td>{{ ((now() - user.last_seen).total_seconds() // 60)|int }} min atrás</td>
+                            <td>{{ user.last_seen | time_since }}</td>
                         </tr>
                         {% else %}
                         <tr>
