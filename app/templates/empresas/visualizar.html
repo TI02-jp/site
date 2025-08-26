@@ -62,8 +62,8 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3">
+            <div id="department-nav" class="card border-0 shadow-sm sticky-top">
+                <div class="card-body py-3 bg-white">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
                         <a href="#dados-empresa" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
                         <a href="#fiscal" class="btn btn-outline-dept-blue btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
@@ -648,14 +648,17 @@
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Smooth scroll para navegação com offset para o cabeçalho
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    // Smooth scroll para navegação com offset dinâmico baseado na altura da barra
+    const navBar = document.getElementById('department-nav');
+    const getOffset = () => (navBar ? navBar.offsetHeight : 0);
+
+    document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
             const targetId = this.getAttribute('href');
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                const offset = 80; 
+                const offset = getOffset();
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -730,7 +733,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }, observerOptions);
 
     document.querySelectorAll('div[id]').forEach(section => {
-        if (section.id) observer.observe(section);
+        if (section.id && section.id !== 'department-nav') {
+            observer.observe(section);
+        }
     });
 
     // Otimização para impressão

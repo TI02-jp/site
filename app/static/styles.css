@@ -1,6 +1,10 @@
 /* -----------------------------
 Fonte personalizada moderna
 ----------------------------- */
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     background-color: #f4f4f4;
@@ -1212,4 +1216,18 @@ Mensagem de login flutuante
     max-width: 100%;
     height: auto;
     cursor: pointer;
+}
+
+/* Sticky navigation for departamentos */
+#department-nav {
+    z-index: 1020;
+}
+
+/* Offset anchors so content isn't hidden behind sticky bar */
+#dados-empresa,
+#fiscal,
+#contabil,
+#pessoal,
+#administrativo {
+    scroll-margin-top: 100px;
 }
