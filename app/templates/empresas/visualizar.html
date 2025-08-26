@@ -657,13 +657,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const updateNav = () => {
             const contentRect = document.querySelector('.content-area').getBoundingClientRect();
+            const isMobile = window.innerWidth <= 576;
+            placeholder.style.height = `${companyNav.offsetHeight}px`;
             if (window.scrollY >= navOffset) {
                 if (!companyNav.classList.contains('fixed')) {
                     companyNav.classList.add('fixed');
                     companyNav.parentNode.insertBefore(placeholder, companyNav);
                 }
-                companyNav.style.left = `${contentRect.left}px`;
-                companyNav.style.width = `${contentRect.width}px`;
+                if (isMobile) {
+                    companyNav.style.left = '0px';
+                    companyNav.style.width = '100%';
+                } else {
+                    companyNav.style.left = `${contentRect.left}px`;
+                    companyNav.style.width = `${contentRect.width}px`;
+                }
             } else {
                 if (companyNav.classList.contains('fixed')) {
                     companyNav.classList.remove('fixed');
@@ -685,7 +692,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const targetId = this.getAttribute('href');
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                const offset = 80; 
+                const offset = window.innerWidth <= 576 ? 60 : 80;
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 

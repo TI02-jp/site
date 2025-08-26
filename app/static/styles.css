@@ -13,6 +13,7 @@ body {
     padding: 0;
     text-align: center;
     overflow-wrap: anywhere;
+    overflow-x: hidden;
 }
 
 /* Ensure images scale down within their containers */
@@ -63,24 +64,32 @@ Barra de navegação fixa na visualização da empresa
 
 @media (max-width: 576px) {
     .company-nav .card-body {
-        padding: 0.5rem !important;
+        padding: 0.25rem !important;
     }
     .company-nav .card-body .d-flex {
-        gap: 0.25rem !important;
+        gap: 0.2rem !important;
         flex-wrap: wrap;
         justify-content: center;
     }
     .company-nav .btn {
-        font-size: 0.75rem !important;
-        padding: 0.25rem 0.5rem !important;
+        font-size: 0.7rem !important;
+        padding: 0.25rem 0.4rem !important;
         white-space: normal;
         text-align: center;
+    }
+    .section-anchor {
+        scroll-margin-top: 60px;
     }
 }
 
 /* Garante espaço ao navegar por âncoras com barra fixa */
 .section-anchor {
     scroll-margin-top: 80px;
+}
+
+/* Prevent horizontal overflow within the main content area */
+.content-area {
+    overflow-x: hidden;
 }
 
 /* -----------------------------
@@ -146,6 +155,9 @@ Botões e Ações
 
 /* Ajustes de responsividade para telas pequenas */
 @media (max-width: 576px) {
+    body {
+        font-size: 0.9rem;
+    }
     header {
         font-size: 1.5em;
         padding: 15px;
@@ -168,6 +180,9 @@ Botões e Ações
     .actions .btn {
         width: 100%;
         max-width: 300px;
+    }
+    main {
+        padding: 20px 10px;
     }
 }
 
