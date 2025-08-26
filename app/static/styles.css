@@ -8,6 +8,14 @@ body {
     margin: 0;
     padding: 0;
     text-align: center;
+    overflow-x: hidden;
+    overflow-wrap: anywhere;
+}
+
+/* Ensure images scale down within their containers */
+img {
+    max-width: 100%;
+    height: auto;
 }
 
 /* -----------------------------
@@ -48,6 +56,21 @@ Barra de navegação fixa na visualização da empresa
     position: fixed;
     top: 0;
     z-index: 1020;
+}
+
+@media (max-width: 576px) {
+    .company-nav .card-body {
+        padding: 0.5rem !important;
+    }
+    .company-nav .card-body .d-flex {
+        gap: 0.25rem !important;
+    }
+    .company-nav .btn {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 0.5rem !important;
+        white-space: normal;
+        text-align: center;
+    }
 }
 
 /* Garante espaço ao navegar por âncoras com barra fixa */
@@ -114,6 +137,33 @@ Botões e Ações
 
 .btn-sm {
     padding: 0.25rem 0.5rem;
+}
+
+/* Ajustes de responsividade para telas pequenas */
+@media (max-width: 576px) {
+    header {
+        font-size: 1.5em;
+        padding: 15px;
+    }
+
+    .intro h2 {
+        font-size: 1.4em;
+    }
+
+    .intro p {
+        font-size: 1em;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .actions .btn {
+        width: 100%;
+        max-width: 300px;
+    }
 }
 
 /* -----------------------------
@@ -619,6 +669,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 .badge {
     font-size: 0.75rem;
     padding: 0.375rem 0.5rem;
+    overflow-wrap: anywhere;
 }
 
 /* Listas sem marcadores nos cards */
@@ -734,6 +785,7 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
     font-size: 1rem;
     color: #212529;
     line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 /* Container para campos de senha */
