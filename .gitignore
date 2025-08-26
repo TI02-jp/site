@@ -11,9 +11,6 @@ __pycache__/
 venv/
 env/
 
-# Ignorar a pasta de migrações (se necessário)
-migrations/
-
 # Ignorar o arquivo SQLite (se você estiver usando SQLite para o desenvolvimento local)
 *.db
 

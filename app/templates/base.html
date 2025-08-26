@@ -428,6 +428,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
+                                <i class="bi bi-person-check"></i>
+                                Usuários Online
+                                <span class="nav-badge">{{ online_users_count or 0 }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#" onclick="return false;" style="opacity: 0.6;">
                                 <i class="bi bi-gear"></i>
                                 Configurações
