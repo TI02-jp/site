@@ -1220,6 +1220,8 @@ Mensagem de login flutuante
 
 /* Sticky navigation for departamentos */
 #department-nav {
+    position: sticky;
+    top: 0;
     z-index: 1020;
 }
 
