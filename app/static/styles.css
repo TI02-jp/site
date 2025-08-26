@@ -14,7 +14,7 @@ body {
 Cabeçalho
 ----------------------------- */
 header {
-    background-color: #0b288b;
+    background-color: var(--primary-dark);
     color: white;
     padding: 20px;
     font-size: 2em;
@@ -46,7 +46,7 @@ Seção Introdução
 }
 
 .intro h2 {
-    color: #0b288b;
+    color: var(--primary-dark);
     font-size: 1.8em;
 }
 
@@ -70,7 +70,7 @@ Botões e Ações
     padding: 12px 20px;
     font-size: 1.1em;
     color: white;
-    background-color: #e87429;
+    background-color: var(--primary-color);
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -80,7 +80,7 @@ Botões e Ações
 }
 
 .btn:hover, .btn-custom:hover, .submit-btn:hover {
-    background-color: #0b288b;
+    background-color: var(--primary-dark);
 }
 
 .btn:focus, .btn-custom:focus, .submit-btn:focus {
@@ -122,7 +122,7 @@ Tabelas (Empresas e Usuários)
 }
 
 .user-table th, .table-empresas thead th {
-    background-color: #0b288b;
+    background-color: var(--primary-dark);
     color: white;
     text-align: center;
 }
@@ -170,7 +170,7 @@ td:nth-child(5) {
 Botões personalizados
 ----------------------------- */
 .btn-custom {
-    background-color: #e87429;
+    background-color: var(--primary-color);
     color: white;
     border-radius: 6px;
     padding: 6px 12px;
@@ -181,7 +181,7 @@ Botões personalizados
 }
 
 .btn-custom:hover {
-    background-color: #0b288b;
+    background-color: var(--primary-dark);
 }
 
 .btn-danger {
@@ -193,7 +193,7 @@ Botões personalizados
 Rodapé
 ----------------------------- */
 footer {
-    background-color: #333;
+    background-color: var(--footer-bg);
     color: white;
     padding: 15px;
     margin-top: 30px;
@@ -219,7 +219,7 @@ Formulários
 .form-container h2 {
     text-align: center;
     margin-bottom: 1.5rem;
-    color: #0b288b;
+    color: var(--primary-dark);
 }
 
 .form-group {
@@ -245,7 +245,7 @@ input[type="password"] {
 }
 
 input:focus {
-    border-color: #0b288b;
+    border-color: var(--primary-dark);
     outline: none;
 }
 
@@ -255,7 +255,7 @@ TELA DE LOGIN - ESTILOS ESPECÍFICOS
 
 /* Body da página de login com background especial */
 body.login-page {
-    background: linear-gradient(135deg, #0b288b, #e87429);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -315,14 +315,14 @@ body.login-page {
 }
 
 .login-container .form-control:focus {
-    border-color: #0b288b;
+    border-color: var(--primary-dark);
     box-shadow: 0 0 0 0.2rem rgba(75, 148, 243, 0.25);
 }
 
 /* Botão principal do login */
 .login-container .btn-primary {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
     padding: 0.75rem;
     font-weight: 500;
     border-radius: 8px;
@@ -330,8 +330,8 @@ body.login-page {
 }
 
 .login-container .btn-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
     transform: translateY(-1px);
 }
 
@@ -380,46 +380,46 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
 
 /* Cabeçalho dos cards de formulário */
 .card-header.bg-primary {
-    background-color: #0b288b !important;
+    background-color: var(--primary-dark) !important;
 }
 
 /* Títulos das seções */
 .text-primary {
-    color: #0b288b !important;
+    color: var(--primary-dark) !important;
 }
 
 /* Bordas inferiores das seções */
 .border-bottom {
-    border-color: #0b288b !important;
+    border-color: var(--primary-dark) !important;
     border-width: 2px !important;
 }
 
 /* Botões primários */
 .btn-primary {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .btn-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 /* Checkboxes */
 .form-check-input:checked {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 /* Focus states para inputs */
 .form-floating > .form-control:focus,
 .form-control:focus {
-    border-color: #0b288b;
+    border-color: var(--primary-dark);
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
 .form-select:focus {
-    border-color: #0b288b;
+    border-color: var(--primary-dark);
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
@@ -533,7 +533,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 
 /* Cores de borda consistentes */
 .border-primary {
-    border-color: #0b288b !important;
+    border-color: var(--primary-dark) !important;
 }
 
 /* Headers coloridos para os cards de relatório */
@@ -746,13 +746,13 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 
 /* Botões outline personalizados */
 .btn-outline-primary {
-    color: #0b288b;
-    border-color: #0b288b;
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .btn-outline-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .btn-outline-secondary {
@@ -807,7 +807,7 @@ Mensagens de erro
 Links
 ----------------------------- */
 a {
-    color: #0b288b;
+    color: var(--primary-dark);
     text-decoration: none;
 }
 
@@ -1127,77 +1127,77 @@ Mensagem de login flutuante
 
 /* Department color utilities */
 .text-dept-blue {
-    color: #0b288b !important;
+    color: var(--primary-dark) !important;
 }
 
 .text-dept-orange {
-    color: #e87429 !important;
+    color: var(--primary-color) !important;
 }
 
 .bg-dept-blue {
-    background-color: #0b288b !important;
+    background-color: var(--primary-dark) !important;
 }
 
 .bg-dept-orange {
-    background-color: #e87429 !important;
+    background-color: var(--primary-color) !important;
 }
 
 .bg-dept-blue-subtle {
     background-color: rgba(11, 40, 139, 0.1) !important;
-    color: #0b288b !important;
+    color: var(--primary-dark) !important;
 }
 
 .bg-dept-orange-subtle {
     background-color: rgba(232, 116, 41, 0.1) !important;
-    color: #e87429 !important;
+    color: var(--primary-color) !important;
 }
 
 .btn-dept-blue {
-    background-color: #0b288b;
-    border-color: #0b288b;
-    color: #e87429;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: var(--primary-color);
 }
 
 .btn-dept-blue:hover {
-    background-color: #09206d;
-    border-color: #09206d;
-    color: #e87429;
+    background-color: var(--primary-dark-hover);
+    border-color: var(--primary-dark-hover);
+    color: var(--primary-color);
 }
 
 .btn-dept-orange {
-    background-color: #e87429;
-    border-color: #e87429;
-    color: #0b288b;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
 }
 
 .btn-dept-orange:hover {
-    background-color: #cf661f;
-    border-color: #cf661f;
-    color: #0b288b;
+    background-color: var(--primary-color-hover);
+    border-color: var(--primary-color-hover);
+    color: var(--primary-dark);
 }
 
 .btn-outline-dept-blue {
     background-color: transparent;
-    border-color: #0b288b;
-    color: #e87429;
+    border-color: var(--primary-dark);
+    color: var(--primary-color);
 }
 
 .btn-outline-dept-blue:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
-    color: #e87429;
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: var(--primary-color);
 }
 
 .btn-outline-dept-orange {
     background-color: transparent;
-    border-color: #e87429;
-    color: #0b288b;
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
 }
 
 .btn-outline-dept-orange:hover {
-    background-color: #e87429;
-    border-color: #e87429;
-    color: #0b288b;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
 }
 
 

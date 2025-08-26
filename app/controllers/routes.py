@@ -105,54 +105,40 @@ def validate_contatos(contatos):
         c.pop('endereco', None)
     return contatos
 
-    ## Rota para upload de imagens
-
 @app.route('/upload_image', methods=['POST'])
 @login_required
 def upload_image():
-    print("--- Rota /upload_image foi chamada! ---")
-
+    """Handle image uploads from the WYSIWYG editor."""
     if 'image' not in request.files:
-        print("ERRO: 'image' não está no request.files.")
         return jsonify({'error': 'Nenhuma imagem enviada'}), 400
 
     file = request.files['image']
-    print(f"Arquivo recebido: {file.filename}")
-
     if file.filename == '':
-        print("ERRO: Nome de arquivo vazio.")
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
         header = file.read(512)
         file.seek(0)
         if imghdr.what(None, header) not in ALLOWED_EXTENSIONS:
-            print("ERRO: Conteúdo não reconhecido como imagem.")
             return jsonify({'error': 'Arquivo inválido ou corrompido'}), 400
 
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
-        
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
         file_path = os.path.join(upload_folder, unique_name)
-        print(f"Tentando salvar em: {file_path}")
 
         try:
             os.makedirs(upload_folder, exist_ok=True)
             file.save(file_path)
-            print("SUCESSO: file.save() executado sem erros!")
-
             file_url = url_for('static', filename=f'uploads/{unique_name}')
             return jsonify({'image_url': file_url})
-
         except Exception as e:
-            print(f"!!! ERRO AO SALVAR O ARQUIVO: {e} !!!")
             return jsonify({'error': f'Erro no servidor ao salvar: {e}'}), 500
 
-    print(f"ERRO: Arquivo não permitido. Nome: {file.filename}")
     return jsonify({'error': 'Arquivo inválido ou não permitido'}), 400
 
 def admin_required(f):
+    """Decorator that restricts access to admin users."""
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
@@ -163,16 +149,19 @@ def admin_required(f):
 
 @app.route('/')
 def home():
+    """Render the public landing page."""
     return render_template('home.html')
 
 
 @app.route('/cookies')
 def cookies():
+    """Render the cookie policy page."""
     return render_template('cookie_policy.html')
 
 
 @app.route('/cookies/revoke')
 def revoke_cookies():
+    """Revoke cookie consent and redirect to home."""
     resp = redirect(url_for('home'))
     resp.delete_cookie('cookie_consent')
     flash('Consentimento de cookies revogado.', 'info')
@@ -985,23 +974,14 @@ def relatorio_usuarios():
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
+    """Log out the current user."""
     logout_user()
     return redirect(url_for('home'))
-
-@app.route('/test_connection')
-def test_connection():
-    try:
-        from sqlalchemy import text
-        result = db.session.execute(text('SELECT 1'))
-        return "Conexão bem-sucedida com o banco de dados!"
-    except Exception as e:
-        return f"Erro na conexão: {str(e)}", 500
-    
-    ## Rota para listar usuários
 
 @app.route('/users', methods=['GET', 'POST'])
 @admin_required
 def list_users():
+    """List and register users in the admin panel."""
     form = RegistrationForm()
     show_inactive = request.args.get('show_inactive') in ('1', 'on')
 
@@ -1033,8 +1013,9 @@ def list_users():
 @app.route('/novo_usuario', methods=['GET', 'POST'])
 @admin_required
 def novo_usuario():
+    """Create a new user from the admin interface."""
     form = RegistrationForm()
-    if form.validate_on_submit():           
+    if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.username == form.username.data) | (User.email == form.email.data)
         ).first()
@@ -1057,6 +1038,7 @@ def novo_usuario():
 @app.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
 @admin_required
 def edit_user(user_id):
+    """Edit an existing user."""
     user = User.query.get_or_404(user_id)
     form = EditUserForm(obj=user)
 
