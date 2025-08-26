@@ -154,8 +154,17 @@ def admin_required(f):
     return decorated_function
 
 @app.route('/')
+def index():
+    """Redirect users to the appropriate first page."""
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    return redirect(url_for('login'))
+
+
+@app.route('/home')
+@login_required
 def home():
-    """Render the public landing page."""
+    """Render the authenticated home page."""
     return render_template('home.html')
 
 
@@ -167,8 +176,8 @@ def cookies():
 
 @app.route('/cookies/revoke')
 def revoke_cookies():
-    """Revoke cookie consent and redirect to home."""
-    resp = redirect(url_for('home'))
+    """Revoke cookie consent and redirect to index."""
+    resp = redirect(url_for('index'))
     resp.delete_cookie('cookie_consent')
     flash('Consentimento de cookies revogado.', 'info')
     return resp
@@ -189,7 +198,7 @@ def login():
             )
             session.permanent = form.remember_me.data
             flash('Login bem-sucedido!')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('home'))
         else:
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
@@ -986,7 +995,7 @@ def relatorio_usuarios():
 def logout():
     """Log out the current user."""
     logout_user()
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
 @app.route('/users', methods=['GET', 'POST'])
 @admin_required
