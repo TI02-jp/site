@@ -163,3 +163,8 @@ class DepartamentoPessoalForm(DepartamentoForm):
     ponto_eletronico = StringField('Ponto Eletrônico', validators=[Optional()])
     pagamento_funcionario = StringField('Pagamento de Funcionário', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+
+
+class DepartamentoAdministrativoForm(FlaskForm):
+    """Formulário para o Departamento Administrativo."""
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])

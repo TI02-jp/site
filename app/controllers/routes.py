@@ -8,10 +8,10 @@ from app.models.tables import User, Empresa, Departamento
 from app.forms import (
     EmpresaForm,
     EditUserForm,
-    DepartamentoForm,
     DepartamentoFiscalForm,
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
+    DepartamentoAdministrativoForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -380,8 +380,7 @@ def processar_dados_pessoal(request):
 def processar_dados_administrativo(request):
     """Função auxiliar para processar dados do departamento administrativo"""
     return {
-        'responsavel': request.form.get('responsavel'),
-        'descricao': request.form.get('descricao')
+        'particularidades_texto': sanitize_html(request.form.get('particularidades'))
     }
 
 @app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
@@ -508,7 +507,7 @@ def gerenciar_departamentos(empresa_id):
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
-    administrativo_form = DepartamentoForm(request.form, obj=administrativo)
+    administrativo_form = DepartamentoAdministrativoForm(request.form, obj=administrativo)
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
