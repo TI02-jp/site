@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -187,6 +187,7 @@ def login():
                 remember=form.remember_me.data,
                 duration=timedelta(days=30),
             )
+            session.permanent = form.remember_me.data
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
         else:

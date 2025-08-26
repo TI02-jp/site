@@ -22,6 +22,7 @@ app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
 
 csrf = CSRFProtect(app)
