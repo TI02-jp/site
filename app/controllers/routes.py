@@ -1062,6 +1062,16 @@ def edit_user(user_id):
         user.name = form.name.data
         user.role = form.role.data
         user.ativo = form.ativo.data
+
+        # Process optional password change
+        new_password = request.form.get('new_password')
+        confirm_new_password = request.form.get('confirm_new_password')
+        if new_password:
+            if new_password != confirm_new_password:
+                flash('As senhas devem ser iguais.', 'danger')
+                return redirect(url_for('edit_user', user_id=user.id))
+            user.set_password(new_password)
+
         db.session.commit()
         flash('Usuário atualizado com sucesso!', 'success')
         return redirect(url_for('list_users'))
