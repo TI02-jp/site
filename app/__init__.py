@@ -1,4 +1,6 @@
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -21,6 +23,21 @@ app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
+
+# Configuração de logging
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+log_path = os.path.join(LOG_DIR, 'app.log')
+file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+file_handler.setLevel(logging.DEBUG)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+root_logger.addHandler(file_handler)
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)

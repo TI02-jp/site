@@ -1071,3 +1071,18 @@ def edit_user(user_id):
         return redirect(url_for('list_users'))
 
     return render_template('edit_user.html', form=form)
+
+
+@app.route('/admin/logs')
+@admin_required
+def view_logs():
+    log_file = os.path.abspath(
+        os.path.join(current_app.root_path, '..', 'logs', 'app.log')
+    )
+    if not os.path.exists(log_file):
+        flash('Arquivo de log não encontrado.', 'warning')
+        return render_template('admin/logs.html', logs=None)
+    with open(log_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()[-200:]
+    logs = ''.join(lines)
+    return render_template('admin/logs.html', logs=logs)
