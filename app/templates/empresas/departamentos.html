@@ -380,6 +380,14 @@
             <form method="POST">
                 {{ administrativo_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="administrativo">
+                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div id="editor-administrativo" style="height: 250px;"></div>
+                        {{ administrativo_form.particularidades_texto(id="particularidades-administrativo", style="display:none;") }}
+                        <input type="file" id="image-input-administrativo" accept="image/*" style="display: none;">
+                    </div>
+                </div>
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
                 </div>
@@ -504,6 +512,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initializeQuill('#editor-fiscal', '#particularidades-fiscal', '#image-input-fiscal');
     initializeQuill('#editor-contabil', '#particularidades-contabil', '#image-input-contabil');
     initializeQuill('#editor-pessoal', '#particularidades-pessoal', '#image-input-pessoal');
+    initializeQuill('#editor-administrativo', '#particularidades-administrativo', '#image-input-administrativo');
     
     // -- SEUS SCRIPTS DE UI EXISTENTES (integrados) --
     
