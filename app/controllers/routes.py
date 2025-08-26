@@ -21,15 +21,21 @@ from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
+from datetime import datetime, timedelta
 
 @app.context_processor
 def inject_stats():
     if current_user.is_authenticated:
         total_empresas = Empresa.query.count()
         total_usuarios = User.query.count() if current_user.role == 'admin' else 0
+        online_count = 0
+        if current_user.role == 'admin':
+            cutoff = datetime.utcnow() - timedelta(minutes=5)
+            online_count = User.query.filter(User.last_seen >= cutoff).count()
         return {
             'total_empresas': total_empresas,
-            'total_usuarios': total_usuarios
+            'total_usuarios': total_usuarios,
+            'online_users_count': online_count
         }
     return {}
 
@@ -1009,6 +1015,14 @@ def list_users():
         users_query = users_query.filter_by(ativo=True)
     users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template('list_users.html', users=users, form=form, show_inactive=show_inactive)
+
+
+@app.route('/admin/online-users')
+@admin_required
+def online_users():
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    users = User.query.filter(User.last_seen >= cutoff).order_by(User.name).all()
+    return render_template('admin/online_users.html', users=users)
 
 @app.route('/novo_usuario', methods=['GET', 'POST'])
 @admin_required

@@ -3,9 +3,9 @@ from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from markupsafe import Markup, escape
 from app.utils.security import sanitize_html
 
@@ -34,6 +34,15 @@ def _enforce_https():
     if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
+
+
+@app.before_request
+def _update_last_seen():
+    if current_user.is_authenticated:
+        now = datetime.utcnow()
+        if not current_user.last_seen or (now - current_user.last_seen) > timedelta(minutes=1):
+            current_user.last_seen = now
+            db.session.commit()
 
 
 @app.after_request

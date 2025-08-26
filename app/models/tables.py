@@ -36,6 +36,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
