@@ -3,6 +3,14 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
+from app.utils.logging_utils import (
+    log_acesso_dados,
+    log_autenticacao,
+    log_alteracao_dados,
+    log_erro_execucao,
+    log_integracao_externa,
+    log_acao_administrativa,
+)
 from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import User, Empresa, Departamento
 from app.forms import (
@@ -13,7 +21,7 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
 )
-import os, json, re
+import os, json, re, logging
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -188,9 +196,11 @@ def login():
                 flash('Seu usuário está inativo. Contate o administrador.', 'danger')
                 return redirect(url_for('login'))
             login_user(user, remember=form.remember_me.data)
+            log_autenticacao(request.remote_addr or 'unknown', user.username, 'login')
             flash('Login bem-sucedido!')
             return redirect(url_for('dashboard'))
         else:
+            log_autenticacao(request.remote_addr or 'unknown', form.username.data, 'falha')
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
 
@@ -204,15 +214,21 @@ def dashboard():
 def api_cnpj(cnpj):
     try:
         dados = consultar_cnpj(cnpj)
+        log_integracao_externa('consultar_cnpj', {'cnpj': cnpj}, 'sucesso', 0)
     except ValueError as e:
+        log_integracao_externa('consultar_cnpj', {'cnpj': cnpj}, 'dados_invalidos', 0)
+        log_erro_execucao(request.path, current_user.id, e)
         msg = str(e)
         status = 400 if 'inválido' in msg.lower() or 'invalido' in msg.lower() else 404
         if status == 404:
             msg = 'CNPJ não está cadastrado'
         return jsonify({'error': msg}), status
-    except Exception:
+    except Exception as e:
+        log_integracao_externa('consultar_cnpj', {'cnpj': cnpj}, 'erro', 0)
+        log_erro_execucao(request.path, current_user.id, e)
         return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
     if not dados:
+        log_integracao_externa('consultar_cnpj', {'cnpj': cnpj}, 'nao_encontrado', 0)
         return jsonify({'error': 'CNPJ não está cadastrado'}), 404
     return jsonify(dados)
 
@@ -248,10 +264,18 @@ def cadastrar_empresa():
             )
             db.session.add(nova_empresa)
             db.session.commit()
+            log_alteracao_dados(
+                'create',
+                'empresa',
+                nova_empresa.id,
+                request.form.keys(),
+                current_user.id,
+            )
             flash('Empresa cadastrada com sucesso!', 'success')
             return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
         except Exception as e:
             db.session.rollback()
+            log_erro_execucao(request.path, current_user.id, e)
             flash(f'Erro ao cadastrar empresa: {e}', 'danger')
     else:
         print("Formulário não validado:")
@@ -393,6 +417,7 @@ def processar_dados_administrativo(request):
 @login_required
 def editar_empresa(id):
     empresa = Empresa.query.get_or_404(id)
+    log_acesso_dados(current_user.id, 'empresa', id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
 
     if request.method == 'GET':
@@ -412,10 +437,12 @@ def editar_empresa(id):
             db.session.add(empresa)
             try:
                 db.session.commit()
+                log_alteracao_dados('update', 'empresa', id, request.form.keys(), current_user.id)
                 flash('Dados da Empresa salvos com sucesso!', 'success')
                 return redirect(url_for('visualizar_empresa', id=id) + '#dados-empresa')
             except Exception as e:
                 db.session.rollback()
+                log_erro_execucao(request.path, current_user.id, e)
                 flash(f'Erro ao salvar: {str(e)}', 'danger')
         else:
             for field, errors in empresa_form.errors.items():
@@ -434,6 +461,7 @@ def visualizar_empresa(id):
     from types import SimpleNamespace
 
     empresa = Empresa.query.get_or_404(id)
+    log_acesso_dados(current_user.id, 'empresa', id)
 
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
@@ -985,6 +1013,7 @@ def relatorio_usuarios():
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
+    log_autenticacao(request.remote_addr or 'unknown', current_user.username, 'logout')
     logout_user()
     return redirect(url_for('home'))
 
@@ -1021,6 +1050,7 @@ def list_users():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            log_acao_administrativa(current_user.id, f'create_user:{user.id}')
             flash('Novo usuário cadastrado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
@@ -1050,6 +1080,7 @@ def novo_usuario():
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            log_acao_administrativa(current_user.id, f'create_user:{user.id}')
             flash('Novo usuário cadastrado com sucesso!', 'success')
             return redirect(url_for('list_users'))
     return render_template('admin/novo_usuario.html', form=form)
@@ -1067,6 +1098,7 @@ def edit_user(user_id):
         user.role = form.role.data
         user.ativo = form.ativo.data
         db.session.commit()
+        log_acao_administrativa(current_user.id, f'edit_user:{user_id}')
         flash('Usuário atualizado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
@@ -1076,9 +1108,15 @@ def edit_user(user_id):
 @app.route('/admin/logs')
 @admin_required
 def view_logs():
+    log_acao_administrativa(current_user.id, 'view_logs')
     log_file = os.path.abspath(
         os.path.join(current_app.root_path, '..', 'logs', 'app.log')
     )
+    for handler in logging.getLogger().handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
     if not os.path.exists(log_file):
         flash('Arquivo de log não encontrado.', 'warning')
         return render_template('admin/logs.html', logs=None)
