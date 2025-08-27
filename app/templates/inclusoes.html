@@ -41,7 +41,7 @@
                         <label for="consultoria" class="form-label">Consultoria</label>
                         <select id="consultoria" name="consultoria" class="form-select">
                             {% for c in consultorias %}
-                            <option value="{{ c['nome'] }}">{{ c['nome'] }}</option>
+                            <option value="{{ c.nome }}">{{ c.nome }}</option>
                             {% endfor %}
                         </select>
                     </div>
