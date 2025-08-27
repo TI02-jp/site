@@ -13,12 +13,6 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('list_users') }}">
-                <i class="bi bi-people"></i>
-                USUÁRIOS
-            </a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link {% if request.endpoint in ['setores', 'cadastro_setor'] %}active{% endif %}" href="{{ url_for('setores') }}">
                 <i class="bi bi-diagram-2"></i>
                 SETORES
