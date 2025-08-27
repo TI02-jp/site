@@ -116,19 +116,22 @@
             padding: 1.25rem 0;
         }
 
-        .sidebar-nav ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
+        .sidebar .nav-link {
+            color: var(--sidebar-text);
+            font-weight: 500;
+            padding: 0.875rem 1.25rem;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
         }
 
-        .sidebar-nav li + li {
-            margin-top: 1rem;
-        }
-
-        .sidebar-nav img {
-            max-width: 100%;
-            height: auto;
+        .sidebar .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
         }
 
         .content-area {
@@ -163,26 +166,18 @@
                     </div>
                 </div>
                 <div class="sidebar-nav">
-                    <ul class="list-unstyled text-center">
-                        <li class="mb-3">
-                            <a href="#" target="_blank" rel="noopener" class="d-block">
-                                <img src="https://via.placeholder.com/180x60?text=MC" alt="MC" class="img-fluid">
-                            </a>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Cadastro</a>
                         </li>
-                        <li class="mb-3">
-                            <a href="#" target="_blank" rel="noopener" class="d-block">
-                                <img src="https://via.placeholder.com/180x60?text=IOB" alt="IOB" class="img-fluid">
-                            </a>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Inclusões</a>
                         </li>
-                        <li class="mb-3">
-                            <a href="#" target="_blank" rel="noopener" class="d-block">
-                                <img src="https://via.placeholder.com/180x60?text=Auditoria" alt="Auditoria" class="img-fluid">
-                            </a>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Pesquisas</a>
                         </li>
-                        <li>
-                            <a href="#" target="_blank" rel="noopener" class="d-block">
-                                <img src="https://via.placeholder.com/180x60?text=Axis" alt="Axis" class="img-fluid">
-                            </a>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">Sair</a>
                         </li>
                     </ul>
                 </div>
