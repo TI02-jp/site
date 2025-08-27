@@ -1,157 +1,44 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Sistema JP Contábil</title>
+{% extends "base.html" %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+{% block title %}HOME{% endblock %}
 
-    <style>
-        :root {
-            --primary-color: #e87429;
-            --primary-color-hover: #cf661f;
-            --primary-dark: #0b288b;
-            --primary-dark-hover: #09206d;
-            --sidebar-bg: #ffffff;
-            --sidebar-text: #000000;
-            --sidebar-hover: #fde8d9;
-            --border-color: #f7c79f;
-        }
+{% block sidebar_nav %}
+<div class="nav-section">
+    <div class="nav-section-title">PRINCIPAL</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-list-task"></i>
+                PARTICULARIDADES
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                ACESSÓRIAS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                SIEG
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('consultorias') }}">
+                <i class="bi bi-buildings"></i>
+                CONSULTORIAS
+            </a>
+        </li>
+    </ul>
+</div>
+<style>
+    .content-breadcrumb { display: none; }
+</style>
+{% endblock %}
 
-        html, body {
-            height: 100%;
-            margin: 0;
-            background-color: #f0f2f5;
-            font-family: 'Inter', sans-serif;
-            color: #333;
-        }
-
-        .wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .main-content {
-            display: flex;
-            flex: 1;
-            width: 100%;
-        }
-
-        .sidebar {
-            width: 250px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            padding: 1.5rem 1.25rem;
-            border-bottom: 1px solid var(--border-color);
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-        }
-
-        .sidebar-nav {
-            flex: 1;
-            padding: 1.25rem 0;
-        }
-
-        .sidebar .nav-link {
-            color: var(--sidebar-text);
-            font-weight: 500;
-            padding: 0.875rem 1.25rem;
-            border-left: 3px solid transparent;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
-        .sidebar .nav-link:hover {
-            background-color: var(--sidebar-hover);
-            color: var(--primary-color);
-            border-left-color: var(--primary-color);
-        }
-
-        .sidebar .nav-link i {
-            font-size: 1.1rem;
-            width: 20px;
-            text-align: center;
-        }
-
-        .content-area {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        main {
-            flex: 1;
-        }
-
-        .header-bg-primary {
-            background-color: var(--primary-dark);
-        }
-
-        .app-footer {
-            margin-top: auto;
-        }
-    </style>
-
-</head>
-<body>
-    <div class="wrapper">
-        <div class="main-content">
-            <nav class="sidebar">
-                <div class="sidebar-header">
-                    <h4>Menu</h4>
-                </div>
-                <div class="sidebar-nav">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">
-                                <i class="bi bi-list-task"></i>
-                                Particularidades
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
-                                <i class="bi bi-box-arrow-up-right"></i>
-                                Acessórias
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
-                                <i class="bi bi-box-arrow-up-right"></i>
-                                Sieg
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <div class="content-area">
-                <header class="py-5 text-white text-center header-bg-primary">
-                    <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>Sistemas JP Contábil</h1>
-                </header>
-
-                <main></main>
-
-                <footer class="bg-light text-muted text-center py-3 app-footer">
-                    <p class="mb-0">&copy; {{ now().year }} - JP Contabil. Todos os direitos reservados.</p>
-                </footer>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    {% set now = now() %}
-</body>
-</html>
+{% block content %}
+<header class="py-5 text-white text-center" style="background-color: var(--primary-dark);">
+    <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>SISTEMAS JP CONTÁBIL</h1>
+</header>
+{% endblock %}

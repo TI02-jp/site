@@ -45,6 +45,11 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# In-memory storage for consultorias, setores and inclusões until a persistent layer is introduced
+consultorias_data = []
+setores_data = []
+inclusoes_data = []
+
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
@@ -167,6 +172,85 @@ def home():
     """Render the authenticated home page."""
     return render_template('home.html')
 
+
+@app.route('/consultorias')
+@login_required
+def consultorias():
+    """List registered consultorias with optional search."""
+    search = request.args.get('q', '').lower()
+    consultorias = consultorias_data
+    if search:
+        consultorias = [c for c in consultorias if search in c['nome'].lower()]
+    return render_template('consultorias.html', consultorias=consultorias, search=search)
+
+
+@app.route('/consultorias/cadastro', methods=['GET', 'POST'])
+@login_required
+def cadastro_consultoria():
+    """Render and handle the Cadastro de Consultoria page."""
+    codigo = len(consultorias_data) + 1
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        usuario_id = request.form.get('usuario')
+        senha = request.form.get('senha', '').strip()
+        user_obj = User.query.get(int(usuario_id)) if usuario_id else None
+        consultorias_data.append({
+            'codigo': codigo,
+            'nome': nome,
+            'usuario': user_obj.name if user_obj else '',
+            'senha': senha,
+        })
+        flash('Consultoria cadastrada com sucesso.', 'success')
+        return redirect(url_for('consultorias'))
+    return render_template('cadastro_consultoria.html', codigo=codigo, users=users)
+
+@app.route('/consultorias/setores')
+@login_required
+def setores():
+    """List registered setores with optional search."""
+    search = request.args.get('q', '').lower()
+    setores = setores_data
+    if search:
+        setores = [s for s in setores if search in s['nome'].lower()]
+    return render_template('setores.html', setores=setores, search=search)
+
+
+@app.route('/consultorias/setores/cadastro')
+@login_required
+def cadastro_setor():
+    """Render the Cadastro de Setor page."""
+    codigo = len(setores_data) + 1
+    return render_template('cadastro_setor.html', codigo=codigo)
+
+
+@app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
+@login_required
+def inclusoes():
+    """Render and handle Inclusões de Consultoria form."""
+    codigo = len(inclusoes_data) + 1
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        data = {
+            'codigo': codigo,
+            'data': request.form.get('data'),
+            'usuario': request.form.get('usuario'),
+            'setor': request.form.get('setor'),
+            'consultoria': request.form.get('consultoria'),
+            'assunto': request.form.get('assunto'),
+            'pergunta': request.form.get('pergunta'),
+            'resposta': request.form.get('resposta'),
+        }
+        inclusoes_data.append(data)
+        flash('Inclusão registrada com sucesso.', 'success')
+        return redirect(url_for('inclusoes'))
+    return render_template(
+        'inclusoes.html',
+        codigo=codigo,
+        users=users,
+        setores=setores_data,
+        consultorias=consultorias_data,
+    )
 
 @app.route('/cookies')
 def cookies():
