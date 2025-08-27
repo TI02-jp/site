@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CONSULTORIAS</title>
+    <title>CADASTRAR CONSULTORIA</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
@@ -168,11 +168,11 @@
                 <div class="sidebar-nav">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#cadastroSubmenu" role="button" aria-expanded="false" aria-controls="cadastroSubmenu">
+                            <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#cadastroSubmenu" role="button" aria-expanded="true" aria-controls="cadastroSubmenu">
                                 CADASTRO
                                 <i class="bi bi-chevron-down small"></i>
                             </a>
-                            <div class="collapse" id="cadastroSubmenu">
+                            <div class="collapse show" id="cadastroSubmenu">
                                 <ul class="nav flex-column ms-3">
                                     <li class="nav-item"><a class="nav-link" href="{{ url_for('cadastro_consultoria') }}">CONSULTORIAS</a></li>
                                     <li class="nav-item"><a class="nav-link" href="#">USUÁRIOS</a></li>
@@ -192,8 +192,35 @@
 
             <div class="content-area">
                 <main class="p-4">
-                    <h1 class="mb-4 text-primary"><i class="bi bi-clock-history me-2"></i>CONSULTORIAS</h1>
-                    <p>Em breve você poderá ver as consultorias por aqui.</p>
+                    <h1 class="mb-4 text-primary"><i class="bi bi-building-add me-2"></i>CADASTRAR CONSULTORIA</h1>
+                    <form method="post" class="mt-4">
+                        <div class="mb-3">
+                            <label for="codigo" class="form-label">Código</label>
+                            <input type="text" class="form-control" id="codigo" name="codigo">
+                        </div>
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome da Consultoria</label>
+                            <input type="text" class="form-control" id="nome" name="nome">
+                        </div>
+                        <div class="mb-3">
+                            <label for="usuario" class="form-label">Usuário na Consultoria</label>
+                            <input type="text" class="form-control" id="usuario" name="usuario">
+                        </div>
+                        <div class="mb-4">
+                            <label for="senha" class="form-label">Senha na Consultoria</label>
+                            <input type="password" class="form-control" id="senha" name="senha">
+                        </div>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary" title="Primeiro"><i class="bi bi-skip-backward-fill"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" title="Anterior"><i class="bi bi-caret-left-fill"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" title="Próximo"><i class="bi bi-caret-right-fill"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" title="Último"><i class="bi bi-skip-forward-fill"></i></button>
+                            <button type="reset" class="btn btn-outline-secondary" title="Novo"><i class="bi bi-file-earmark-plus"></i></button>
+                            <button type="submit" class="btn btn-outline-secondary" title="Salvar"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" title="Excluir"><i class="bi bi-trash"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" title="Cancelar"><i class="bi bi-x-circle"></i></button>
+                        </div>
+                    </form>
                 </main>
 
                 <footer class="bg-light text-muted text-center py-3 app-footer">
