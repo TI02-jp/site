@@ -20,7 +20,11 @@
                 </div>
                 <div class="mb-3">
                     <label for="usuario" class="form-label">Usuário na Consultoria</label>
-                    <input type="text" id="usuario" class="form-control">
+                    <select id="usuario" name="usuario" class="form-select">
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label for="senha" class="form-label">Senha na Consultoria</label>
