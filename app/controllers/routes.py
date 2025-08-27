@@ -45,6 +45,9 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# In-memory storage for consultorias until a persistent layer is introduced
+consultorias_data = []
+
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
@@ -173,7 +176,7 @@ def home():
 def consultorias():
     """List registered consultorias with optional search."""
     search = request.args.get('q', '').lower()
-    consultorias = []
+    consultorias = consultorias_data
     if search:
         consultorias = [c for c in consultorias if search in c['nome'].lower()]
     return render_template('consultorias.html', consultorias=consultorias, search=search)
@@ -183,7 +186,8 @@ def consultorias():
 @login_required
 def cadastro_consultoria():
     """Render the Cadastro de Consultoria page."""
-    return render_template('cadastro_consultoria.html')
+    codigo = len(consultorias_data) + 1
+    return render_template('cadastro_consultoria.html', codigo=codigo)
 
 @app.route('/consultorias/setores')
 @login_required

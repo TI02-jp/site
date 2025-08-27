@@ -12,11 +12,19 @@
             <form>
                 <div class="mb-3">
                     <label for="codigo" class="form-label">Código</label>
-                    <input type="text" id="codigo" class="form-control" placeholder="Código da consultoria">
+                    <input type="text" id="codigo" class="form-control" value="{{ codigo }}" readonly>
                 </div>
                 <div class="mb-3">
-                    <label for="nome" class="form-label">Nome</label>
+                    <label for="nome" class="form-label">Nome da Consultoria</label>
                     <input type="text" id="nome" class="form-control" placeholder="Nome da consultoria">
+                </div>
+                <div class="mb-3">
+                    <label for="usuario" class="form-label">Usuário na Consultoria</label>
+                    <input type="text" id="usuario" class="form-control" placeholder="Usuário da consultoria">
+                </div>
+                <div class="mb-3">
+                    <label for="senha" class="form-label">Senha na Consultoria</label>
+                    <input type="text" id="senha" class="form-control" placeholder="Senha da consultoria">
                 </div>
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{{ url_for('consultorias') }}" class="btn btn-outline-secondary">Cancelar</a>
