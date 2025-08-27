@@ -4,7 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa, Departamento, Consultoria
+from app.models.tables import User, Empresa, Departamento, Consultoria, Setor
 from app.forms import (
     EmpresaForm,
     EditUserForm,
@@ -45,8 +45,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# In-memory storage for setores and inclusões until a persistent layer is introduced
-setores_data = []
+# In-memory storage for inclusões until a persistent layer is introduced
 inclusoes_data = []
 
 
@@ -208,17 +207,24 @@ def cadastro_consultoria():
 def setores():
     """List registered setores with optional search."""
     search = request.args.get('q', '').lower()
-    setores = setores_data
+    query = Setor.query
     if search:
-        setores = [s for s in setores if search in s['nome'].lower()]
+        query = query.filter(Setor.nome.ilike(f"%{search}%"))
+    setores = query.all()
     return render_template('setores.html', setores=setores, search=search)
 
 
-@app.route('/consultorias/setores/cadastro')
+@app.route('/consultorias/setores/cadastro', methods=['GET', 'POST'])
 @login_required
 def cadastro_setor():
-    """Render the Cadastro de Setor page."""
-    codigo = len(setores_data) + 1
+    """Render and handle the Cadastro de Setor page."""
+    codigo = Setor.query.count() + 1
+    if request.method == 'POST':
+        setor = Setor(nome=request.form.get('nome'))
+        db.session.add(setor)
+        db.session.commit()
+        flash('Setor registrado com sucesso.', 'success')
+        return redirect(url_for('setores'))
     return render_template('cadastro_setor.html', codigo=codigo)
 
 
@@ -246,7 +252,7 @@ def inclusoes():
         'inclusoes.html',
         codigo=codigo,
         users=users,
-        setores=setores_data,
+        setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 

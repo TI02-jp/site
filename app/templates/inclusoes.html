@@ -33,7 +33,7 @@
                         <label for="setor" class="form-label">Setor</label>
                         <select id="setor" name="setor" class="form-select">
                             {% for s in setores %}
-                            <option value="{{ s['nome'] }}">{{ s['nome'] }}</option>
+                            <option value="{{ s.nome }}">{{ s.nome }}</option>
                             {% endfor %}
                         </select>
                     </div>
