@@ -14,29 +14,29 @@
                     <label for="codigo" class="form-label">Código</label>
                     <input type="text" id="codigo" name="codigo" class="form-control" value="{{ codigo }}" readonly>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" style="max-width: 200px;">
                     <label for="data" class="form-label">Data</label>
                     <input type="date" id="data" name="data" class="form-control">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" style="max-width: 300px;">
                     <label for="usuario" class="form-label">Usuário</label>
-                    <select id="usuario" name="usuario" class="form-select">
+                    <select id="usuario" name="usuario" class="form-select" size="5">
                         {% for u in users %}
                         <option value="{{ u.id }}">{{ u.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" style="max-width: 300px;">
                     <label for="setor" class="form-label">Setor</label>
-                    <select id="setor" name="setor" class="form-select">
+                    <select id="setor" name="setor" class="form-select" size="5">
                         {% for s in setores %}
                         <option value="{{ s['nome'] }}">{{ s['nome'] }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" style="max-width: 300px;">
                     <label for="consultoria" class="form-label">Consultoria</label>
-                    <select id="consultoria" name="consultoria" class="form-select">
+                    <select id="consultoria" name="consultoria" class="form-select" size="5">
                         {% for c in consultorias %}
                         <option value="{{ c['nome'] }}">{{ c['nome'] }}</option>
                         {% endfor %}
