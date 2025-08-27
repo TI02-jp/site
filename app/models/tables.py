@@ -62,10 +62,8 @@ class Consultoria(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    usuario = db.Column(db.String(100))
     senha = db.Column(db.String(255))
-
-    usuario = db.relationship('User', backref=db.backref('consultorias', lazy=True))
 
     def __repr__(self):
         return f"<Consultoria {self.nome}>"
