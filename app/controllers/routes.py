@@ -181,6 +181,13 @@ def cadastro_consultoria():
     """Render the Cadastro de Consultoria page."""
     return render_template('cadastro_consultoria.html')
 
+
+@app.route('/consultorias/setores')
+@login_required
+def cadastro_setores():
+    """Render the Cadastro de Setores page."""
+    return render_template('cadastro_setores.html')
+
 @app.route('/cookies')
 def cookies():
     """Render the cookie policy page."""
