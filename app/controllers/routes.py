@@ -174,6 +174,13 @@ def consultorias():
     """Render the Consultorias page."""
     return render_template('consultorias.html')
 
+
+@app.route('/consultorias/cadastro')
+@login_required
+def cadastro_consultoria():
+    """Render the Cadastro de Consultoria page."""
+    return render_template('cadastro_consultoria.html')
+
 @app.route('/cookies')
 def cookies():
     """Render the cookie policy page."""
