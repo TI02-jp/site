@@ -168,6 +168,12 @@ def home():
     return render_template('home.html')
 
 
+@app.route('/consultorias')
+@login_required
+def consultorias():
+    """Render the Consultorias page."""
+    return render_template('consultorias.html')
+
 @app.route('/cookies')
 def cookies():
     """Render the cookie policy page."""
