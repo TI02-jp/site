@@ -191,11 +191,10 @@ def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
     codigo = Consultoria.query.count() + 1
     form = ConsultoriaForm()
-    form.usuario.choices = [(u.id, u.name) for u in User.query.order_by(User.name).all()]
     if form.validate_on_submit():
         consultoria = Consultoria(
             nome=form.nome.data,
-            usuario_id=form.usuario.data,
+            usuario=form.usuario.data,
             senha=form.senha.data,
         )
         db.session.add(consultoria)
