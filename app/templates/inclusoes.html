@@ -20,7 +20,7 @@
                 </div>
                 <div class="mb-3" style="max-width: 300px;">
                     <label for="usuario" class="form-label">Usuário</label>
-                    <select id="usuario" name="usuario" class="form-select" size="5">
+                    <select id="usuario" name="usuario" class="form-select">
                         {% for u in users %}
                         <option value="{{ u.id }}">{{ u.name }}</option>
                         {% endfor %}
@@ -28,7 +28,7 @@
                 </div>
                 <div class="mb-3" style="max-width: 300px;">
                     <label for="setor" class="form-label">Setor</label>
-                    <select id="setor" name="setor" class="form-select" size="5">
+                    <select id="setor" name="setor" class="form-select">
                         {% for s in setores %}
                         <option value="{{ s['nome'] }}">{{ s['nome'] }}</option>
                         {% endfor %}
@@ -36,7 +36,7 @@
                 </div>
                 <div class="mb-3" style="max-width: 300px;">
                     <label for="consultoria" class="form-label">Consultoria</label>
-                    <select id="consultoria" name="consultoria" class="form-select" size="5">
+                    <select id="consultoria" name="consultoria" class="form-select">
                         {% for c in consultorias %}
                         <option value="{{ c['nome'] }}">{{ c['nome'] }}</option>
                         {% endfor %}

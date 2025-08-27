@@ -189,7 +189,8 @@ def consultorias():
 def cadastro_consultoria():
     """Render the Cadastro de Consultoria page."""
     codigo = len(consultorias_data) + 1
-    return render_template('cadastro_consultoria.html', codigo=codigo)
+    users = User.query.order_by(User.name).all()
+    return render_template('cadastro_consultoria.html', codigo=codigo, users=users)
 
 @app.route('/consultorias/setores')
 @login_required
