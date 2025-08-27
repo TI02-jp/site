@@ -400,6 +400,7 @@
 
             <!-- Navegação -->
             <div class="sidebar-nav">
+                {% block sidebar_nav %}
                 <!-- Seção Principal -->
                 <div class="nav-section">
                     <div class="nav-section-title">Principal</div>
@@ -480,6 +481,7 @@
                         </li>
                     </ul>
                 </div>
+                {% endblock %}
             </div>
 
         </nav>
