@@ -100,28 +100,8 @@
             background-color: var(--primary-dark);
         }
 
-        .intro-section {
-            padding: 40px 20px;
-            max-width: 700px;
-            margin: 40px auto;
-        }
-
         .app-footer {
             margin-top: auto;
-        }
-
-        .action-btn .btn {
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            border-radius: 30px;
-            background-color: var(--primary-color);
-            color: #fff;
-            border: none;
-            transition: background-color 0.2s ease;
-        }
-
-        .action-btn .btn:hover {
-            background-color: var(--primary-color-hover);
         }
     </style>
 
@@ -162,21 +142,7 @@
                     <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>Sistemas JP Contábil</h1>
                 </header>
 
-                <main>
-                    <section class="intro card shadow-sm intro-section">
-                        <div class="card-body text-center">
-                            <h2 class="card-title mb-4">Escolha uma opção</h2>
-                            <div class="actions d-flex justify-content-center gap-3">
-                                <div class="action-btn">
-                                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg shadow">Procedimentos</a>
-                                </div>
-                                <div class="action-btn">
-                                    <a href="{{ url_for('listar_empresas') }}" class="btn btn-primary btn-lg shadow">Site das Empresas</a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </main>
+                <main></main>
 
                 <footer class="bg-light text-muted text-center py-3 app-footer">
                     <p class="mb-0">&copy; {{ now().year }} - JP Contabil. Todos os direitos reservados.</p>
