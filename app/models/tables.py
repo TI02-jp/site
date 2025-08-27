@@ -56,6 +56,20 @@ class Post(db.Model):
     id_user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
 
+
+class Consultoria(db.Model):
+    __tablename__ = 'consultorias'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(100), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    senha = db.Column(db.String(255))
+
+    usuario = db.relationship('User', backref=db.backref('consultorias', lazy=True))
+
+    def __repr__(self):
+        return f"<Consultoria {self.nome}>"
+
 class Empresa(db.Model):
     __tablename__ = 'tbl_empresas'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

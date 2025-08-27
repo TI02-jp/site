@@ -4,7 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa, Departamento
+from app.models.tables import User, Empresa, Departamento, Consultoria
 from app.forms import (
     EmpresaForm,
     EditUserForm,
@@ -45,8 +45,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# In-memory storage for consultorias, setores and inclusões until a persistent layer is introduced
-consultorias_data = []
+# In-memory storage for setores and inclusões until a persistent layer is introduced
 setores_data = []
 inclusoes_data = []
 
@@ -178,9 +177,10 @@ def home():
 def consultorias():
     """List registered consultorias with optional search."""
     search = request.args.get('q', '').lower()
-    consultorias = consultorias_data
+    query = Consultoria.query
     if search:
-        consultorias = [c for c in consultorias if search in c['nome'].lower()]
+        query = query.filter(Consultoria.nome.ilike(f"%{search}%"))
+    consultorias = query.all()
     return render_template('consultorias.html', consultorias=consultorias, search=search)
 
 
@@ -188,19 +188,17 @@ def consultorias():
 @login_required
 def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
-    codigo = len(consultorias_data) + 1
+    codigo = Consultoria.query.count() + 1
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
-        usuario_id = request.form.get('usuario')
-        usuario = User.query.get(usuario_id) if usuario_id else None
-        data = {
-            'codigo': codigo,
-            'nome': request.form.get('nome'),
-            'usuario_id': usuario_id,
-            'usuario_nome': usuario.name if usuario else '',
-            'senha': request.form.get('senha'),
-        }
-        consultorias_data.append(data)
+        usuario_id = request.form.get('usuario') or None
+        consultoria = Consultoria(
+            nome=request.form.get('nome'),
+            usuario_id=usuario_id,
+            senha=request.form.get('senha'),
+        )
+        db.session.add(consultoria)
+        db.session.commit()
         flash('Consultoria registrada com sucesso.', 'success')
         return redirect(url_for('consultorias'))
     return render_template('cadastro_consultoria.html', codigo=codigo, users=users)
@@ -249,7 +247,7 @@ def inclusoes():
         codigo=codigo,
         users=users,
         setores=setores_data,
-        consultorias=consultorias_data,
+        consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 
 @app.route('/cookies')
