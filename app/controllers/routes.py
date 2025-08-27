@@ -168,6 +168,12 @@ def home():
     return render_template('home.html')
 
 
+@app.route('/historico')
+@login_required
+def historico():
+    """Render the Hitórico page."""
+    return render_template('historico.html')
+
 @app.route('/cookies')
 def cookies():
     """Render the cookie policy page."""
