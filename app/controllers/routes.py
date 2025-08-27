@@ -184,12 +184,25 @@ def consultorias():
     return render_template('consultorias.html', consultorias=consultorias, search=search)
 
 
-@app.route('/consultorias/cadastro')
+@app.route('/consultorias/cadastro', methods=['GET', 'POST'])
 @login_required
 def cadastro_consultoria():
-    """Render the Cadastro de Consultoria page."""
+    """Render and handle the Cadastro de Consultoria page."""
     codigo = len(consultorias_data) + 1
     users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        usuario_id = request.form.get('usuario')
+        usuario = User.query.get(usuario_id) if usuario_id else None
+        data = {
+            'codigo': codigo,
+            'nome': request.form.get('nome'),
+            'usuario_id': usuario_id,
+            'usuario_nome': usuario.name if usuario else '',
+            'senha': request.form.get('senha'),
+        }
+        consultorias_data.append(data)
+        flash('Consultoria registrada com sucesso.', 'success')
+        return redirect(url_for('consultorias'))
     return render_template('cadastro_consultoria.html', codigo=codigo, users=users)
 
 @app.route('/consultorias/setores')
