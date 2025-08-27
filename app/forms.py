@@ -168,3 +168,17 @@ class DepartamentoPessoalForm(DepartamentoForm):
 class DepartamentoAdministrativoForm(FlaskForm):
     """Formulário para o Departamento Administrativo."""
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+
+
+class ConsultoriaForm(FlaskForm):
+    """Formulário para cadastro de consultorias."""
+    nome = StringField('Nome da Consultoria', validators=[DataRequired()])
+    usuario = SelectField('Usuário na Consultoria', coerce=int, validators=[DataRequired()])
+    senha = StringField('Senha na Consultoria', validators=[Optional()])
+    submit = SubmitField('Salvar')
+
+
+class SetorForm(FlaskForm):
+    """Formulário para cadastro de setores."""
+    nome = StringField('Setor', validators=[DataRequired()])
+    submit = SubmitField('Salvar')

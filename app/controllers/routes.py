@@ -12,6 +12,8 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
     DepartamentoAdministrativoForm,
+    ConsultoriaForm,
+    SetorForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -188,19 +190,19 @@ def consultorias():
 def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
     codigo = Consultoria.query.count() + 1
-    users = User.query.order_by(User.name).all()
-    if request.method == 'POST':
-        usuario_id = request.form.get('usuario') or None
+    form = ConsultoriaForm()
+    form.usuario.choices = [(u.id, u.name) for u in User.query.order_by(User.name).all()]
+    if form.validate_on_submit():
         consultoria = Consultoria(
-            nome=request.form.get('nome'),
-            usuario_id=usuario_id,
-            senha=request.form.get('senha'),
+            nome=form.nome.data,
+            usuario_id=form.usuario.data,
+            senha=form.senha.data,
         )
         db.session.add(consultoria)
         db.session.commit()
         flash('Consultoria registrada com sucesso.', 'success')
         return redirect(url_for('consultorias'))
-    return render_template('cadastro_consultoria.html', codigo=codigo, users=users)
+    return render_template('cadastro_consultoria.html', form=form, codigo=codigo)
 
 @app.route('/consultorias/setores')
 @login_required
@@ -219,13 +221,14 @@ def setores():
 def cadastro_setor():
     """Render and handle the Cadastro de Setor page."""
     codigo = Setor.query.count() + 1
-    if request.method == 'POST':
-        setor = Setor(nome=request.form.get('nome'))
+    form = SetorForm()
+    if form.validate_on_submit():
+        setor = Setor(nome=form.nome.data)
         db.session.add(setor)
         db.session.commit()
         flash('Setor registrado com sucesso.', 'success')
         return redirect(url_for('setores'))
-    return render_template('cadastro_setor.html', codigo=codigo)
+    return render_template('cadastro_setor.html', form=form, codigo=codigo)
 
 
 @app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
