@@ -45,9 +45,10 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# In-memory storage for consultorias and setores until a persistent layer is introduced
+# In-memory storage for consultorias, setores and inclusões until a persistent layer is introduced
 consultorias_data = []
 setores_data = []
+inclusoes_data = []
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -207,6 +208,35 @@ def cadastro_setor():
     """Render the Cadastro de Setor page."""
     codigo = len(setores_data) + 1
     return render_template('cadastro_setor.html', codigo=codigo)
+
+
+@app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
+@login_required
+def inclusoes():
+    """Render and handle Inclusões de Consultoria form."""
+    codigo = len(inclusoes_data) + 1
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        data = {
+            'codigo': codigo,
+            'data': request.form.get('data'),
+            'usuario': request.form.get('usuario'),
+            'setor': request.form.get('setor'),
+            'consultoria': request.form.get('consultoria'),
+            'assunto': request.form.get('assunto'),
+            'pergunta': request.form.get('pergunta'),
+            'resposta': request.form.get('resposta'),
+        }
+        inclusoes_data.append(data)
+        flash('Inclusão registrada com sucesso.', 'success')
+        return redirect(url_for('inclusoes'))
+    return render_template(
+        'inclusoes.html',
+        codigo=codigo,
+        users=users,
+        setores=setores_data,
+        consultorias=consultorias_data,
+    )
 
 @app.route('/cookies')
 def cookies():
