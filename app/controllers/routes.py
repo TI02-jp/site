@@ -171,8 +171,12 @@ def home():
 @app.route('/consultorias')
 @login_required
 def consultorias():
-    """Render the Consultorias page."""
-    return render_template('consultorias.html')
+    """List registered consultorias with optional search."""
+    search = request.args.get('q', '').lower()
+    consultorias = []
+    if search:
+        consultorias = [c for c in consultorias if search in c['nome'].lower()]
+    return render_template('consultorias.html', consultorias=consultorias, search=search)
 
 
 @app.route('/consultorias/cadastro')
@@ -181,12 +185,22 @@ def cadastro_consultoria():
     """Render the Cadastro de Consultoria page."""
     return render_template('cadastro_consultoria.html')
 
-
 @app.route('/consultorias/setores')
 @login_required
-def cadastro_setores():
-    """Render the Cadastro de Setores page."""
-    return render_template('cadastro_setores.html')
+def setores():
+    """List registered setores with optional search."""
+    search = request.args.get('q', '').lower()
+    setores = []
+    if search:
+        setores = [s for s in setores if search in s['nome'].lower()]
+    return render_template('setores.html', setores=setores, search=search)
+
+
+@app.route('/consultorias/setores/cadastro')
+@login_required
+def cadastro_setor():
+    """Render the Cadastro de Setor page."""
+    return render_template('cadastro_setor.html')
 
 @app.route('/cookies')
 def cookies():
