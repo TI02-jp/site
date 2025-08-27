@@ -168,11 +168,11 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/historico')
+@app.route('/consultorias')
 @login_required
-def historico():
-    """Render the Histórico page."""
-    return render_template('historico.html')
+def consultorias():
+    """Render the Consultorias page."""
+    return render_template('consultorias.html')
 
 @app.route('/cookies')
 def cookies():
