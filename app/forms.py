@@ -173,7 +173,7 @@ class DepartamentoAdministrativoForm(FlaskForm):
 class ConsultoriaForm(FlaskForm):
     """Formulário para cadastro de consultorias."""
     nome = StringField('Nome da Consultoria', validators=[DataRequired()])
-    usuario = SelectField('Usuário na Consultoria', coerce=int, validators=[DataRequired()])
+    usuario = StringField('Usuário na Consultoria', validators=[DataRequired()])
     senha = StringField('Senha na Consultoria', validators=[Optional()])
     submit = SubmitField('Salvar')
 
