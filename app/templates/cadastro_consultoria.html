@@ -147,6 +147,24 @@
         .app-footer {
             margin-top: auto;
         }
+
+        .form-card {
+            max-width: 600px;
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-color-hover);
+            border-color: var(--primary-color-hover);
+        }
     </style>
 </head>
 <body>
@@ -192,35 +210,37 @@
 
             <div class="content-area">
                 <main class="p-4">
-                    <h1 class="mb-4 text-primary"><i class="bi bi-building-add me-2"></i>CADASTRAR CONSULTORIA</h1>
-                    <form method="post" class="mt-4">
-                        <div class="mb-3">
-                            <label for="codigo" class="form-label">Código</label>
-                            <input type="text" class="form-control" id="codigo" name="codigo">
-                        </div>
-                        <div class="mb-3">
-                            <label for="nome" class="form-label">Nome da Consultoria</label>
-                            <input type="text" class="form-control" id="nome" name="nome">
-                        </div>
-                        <div class="mb-3">
-                            <label for="usuario" class="form-label">Usuário na Consultoria</label>
-                            <input type="text" class="form-control" id="usuario" name="usuario">
-                        </div>
-                        <div class="mb-4">
-                            <label for="senha" class="form-label">Senha na Consultoria</label>
-                            <input type="password" class="form-control" id="senha" name="senha">
-                        </div>
-                        <div class="d-flex justify-content-center gap-2">
-                            <button type="button" class="btn btn-outline-secondary" title="Primeiro"><i class="bi bi-skip-backward-fill"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" title="Anterior"><i class="bi bi-caret-left-fill"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" title="Próximo"><i class="bi bi-caret-right-fill"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" title="Último"><i class="bi bi-skip-forward-fill"></i></button>
-                            <button type="reset" class="btn btn-outline-secondary" title="Novo"><i class="bi bi-file-earmark-plus"></i></button>
-                            <button type="submit" class="btn btn-outline-secondary" title="Salvar"><i class="bi bi-check-lg"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" title="Excluir"><i class="bi bi-trash"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" title="Cancelar"><i class="bi bi-x-circle"></i></button>
-                        </div>
-                    </form>
+                    <div class="card form-card mx-auto p-4">
+                        <h2 class="mb-4 text-center text-primary"><i class="bi bi-building-add me-2"></i>CADASTRAR CONSULTORIA</h2>
+                        <form method="post">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="codigo" name="codigo" placeholder="Código">
+                                <label for="codigo">Código</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="nome" name="nome" placeholder="Nome da Consultoria">
+                                <label for="nome">Nome da Consultoria</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="usuario" name="usuario" placeholder="Usuário na Consultoria">
+                                <label for="usuario">Usuário na Consultoria</label>
+                            </div>
+                            <div class="form-floating mb-4">
+                                <input type="password" class="form-control" id="senha" name="senha" placeholder="Senha na Consultoria">
+                                <label for="senha">Senha na Consultoria</label>
+                            </div>
+                            <div class="d-flex justify-content-center flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-secondary" title="Primeiro"><i class="bi bi-skip-backward-fill"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" title="Anterior"><i class="bi bi-caret-left-fill"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" title="Próximo"><i class="bi bi-caret-right-fill"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" title="Último"><i class="bi bi-skip-forward-fill"></i></button>
+                                <button type="reset" class="btn btn-outline-secondary" title="Novo"><i class="bi bi-file-earmark-plus"></i></button>
+                                <button type="submit" class="btn btn-primary" title="Salvar"><i class="bi bi-check-lg"></i></button>
+                                <button type="button" class="btn btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
+                                <button type="button" class="btn btn-outline-secondary" title="Cancelar"><i class="bi bi-x-circle"></i></button>
+                            </div>
+                        </form>
+                    </div>
                 </main>
 
                 <footer class="bg-light text-muted text-center py-3 app-footer">
