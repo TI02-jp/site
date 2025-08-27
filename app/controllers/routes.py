@@ -171,7 +171,7 @@ def home():
 @app.route('/historico')
 @login_required
 def historico():
-    """Render the Hitórico page."""
+    """Render the Histórico page."""
     return render_template('historico.html')
 
 @app.route('/cookies')
