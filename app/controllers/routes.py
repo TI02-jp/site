@@ -311,7 +311,14 @@ def visualizar_inclusao(codigo):
     inclusao = next((i for i in inclusoes_data if i['codigo'] == codigo), None)
     if not inclusao:
         abort(404)
-    return render_template('visualizar_inclusao.html', inclusao=inclusao)
+    data_str = inclusao.get('data')
+    try:
+        data_formatada = datetime.strptime(data_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except (TypeError, ValueError):
+        data_formatada = data_str
+    return render_template(
+        'visualizar_inclusao.html', inclusao=inclusao, data_formatada=data_formatada
+    )
 
 
 @app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])

@@ -9,11 +9,17 @@
             <h2 class="mb-0"><i class="bi bi-eye me-2"></i>Visualizar Inclusão</h2>
         </div>
         <div class="card-body">
-            <div class="mb-3"><strong>Data:</strong> {{ inclusao.data }}</div>
-            <div class="mb-3"><strong>Usuário:</strong> {{ inclusao.usuario }}</div>
-            <div class="mb-3"><strong>Setor:</strong> {{ inclusao.setor }}</div>
-            <div class="mb-3"><strong>Consultoria:</strong> {{ inclusao.consultoria }}</div>
-            <div class="mb-3"><strong>Assunto:</strong> {{ inclusao.assunto }}</div>
+            <div class="row mb-3">
+                <div class="col-md-6 text-center"><strong>Data:</strong> {{ data_formatada }}</div>
+                <div class="col-md-6 text-end"><strong>Usuário:</strong> {{ inclusao.usuario }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6"><strong>Setor:</strong> {{ inclusao.setor }}</div>
+                <div class="col-md-6 text-end"><strong>Consultoria:</strong> {{ inclusao.consultoria }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-12"><strong>Assunto:</strong> {{ inclusao.assunto }}</div>
+            </div>
             <div class="mb-3">
                 <strong>Pergunta:</strong>
                 <div class="border p-3 rounded" style="min-height:100px;">{{ inclusao.pergunta|safe }}</div>
