@@ -69,8 +69,12 @@
             </form>
         </div>
     </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = "{{ csrf_token() }}";
 
     function uploadImage(file) {
@@ -186,6 +190,7 @@
 
     initializeQuill('#editor-pergunta', '#pergunta', '#image-input-pergunta');
     initializeQuill('#editor-resposta', '#resposta', '#image-input-resposta');
+});
 </script>
-</div>
 {% endblock %}
+
