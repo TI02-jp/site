@@ -251,15 +251,26 @@ def editar_setor(id):
     return render_template('cadastro_setor.html', form=form, setor=setor)
 
 
-@app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
+@app.route('/consultorias/inclusoes')
 @login_required
 def inclusoes():
-    """Render and handle Inclusões de Consultoria form and search."""
-    users = User.query.order_by(User.name).all()
+    """List and search Inclusões de Consultoria."""
     search = request.args.get('q', '').lower()
     resultados = [
         i for i in inclusoes_data if search in i.get('assunto', '').lower()
     ] if search else inclusoes_data
+    return render_template(
+        'inclusoes.html',
+        inclusoes=resultados,
+        search=search,
+    )
+
+
+@app.route('/consultorias/inclusoes/nova', methods=['GET', 'POST'])
+@login_required
+def nova_inclusao():
+    """Render and handle Inclusões de Consultoria form."""
+    users = User.query.order_by(User.name).all()
     if request.method == 'POST':
         codigo = len(inclusoes_data) + 1
         user_id = request.form.get('usuario')
@@ -278,12 +289,10 @@ def inclusoes():
         flash('Inclusão registrada com sucesso.', 'success')
         return redirect(url_for('inclusoes'))
     return render_template(
-        'inclusoes.html',
+        'nova_inclusao.html',
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
-        inclusoes=resultados,
-        search=search,
     )
 
 @app.route('/cookies')
