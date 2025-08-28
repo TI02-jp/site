@@ -52,11 +52,15 @@
                 </div>
                 <div class="mb-3">
                     <label for="pergunta" class="form-label">Pergunta</label>
-                    <textarea id="pergunta" name="pergunta" class="form-control" rows="4"></textarea>
+                    <input type="hidden" id="pergunta" name="pergunta">
+                    <div id="editor-pergunta" style="height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
+                    <input type="file" id="image-input-pergunta" accept="image/*" style="display: none;" />
                 </div>
                 <div class="mb-3">
                     <label for="resposta" class="form-label">Resposta</label>
-                    <textarea id="resposta" name="resposta" class="form-control" rows="4"></textarea>
+                    <input type="hidden" id="resposta" name="resposta">
+                    <div id="editor-resposta" style="height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
+                    <input type="file" id="image-input-resposta" accept="image/*" style="display: none;" />
                 </div>
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{{ url_for('consultorias') }}" class="btn btn-outline-secondary">Cancelar</a>
@@ -66,4 +70,87 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = "{{ csrf_token() }}";
+
+    function uploadImage(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', file);
+            fetch('/upload_image', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.image_url) {
+                    resolve(result.image_url);
+                } else {
+                    reject(result.error || 'Erro no servidor');
+                }
+            })
+            .catch(() => reject('Falha na comunicação com o servidor.'));
+        });
+    }
+
+    function initEditor(editorId, hiddenInputId, fileInputId) {
+        const quill = new Quill(editorId, {
+            theme: 'snow',
+            modules: {
+                toolbar: {
+                    container: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ],
+                    handlers: {
+                        image: () => document.querySelector(fileInputId).click()
+                    }
+                }
+            }
+        });
+
+        const hiddenInput = document.querySelector(hiddenInputId);
+        const imageInput = document.querySelector(fileInputId);
+
+        imageInput.addEventListener('change', () => {
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                const range = quill.getSelection(true);
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const base64 = e.target.result;
+                    quill.insertEmbed(range.index, 'image', base64);
+                    quill.setSelection(range.index + 1);
+                    uploadImage(file)
+                        .then(url => {
+                            const img = quill.root.querySelector(`img[src="${base64}"]`);
+                            if (img) img.src = url;
+                        })
+                        .catch(() => {
+                            const img = quill.root.querySelector(`img[src="${base64}"]`);
+                            if (img) img.remove();
+                        });
+                };
+                reader.readAsDataURL(file);
+                imageInput.value = '';
+            }
+        });
+
+        document.querySelector('form').addEventListener('submit', () => {
+            hiddenInput.value = quill.root.innerHTML;
+        });
+    }
+
+    initEditor('#editor-pergunta', '#pergunta', '#image-input-pergunta');
+    initEditor('#editor-resposta', '#resposta', '#image-input-resposta');
+});
+</script>
 {% endblock %}
