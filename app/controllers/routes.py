@@ -251,17 +251,42 @@ def editar_setor(id):
     return render_template('cadastro_setor.html', form=form, setor=setor)
 
 
-@app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
+@app.route('/consultorias/inclusoes')
 @login_required
 def inclusoes():
+    """List and search Inclusões de Consultoria."""
+    search = request.args.get('q', '').lower()
+    resultados = [
+        i for i in inclusoes_data if search in i.get('assunto', '').lower()
+    ] if search else inclusoes_data
+    inclusoes_formatadas = []
+    for inc in resultados:
+        data_str = inc.get('data')
+        try:
+            data_formatada = datetime.strptime(data_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+        except (TypeError, ValueError):
+            data_formatada = data_str
+        inclusoes_formatadas.append({**inc, 'data_formatada': data_formatada})
+    return render_template(
+        'inclusoes.html',
+        inclusoes=inclusoes_formatadas,
+        search=search,
+    )
+
+
+@app.route('/consultorias/inclusoes/nova', methods=['GET', 'POST'])
+@login_required
+def nova_inclusao():
     """Render and handle Inclusões de Consultoria form."""
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
         codigo = len(inclusoes_data) + 1
+        user_id = request.form.get('usuario')
+        user = User.query.get(int(user_id)) if user_id else None
         data = {
             'codigo': codigo,
             'data': request.form.get('data'),
-            'usuario': request.form.get('usuario'),
+            'usuario': user.name if user else '',
             'setor': request.form.get('setor'),
             'consultoria': request.form.get('consultoria'),
             'assunto': request.form.get('assunto'),
@@ -272,10 +297,58 @@ def inclusoes():
         flash('Inclusão registrada com sucesso.', 'success')
         return redirect(url_for('inclusoes'))
     return render_template(
-        'inclusoes.html',
+        'nova_inclusao.html',
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+    )
+
+
+@app.route('/consultorias/inclusoes/<int:codigo>')
+@login_required
+def visualizar_inclusao(codigo):
+    """Display details for a single inclusão."""
+    inclusao = next((i for i in inclusoes_data if i['codigo'] == codigo), None)
+    if not inclusao:
+        abort(404)
+    data_str = inclusao.get('data')
+    try:
+        data_formatada = datetime.strptime(data_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except (TypeError, ValueError):
+        data_formatada = data_str
+    return render_template(
+        'visualizar_inclusao.html', inclusao=inclusao, data_formatada=data_formatada
+    )
+
+
+@app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_inclusao(codigo):
+    """Render and handle editing of an inclusão."""
+    inclusao = next((i for i in inclusoes_data if i['codigo'] == codigo), None)
+    if not inclusao:
+        abort(404)
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        user_id = request.form.get('usuario')
+        user = User.query.get(int(user_id)) if user_id else None
+        inclusao.update({
+            'data': request.form.get('data'),
+            'usuario': user.name if user else '',
+            'setor': request.form.get('setor'),
+            'consultoria': request.form.get('consultoria'),
+            'assunto': request.form.get('assunto'),
+            'pergunta': sanitize_html(request.form.get('pergunta')),
+            'resposta': sanitize_html(request.form.get('resposta')),
+        })
+        flash('Inclusão atualizada com sucesso.', 'success')
+        return redirect(url_for('inclusoes'))
+    return render_template(
+        'nova_inclusao.html',
+        users=users,
+        setores=Setor.query.order_by(Setor.nome).all(),
+        consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+        inclusao=inclusao,
     )
 
 @app.route('/cookies')
