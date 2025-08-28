@@ -15,7 +15,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
 )
-import os, json, re
+import os, json, re, imghdr
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
