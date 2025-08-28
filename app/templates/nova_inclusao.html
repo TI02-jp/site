@@ -1,26 +1,28 @@
 {% extends "consultorias_base.html" %}
 
-{% block title %}Nova Inclusão{% endblock %}
+{% block title %}{{ 'Editar Inclusão' if inclusao else 'Nova Inclusão' }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4" style="max-width: 800px;">
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white text-center">
-            <h2 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nova Inclusão</h2>
+            <h2 class="mb-0">
+                <i class="bi bi-{{ 'pencil-square' if inclusao else 'plus-circle' }} me-2"></i>{{ 'Editar Inclusão' if inclusao else 'Nova Inclusão' }}
+            </h2>
         </div>
         <div class="card-body">
-            <form method="post">
+            <form method="post" action="{{ url_for('editar_inclusao', codigo=inclusao.codigo) if inclusao else url_for('nova_inclusao') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="d-flex gap-4 mb-3">
                     <div style="max-width: 200px;">
                         <label for="data" class="form-label">Data</label>
-                        <input type="date" id="data" name="data" class="form-control">
+                        <input type="date" id="data" name="data" class="form-control" value="{{ inclusao.data if inclusao else '' }}">
                     </div>
                     <div style="max-width: 350px;">
                         <label for="usuario" class="form-label">Usuário</label>
                         <select id="usuario" name="usuario" class="form-select">
                             {% for u in users %}
-                            <option value="{{ u.id }}">{{ u.name }}</option>
+                            <option value="{{ u.id }}" {% if inclusao and inclusao.usuario == u.name %}selected{% endif %}>{{ u.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -30,7 +32,7 @@
                         <label for="setor" class="form-label">Setor</label>
                         <select id="setor" name="setor" class="form-select">
                             {% for s in setores %}
-                            <option value="{{ s.nome }}">{{ s.nome }}</option>
+                            <option value="{{ s.nome }}" {% if inclusao and inclusao.setor == s.nome %}selected{% endif %}>{{ s.nome }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -38,24 +40,24 @@
                         <label for="consultoria" class="form-label">Consultoria</label>
                         <select id="consultoria" name="consultoria" class="form-select">
                             {% for c in consultorias %}
-                            <option value="{{ c.nome }}">{{ c.nome }}</option>
+                            <option value="{{ c.nome }}" {% if inclusao and inclusao.consultoria == c.nome %}selected{% endif %}>{{ c.nome }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="mb-3">
                     <label for="assunto" class="form-label">Assunto da Consultoria</label>
-                    <input type="text" id="assunto" name="assunto" class="form-control">
+                    <input type="text" id="assunto" name="assunto" class="form-control" value="{{ inclusao.assunto if inclusao else '' }}">
                 </div>
                 <div class="mb-3">
                     <label for="pergunta" class="form-label fw-bold fs-5">Pergunta</label>
                     <div id="editor-pergunta" style="height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
-                    <input type="hidden" id="pergunta" name="pergunta">
+                    <input type="hidden" id="pergunta" name="pergunta" value="{{ inclusao.pergunta|safe if inclusao else '' }}">
                 </div>
                 <div class="mb-3">
                     <label for="resposta" class="form-label fw-bold fs-5">Resposta</label>
                     <div id="editor-resposta" style="height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
-                    <input type="hidden" id="resposta" name="resposta">
+                    <input type="hidden" id="resposta" name="resposta" value="{{ inclusao.resposta|safe if inclusao else '' }}">
                 </div>
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{{ url_for('inclusoes') }}" class="btn btn-outline-secondary">Cancelar</a>
@@ -109,6 +111,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const hiddenInput = document.querySelector(hiddenInputId);
         const imageInput = document.querySelector(fileInputId);
+
+        if (hiddenInput.value) {
+            quill.root.innerHTML = hiddenInput.value;
+        }
 
         imageInput.addEventListener('change', () => {
             if (imageInput.files && imageInput.files[0]) {
