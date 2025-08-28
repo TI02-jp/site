@@ -33,23 +33,23 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped mb-0 text-nowrap">
+                <table class="table table-striped mb-0 text-nowrap text-start">
                     <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Consultoria</th>
-                            <th>Usuário</th>
-                            <th>Senha</th>
+                            <th class="text-start">Código</th>
+                            <th class="text-start">Consultoria</th>
+                            <th class="text-start">Usuário</th>
+                            <th class="text-start">Senha</th>
                             <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in consultorias %}
                         <tr>
-                            <td>{{ c.id }}</td>
-                            <td>{{ c.nome }}</td>
-                            <td>{{ c.usuario }}</td>
-                            <td>{{ c.senha }}</td>
+                            <td class="text-start">{{ c.id }}</td>
+                            <td class="text-start">{{ c.nome }}</td>
+                            <td class="text-start">{{ c.usuario }}</td>
+                            <td class="text-start">{{ c.senha }}</td>
                             <td class="text-end">
                                 <a href="{{ url_for('editar_consultoria', id=c.id) }}" class="btn btn-custom btn-sm" title="Editar">
                                     <i class="bi bi-pencil"></i>
