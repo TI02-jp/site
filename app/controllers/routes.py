@@ -15,7 +15,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
 )
-import os, json, re, imghdr
+import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -128,11 +128,6 @@ def upload_image():
         return jsonify({'error': 'Nome de arquivo vazio'}), 400
 
     if file and allowed_file(file.filename):
-        header = file.read(512)
-        file.seek(0)
-        if imghdr.what(None, header) not in ALLOWED_EXTENSIONS:
-            return jsonify({'error': 'Arquivo inválido ou corrompido'}), 400
-
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
