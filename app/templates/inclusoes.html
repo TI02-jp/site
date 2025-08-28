@@ -27,10 +27,8 @@
                 <table class="table table-striped mb-0 text-nowrap">
                     <thead>
                         <tr>
-                            <th>Código</th>
                             <th>Data</th>
                             <th>Usuário</th>
-                            <th>Setor</th>
                             <th>Consultoria</th>
                             <th>Assunto</th>
                         </tr>
@@ -38,16 +36,14 @@
                     <tbody>
                         {% for inc in inclusoes %}
                         <tr>
-                            <td>{{ inc.codigo }}</td>
                             <td>{{ inc.data }}</td>
                             <td>{{ inc.usuario }}</td>
-                            <td>{{ inc.setor }}</td>
                             <td>{{ inc.consultoria }}</td>
                             <td>{{ inc.assunto }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="4" class="text-center py-5 text-muted">
                                 <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
                                 Nenhuma inclusão encontrada
                             </td>
