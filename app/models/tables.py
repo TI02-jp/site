@@ -78,6 +78,26 @@ class Setor(db.Model):
     def __repr__(self):
         return f"<Setor {self.nome}>"
 
+
+class Inclusao(db.Model):
+    __tablename__ = 'inclusoes'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    data = db.Column(db.Date)
+    usuario = db.Column(db.String(100))
+    setor = db.Column(db.String(100))
+    consultoria = db.Column(db.String(100))
+    assunto = db.Column(db.String(200))
+    pergunta = db.Column(db.Text)
+    resposta = db.Column(db.Text)
+
+    @property
+    def data_formatada(self):
+        return self.data.strftime('%d/%m/%Y') if self.data else ''
+
+    def __repr__(self):
+        return f"<Inclusao {self.assunto}>"
+
 class Empresa(db.Model):
     __tablename__ = 'tbl_empresas'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
