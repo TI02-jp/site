@@ -15,7 +15,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
 )
-import os, json, re
+import os, json, re, imghdr
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_
@@ -260,9 +260,9 @@ def editar_setor(id):
 @login_required
 def inclusoes():
     """Render and handle Inclusões de Consultoria form."""
-    codigo = len(inclusoes_data) + 1
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
+        codigo = len(inclusoes_data) + 1
         data = {
             'codigo': codigo,
             'data': request.form.get('data'),
@@ -278,7 +278,6 @@ def inclusoes():
         return redirect(url_for('inclusoes'))
     return render_template(
         'inclusoes.html',
-        codigo=codigo,
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
