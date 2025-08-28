@@ -123,15 +123,28 @@ document.addEventListener('DOMContentLoaded', function() {
             images.forEach(img => {
                 const file = dataURLtoFile(img.src, 'pasted-image');
                 uploadImage(file)
-                    .then(url => { img.src = url; })
-                    .catch(() => img.remove());
+                    .then(url => {
+                        img.src = url;
+                        hiddenInput.value = quill.root.innerHTML;
+                    })
+                    .catch(() => {
+                        img.remove();
+                        hiddenInput.value = quill.root.innerHTML;
+                    });
             });
             hiddenInput.value = quill.root.innerHTML;
         });
+
+        return quill;
     }
 
-    initEditor('#editor-pergunta', '#pergunta');
-    initEditor('#editor-resposta', '#resposta');
+    const perguntaEditor = initEditor('#editor-pergunta', '#pergunta');
+    const respostaEditor = initEditor('#editor-resposta', '#resposta');
+
+    document.querySelector('form').addEventListener('submit', () => {
+        document.querySelector('#pergunta').value = perguntaEditor.root.innerHTML;
+        document.querySelector('#resposta').value = respostaEditor.root.innerHTML;
+    });
 });
 </script>
 {% endblock %}
