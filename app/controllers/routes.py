@@ -270,8 +270,8 @@ def inclusoes():
             'setor': request.form.get('setor'),
             'consultoria': request.form.get('consultoria'),
             'assunto': request.form.get('assunto'),
-            'pergunta': sanitize_html(request.form.get('pergunta')),
-            'resposta': sanitize_html(request.form.get('resposta')),
+            'pergunta': request.form.get('pergunta'),
+            'resposta': request.form.get('resposta'),
         }
         inclusoes_data.append(data)
         flash('Inclusão registrada com sucesso.', 'success')
