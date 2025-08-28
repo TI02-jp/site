@@ -259,9 +259,17 @@ def inclusoes():
     resultados = [
         i for i in inclusoes_data if search in i.get('assunto', '').lower()
     ] if search else inclusoes_data
+    inclusoes_formatadas = []
+    for inc in resultados:
+        data_str = inc.get('data')
+        try:
+            data_formatada = datetime.strptime(data_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+        except (TypeError, ValueError):
+            data_formatada = data_str
+        inclusoes_formatadas.append({**inc, 'data_formatada': data_formatada})
     return render_template(
         'inclusoes.html',
-        inclusoes=resultados,
+        inclusoes=inclusoes_formatadas,
         search=search,
     )
 
