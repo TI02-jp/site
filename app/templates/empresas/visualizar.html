@@ -745,6 +745,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Highlight da seção ativa durante o scroll
     const sections = document.querySelectorAll('.section-anchor');
     const navLinks = document.querySelectorAll('.company-nav-link');
+    if (navLinks.length) {
+        navLinks[0].classList.add('active');
+    }
     const observerOptions = { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0.1 };
 
     const observer = new IntersectionObserver((entries) => {

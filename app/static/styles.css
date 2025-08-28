@@ -54,7 +54,8 @@ Barra de navegação fixa na visualização da empresa
 }
 
 .company-nav-link i {
-    color: inherit;
+    color: #fff !important;
+    background: none !important;
 }
 
 .company-nav-link:hover,
