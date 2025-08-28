@@ -230,6 +230,20 @@ def cadastro_setor():
     return render_template('cadastro_setor.html', form=form, codigo=codigo)
 
 
+@app.route('/consultorias/setores/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_setor(id):
+    setor = Setor.query.get_or_404(id)
+    form = SetorForm(obj=setor)
+    if form.validate_on_submit():
+        setor.nome = form.nome.data
+        db.session.commit()
+        flash('Setor atualizado com sucesso.', 'success')
+        return redirect(url_for('setores'))
+    codigo = setor.id
+    return render_template('cadastro_setor.html', form=form, codigo=codigo, setor=setor)
+
+
 @app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
 @login_required
 def inclusoes():
