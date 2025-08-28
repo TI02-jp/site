@@ -153,6 +153,35 @@
                 hiddenInput.value = quill.root.innerHTML;
             }
         });
+
+        quill.root.addEventListener('paste', e => {
+            if (e.clipboardData && e.clipboardData.items) {
+                const items = Array.from(e.clipboardData.items).filter(item => item.type.startsWith('image/'));
+                if (items.length) {
+                    e.preventDefault();
+                    const range = quill.getSelection(true);
+                    items.forEach(item => {
+                        const file = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = evt => {
+                            const base64Image = evt.target.result;
+                            quill.insertEmbed(range.index, 'image', base64Image);
+                            quill.setSelection(range.index + 1);
+                            uploadImage(file)
+                                .then(serverUrl => {
+                                    const img = quill.root.querySelector(`img[src="${base64Image}"]`);
+                                    if (img) img.src = serverUrl;
+                                })
+                                .catch(() => {
+                                    const img = quill.root.querySelector(`img[src="${base64Image}"]`);
+                                    if (img) img.remove();
+                                });
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+        });
     }
 
     initializeQuill('#editor-pergunta', '#pergunta', '#image-input-pergunta');
