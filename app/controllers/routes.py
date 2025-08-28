@@ -171,13 +171,9 @@ def home():
 @app.route('/consultorias')
 @login_required
 def consultorias():
-    """List registered consultorias with optional search."""
-    search = request.args.get('q', '').lower()
-    query = Consultoria.query
-    if search:
-        query = query.filter(Consultoria.nome.ilike(f"%{search}%"))
-    consultorias = query.all()
-    return render_template('consultorias.html', consultorias=consultorias, search=search)
+    """List registered consultorias."""
+    consultorias = Consultoria.query.all()
+    return render_template('consultorias.html', consultorias=consultorias)
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
@@ -215,13 +211,9 @@ def editar_consultoria(id):
 @app.route('/consultorias/setores')
 @login_required
 def setores():
-    """List registered setores with optional search."""
-    search = request.args.get('q', '').lower()
-    query = Setor.query
-    if search:
-        query = query.filter(Setor.nome.ilike(f"%{search}%"))
-    setores = query.all()
-    return render_template('setores.html', setores=setores, search=search)
+    """List registered setores."""
+    setores = Setor.query.all()
+    return render_template('setores.html', setores=setores)
 
 
 @app.route('/consultorias/setores/cadastro', methods=['GET', 'POST'])
