@@ -31,37 +31,23 @@
     </form>
 
     <div class="card shadow-sm">
-        <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
-            <table class="table table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th class="w-25">Código</th>
-                        <th>Setor</th>
-                        <th class="text-end w-25">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in setores %}
-                    <tr>
-                        <td>{{ s.id }}</td>
-                        <td>{{ s.nome }}</td>
-                        <td class="text-end">
-                            <a href="#" class="btn btn-custom btn-sm" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="bi bi-diagram-3 fs-1 d-block mb-3"></i>
-                            Nenhum setor cadastrado
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <ul class="list-group list-group-flush">
+            {% for s in setores %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small me-2">#{{ s.id }}</span>{{ s.nome }}
+                </div>
+                <a href="{{ url_for('editar_setor', id=s.id) }}" class="btn btn-custom btn-sm" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="list-group-item text-center py-5 text-muted">
+                <i class="bi bi-diagram-3 fs-1 d-block mb-3"></i>
+                Nenhum setor cadastrado
+            </li>
+            {% endfor %}
+        </ul>
     </div>
 </div>
 {% endblock %}

@@ -1,12 +1,12 @@
 {% extends "consultorias_base.html" %}
 
-{% block title %}Cadastrar Setor{% endblock %}
+{% block title %}{{ 'Editar Setor' if setor else 'Cadastrar Setor' }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4" style="max-width: 800px;">
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white text-center">
-            <h2 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Cadastro de Setor</h2>
+            <h2 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>{{ 'Editar Setor' if setor else 'Cadastro de Setor' }}</h2>
         </div>
         <div class="card-body">
             <form method="post">
