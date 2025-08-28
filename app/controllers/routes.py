@@ -203,6 +203,22 @@ def cadastro_consultoria():
         return redirect(url_for('consultorias'))
     return render_template('cadastro_consultoria.html', form=form, codigo=codigo)
 
+
+@app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_consultoria(id):
+    consultoria = Consultoria.query.get_or_404(id)
+    form = ConsultoriaForm(obj=consultoria)
+    if form.validate_on_submit():
+        consultoria.nome = form.nome.data
+        consultoria.usuario = form.usuario.data
+        consultoria.senha = form.senha.data
+        db.session.commit()
+        flash('Consultoria atualizada com sucesso.', 'success')
+        return redirect(url_for('consultorias'))
+    codigo = consultoria.id
+    return render_template('cadastro_consultoria.html', form=form, codigo=codigo, consultoria=consultoria)
+
 @app.route('/consultorias/setores')
 @login_required
 def setores():

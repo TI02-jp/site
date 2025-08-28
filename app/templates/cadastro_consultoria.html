@@ -1,12 +1,12 @@
 {% extends "consultorias_base.html" %}
 
-{% block title %}Cadastrar Consultoria{% endblock %}
+{% block title %}{{ 'Editar Consultoria' if consultoria else 'Cadastrar Consultoria' }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4" style="max-width: 800px;">
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white text-center">
-            <h2 class="mb-0"><i class="bi bi-building-add me-2"></i>Cadastro de Consultoria</h2>
+            <h2 class="mb-0"><i class="bi bi-building-add me-2"></i>{{ 'Editar Consultoria' if consultoria else 'Cadastro de Consultoria' }}</h2>
         </div>
         <div class="card-body">
             <form method="post">
