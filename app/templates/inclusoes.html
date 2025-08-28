@@ -27,23 +27,23 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0">
+                <table class="table table-striped table-hover align-middle mb-0 text-start">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Usuário</th>
-                            <th>Consultoria</th>
-                            <th>Assunto</th>
+                            <th class="text-start">Data</th>
+                            <th class="text-start">Usuário</th>
+                            <th class="text-start">Consultoria</th>
+                            <th class="text-start">Assunto</th>
                             <th class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for inc in inclusoes %}
                         <tr>
-                            <td>{{ inc.data_formatada }}</td>
-                            <td>{{ inc.usuario }}</td>
-                            <td>{{ inc.consultoria }}</td>
-                            <td class="text-truncate" style="max-width: 400px;">{{ inc.assunto }}</td>
+                            <td class="text-start">{{ inc.data_formatada }}</td>
+                            <td class="text-start">{{ inc.usuario }}</td>
+                            <td class="text-start">{{ inc.consultoria }}</td>
+                            <td class="text-start text-truncate" style="max-width: 400px;">{{ inc.assunto }}</td>
                             <td class="text-center">
                                 <a href="{{ url_for('visualizar_inclusao', codigo=inc.codigo) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
                                     <i class="bi bi-eye"></i>
