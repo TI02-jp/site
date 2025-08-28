@@ -31,40 +31,42 @@
     </form>
 
     <div class="card shadow-sm">
-        <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
-            <table class="table table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th class="w-25">Código</th>
-                        <th>Consultoria</th>
-                        <th>Usuário</th>
-                        <th>Senha</th>
-                        <th class="text-end w-25">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in consultorias %}
-                    <tr>
-                        <td>{{ c.id }}</td>
-                        <td>{{ c.nome }}</td>
-                        <td>{{ c.usuario }}</td>
-                        <td>{{ c.senha }}</td>
-                        <td class="text-end">
-                            <a href="#" class="btn btn-custom btn-sm" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
-                            Nenhuma consultoria cadastrada
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Consultoria</th>
+                            <th>Usuário</th>
+                            <th>Senha</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in consultorias %}
+                        <tr>
+                            <td>{{ c.id }}</td>
+                            <td>{{ c.nome }}</td>
+                            <td>{{ c.usuario }}</td>
+                            <td>{{ c.senha }}</td>
+                            <td class="text-end">
+                                <a href="#" class="btn btn-custom btn-sm" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
+                                Nenhuma consultoria cadastrada
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
