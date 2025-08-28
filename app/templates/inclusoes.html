@@ -51,12 +51,16 @@
                     <input type="text" id="assunto" name="assunto" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label for="pergunta" class="form-label">Pergunta</label>
-                    <textarea id="pergunta" name="pergunta" class="form-control" rows="4"></textarea>
+                    <label for="editor-pergunta" class="form-label">Pergunta</label>
+                    <div id="editor-pergunta" style="height: 200px;"></div>
+                    <input type="hidden" id="pergunta" name="pergunta">
+                    <input type="file" id="image-input-pergunta" accept="image/*" style="display:none;">
                 </div>
                 <div class="mb-3">
-                    <label for="resposta" class="form-label">Resposta</label>
-                    <textarea id="resposta" name="resposta" class="form-control" rows="4"></textarea>
+                    <label for="editor-resposta" class="form-label">Resposta</label>
+                    <div id="editor-resposta" style="height: 200px;"></div>
+                    <input type="hidden" id="resposta" name="resposta">
+                    <input type="file" id="image-input-resposta" accept="image/*" style="display:none;">
                 </div>
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{{ url_for('consultorias') }}" class="btn btn-outline-secondary">Cancelar</a>
@@ -65,5 +69,94 @@
             </form>
         </div>
     </div>
+
+<script>
+    const csrfToken = "{{ csrf_token() }}";
+
+    function uploadImage(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', file);
+            fetch('/upload_image', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.image_url) {
+                    resolve(result.image_url);
+                } else {
+                    reject('Erro no servidor: ' + (result.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(() => reject('Falha na comunicação com o servidor.'));
+        });
+    }
+
+    function initializeQuill(editorId, hiddenInputId, fileInputId) {
+        const editor = document.querySelector(editorId);
+        if (!editor) return;
+
+        function selectLocalImage() {
+            document.querySelector(fileInputId).click();
+        }
+
+        const quill = new Quill(editor, {
+            theme: 'snow',
+            placeholder: 'Digite aqui...',
+            modules: {
+                toolbar: {
+                    container: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ],
+                    handlers: { 'image': selectLocalImage }
+                }
+            }
+        });
+
+        const hiddenInput = document.querySelector(hiddenInputId);
+        if (hiddenInput && hiddenInput.value) {
+            quill.root.innerHTML = hiddenInput.value;
+        }
+
+        const imageInput = document.querySelector(fileInputId);
+        imageInput.addEventListener('change', () => {
+            if (imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                const range = quill.getSelection(true);
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const base64Image = e.target.result;
+                    quill.insertEmbed(range.index, 'image', base64Image);
+                    quill.setSelection(range.index + 1);
+                    uploadImage(file)
+                        .then(serverUrl => {
+                            const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
+                            if (previewImage) previewImage.src = serverUrl;
+                        })
+                        .catch(() => {
+                            const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
+                            if (previewImage) previewImage.remove();
+                        });
+                };
+                reader.readAsDataURL(file);
+                imageInput.value = "";
+            }
+        });
+
+        editor.closest('form').addEventListener('submit', function() {
+            if (hiddenInput) {
+                hiddenInput.value = quill.root.innerHTML;
+            }
+        });
+    }
+
+    initializeQuill('#editor-pergunta', '#pergunta', '#image-input-pergunta');
+    initializeQuill('#editor-resposta', '#resposta', '#image-input-resposta');
+</script>
 </div>
 {% endblock %}
