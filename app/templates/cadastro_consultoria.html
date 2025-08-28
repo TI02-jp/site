@@ -11,10 +11,6 @@
         <div class="card-body">
             <form method="post">
                 {{ form.hidden_tag() }}
-                <div class="mb-3" style="max-width: 150px;">
-                    <label for="codigo" class="form-label">Código</label>
-                    <input type="text" id="codigo" name="codigo" class="form-control" value="{{ codigo }}" readonly>
-                </div>
                 <div class="mb-3">
                     {{ form.nome.label(class="form-label") }}
                     {{ form.nome(class="form-control", id="nome") }}

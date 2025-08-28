@@ -189,7 +189,6 @@ def consultorias():
 @login_required
 def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
-    codigo = Consultoria.query.count() + 1
     form = ConsultoriaForm()
     if form.validate_on_submit():
         consultoria = Consultoria(
@@ -201,7 +200,7 @@ def cadastro_consultoria():
         db.session.commit()
         flash('Consultoria registrada com sucesso.', 'success')
         return redirect(url_for('consultorias'))
-    return render_template('cadastro_consultoria.html', form=form, codigo=codigo)
+    return render_template('cadastro_consultoria.html', form=form)
 
 
 @app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
@@ -216,8 +215,7 @@ def editar_consultoria(id):
         db.session.commit()
         flash('Consultoria atualizada com sucesso.', 'success')
         return redirect(url_for('consultorias'))
-    codigo = consultoria.id
-    return render_template('cadastro_consultoria.html', form=form, codigo=codigo, consultoria=consultoria)
+    return render_template('cadastro_consultoria.html', form=form, consultoria=consultoria)
 
 @app.route('/consultorias/setores')
 @login_required
@@ -235,7 +233,6 @@ def setores():
 @login_required
 def cadastro_setor():
     """Render and handle the Cadastro de Setor page."""
-    codigo = Setor.query.count() + 1
     form = SetorForm()
     if form.validate_on_submit():
         setor = Setor(nome=form.nome.data)
@@ -243,7 +240,7 @@ def cadastro_setor():
         db.session.commit()
         flash('Setor registrado com sucesso.', 'success')
         return redirect(url_for('setores'))
-    return render_template('cadastro_setor.html', form=form, codigo=codigo)
+    return render_template('cadastro_setor.html', form=form)
 
 
 @app.route('/consultorias/setores/editar/<int:id>', methods=['GET', 'POST'])
@@ -256,8 +253,7 @@ def editar_setor(id):
         db.session.commit()
         flash('Setor atualizado com sucesso.', 'success')
         return redirect(url_for('setores'))
-    codigo = setor.id
-    return render_template('cadastro_setor.html', form=form, codigo=codigo, setor=setor)
+    return render_template('cadastro_setor.html', form=form, setor=setor)
 
 
 @app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
