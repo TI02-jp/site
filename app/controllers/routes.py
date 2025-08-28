@@ -295,6 +295,47 @@ def nova_inclusao():
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 
+
+@app.route('/consultorias/inclusoes/<int:codigo>')
+@login_required
+def visualizar_inclusao(codigo):
+    """Display details for a single inclusão."""
+    inclusao = next((i for i in inclusoes_data if i['codigo'] == codigo), None)
+    if not inclusao:
+        abort(404)
+    return render_template('visualizar_inclusao.html', inclusao=inclusao)
+
+
+@app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_inclusao(codigo):
+    """Render and handle editing of an inclusão."""
+    inclusao = next((i for i in inclusoes_data if i['codigo'] == codigo), None)
+    if not inclusao:
+        abort(404)
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        user_id = request.form.get('usuario')
+        user = User.query.get(int(user_id)) if user_id else None
+        inclusao.update({
+            'data': request.form.get('data'),
+            'usuario': user.name if user else '',
+            'setor': request.form.get('setor'),
+            'consultoria': request.form.get('consultoria'),
+            'assunto': request.form.get('assunto'),
+            'pergunta': sanitize_html(request.form.get('pergunta')),
+            'resposta': sanitize_html(request.form.get('resposta')),
+        })
+        flash('Inclusão atualizada com sucesso.', 'success')
+        return redirect(url_for('inclusoes'))
+    return render_template(
+        'nova_inclusao.html',
+        users=users,
+        setores=Setor.query.order_by(Setor.nome).all(),
+        consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+        inclusao=inclusao,
+    )
+
 @app.route('/cookies')
 def cookies():
     """Render the cookie policy page."""

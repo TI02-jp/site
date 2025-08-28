@@ -31,6 +31,7 @@
                             <th>Usuário</th>
                             <th>Consultoria</th>
                             <th>Assunto</th>
+                            <th class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -40,10 +41,18 @@
                             <td>{{ inc.usuario }}</td>
                             <td>{{ inc.consultoria }}</td>
                             <td>{{ inc.assunto }}</td>
+                            <td class="text-center">
+                                <a href="{{ url_for('visualizar_inclusao', codigo=inc.codigo) }}" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('editar_inclusao', codigo=inc.codigo) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
+                            <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
                                 Nenhuma inclusão encontrada
                             </td>
