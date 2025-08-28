@@ -40,23 +40,27 @@ Barra de navegação fixa na visualização da empresa
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.company-nav .btn {
-    box-shadow: none;
+.company-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
     color: #fff !important;
     background-color: transparent !important;
-    border-color: transparent !important;
+    border: none;
+    text-decoration: none;
     transition: background-color 0.3s ease;
+    border-bottom: 2px solid transparent;
 }
 
-.company-nav .btn i {
+.company-nav-link i {
     color: inherit;
 }
 
-.company-nav .btn:hover,
-.company-nav .btn.active {
+.company-nav-link:hover,
+.company-nav-link.active {
     background-color: rgba(255, 255, 255, 0.15) !important;
-    color: #fff !important;
-    border-bottom: 2px solid #fff;
+    border-bottom-color: #fff;
 }
 
 .company-nav.fixed {
