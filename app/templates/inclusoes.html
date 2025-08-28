@@ -17,31 +17,9 @@
         </a>
     </div>
 
-    <form method="GET" class="row g-2 mb-3 align-items-end">
+    <form method="GET" class="row g-2 mb-3">
         <div class="col-md">
-            <input type="text" name="assunto" class="form-control" placeholder="Assunto" value="{{ assunto or '' }}">
-        </div>
-        <div class="col-md">
-            <select name="usuario" class="form-select">
-                <option value="">Usuário</option>
-                {% for u in users %}
-                <option value="{{ u.name }}" {% if usuario == u.name %}selected{% endif %}>{{ u.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md">
-            <select name="consultoria" class="form-select">
-                <option value="">Consultoria</option>
-                {% for c in consultorias %}
-                <option value="{{ c.nome }}" {% if consultoria == c.nome %}selected{% endif %}>{{ c.nome }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md">
-            <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio or '' }}">
-        </div>
-        <div class="col-md">
-            <input type="date" name="data_fim" class="form-control" value="{{ data_fim or '' }}">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por assunto, usuário ou consultoria" value="{{ search or '' }}">
         </div>
         <div class="col-auto">
             <button class="btn btn-outline-secondary" type="submit">

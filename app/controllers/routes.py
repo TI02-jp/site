@@ -255,46 +255,17 @@ def editar_setor(id):
 @login_required
 def inclusoes():
     """List and search Inclusões de Consultoria."""
-    assunto_raw = request.args.get('assunto', '')
-    usuario_raw = request.args.get('usuario', '')
-    consultoria_raw = request.args.get('consultoria', '')
-    data_inicio = request.args.get('data_inicio', '')
-    data_fim = request.args.get('data_fim', '')
-
-    assunto = assunto_raw.lower()
-    usuario = usuario_raw.lower()
-    consultoria = consultoria_raw.lower()
-    start_date = None
-    end_date = None
-    try:
-        if data_inicio:
-            start_date = datetime.strptime(data_inicio, '%Y-%m-%d')
-        if data_fim:
-            end_date = datetime.strptime(data_fim, '%Y-%m-%d')
-    except ValueError:
-        start_date = end_date = None
+    search_raw = request.args.get('q', '')
+    search = search_raw.lower()
 
     resultados = inclusoes_data
-    if assunto:
-        resultados = [i for i in resultados if assunto in i.get('assunto', '').lower()]
-    if usuario:
-        resultados = [i for i in resultados if usuario == i.get('usuario', '').lower()]
-    if consultoria:
-        resultados = [i for i in resultados if consultoria == i.get('consultoria', '').lower()]
-    if start_date or end_date:
-        filtrados = []
-        for inc in resultados:
-            data_str = inc.get('data')
-            try:
-                data_obj = datetime.strptime(data_str, '%Y-%m-%d')
-            except (TypeError, ValueError):
-                continue
-            if start_date and data_obj < start_date:
-                continue
-            if end_date and data_obj > end_date:
-                continue
-            filtrados.append(inc)
-        resultados = filtrados
+    if search:
+        resultados = [
+            i for i in resultados
+            if search in i.get('assunto', '').lower()
+            or search in i.get('usuario', '').lower()
+            or search in i.get('consultoria', '').lower()
+        ]
 
     inclusoes_formatadas = []
     for inc in resultados:
@@ -305,19 +276,10 @@ def inclusoes():
             data_formatada = data_str
         inclusoes_formatadas.append({**inc, 'data_formatada': data_formatada})
 
-    users = User.query.order_by(User.name).all()
-    consultorias_lista = Consultoria.query.order_by(Consultoria.nome).all()
-
     return render_template(
         'inclusoes.html',
         inclusoes=inclusoes_formatadas,
-        users=users,
-        consultorias=consultorias_lista,
-        assunto=assunto_raw,
-        usuario=usuario_raw,
-        consultoria=consultoria_raw,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
+        search=search_raw,
     )
 
 
