@@ -24,7 +24,7 @@
     <div class="nav-section-title">OUTROS</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'inclusoes' %}active{% endif %}" href="{{ url_for('inclusoes') }}">
+            <a class="nav-link {% if request.endpoint in ['inclusoes', 'nova_inclusao'] %}active{% endif %}" href="{{ url_for('inclusoes') }}">
                 <i class="bi bi-plus-circle"></i>
                 INCLUSÕES
             </a>
