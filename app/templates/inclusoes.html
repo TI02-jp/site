@@ -17,15 +17,11 @@
         </a>
     </div>
 
-    <form method="GET" class="row g-2 mb-3">
-        <div class="col-md">
-            <input type="text" name="q" class="form-control" placeholder="Buscar por assunto, usuário ou consultoria" value="{{ search or '' }}">
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-outline-secondary" type="submit">
-                <i class="bi bi-search"></i>
-            </button>
-        </div>
+    <form method="GET" class="d-flex mb-3">
+        <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar consultoria" value="{{ search or '' }}">
+        <button class="btn btn-outline-secondary" type="submit">
+            <i class="bi bi-search"></i>
+        </button>
     </form>
 
     <div class="card shadow-sm mb-4">
