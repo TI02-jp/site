@@ -171,7 +171,8 @@ def home():
 def consultorias():
     """List registered consultorias."""
     consultorias = Consultoria.query.all()
-    return render_template('consultorias.html', consultorias=consultorias)
+    setores = Setor.query.all()
+    return render_template('consultorias.html', consultorias=consultorias, setores=setores)
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
@@ -209,9 +210,8 @@ def editar_consultoria(id):
 @app.route('/consultorias/setores')
 @login_required
 def setores():
-    """List registered setores."""
-    setores = Setor.query.all()
-    return render_template('setores.html', setores=setores)
+    """Redirect to consultorias where setores are managed."""
+    return redirect(url_for('consultorias'))
 
 
 @app.route('/consultorias/setores/cadastro', methods=['GET', 'POST'])
@@ -224,7 +224,7 @@ def cadastro_setor():
         db.session.add(setor)
         db.session.commit()
         flash('Setor registrado com sucesso.', 'success')
-        return redirect(url_for('setores'))
+        return redirect(url_for('consultorias'))
     return render_template('cadastro_setor.html', form=form)
 
 
@@ -237,7 +237,7 @@ def editar_setor(id):
         setor.nome = form.nome.data
         db.session.commit()
         flash('Setor atualizado com sucesso.', 'success')
-        return redirect(url_for('setores'))
+        return redirect(url_for('consultorias'))
     return render_template('cadastro_setor.html', form=form, setor=setor)
 
 
