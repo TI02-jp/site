@@ -254,14 +254,20 @@ def editar_setor(id):
 @app.route('/consultorias/inclusoes', methods=['GET', 'POST'])
 @login_required
 def inclusoes():
-    """Render and handle Inclusões de Consultoria form."""
+    """Render and handle Inclusões de Consultoria form and search."""
     users = User.query.order_by(User.name).all()
+    search = request.args.get('q', '').lower()
+    resultados = [
+        i for i in inclusoes_data if search in i.get('assunto', '').lower()
+    ] if search else inclusoes_data
     if request.method == 'POST':
         codigo = len(inclusoes_data) + 1
+        user_id = request.form.get('usuario')
+        user = User.query.get(int(user_id)) if user_id else None
         data = {
             'codigo': codigo,
             'data': request.form.get('data'),
-            'usuario': request.form.get('usuario'),
+            'usuario': user.name if user else '',
             'setor': request.form.get('setor'),
             'consultoria': request.form.get('consultoria'),
             'assunto': request.form.get('assunto'),
@@ -276,6 +282,8 @@ def inclusoes():
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+        inclusoes=resultados,
+        search=search,
     )
 
 @app.route('/cookies')
