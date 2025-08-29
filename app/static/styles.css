@@ -38,16 +38,24 @@ Barra de navegação fixa na visualização da empresa
     background: linear-gradient(90deg, var(--primary-dark), var(--primary-color));
     color: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 0;
 }
 
 .company-nav .btn {
     box-shadow: none;
 }
 
+.company-nav .btn.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
 .company-nav.fixed {
     position: fixed;
     top: 0;
     z-index: 1020;
+    border-radius: 0;
 }
 
 /* Garante espaço ao navegar por âncoras com barra fixa */
@@ -1175,27 +1183,27 @@ Mensagem de login flutuante
 }
 
 .btn-dept-blue {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
-    color: var(--primary-color);
+    background-color: transparent;
+    border-color: transparent;
+    color: #fff;
 }
 
 .btn-dept-blue:hover {
-    background-color: var(--primary-dark-hover);
-    border-color: var(--primary-dark-hover);
-    color: var(--primary-color);
+    background-color: transparent;
+    border-color: transparent;
+    color: #fff;
 }
 
 .btn-dept-orange {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: var(--primary-dark);
+    background-color: transparent;
+    border-color: transparent;
+    color: #fff;
 }
 
 .btn-dept-orange:hover {
-    background-color: var(--primary-color-hover);
-    border-color: var(--primary-color-hover);
-    color: var(--primary-dark);
+    background-color: transparent;
+    border-color: transparent;
+    color: #fff;
 }
 
 .btn-outline-dept-blue {
