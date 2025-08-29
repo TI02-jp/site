@@ -65,11 +65,11 @@
             <div class="card border-0 shadow-sm company-nav">
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-empresa" class="btn btn-dept-blue btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
-                        <a href="#fiscal" class="btn btn-dept-blue btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-dept-orange btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-dept-blue btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-dept-orange btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                        <a href="#dados-empresa" class="btn btn-company-nav btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
+                        <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                     </div>
                 </div>
             </div>
@@ -206,7 +206,7 @@
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-outline-light btn-sm text-white"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
@@ -366,7 +366,7 @@
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-outline-light btn-sm text-white"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
@@ -515,7 +515,7 @@
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
                         <div class="d-flex align-items-center gap-2">
                             {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                            <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-outline-light btn-sm text-white"><i class="bi bi-pencil me-1"></i>Editar</a>
+                            <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                         </div>
                     </div>
                 </div>
@@ -597,7 +597,7 @@
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-outline-light btn-sm text-white"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
