@@ -743,24 +743,26 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Highlighting da seção ativa durante scroll
+    const navLinks = document.querySelectorAll('.company-nav .btn');
     const observerOptions = { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0.1 };
     const observer = new IntersectionObserver((entries) => {
         let lastIntersectingId = null;
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                 lastIntersectingId = entry.target.getAttribute('id');
+                lastIntersectingId = entry.target.id;
             }
         });
 
         if (lastIntersectingId) {
-            document.querySelectorAll('.card-body .btn-sm').forEach(link => link.classList.remove('active'));
-            const activeLink = document.querySelector(`a[href="#${lastIntersectingId}"]`);
+            navLinks.forEach(link => link.classList.remove('active'));
+            const activeLink = document.querySelector(`.company-nav a[href="#${lastIntersectingId}"]`);
             if (activeLink) activeLink.classList.add('active');
         }
     }, observerOptions);
 
-    document.querySelectorAll('div[id]').forEach(section => {
-        if (section.id) observer.observe(section);
+    navLinks.forEach(link => {
+        const target = document.getElementById(link.getAttribute('href').substring(1));
+        if (target) observer.observe(target);
     });
 
     // Otimização para impressão
