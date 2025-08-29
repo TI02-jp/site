@@ -1,3 +1,5 @@
+"""Alembic environment configuration for database migrations."""
+
 import logging
 from logging.config import fileConfig
 
@@ -16,6 +18,7 @@ logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
+    """Return the SQLAlchemy engine bound to the Flask app."""
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions['migrate'].db.get_engine()
@@ -25,6 +28,7 @@ def get_engine():
 
 
 def get_engine_url():
+    """Return the engine URL with credentials for Alembic."""
     try:
         return get_engine().url.render_as_string(hide_password=False).replace(
             '%', '%%')
@@ -46,6 +50,7 @@ target_db = current_app.extensions['migrate'].db
 
 
 def get_metadata():
+    """Retrieve metadata for auto-generating migrations."""
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata

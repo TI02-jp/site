@@ -1,3 +1,5 @@
+"""Security-related helper utilities."""
+
 import re
 import subprocess
 
