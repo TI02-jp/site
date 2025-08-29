@@ -179,7 +179,34 @@ def home():
 @login_required
 def sala_reunioes():
     """Display meeting room schedule."""
-    return render_template('sala_reunioes.html')
+    today = datetime.utcnow().date()
+    events = [
+        {
+            'date': today.strftime('%d/%m/%Y'),
+            'start': '08:00',
+            'end': '09:00',
+            'title': 'Reunião de equipe',
+            'user': 'João',
+            'end_iso': f"{today.isoformat()}T09:00:00"
+        },
+        {
+            'date': today.strftime('%d/%m/%Y'),
+            'start': '09:30',
+            'end': '10:30',
+            'title': 'Planejamento de projetos',
+            'user': 'Maria',
+            'end_iso': f"{today.isoformat()}T10:30:00"
+        },
+        {
+            'date': today.strftime('%d/%m/%Y'),
+            'start': '14:00',
+            'end': '15:00',
+            'title': 'Reunião com clientes',
+            'user': 'Carlos',
+            'end_iso': f"{today.isoformat()}T15:00:00"
+        },
+    ]
+    return render_template('sala_reunioes.html', events=events)
 
 
 @app.route('/consultorias')

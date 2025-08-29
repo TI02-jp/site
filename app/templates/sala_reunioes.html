@@ -50,33 +50,44 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Horário</th>
+                    <th>Data</th>
+                    <th>Período</th>
                     <th>Evento</th>
+                    <th>Usuário</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>08:00 - 09:00</td>
-                    <td>Reunião de equipe</td>
+                {% for event in events %}
+                <tr data-end="{{ event.end_iso }}">
+                    <td>{{ event.date }}</td>
+                    <td>{{ event.start }} - {{ event.end }}</td>
+                    <td>{{ event.title }}</td>
+                    <td>{{ event.user }}</td>
                 </tr>
+                {% else %}
                 <tr>
-                    <td>09:30 - 10:30</td>
-                    <td>Planejamento de projetos</td>
+                    <td colspan="4" class="text-center">Nenhum evento cadastrado</td>
                 </tr>
-                <tr>
-                    <td>11:00 - 12:00</td>
-                    <td>Disponível</td>
-                </tr>
-                <tr>
-                    <td>14:00 - 15:00</td>
-                    <td>Reunião com clientes</td>
-                </tr>
-                <tr>
-                    <td>15:30 - 16:30</td>
-                    <td>Disponível</td>
-                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const rows = document.querySelectorAll('tbody tr[data-end]');
+    const now = new Date();
+    rows.forEach(row => {
+        const end = new Date(row.dataset.end);
+        const diff = end.getTime() + 5 * 60 * 1000 - now.getTime();
+        if (diff <= 0) {
+            row.style.display = 'none';
+        } else {
+            setTimeout(() => {
+                row.style.display = 'none';
+            }, diff);
+        }
+    });
+});
+</script>
 {% endblock %}
