@@ -34,6 +34,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+import calendar
 
 @app.context_processor
 def inject_stats():
@@ -194,26 +195,32 @@ def consultorias():
 @app.route('/sala-reunioes')
 @login_required
 def sala_reunioes():
-    """Display meeting room agenda."""
-    cutoff = datetime.now() - timedelta(minutes=5)
+    """Display meeting room agenda as a calendar."""
     events = (
         MeetingRoomEvent.query
-        .filter(MeetingRoomEvent.end_time > cutoff)
         .order_by(MeetingRoomEvent.start_time)
         .all()
     )
-    agenda = []
+    events_by_date = {}
     for e in events:
-        date_obj = e.date or (e.start_time.date() if e.start_time else None)
-        agenda.append({
-            'data': date_obj.strftime('%d/%m/%Y') if date_obj else '',
-            'inicio': e.start_time.strftime('%H:%M') if e.start_time else '',
-            'fim': e.end_time.strftime('%H:%M') if e.end_time else '',
-            'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M') if e.end_time else '',
+        date_str = e.date.isoformat()
+        events_by_date.setdefault(date_str, []).append({
+            'inicio': e.start_time.strftime('%H:%M'),
+            'fim': e.end_time.strftime('%H:%M'),
             'evento': e.title,
             'usuario': e.user.name if e.user else ''
         })
-    return render_template('sala_reunioes.html', agenda=agenda)
+
+    today = datetime.now().date()
+    cal = calendar.Calendar()
+    weeks = cal.monthdatescalendar(today.year, today.month)
+
+    return render_template(
+        'sala_reunioes.html',
+        weeks=weeks,
+        events_by_date=events_by_date,
+        today=today,
+    )
 
 
 @app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
@@ -239,6 +246,19 @@ def novo_evento():
             if date_obj and end_str
             else None
         )
+        if start_time and end_time and start_time >= end_time:
+            flash('Horário final deve ser após o início.', 'danger')
+            return redirect(url_for('novo_evento'))
+
+        conflict = MeetingRoomEvent.query.filter(
+            MeetingRoomEvent.date == date_obj,
+            MeetingRoomEvent.start_time < end_time,
+            MeetingRoomEvent.end_time > start_time,
+        ).first()
+        if conflict:
+            flash('Já existe um evento nesse horário.', 'danger')
+            return redirect(url_for('novo_evento'))
+
         event = MeetingRoomEvent(
             title=title,
             date=date_obj,

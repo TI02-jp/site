@@ -54,44 +54,51 @@
         <a href="{{ url_for('novo_evento') }}" class="btn btn-primary">Criar Evento</a>
     </div>
     {% endif %}
-    <table class="table table-bordered text-start" id="agenda">
+    <table class="table table-bordered text-center" id="calendar">
         <thead>
             <tr>
-                <th style="width: 15%;">Data</th>
-                <th style="width: 15%;">Período</th>
-                <th style="width: 20%;">Usuário</th>
-                <th style="width: 50%;">Evento</th>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sáb</th>
+                <th>Dom</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in agenda %}
-            <tr data-end="{{ item.end_iso }}">
-                <td>{{ item.data }}</td>
-                <td>{{ item.inicio }} - {{ item.fim }}</td>
-                <td>{{ item.usuario }}</td>
-                <td>{{ item.evento }}</td>
-            </tr>
-            {% else %}
+            {% for week in weeks %}
             <tr>
-                <td colspan="4" class="text-muted">Nenhuma reunião agendada.</td>
+                {% for day in week %}
+                {% set iso = day.isoformat() %}
+                <td class="py-3{% if day.month != today.month %} text-muted{% endif %}{% if iso in events_by_date %} bg-primary text-white has-event{% endif %}"
+                    data-date="{{ iso }}">{{ day.day }}</td>
+                {% endfor %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    <div id="event-list" class="mt-4"></div>
 </div>
 <script>
-function hidePastEvents() {
-    const rows = document.querySelectorAll('#agenda tbody tr[data-end]');
-    const now = new Date();
-    rows.forEach(row => {
-        const endTime = new Date(row.dataset.end);
-        if (now - endTime > 5 * 60 * 1000) {
-            row.style.display = 'none';
+const events = {{ events_by_date|tojson }};
+document.querySelectorAll('#calendar td.has-event').forEach(td => {
+    td.addEventListener('click', () => {
+        const iso = td.dataset.date;
+        const list = events[iso] || [];
+        let html = `<h4>Eventos em ${new Date(iso).toLocaleDateString()}</h4>`;
+        if (list.length === 0) {
+            html += '<p>Nenhum evento.</p>';
+        } else {
+            html += '<ul>';
+            list.forEach(ev => {
+                html += `<li><strong>${ev.inicio} - ${ev.fim}</strong> ${ev.evento} (${ev.usuario})</li>`;
+            });
+            html += '</ul>';
         }
+        document.getElementById('event-list').innerHTML = html;
     });
-}
-hidePastEvents();
-setInterval(hidePastEvents, 60000);
+});
 </script>
 {% endblock %}
 
