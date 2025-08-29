@@ -54,16 +54,21 @@
         <a href="{{ url_for('novo_evento') }}" class="btn btn-primary">Criar Evento</a>
     </div>
     {% endif %}
-    <table class="table table-bordered text-center" id="calendar">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="btn btn-outline-primary" href="{{ url_for('sala_reunioes', year=prev_month.year, month=prev_month.month) }}">&lt;</a>
+        <h3 class="mb-0">{{ display_date.strftime('%B %Y')|title }}</h3>
+        <a class="btn btn-outline-primary" href="{{ url_for('sala_reunioes', year=next_month.year, month=next_month.month) }}">&gt;</a>
+    </div>
+    <table class="table text-center" id="calendar">
         <thead>
             <tr>
+                <th>Dom</th>
                 <th>Seg</th>
                 <th>Ter</th>
                 <th>Qua</th>
                 <th>Qui</th>
                 <th>Sex</th>
                 <th>Sáb</th>
-                <th>Dom</th>
             </tr>
         </thead>
         <tbody>
@@ -71,34 +76,78 @@
             <tr>
                 {% for day in week %}
                 {% set iso = day.isoformat() %}
-                <td class="py-3{% if day.month != today.month %} text-muted{% endif %}{% if iso in events_by_date %} bg-primary text-white has-event{% endif %}"
-                    data-date="{{ iso }}">{{ day.day }}</td>
+                <td class="day{% if day.month != display_date.month %} text-muted{% endif %}{% if iso in events_by_date %} has-event{% endif %}{% if day == today %} today{% endif %}" data-date="{{ iso }}">{{ day.day }}</td>
                 {% endfor %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
     <div id="event-list" class="mt-4"></div>
-</div>
-<script>
-const events = {{ events_by_date|tojson }};
-document.querySelectorAll('#calendar td.has-event').forEach(td => {
-    td.addEventListener('click', () => {
+    <style>
+        #calendar {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #calendar th, #calendar td {
+            width: 14.285%;
+            height: 80px;
+        }
+        #calendar td {
+            cursor: pointer;
+            position: relative;
+            border-radius: 6px;
+            vertical-align: top;
+            padding-top: 8px;
+        }
+        #calendar td:hover {
+            background-color: #f0f0f0;
+        }
+        #calendar td.today, #calendar td.selected {
+            border: 2px solid var(--primary);
+        }
+        #calendar td.has-event::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+    <script>
+    const events = {{ events_by_date|tojson }};
+    let selected = null;
+    function showEvents(td) {
         const iso = td.dataset.date;
         const list = events[iso] || [];
-        let html = `<h4>Eventos em ${new Date(iso).toLocaleDateString()}</h4>`;
+        let html = `<h4>Eventos em ${new Date(iso).toLocaleDateString('pt-BR')}</h4>`;
         if (list.length === 0) {
             html += '<p>Nenhum evento.</p>';
         } else {
-            html += '<ul>';
+            html += '<ul class="list-unstyled">';
             list.forEach(ev => {
                 html += `<li><strong>${ev.inicio} - ${ev.fim}</strong> ${ev.evento} (${ev.usuario})</li>`;
             });
             html += '</ul>';
         }
         document.getElementById('event-list').innerHTML = html;
+    }
+    document.querySelectorAll('#calendar td').forEach(td => {
+        td.addEventListener('click', () => {
+            if (selected) selected.classList.remove('selected');
+            selected = td;
+            td.classList.add('selected');
+            showEvents(td);
+        });
     });
-});
-</script>
+    const todayCell = document.querySelector('#calendar td.today');
+    if (todayCell) {
+        todayCell.classList.add('selected');
+        showEvents(todayCell);
+    }
+    </script>
+</div>
 {% endblock %}
-

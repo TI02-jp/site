@@ -33,7 +33,7 @@ from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import calendar
 
 @app.context_processor
@@ -196,8 +196,23 @@ def consultorias():
 @login_required
 def sala_reunioes():
     """Display meeting room agenda as a calendar."""
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    today = datetime.now().date()
+    if not year or not month:
+        year = today.year
+        month = today.month
+
+    display_date = date(year, month, 1)
+    cal = calendar.Calendar(firstweekday=6)
+    weeks = cal.monthdatescalendar(year, month)
+    first_day = weeks[0][0]
+    last_day = weeks[-1][-1]
+
     events = (
         MeetingRoomEvent.query
+        .filter(MeetingRoomEvent.date >= first_day,
+                MeetingRoomEvent.date <= last_day)
         .order_by(MeetingRoomEvent.start_time)
         .all()
     )
@@ -211,15 +226,17 @@ def sala_reunioes():
             'usuario': e.user.name if e.user else ''
         })
 
-    today = datetime.now().date()
-    cal = calendar.Calendar()
-    weeks = cal.monthdatescalendar(today.year, today.month)
+    prev_month = (display_date - timedelta(days=1)).replace(day=1)
+    next_month = (display_date + timedelta(days=31)).replace(day=1)
 
     return render_template(
         'sala_reunioes.html',
         weeks=weeks,
         events_by_date=events_by_date,
         today=today,
+        display_date=display_date,
+        prev_month=prev_month,
+        next_month=next_month,
     )
 
 
