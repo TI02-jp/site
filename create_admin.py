@@ -1,3 +1,4 @@
+"""Utility script to create an administrator user."""
 from app import app, db, User # Importe o app, db e o modelo User do seu arquivo principal
 import getpass
 

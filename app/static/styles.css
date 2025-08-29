@@ -1,6 +1,7 @@
 /* -----------------------------
 Fonte personalizada moderna
 ----------------------------- */
+/* Color variables defined in base.html: --primary (blue) and --accent (orange) */
 body {
     font-family: 'Inter', sans-serif;
     background-color: #f4f4f4;
@@ -14,7 +15,7 @@ body {
 Cabeçalho
 ----------------------------- */
 header {
-    background-color: var(--primary-dark);
+    background-color: var(--primary);
     color: white;
     padding: 20px;
     font-size: 2em;
@@ -35,7 +36,7 @@ Navbar (fixa com sombra leve)
 Barra de navegação fixa na visualização da empresa
 ----------------------------- */
 .company-nav {
-    background: linear-gradient(90deg, var(--primary-dark), var(--primary-color));
+    background: linear-gradient(90deg, var(--primary), var(--accent));
     color: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: none;
@@ -78,7 +79,7 @@ Seção Introdução
 }
 
 .intro h2 {
-    color: var(--primary-dark);
+    color: var(--primary);
     font-size: 1.8em;
 }
 
@@ -102,7 +103,7 @@ Botões e Ações
     padding: 12px 20px;
     font-size: 1.1em;
     color: white;
-    background-color: var(--primary-color);
+    background-color: var(--accent);
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -112,7 +113,7 @@ Botões e Ações
 }
 
 .btn:hover, .btn-custom:hover, .submit-btn:hover {
-    background-color: var(--primary-dark);
+    background-color: var(--primary);
 }
 
 .btn:focus, .btn-custom:focus, .submit-btn:focus {
@@ -154,7 +155,7 @@ Tabelas (Empresas e Usuários)
 }
 
 .user-table th, .table-empresas thead th {
-    background-color: var(--primary-dark);
+    background-color: var(--primary);
     color: white;
     text-align: center;
 }
@@ -202,7 +203,7 @@ td:nth-child(5) {
 Botões personalizados
 ----------------------------- */
 .btn-custom {
-    background-color: var(--primary-color);
+    background-color: var(--accent);
     color: white;
     border-radius: 6px;
     padding: 6px 12px;
@@ -213,7 +214,7 @@ Botões personalizados
 }
 
 .btn-custom:hover {
-    background-color: var(--primary-dark);
+    background-color: var(--primary);
 }
 
 .btn-danger {
@@ -249,7 +250,7 @@ Formulários
 .form-container h2 {
     text-align: center;
     margin-bottom: 1.5rem;
-    color: var(--primary-dark);
+    color: var(--primary);
 }
 
 .form-group {
@@ -275,7 +276,7 @@ input[type="password"] {
 }
 
 input:focus {
-    border-color: var(--primary-dark);
+    border-color: var(--primary);
     outline: none;
 }
 
@@ -285,7 +286,7 @@ TELA DE LOGIN - ESTILOS ESPECÍFICOS
 
 /* Body da página de login com background especial */
 body.login-page {
-    background: linear-gradient(135deg, #0b288b, #e87429);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -345,14 +346,14 @@ body.login-page {
 }
 
 .login-container .form-control:focus {
-    border-color: #0b288b;
+    border-color: var(--primary);
     box-shadow: 0 0 0 0.2rem rgba(75, 148, 243, 0.25);
 }
 
 /* Botão principal do login */
 .login-container .btn-primary {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary);
+    border-color: var(--primary);
     padding: 0.75rem;
     font-weight: 500;
     border-radius: 8px;
@@ -360,8 +361,8 @@ body.login-page {
 }
 
 .login-container .btn-primary:hover {
-    background-color: #0b288b;
-    border-color: #0b288b;
+    background-color: var(--primary);
+    border-color: var(--primary);
     transform: translateY(-1px);
 }
 
@@ -410,46 +411,46 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
 
 /* Cabeçalho dos cards de formulário */
 .card-header.bg-primary {
-    background-color: var(--primary-dark) !important;
+    background-color: var(--primary) !important;
 }
 
 /* Títulos das seções */
 .text-primary {
-    color: var(--primary-dark) !important;
+    color: var(--primary) !important;
 }
 
 /* Bordas inferiores das seções */
 .border-bottom {
-    border-color: var(--primary-dark) !important;
+    border-color: var(--primary) !important;
     border-width: 2px !important;
 }
 
 /* Botões primários */
 .btn-primary {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* Checkboxes */
 .form-check-input:checked {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* Focus states para inputs */
 .form-floating > .form-control:focus,
 .form-control:focus {
-    border-color: var(--primary-dark);
+    border-color: var(--primary);
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
 .form-select:focus {
-    border-color: var(--primary-dark);
+    border-color: var(--primary);
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
@@ -563,7 +564,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 
 /* Cores de borda consistentes */
 .border-primary {
-    border-color: var(--primary-dark) !important;
+    border-color: var(--primary) !important;
 }
 
 /* Headers coloridos para os cards de relatório */
@@ -729,7 +730,7 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 /* Labels dos campos de informação */
 .info-label {
     font-weight: 600;
-    color: var(--primary-dark);
+    color: var(--primary);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -776,13 +777,13 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 
 /* Botões outline personalizados */
 .btn-outline-primary {
-    color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 .btn-outline-primary:hover {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 .btn-outline-secondary {
@@ -837,7 +838,7 @@ Mensagens de erro
 Links
 ----------------------------- */
 a {
-    color: var(--primary-dark);
+    color: var(--primary);
     text-decoration: none;
 }
 
@@ -1157,29 +1158,29 @@ Mensagem de login flutuante
 
 /* Department color utilities */
 .text-dept-blue {
-    color: var(--primary-dark) !important;
+    color: var(--primary) !important;
 }
 
 .text-dept-orange {
-    color: var(--primary-color) !important;
+    color: var(--accent) !important;
 }
 
 .bg-dept-blue {
-    background-color: var(--primary-dark) !important;
+    background-color: var(--primary) !important;
 }
 
 .bg-dept-orange {
-    background-color: var(--primary-color) !important;
+    background-color: var(--accent) !important;
 }
 
 .bg-dept-blue-subtle {
     background-color: rgba(11, 40, 139, 0.1) !important;
-    color: var(--primary-dark) !important;
+    color: var(--primary) !important;
 }
 
 .bg-dept-orange-subtle {
     background-color: rgba(232, 116, 41, 0.1) !important;
-    color: var(--primary-color) !important;
+    color: var(--accent) !important;
 }
 
 .btn-dept-blue {
@@ -1208,26 +1209,26 @@ Mensagem de login flutuante
 
 .btn-outline-dept-blue {
     background-color: transparent;
-    border-color: var(--primary-dark);
-    color: var(--primary-color);
+    border-color: var(--primary);
+    color: var(--accent);
 }
 
 .btn-outline-dept-blue:hover {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
-    color: var(--primary-color);
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--accent);
 }
 
 .btn-outline-dept-orange {
     background-color: transparent;
-    border-color: var(--primary-color);
-    color: var(--primary-dark);
+    border-color: var(--accent);
+    color: var(--primary);
 }
 
 .btn-outline-dept-orange:hover {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: var(--primary-dark);
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--primary);
 }
 
 
@@ -1243,3 +1244,4 @@ Mensagem de login flutuante
     height: auto;
     cursor: pointer;
 }
+

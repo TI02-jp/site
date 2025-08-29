@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 
 @app.context_processor
 def inject_stats():
+    """Inject global statistics into templates."""
     if current_user.is_authenticated:
         total_empresas = Empresa.query.count()
         total_usuarios = User.query.count() if current_user.role == 'admin' else 0
@@ -41,9 +42,11 @@ def inject_stats():
         }
     return {}
 
+# Allowed image file extensions for uploads
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
+    """Check if a filename has an allowed extension."""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -51,10 +54,12 @@ def allowed_file(filename):
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
+    """Return JSON error when uploaded file exceeds limit."""
     return jsonify({'error': 'Arquivo excede o tamanho permitido'}), 413
 
 
 def format_phone(digits: str) -> str:
+    """Format raw digit strings into phone numbers."""
     if len(digits) >= 11:
         return f"({digits[:2]}) {digits[2:7]}-{digits[7:11]}"
     if len(digits) >= 10:
@@ -63,6 +68,7 @@ def format_phone(digits: str) -> str:
 
 
 def normalize_contatos(contatos):
+    """Normalize contact entries into a consistent structure."""
     if not contatos:
         return []
     if all(isinstance(c, dict) and 'meios' in c for c in contatos):
@@ -91,6 +97,7 @@ def normalize_contatos(contatos):
 
 
 def validate_contatos(contatos):
+    """Validate contact data ensuring proper formats."""
     email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
     for c in contatos:
         meios = c.get('meios')
@@ -1260,3 +1267,4 @@ def edit_user(user_id):
         return redirect(url_for('list_users'))
 
     return render_template('edit_user.html', form=form)
+

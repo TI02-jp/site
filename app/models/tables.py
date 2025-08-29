@@ -4,11 +4,13 @@ from app import db
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# Timezone for timestamp fields
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class JsonString(TypeDecorator):
+    """Store JSON as a serialized string."""
     impl = String
 
     def __init__(self, length=255, **kwargs):
@@ -28,6 +30,7 @@ class JsonString(TypeDecorator):
         return None
 
 class User(db.Model, UserMixin):
+    """Application user account."""
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -50,6 +53,7 @@ class User(db.Model, UserMixin):
         return self.ativo
 
 class Post(db.Model):
+    """User-generated post."""
     __tablename__ = "posts"
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
@@ -58,6 +62,7 @@ class Post(db.Model):
 
 
 class Consultoria(db.Model):
+    """Stores consulting company credentials."""
     __tablename__ = 'consultorias'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -70,6 +75,7 @@ class Consultoria(db.Model):
 
 
 class Setor(db.Model):
+    """Represents a business sector."""
     __tablename__ = 'setores'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -80,6 +86,7 @@ class Setor(db.Model):
 
 
 class Inclusao(db.Model):
+    """Records FAQ entries with questions and answers."""
     __tablename__ = 'inclusoes'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -99,6 +106,7 @@ class Inclusao(db.Model):
         return f"<Inclusao {self.assunto}>"
 
 class Empresa(db.Model):
+    """Company registered in the system."""
     __tablename__ = 'tbl_empresas'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome_empresa = db.Column(db.String(100), nullable=False)
@@ -118,6 +126,7 @@ class Empresa(db.Model):
         return f"<Empresa {self.nome_empresa}>"
 
 class Departamento(db.Model):
+    """Department belonging to a company."""
     __tablename__ = 'departamentos'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False)
@@ -150,3 +159,4 @@ class Departamento(db.Model):
 
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
+
