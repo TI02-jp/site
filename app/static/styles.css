@@ -1177,25 +1177,25 @@ Mensagem de login flutuante
 .btn-dept-blue {
     background-color: var(--primary-dark);
     border-color: var(--primary-dark);
-    color: var(--primary-color);
+    color: #fff;
 }
 
 .btn-dept-blue:hover {
     background-color: var(--primary-dark-hover);
     border-color: var(--primary-dark-hover);
-    color: var(--primary-color);
+    color: #fff;
 }
 
 .btn-dept-orange {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
-    color: var(--primary-dark);
+    color: #fff;
 }
 
 .btn-dept-orange:hover {
     background-color: var(--primary-color-hover);
     border-color: var(--primary-color-hover);
-    color: var(--primary-dark);
+    color: #fff;
 }
 
 .btn-outline-dept-blue {
