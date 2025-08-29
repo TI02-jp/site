@@ -60,7 +60,7 @@
         </thead>
         <tbody>
             {% for item in agenda %}
-            <tr data-end="{{ item.data_iso }}T{{ item.fim }}">
+            <tr data-end="{{ item.end_iso }}">
                 <td>{{ item.data }}</td>
                 <td>{{ item.inicio }} - {{ item.fim }}</td>
                 <td>{{ item.evento }}</td>
