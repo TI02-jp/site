@@ -196,17 +196,17 @@ def consultorias():
 def sala_reunioes():
     """Display meeting room agenda."""
     events = MeetingRoomEvent.query.order_by(MeetingRoomEvent.start_time).all()
-    agenda = [
-        {
-            'data': e.date.strftime('%d/%m/%Y'),
-            'inicio': e.start_time.strftime('%H:%M'),
-            'fim': e.end_time.strftime('%H:%M'),
-            'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M'),
+    agenda = []
+    for e in events:
+        date_obj = e.date or (e.start_time.date() if e.start_time else None)
+        agenda.append({
+            'data': date_obj.strftime('%d/%m/%Y') if date_obj else '',
+            'inicio': e.start_time.strftime('%H:%M') if e.start_time else '',
+            'fim': e.end_time.strftime('%H:%M') if e.end_time else '',
+            'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M') if e.end_time else '',
             'evento': e.title,
             'usuario': e.user.name if e.user else ''
-        }
-        for e in events
-    ]
+        })
     return render_template('sala_reunioes.html', agenda=agenda)
 
 
