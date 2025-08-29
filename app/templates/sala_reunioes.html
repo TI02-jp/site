@@ -54,13 +54,13 @@
         <a href="{{ url_for('novo_evento') }}" class="btn btn-primary">Criar Evento</a>
     </div>
     {% endif %}
-    <table class="table table-bordered" id="agenda">
+    <table class="table table-bordered text-start" id="agenda">
         <thead>
             <tr>
-                <th>Data</th>
-                <th>Período</th>
-                <th>Evento</th>
-                <th>Usuário</th>
+                <th style="width: 15%;">Data</th>
+                <th style="width: 15%;">Período</th>
+                <th style="width: 20%;">Usuário</th>
+                <th style="width: 50%;">Evento</th>
             </tr>
         </thead>
         <tbody>
@@ -68,12 +68,12 @@
             <tr data-end="{{ item.end_iso }}">
                 <td>{{ item.data }}</td>
                 <td>{{ item.inicio }} - {{ item.fim }}</td>
-                <td>{{ item.evento }}</td>
                 <td>{{ item.usuario }}</td>
+                <td>{{ item.evento }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="text-center text-muted">Nenhuma reunião agendada.</td>
+                <td colspan="4" class="text-muted">Nenhuma reunião agendada.</td>
             </tr>
             {% endfor %}
         </tbody>
