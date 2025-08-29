@@ -11,7 +11,8 @@ from wtforms import (
     TextAreaField,
     PasswordField,
     BooleanField,
-    HiddenField
+    HiddenField,
+    TimeField
 )
 from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo, ValidationError
 import re
@@ -183,4 +184,14 @@ class ConsultoriaForm(FlaskForm):
 class SetorForm(FlaskForm):
     """Formulário para cadastro de setores."""
     nome = StringField('Setor', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class MeetingRoomEventForm(FlaskForm):
+    """Form to schedule a meeting room event."""
+    title = StringField('Evento', validators=[DataRequired()])
+    date = DateField('Data', format='%Y-%m-%d', validators=[DataRequired()])
+    start_time = TimeField('Início', validators=[DataRequired()])
+    end_time = TimeField('Fim', validators=[DataRequired()])
+    user_id = SelectField('Usuário', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Salvar')

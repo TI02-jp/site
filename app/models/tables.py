@@ -166,3 +166,19 @@ class Departamento(db.Model):
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
 
+
+class MeetingRoomEvent(db.Model):
+    """Event scheduled for the meeting room."""
+    __tablename__ = 'meeting_room_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('meeting_events', lazy=True))
+
+    def __repr__(self):
+        return f"<MeetingRoomEvent {self.title} by {self.user_id}>"
+

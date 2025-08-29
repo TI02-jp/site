@@ -6,7 +6,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa, Departamento, Consultoria, Setor, Inclusao
+from app.models.tables import User, Empresa, Departamento, Consultoria, Setor, Inclusao, MeetingRoomEvent
 from app.forms import (
     EmpresaForm,
     EditUserForm,
@@ -16,6 +16,7 @@ from app.forms import (
     DepartamentoAdministrativoForm,
     ConsultoriaForm,
     SetorForm,
+    MeetingRoomEventForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -179,34 +180,42 @@ def home():
 @login_required
 def sala_reunioes():
     """Display meeting room schedule."""
-    today = datetime.utcnow().date()
-    events = [
-        {
-            'date': today.strftime('%d/%m/%Y'),
-            'start': '08:00',
-            'end': '09:00',
-            'title': 'Reunião de equipe',
-            'user': 'João',
-            'end_iso': f"{today.isoformat()}T09:00:00"
-        },
-        {
-            'date': today.strftime('%d/%m/%Y'),
-            'start': '09:30',
-            'end': '10:30',
-            'title': 'Planejamento de projetos',
-            'user': 'Maria',
-            'end_iso': f"{today.isoformat()}T10:30:00"
-        },
-        {
-            'date': today.strftime('%d/%m/%Y'),
-            'start': '14:00',
-            'end': '15:00',
-            'title': 'Reunião com clientes',
-            'user': 'Carlos',
-            'end_iso': f"{today.isoformat()}T15:00:00"
-        },
-    ]
+    events_query = MeetingRoomEvent.query.order_by(MeetingRoomEvent.start_time).all()
+    events = []
+    for ev in events_query:
+        start = ev.start_time
+        end = ev.end_time
+        events.append({
+            'date': start.strftime('%d/%m/%Y'),
+            'start': start.strftime('%H:%M'),
+            'end': end.strftime('%H:%M'),
+            'title': ev.title,
+            'user': ev.user.name,
+            'end_iso': end.isoformat()
+        })
     return render_template('sala_reunioes.html', events=events)
+
+
+@app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
+@admin_required
+def criar_evento():
+    """Create a new meeting room event."""
+    form = MeetingRoomEventForm()
+    form.user_id.choices = [(u.id, u.name) for u in User.query.order_by(User.name).all()]
+    if form.validate_on_submit():
+        start = datetime.combine(form.date.data, form.start_time.data)
+        end = datetime.combine(form.date.data, form.end_time.data)
+        event = MeetingRoomEvent(
+            title=form.title.data,
+            start_time=start,
+            end_time=end,
+            user_id=form.user_id.data
+        )
+        db.session.add(event)
+        db.session.commit()
+        flash('Evento criado com sucesso.', 'success')
+        return redirect(url_for('sala_reunioes'))
+    return render_template('sala_reunioes_form.html', form=form)
 
 
 @app.route('/consultorias')
