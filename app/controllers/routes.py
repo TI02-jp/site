@@ -183,6 +183,14 @@ def consultorias():
     return render_template('consultorias.html', consultorias=consultorias)
 
 
+@app.route('/sala-reunioes')
+@login_required
+def sala_reunioes():
+    """Display meeting room agenda."""
+    agenda = []
+    return render_template('sala_reunioes.html', agenda=agenda)
+
+
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
 @login_required
 def cadastro_consultoria():
