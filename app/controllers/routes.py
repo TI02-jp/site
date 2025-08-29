@@ -175,6 +175,13 @@ def home():
     return render_template('home.html')
 
 
+@app.route('/sala-reunioes')
+@login_required
+def sala_reunioes():
+    """Display meeting room schedule."""
+    return render_template('sala_reunioes.html')
+
+
 @app.route('/consultorias')
 @login_required
 def consultorias():

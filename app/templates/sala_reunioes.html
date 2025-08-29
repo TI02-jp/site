@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}HOME{% endblock %}
+{% block title %}Sala de Reuniões{% endblock %}
 
 {% block sidebar_nav %}
 <div class="nav-section">
@@ -31,7 +31,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('sala_reunioes') }}">
+            <a class="nav-link active" href="{{ url_for('sala_reunioes') }}">
                 <i class="bi bi-calendar-event"></i>
                 SALA DE REUNIÕES
             </a>
@@ -44,8 +44,39 @@
 {% endblock %}
 
 {% block content %}
-<header class="py-5 text-white text-center" style="background-color: var(--primary);">
-    <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>SISTEMAS JP CONTÁBIL</h1>
-</header>
+<div class="container py-4">
+    <h1 class="mb-4"><i class="bi bi-calendar-event me-2"></i>Agenda da Sala de Reuniões</h1>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Horário</th>
+                    <th>Evento</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>08:00 - 09:00</td>
+                    <td>Reunião de equipe</td>
+                </tr>
+                <tr>
+                    <td>09:30 - 10:30</td>
+                    <td>Planejamento de projetos</td>
+                </tr>
+                <tr>
+                    <td>11:00 - 12:00</td>
+                    <td>Disponível</td>
+                </tr>
+                <tr>
+                    <td>14:00 - 15:00</td>
+                    <td>Reunião com clientes</td>
+                </tr>
+                <tr>
+                    <td>15:30 - 16:30</td>
+                    <td>Disponível</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
-
