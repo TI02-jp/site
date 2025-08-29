@@ -308,9 +308,10 @@ body.login-page {
 
 /* Logo no login - tamanho e posicionamento */
 .img-login {
+    max-width: 200px;
     width: 100%;
-    object-fit: cover;
-    max-height: 80px;
+    height: auto;
+    object-fit: contain;
     object-position: center;
     border-radius: 6px;
 }
