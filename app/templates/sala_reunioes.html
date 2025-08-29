@@ -49,6 +49,11 @@
 </header>
 <div class="container my-4">
     <p class="text-muted">Aqui você poderá consultar a agenda da sala de reuniões.</p>
+    {% if current_user.role == 'admin' %}
+    <div class="text-end mb-3">
+        <a href="{{ url_for('novo_evento') }}" class="btn btn-primary">Criar Evento</a>
+    </div>
+    {% endif %}
     <table class="table table-bordered" id="agenda">
         <thead>
             <tr>

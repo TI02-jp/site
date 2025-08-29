@@ -210,6 +210,31 @@ def sala_reunioes():
     return render_template('sala_reunioes.html', agenda=agenda)
 
 
+@app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
+@admin_required
+def novo_evento():
+    """Create a new meeting room event."""
+    users = User.query.order_by(User.name).all()
+    if request.method == 'POST':
+        title = sanitize_html(request.form.get('title'))
+        start_str = request.form.get('start_time')
+        end_str = request.form.get('end_time')
+        user_id = request.form.get('user_id')
+        start_time = datetime.strptime(start_str, '%Y-%m-%dT%H:%M') if start_str else None
+        end_time = datetime.strptime(end_str, '%Y-%m-%dT%H:%M') if end_str else None
+        event = MeetingRoomEvent(
+            title=title,
+            start_time=start_time,
+            end_time=end_time,
+            user_id=int(user_id) if user_id else None,
+        )
+        db.session.add(event)
+        db.session.commit()
+        flash('Evento criado com sucesso.', 'success')
+        return redirect(url_for('sala_reunioes'))
+    return render_template('novo_evento.html', users=users)
+
+
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
 @login_required
 def cadastro_consultoria():
