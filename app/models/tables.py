@@ -111,6 +111,22 @@ class Inclusao(db.Model):
     def __repr__(self):
         return f"<Inclusao {self.assunto}>"
 
+
+class MeetingRoomEvent(db.Model):
+    """Scheduled meeting room event."""
+    __tablename__ = 'meeting_room_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('meeting_room_events', lazy=True))
+
+    def __repr__(self):
+        return f"<MeetingRoomEvent {self.title}>"
+
 class Empresa(db.Model):
     """Company registered in the system."""
     __tablename__ = 'tbl_empresas'

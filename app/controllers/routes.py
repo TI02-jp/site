@@ -6,7 +6,15 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
 from app.loginForms import LoginForm, RegistrationForm
-from app.models.tables import User, Empresa, Departamento, Consultoria, Setor, Inclusao
+from app.models.tables import (
+    User,
+    Empresa,
+    Departamento,
+    Consultoria,
+    Setor,
+    Inclusao,
+    MeetingRoomEvent,
+)
 from app.forms import (
     EmpresaForm,
     EditUserForm,
@@ -187,16 +195,17 @@ def consultorias():
 @login_required
 def sala_reunioes():
     """Display meeting room agenda."""
-    today = datetime.now()
+    events = MeetingRoomEvent.query.order_by(MeetingRoomEvent.start_time).all()
     agenda = [
         {
-            'data': today.strftime('%d/%m/%Y'),
-            'data_iso': today.strftime('%Y-%m-%d'),
-            'inicio': '09:00',
-            'fim': '10:00',
-            'evento': 'Exemplo de Reunião',
-            'usuario': 'Usuário Exemplo'
+            'data': e.start_time.strftime('%d/%m/%Y'),
+            'inicio': e.start_time.strftime('%H:%M'),
+            'fim': e.end_time.strftime('%H:%M'),
+            'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M'),
+            'evento': e.title,
+            'usuario': e.user.name if e.user else ''
         }
+        for e in events
     ]
     return render_template('sala_reunioes.html', agenda=agenda)
 
