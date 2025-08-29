@@ -47,6 +47,18 @@ Barra de navegação fixa na visualização da empresa
     box-shadow: none;
 }
 
+.btn-company-nav {
+    background-color: transparent;
+    border-color: transparent;
+    color: #fff;
+}
+
+.btn-company-nav:hover,
+.btn-company-nav:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
 .company-nav .btn.active {
     background-color: rgba(255, 255, 255, 0.2);
     color: #fff;
@@ -1184,51 +1196,51 @@ Mensagem de login flutuante
 }
 
 .btn-dept-blue {
-    background-color: transparent;
-    border-color: transparent;
+    background-color: var(--primary);
+    border-color: var(--primary);
     color: #fff;
 }
 
 .btn-dept-blue:hover {
-    background-color: transparent;
-    border-color: transparent;
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
     color: #fff;
 }
 
 .btn-dept-orange {
-    background-color: transparent;
-    border-color: transparent;
+    background-color: var(--accent);
+    border-color: var(--accent);
     color: #fff;
 }
 
 .btn-dept-orange:hover {
-    background-color: transparent;
-    border-color: transparent;
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
     color: #fff;
 }
 
 .btn-outline-dept-blue {
     background-color: transparent;
     border-color: var(--primary);
-    color: var(--accent);
+    color: var(--primary);
 }
 
 .btn-outline-dept-blue:hover {
     background-color: var(--primary);
     border-color: var(--primary);
-    color: var(--accent);
+    color: #fff;
 }
 
 .btn-outline-dept-orange {
     background-color: transparent;
     border-color: var(--accent);
-    color: var(--primary);
+    color: var(--accent);
 }
 
 .btn-outline-dept-orange:hover {
     background-color: var(--accent);
     border-color: var(--accent);
-    color: var(--primary);
+    color: #fff;
 }
 
 
