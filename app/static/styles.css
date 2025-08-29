@@ -36,7 +36,7 @@ Navbar (fixa com sombra leve)
 Barra de navegação fixa na visualização da empresa
 ----------------------------- */
 .company-nav {
-    background: linear-gradient(90deg, var(--primary), var(--accent));
+    background-color: var(--primary);
     color: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: none;
