@@ -351,7 +351,7 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5" style="border-color:var(--primary-dark);">
+        <div class="card shadow-lg mb-5" style="border-color:var(--primary);">
             <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
             <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
@@ -500,7 +500,7 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5" style="border-color:var(--primary-color);">
+        <div class="card shadow-lg mb-5" style="border-color:var(--accent);">
             <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
             <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
@@ -582,7 +582,7 @@
                 </div>
             </div>
         {% else %}
-            <div class="card shadow-lg mb-5" style="border-color:var(--primary-dark);">
+            <div class="card shadow-lg mb-5" style="border-color:var(--primary);">
                 <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
                 <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
             </div>
@@ -615,7 +615,7 @@
             </div>
         </div>
     {% else %}
-        <div class="card shadow-lg mb-5" style="border-color:var(--primary-color);">
+        <div class="card shadow-lg mb-5" style="border-color:var(--accent);">
             <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
             <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
@@ -789,3 +789,4 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 {% endblock %}
+
