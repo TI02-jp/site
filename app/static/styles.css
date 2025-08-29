@@ -286,7 +286,7 @@ TELA DE LOGIN - ESTILOS ESPECÍFICOS
 
 /* Body da página de login com background especial */
 body.login-page {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+    background: linear-gradient(135deg, #0b288b, #e87429);
     min-height: 100vh;
     display: flex;
     align-items: center;
