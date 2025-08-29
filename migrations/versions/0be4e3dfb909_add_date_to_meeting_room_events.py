@@ -18,7 +18,7 @@ depends_on = None
 def upgrade():
     op.add_column('meeting_room_events', sa.Column('date', sa.Date(), nullable=True))
     op.execute("UPDATE meeting_room_events SET date = DATE(start_time)")
-    op.alter_column('meeting_room_events', 'date', nullable=False)
+    op.alter_column('meeting_room_events', 'date', existing_type=sa.Date(), nullable=False)
 
 
 def downgrade():
