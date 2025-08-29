@@ -57,12 +57,18 @@
                     <input type="text" id="title" name="title" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label for="start_time" class="form-label">Início</label>
-                    <input type="datetime-local" id="start_time" name="start_time" class="form-control" required>
+                    <label for="date" class="form-label">Data</label>
+                    <input type="date" id="date" name="date" class="form-control" required>
                 </div>
-                <div class="mb-3">
-                    <label for="end_time" class="form-label">Fim</label>
-                    <input type="datetime-local" id="end_time" name="end_time" class="form-control" required>
+                <div class="row">
+                    <div class="col mb-3">
+                        <label for="start_time" class="form-label">Início</label>
+                        <input type="time" id="start_time" name="start_time" class="form-control" required>
+                    </div>
+                    <div class="col mb-3">
+                        <label for="end_time" class="form-label">Fim</label>
+                        <input type="time" id="end_time" name="end_time" class="form-control" required>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label for="user_id" class="form-label">Usuário</label>
