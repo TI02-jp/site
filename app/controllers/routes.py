@@ -194,7 +194,7 @@ def cadastro_consultoria():
 
 @app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
-def editar_consultoria(id):
+def editar_consultoria_cadastro(id):
     consultoria = Consultoria.query.get_or_404(id)
     form = ConsultoriaForm(obj=consultoria)
     if form.validate_on_submit():
@@ -300,11 +300,11 @@ def nova_inclusao():
 
 @app.route('/consultorias/inclusoes/<int:codigo>')
 @login_required
-def visualizar_inclusao(codigo):
+def visualizar_consultoria(codigo):
     """Display details for a single consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     return render_template(
-        'visualizar_inclusao.html',
+        'visualizar_consultoria.html',
         inclusao=inclusao,
         data_formatada=inclusao.data_formatada,
     )
@@ -312,7 +312,7 @@ def visualizar_inclusao(codigo):
 
 @app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])
 @login_required
-def editar_inclusao(codigo):
+def editar_consultoria(codigo):
     """Render and handle editing of a consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     users = User.query.order_by(User.name).all()

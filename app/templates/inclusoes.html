@@ -45,10 +45,10 @@
                             <td class="text-start">{{ inc.consultoria }}</td>
                             <td class="text-start text-truncate" style="max-width: 400px;">{{ inc.assunto }}</td>
                             <td class="text-center">
-                                <a href="{{ url_for('visualizar_inclusao', codigo=inc.id) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
+                                <a href="{{ url_for('visualizar_consultoria', codigo=inc.id) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ url_for('editar_inclusao', codigo=inc.id) }}" class="btn btn-custom btn-sm" title="Editar">
+                                <a href="{{ url_for('editar_consultoria', codigo=inc.id) }}" class="btn btn-custom btn-sm" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                             </td>

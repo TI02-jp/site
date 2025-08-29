@@ -7,7 +7,7 @@
     <div class="nav-section-title">CADASTRO</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link {% if request.endpoint in ['consultorias', 'cadastro_consultoria', 'editar_consultoria'] %}active{% endif %}" href="{{ url_for('consultorias') }}">
+            <a class="nav-link {% if request.endpoint in ['consultorias', 'cadastro_consultoria', 'editar_consultoria_cadastro'] %}active{% endif %}" href="{{ url_for('consultorias') }}">
                 <i class="bi bi-buildings"></i>
                 CONSULTORIAS
             </a>
@@ -18,7 +18,7 @@
     <div class="nav-section-title">OUTROS</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link {% if request.endpoint in ['inclusoes', 'nova_inclusao', 'visualizar_inclusao', 'editar_inclusao'] %}active{% endif %}" href="{{ url_for('inclusoes') }}">
+            <a class="nav-link {% if request.endpoint in ['inclusoes', 'nova_inclusao', 'visualizar_consultoria', 'editar_consultoria'] %}active{% endif %}" href="{{ url_for('inclusoes') }}">
                 <i class="bi bi-plus-circle"></i>
                 INCLUSÕES
             </a>
