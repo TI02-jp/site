@@ -244,7 +244,7 @@ def editar_setor(id):
 @app.route('/consultorias/inclusoes')
 @login_required
 def inclusoes():
-    """List and search Inclusões de Consultoria."""
+    """List and search Consultorias."""
     search_raw = request.args.get('q', '')
     query = Inclusao.query
 
@@ -270,7 +270,7 @@ def inclusoes():
 @app.route('/consultorias/inclusoes/nova', methods=['GET', 'POST'])
 @login_required
 def nova_inclusao():
-    """Render and handle Inclusões de Consultoria form."""
+    """Render and handle Consultoria form."""
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
         user_id = request.form.get('usuario')
@@ -288,7 +288,7 @@ def nova_inclusao():
         )
         db.session.add(inclusao)
         db.session.commit()
-        flash('Inclusão registrada com sucesso.', 'success')
+        flash('Consultoria registrada com sucesso.', 'success')
         return redirect(url_for('inclusoes'))
     return render_template(
         'nova_inclusao.html',
@@ -301,7 +301,7 @@ def nova_inclusao():
 @app.route('/consultorias/inclusoes/<int:codigo>')
 @login_required
 def visualizar_inclusao(codigo):
-    """Display details for a single inclusão."""
+    """Display details for a single consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     return render_template(
         'visualizar_inclusao.html',
@@ -313,7 +313,7 @@ def visualizar_inclusao(codigo):
 @app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])
 @login_required
 def editar_inclusao(codigo):
-    """Render and handle editing of an inclusão."""
+    """Render and handle editing of a consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
@@ -328,7 +328,7 @@ def editar_inclusao(codigo):
         inclusao.pergunta = sanitize_html(request.form.get('pergunta'))
         inclusao.resposta = sanitize_html(request.form.get('resposta'))
         db.session.commit()
-        flash('Inclusão atualizada com sucesso.', 'success')
+        flash('Consultoria atualizada com sucesso.', 'success')
         return redirect(url_for('inclusoes'))
     return render_template(
         'nova_inclusao.html',
