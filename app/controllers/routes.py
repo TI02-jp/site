@@ -217,11 +217,22 @@ def novo_evento():
     users = User.query.order_by(User.name).all()
     if request.method == 'POST':
         title = sanitize_html(request.form.get('title'))
+        date_str = request.form.get('date')
         start_str = request.form.get('start_time')
         end_str = request.form.get('end_time')
         user_id = request.form.get('user_id')
-        start_time = datetime.strptime(start_str, '%Y-%m-%dT%H:%M') if start_str else None
-        end_time = datetime.strptime(end_str, '%Y-%m-%dT%H:%M') if end_str else None
+
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
+        start_time = (
+            datetime.combine(date_obj, datetime.strptime(start_str, '%H:%M').time())
+            if date_obj and start_str
+            else None
+        )
+        end_time = (
+            datetime.combine(date_obj, datetime.strptime(end_str, '%H:%M').time())
+            if date_obj and end_str
+            else None
+        )
         event = MeetingRoomEvent(
             title=title,
             start_time=start_time,
