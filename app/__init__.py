@@ -1,3 +1,5 @@
+"""Flask application factory and common utilities."""
+
 import os
 from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
@@ -34,6 +36,7 @@ login_manager.login_view = 'login'
 
 @app.before_request
 def _enforce_https():
+    """Redirect incoming HTTP requests to HTTPS when enforcement is enabled."""
     if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
@@ -41,6 +44,7 @@ def _enforce_https():
 
 @app.before_request
 def _update_last_seen():
+    """Update ``current_user.last_seen`` periodically for activity tracking."""
     if current_user.is_authenticated:
         now = datetime.utcnow()
         if not current_user.last_seen or (now - current_user.last_seen) > timedelta(minutes=1):
@@ -50,6 +54,7 @@ def _update_last_seen():
 
 @app.after_request
 def _set_security_headers(response):
+    """Apply security-related HTTP headers to responses."""
     if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) == 'https':
         response.headers.setdefault(
             'Strict-Transport-Security',
@@ -63,6 +68,7 @@ from app.controllers import routes
 
 @login_manager.user_loader
 def load_user(user_id):
+    """Load a :class:`User` instance for Flask-Login."""
     from app.models.tables import User  # importa aqui para evitar circular import
     return User.query.get(int(user_id))
 
@@ -92,6 +98,7 @@ def _time_since(value):
 
 @app.template_global()
 def render_badge_list(items, classes, icon, placeholder):
+    """Render a list of strings as styled badges in templates."""
     if not items or not isinstance(items, (list, tuple)):
         return Markup(placeholder)
     badges = [

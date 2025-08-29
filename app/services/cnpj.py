@@ -1,3 +1,5 @@
+"""Service layer for consulting CNPJ data from external APIs."""
+
 import os
 import re
 import requests
@@ -8,6 +10,7 @@ ACESSORIAS_TOKEN = os.getenv("ACESSORIAS_TOKEN")
 
 
 def get_acessorias_company(cnpj: str) -> dict | bool | None:
+    """Fetch company information from the Acessórias API."""
     if not ACESSORIAS_TOKEN:
         return None
     url = f"{ACESSORIAS_BASE}/companies/{cnpj}"
@@ -24,10 +27,12 @@ def get_acessorias_company(cnpj: str) -> dict | bool | None:
 
 
 def somente_numeros(s: str) -> str:
+    """Keep only numeric characters from ``s``."""
     return re.sub(r"\D", "", s or "")
 
 
 def ymd(d: str) -> str | None:
+    """Normalize different date formats to ``YYYY-MM-DD``."""
     if not d:
         return None
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y%m%d"):
@@ -114,6 +119,7 @@ def mapear_para_acessorias(d: dict) -> dict:
 
 
 def upsert_acessorias_company(payload: dict) -> dict | None:
+    """Create or update a company record in the Acessórias service."""
     if not ACESSORIAS_TOKEN:
         return None
     url = f"{ACESSORIAS_BASE}/companies"
@@ -130,6 +136,7 @@ def upsert_acessorias_company(payload: dict) -> dict | None:
 
 
 def get_brasilapi_cnpj(cnpj: str) -> dict | None:
+    """Retrieve CNPJ details from BrasilAPI."""
     url = f"https://brasilapi.com.br/api/cnpj/v1/{cnpj}"
     r = requests.get(url, timeout=20, proxies={"http": None, "https": None})
     if r.status_code == 200:
@@ -138,6 +145,7 @@ def get_brasilapi_cnpj(cnpj: str) -> dict | None:
 
 
 def get_receitaws_cnpj(cnpj: str) -> dict | None:
+    """Retrieve CNPJ details from the ReceitaWS service."""
     url = f"https://www.receitaws.com.br/v1/cnpj/{cnpj}"
     r = requests.get(url, timeout=20, proxies={"http": None, "https": None})
     if r.status_code == 200:
@@ -152,6 +160,7 @@ def get_receitaws_cnpj(cnpj: str) -> dict | None:
 
 
 def mapear_para_form(d: dict) -> dict:
+    """Map CNPJ API data into the company form payload."""
     # Atividade principal
     atividade = ""
     ap = pick(d, "atividade_principal", "descricao_atividade_principal")
@@ -214,6 +223,7 @@ def mapear_para_form(d: dict) -> dict:
 
 
 def consultar_cnpj(cnpj_input: str) -> dict | None:
+    """Combine external API data and Acessórias records for a given CNPJ."""
     cnpj = somente_numeros(cnpj_input)
     if len(cnpj) != 14:
         raise ValueError("CNPJ inválido")

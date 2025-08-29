@@ -1,3 +1,5 @@
+"""Database models used by the application."""
+
 import json
 from sqlalchemy.types import TypeDecorator, String
 from app import db
@@ -17,11 +19,13 @@ class JsonString(TypeDecorator):
         super().__init__(length=length, **kwargs)
 
     def process_bind_param(self, value, dialect):
+        """Serialize Python objects to JSON before storing in the DB."""
         if value is not None:
             return json.dumps(value)
         return None
 
     def process_result_value(self, value, dialect):
+        """Deserialize JSON strings from the DB into Python objects."""
         if value is not None:
             try:
                 return json.loads(value)
@@ -42,9 +46,11 @@ class User(db.Model, UserMixin):
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
+        """Hash and store the user's password."""
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
+        """Validate a plaintext password against the stored hash."""
         return check_password_hash(self.password, password)
 
     @property

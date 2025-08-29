@@ -1,3 +1,11 @@
+"""Utility helpers for running standalone database migrations.
+
+This module provides :class:`DatabaseManager`, a small wrapper around
+``mysql.connector`` that abstracts connection handling and common
+operations used by maintenance scripts.  It is intentionally lightweight
+and does not depend on the application's SQLAlchemy models.
+"""
+
 import mysql.connector
 from mysql.connector import errorcode
 import logging
@@ -13,10 +21,15 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
 class DatabaseManager:
+    """Simple wrapper for raw MySQL operations."""
+
     def __init__(self):
+        """Initialize without establishing a connection."""
         self.connection = None
         self.cursor = None
+        # Matches ``%s`` placeholders to enforce parameterized queries
         self._param_pattern = re.compile(r"%s")
         
     def connect(self):
@@ -116,6 +129,7 @@ class DatabaseManager:
             logger.info("Conexão MySQL encerrada")
 
 def main():
+    """Execute database maintenance operations when run as a script."""
     db = DatabaseManager()
     
     if not db.connect():

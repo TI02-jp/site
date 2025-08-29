@@ -1,3 +1,5 @@
+"""Flask route handlers for the web application."""
+
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
@@ -202,6 +204,7 @@ def cadastro_consultoria():
 @app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_consultoria_cadastro(id):
+    """Edit an existing consultoria entry."""
     consultoria = Consultoria.query.get_or_404(id)
     form = ConsultoriaForm(obj=consultoria)
     if form.validate_on_submit():
@@ -238,6 +241,7 @@ def cadastro_setor():
 @app.route('/consultorias/setores/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_setor(id):
+    """Edit a registered setor."""
     setor = Setor.query.get_or_404(id)
     form = SetorForm(obj=setor)
     if form.validate_on_submit():
@@ -361,6 +365,7 @@ def revoke_cookies():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Render the login page and handle authentication."""
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -383,11 +388,13 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    """Admin dashboard placeholder page."""
     return render_template('dashboard.html')
 
 @app.route('/api/cnpj/<cnpj>')
 @login_required
 def api_cnpj(cnpj):
+    """Provide a JSON API for CNPJ lookups."""
     try:
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
@@ -407,6 +414,7 @@ def api_cnpj(cnpj):
 @app.route('/cadastrar_empresa', methods=['GET', 'POST'])
 @login_required
 def cadastrar_empresa():
+    """Create a new company record."""
     form = EmpresaForm()
     if request.method == 'GET':
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
@@ -448,6 +456,7 @@ def cadastrar_empresa():
 @app.route('/listar_empresas')
 @login_required
 def listar_empresas():
+    """List companies with optional search and pagination."""
     search = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
     per_page = 20
@@ -577,6 +586,7 @@ def processar_dados_administrativo(request):
 @app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_empresa(id):
+    """Edit an existing company and its details."""
     empresa = Empresa.query.get_or_404(id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
 
@@ -616,6 +626,7 @@ def editar_empresa(id):
 @app.route('/empresa/visualizar/<int:id>')
 @login_required
 def visualizar_empresa(id):
+    """Display a detailed view of a company."""
     from types import SimpleNamespace
 
     empresa = Empresa.query.get_or_404(id)
@@ -688,6 +699,7 @@ def visualizar_empresa(id):
 @app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
 @login_required
 def gerenciar_departamentos(empresa_id):
+    """Create or update department data for a company."""
     empresa = Empresa.query.get_or_404(empresa_id)
 
     fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
@@ -847,12 +859,14 @@ def gerenciar_departamentos(empresa_id):
 @app.route('/relatorios')
 @admin_required
 def relatorios():
+    """Render the reports landing page."""
     return render_template('admin/relatorios.html')
 
 
 @app.route('/relatorio_empresas')
 @admin_required
 def relatorio_empresas():
+    """Display aggregated company statistics."""
     empresas = Empresa.query.with_entities(
         Empresa.nome_empresa,
         Empresa.cnpj,
@@ -916,6 +930,7 @@ def relatorio_empresas():
 @app.route('/relatorio_fiscal')
 @admin_required
 def relatorio_fiscal():
+    """Show summary charts for the fiscal department."""
     departamentos = (
         Departamento.query.filter_by(tipo='Departamento Fiscal')
         .join(Empresa)
@@ -1015,6 +1030,7 @@ def relatorio_fiscal():
 @app.route('/relatorio_contabil')
 @admin_required
 def relatorio_contabil():
+    """Show summary charts for the accounting department."""
     departamentos = (
         Departamento.query.filter_by(tipo='Departamento Contábil')
         .join(Empresa)
@@ -1128,6 +1144,7 @@ def relatorio_contabil():
 @app.route('/relatorio_usuarios')
 @admin_required
 def relatorio_usuarios():
+    """Visualize user counts by role and status."""
     users = User.query.with_entities(
         User.username, User.name, User.email, User.role, User.ativo
     ).all()
@@ -1210,6 +1227,7 @@ def list_users():
 @app.route('/admin/online-users')
 @admin_required
 def online_users():
+    """List users active within the last five minutes."""
     cutoff = datetime.utcnow() - timedelta(minutes=5)
     users = User.query.filter(User.last_seen >= cutoff).order_by(User.name).all()
     return render_template('admin/online_users.html', users=users)
