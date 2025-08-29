@@ -14,11 +14,11 @@
             <form method="post" action="{{ url_for('editar_inclusao', codigo=inclusao.id) if inclusao else url_for('nova_inclusao') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label for="data" class="form-label">Data</label>
                         <input type="date" id="data" name="data" class="form-control" value="{{ inclusao.data if inclusao else '' }}">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-9">
                         <label for="usuario" class="form-label">Usuário</label>
                         <select id="usuario" name="usuario" class="form-select">
                             {% for u in users %}
