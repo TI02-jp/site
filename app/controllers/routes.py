@@ -195,7 +195,13 @@ def consultorias():
 @login_required
 def sala_reunioes():
     """Display meeting room agenda."""
-    events = MeetingRoomEvent.query.order_by(MeetingRoomEvent.start_time).all()
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    events = (
+        MeetingRoomEvent.query
+        .filter(MeetingRoomEvent.end_time >= cutoff)
+        .order_by(MeetingRoomEvent.start_time)
+        .all()
+    )
     agenda = []
     for e in events:
         date_obj = e.date or (e.start_time.date() if e.start_time else None)
