@@ -198,7 +198,7 @@ def sala_reunioes():
     events = MeetingRoomEvent.query.order_by(MeetingRoomEvent.start_time).all()
     agenda = [
         {
-            'data': e.start_time.strftime('%d/%m/%Y'),
+            'data': e.date.strftime('%d/%m/%Y'),
             'inicio': e.start_time.strftime('%H:%M'),
             'fim': e.end_time.strftime('%H:%M'),
             'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M'),
@@ -235,6 +235,7 @@ def novo_evento():
         )
         event = MeetingRoomEvent(
             title=title,
+            date=date_obj,
             start_time=start_time,
             end_time=end_time,
             user_id=int(user_id) if user_id else None,
