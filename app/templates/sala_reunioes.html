@@ -49,28 +49,44 @@
 </header>
 <div class="container my-4">
     <p class="text-muted">Aqui você poderá consultar a agenda da sala de reuniões.</p>
-    <table class="table table-bordered">
+    <table class="table table-bordered" id="agenda">
         <thead>
             <tr>
                 <th>Data</th>
-                <th>Horário</th>
+                <th>Período</th>
                 <th>Evento</th>
+                <th>Usuário</th>
             </tr>
         </thead>
         <tbody>
             {% for item in agenda %}
-            <tr>
+            <tr data-end="{{ item.data_iso }}T{{ item.fim }}">
                 <td>{{ item.data }}</td>
-                <td>{{ item.horario }}</td>
+                <td>{{ item.inicio }} - {{ item.fim }}</td>
                 <td>{{ item.evento }}</td>
+                <td>{{ item.usuario }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="3" class="text-center text-muted">Nenhuma reunião agendada.</td>
+                <td colspan="4" class="text-center text-muted">Nenhuma reunião agendada.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+<script>
+function hidePastEvents() {
+    const rows = document.querySelectorAll('#agenda tbody tr[data-end]');
+    const now = new Date();
+    rows.forEach(row => {
+        const endTime = new Date(row.dataset.end);
+        if (now - endTime > 5 * 60 * 1000) {
+            row.style.display = 'none';
+        }
+    });
+}
+hidePastEvents();
+setInterval(hidePastEvents, 60000);
+</script>
 {% endblock %}
 

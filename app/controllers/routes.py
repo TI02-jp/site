@@ -187,7 +187,17 @@ def consultorias():
 @login_required
 def sala_reunioes():
     """Display meeting room agenda."""
-    agenda = []
+    today = datetime.now()
+    agenda = [
+        {
+            'data': today.strftime('%d/%m/%Y'),
+            'data_iso': today.strftime('%Y-%m-%d'),
+            'inicio': '09:00',
+            'fim': '10:00',
+            'evento': 'Exemplo de Reunião',
+            'usuario': 'Usuário Exemplo'
+        }
+    ]
     return render_template('sala_reunioes.html', agenda=agenda)
 
 
