@@ -195,10 +195,10 @@ def consultorias():
 @login_required
 def sala_reunioes():
     """Display meeting room agenda."""
-    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    cutoff = datetime.now() - timedelta(minutes=5)
     events = (
         MeetingRoomEvent.query
-        .filter(MeetingRoomEvent.end_time >= cutoff)
+        .filter(MeetingRoomEvent.end_time > cutoff)
         .order_by(MeetingRoomEvent.start_time)
         .all()
     )
