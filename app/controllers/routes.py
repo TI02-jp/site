@@ -305,7 +305,7 @@ def editar_setor(id):
 
 
 @app.route('/consultorias/relatorios')
-@login_required
+@admin_required
 def relatorios_consultorias():
     """Display reports of inclusões grouped by consultoria, user, and date."""
     inicio_raw = request.args.get('inicio')
