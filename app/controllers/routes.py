@@ -391,13 +391,15 @@ def relatorios_consultorias():
             }
         )
 
-    por_data = (
-        query.filter(Inclusao.data.isnot(None))
-        .with_entities(Inclusao.data, db.func.count(Inclusao.id))
-        .group_by(Inclusao.data)
-        .order_by(Inclusao.data)
-        .all()
-    )
+    por_data = []
+    if inicio or fim:
+        por_data = (
+            query.filter(Inclusao.data.isnot(None))
+            .with_entities(Inclusao.data, db.func.count(Inclusao.id))
+            .group_by(Inclusao.data)
+            .order_by(Inclusao.data)
+            .all()
+        )
 
     return render_template(
         'relatorios_consultorias.html',
