@@ -23,12 +23,14 @@
                 INCLUSÕES
             </a>
         </li>
+        {% if current_user.role == 'admin' %}
         <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'relatorios_consultorias' %}active{% endif %}" href="{{ url_for('relatorios_consultorias') }}">
                 <i class="bi bi-bar-chart"></i>
                 RELATÓRIOS
             </a>
         </li>
+        {% endif %}
     </ul>
 </div>
 <style>
