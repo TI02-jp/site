@@ -76,7 +76,7 @@
                         </thead>
                         <tbody>
                             {% for data, total in por_data %}
-                            <tr><td>{{ data.strftime('%d/%m/%Y') }}</td><td>{{ total }}</td></tr>
+                            <tr><td>{{ data.strftime('%d/%m/%Y') if data else '—' }}</td><td>{{ total }}</td></tr>
                             {% else %}
                             <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum registro</td></tr>
                             {% endfor %}
