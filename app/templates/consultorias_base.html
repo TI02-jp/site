@@ -23,6 +23,12 @@
                 INCLUSÕES
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'relatorios_consultorias' %}active{% endif %}" href="{{ url_for('relatorios_consultorias') }}">
+                <i class="bi bi-bar-chart"></i>
+                RELATÓRIOS
+            </a>
+        </li>
     </ul>
 </div>
 <style>
