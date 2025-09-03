@@ -254,7 +254,7 @@ def novo_evento():
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
     form = ConsultoriaForm()
@@ -272,7 +272,7 @@ def cadastro_consultoria():
 
 
 @app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def editar_consultoria_cadastro(id):
     """Edit an existing consultoria entry."""
     consultoria = Consultoria.query.get_or_404(id)
@@ -295,7 +295,7 @@ def setores():
 
 
 @app.route('/consultorias/setores/cadastro', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def cadastro_setor():
     """Render and handle the Cadastro de Setor page."""
     form = SetorForm()
@@ -309,7 +309,7 @@ def cadastro_setor():
 
 
 @app.route('/consultorias/setores/editar/<int:id>', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def editar_setor(id):
     """Edit a registered setor."""
     setor = Setor.query.get_or_404(id)

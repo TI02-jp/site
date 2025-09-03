@@ -18,9 +18,11 @@
             Consultorias
             <span class="badge bg-primary ms-2">{{ consultorias|length }}</span>
         </h1>
+        {% if current_user.role == 'admin' %}
         <a href="{{ url_for('cadastro_consultoria') }}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i>Nova Consultoria
         </a>
+        {% endif %}
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-0">
@@ -32,7 +34,9 @@
                             <th class="text-start">Consultoria</th>
                             <th class="text-start">Usuário</th>
                             <th class="text-start">Senha</th>
+                            {% if current_user.role == 'admin' %}
                             <th class="text-end">Ações</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -42,15 +46,17 @@
                             <td class="text-start">{{ c.nome }}</td>
                             <td class="text-start">{{ c.usuario }}</td>
                             <td class="text-start">{{ c.senha }}</td>
+                            {% if current_user.role == 'admin' %}
                             <td class="text-end">
                                 <a href="{{ url_for('editar_consultoria_cadastro', id=c.id) }}" class="btn btn-custom btn-sm" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                             </td>
+                            {% endif %}
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
+                            <td colspan="{{ 5 if current_user.role == 'admin' else 4 }}" class="text-center py-5 text-muted">
                                 <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
                                 Nenhuma consultoria cadastrada
                             </td>
