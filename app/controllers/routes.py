@@ -34,6 +34,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+from itsdangerous import URLSafeSerializer
 
 @app.context_processor
 def inject_stats():
@@ -194,8 +195,16 @@ def consultorias():
 @app.route('/sala-reunioes')
 @login_required
 def sala_reunioes():
-    """Display meeting room agenda via external system."""
-    return render_template('sala_reunioes.html')
+    """Display meeting room agenda via external system.
+
+    Generates a signed token with the current user's ID and appends
+    it as a query parameter to the iframe source. The external calendar
+    service can verify this token to identify who is creating events.
+    """
+    serializer = URLSafeSerializer(current_app.config['SECRET_KEY'])
+    token = serializer.dumps({'user_id': current_user.id})
+    iframe_src = f"http://192.168.0.211:4000?token={token}"
+    return render_template('sala_reunioes.html', iframe_src=iframe_src)
 
 
 @app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
