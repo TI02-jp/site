@@ -343,7 +343,8 @@ def relatorios_consultorias():
     )
 
     por_data = (
-        query.with_entities(Inclusao.data, db.func.count(Inclusao.id))
+        query.filter(Inclusao.data.isnot(None))
+        .with_entities(Inclusao.data, db.func.count(Inclusao.id))
         .group_by(Inclusao.data)
         .order_by(Inclusao.data)
         .all()
