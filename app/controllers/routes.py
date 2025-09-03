@@ -197,12 +197,14 @@ def consultorias():
 def sala_reunioes():
     """Display meeting room agenda via external system.
 
-    Generates a signed token with the current user's ID and appends
-    it as a query parameter to the iframe source. The external calendar
-    service can verify this token to identify who is creating events.
+    Generates a signed token containing the current user's ID and name
+    and appends it as a query parameter to the iframe source. The
+    external calendar service can verify this token to identify who is
+    creating events.
     """
     serializer = URLSafeSerializer(current_app.config['SECRET_KEY'])
-    token = serializer.dumps({'user_id': current_user.id})
+    user_payload = {'id': current_user.id, 'name': current_user.name}
+    token = serializer.dumps(user_payload)
     iframe_src = f"http://192.168.0.211:4000?token={token}"
     return render_template('sala_reunioes.html', iframe_src=iframe_src)
 
