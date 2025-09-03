@@ -304,6 +304,61 @@ def editar_setor(id):
     return render_template('cadastro_setor.html', form=form, setor=setor)
 
 
+@app.route('/consultorias/relatorios')
+@login_required
+def relatorios_consultorias():
+    """Display reports of inclusões grouped by consultoria, user, and date."""
+    inicio_raw = request.args.get('inicio')
+    fim_raw = request.args.get('fim')
+    query = Inclusao.query
+
+    inicio = None
+    if inicio_raw:
+        try:
+            inicio = datetime.strptime(inicio_raw, '%Y-%m-%d').date()
+            query = query.filter(Inclusao.data >= inicio)
+        except ValueError:
+            inicio = None
+
+    fim = None
+    if fim_raw:
+        try:
+            fim = datetime.strptime(fim_raw, '%Y-%m-%d').date()
+            query = query.filter(Inclusao.data <= fim)
+        except ValueError:
+            fim = None
+
+    por_consultoria = (
+        query.with_entities(Inclusao.consultoria, db.func.count(Inclusao.id))
+        .group_by(Inclusao.consultoria)
+        .order_by(db.func.count(Inclusao.id).desc())
+        .all()
+    )
+
+    por_usuario = (
+        query.with_entities(Inclusao.usuario, db.func.count(Inclusao.id))
+        .group_by(Inclusao.usuario)
+        .order_by(db.func.count(Inclusao.id).desc())
+        .all()
+    )
+
+    por_data = (
+        query.with_entities(Inclusao.data, db.func.count(Inclusao.id))
+        .group_by(Inclusao.data)
+        .order_by(Inclusao.data)
+        .all()
+    )
+
+    return render_template(
+        'relatorios_consultorias.html',
+        por_consultoria=por_consultoria,
+        por_usuario=por_usuario,
+        por_data=por_data,
+        inicio=inicio.strftime('%Y-%m-%d') if inicio else '',
+        fim=fim.strftime('%Y-%m-%d') if fim else '',
+    )
+
+
 @app.route('/consultorias/inclusoes')
 @login_required
 def inclusoes():
