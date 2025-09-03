@@ -67,6 +67,20 @@ class Post(db.Model):
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
 
 
+class Session(db.Model):
+    """Shared user session for Python and PHP applications."""
+    __tablename__ = "sessions"
+
+    session_id = db.Column(db.String(128), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    session_data = db.Column(db.JSON)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.Text)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('sessions', lazy=True))
+
+
 class Consultoria(db.Model):
     """Stores consulting company credentials."""
     __tablename__ = 'consultorias'

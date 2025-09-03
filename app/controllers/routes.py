@@ -1,6 +1,17 @@
 """Flask route handlers for the web application."""
 
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
+from flask import (
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    request,
+    abort,
+    jsonify,
+    current_app,
+    session,
+    make_response,
+)
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -14,6 +25,7 @@ from app.models.tables import (
     Setor,
     Inclusao,
     MeetingRoomEvent,
+    Session as UserSession,
 )
 from app.forms import (
     EmpresaForm,
@@ -545,11 +557,50 @@ def login():
                 duration=timedelta(days=30),
             )
             session.permanent = form.remember_me.data
+
+            # create shared session entry for PHP integration
+            user_session = UserSession(
+                session_id=str(uuid4()),
+                user_id=user.id,
+                session_data={'username': user.username},
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent'),
+            )
+            db.session.add(user_session)
+            db.session.commit()
+
+            resp = make_response(redirect(url_for('home')))
+            resp.set_cookie(
+                'session_id',
+                user_session.session_id,
+                max_age=int(app.config['PERMANENT_SESSION_LIFETIME'].total_seconds()),
+                secure=app.config['ENFORCE_HTTPS'],
+                httponly=True,
+            )
             flash('Login bem-sucedido!')
-            return redirect(url_for('home'))
+            return resp
         else:
             flash('Credenciais inválidas', 'danger')
     return render_template('login.html', form=form)
+
+
+@app.route('/api/session', methods=['GET'])
+def get_session():
+    """Return session information for the current user."""
+    sid = request.cookies.get('session_id')
+    if not sid:
+        return jsonify({'error': 'not authenticated'}), 401
+    user_session = UserSession.query.filter_by(session_id=sid).first()
+    if not user_session:
+        return jsonify({'error': 'invalid session'}), 401
+    user_session.last_activity = datetime.utcnow()
+    db.session.commit()
+    return jsonify(
+        {
+            'user_id': user_session.user_id,
+            'session_data': user_session.session_data,
+        }
+    )
 
 @app.route('/dashboard')
 @login_required
@@ -1354,8 +1405,14 @@ def relatorio_usuarios():
 @login_required
 def logout():
     """Log out the current user."""
+    sid = request.cookies.get('session_id')
+    if sid:
+        UserSession.query.filter_by(session_id=sid).delete()
+        db.session.commit()
     logout_user()
-    return redirect(url_for('index'))
+    resp = make_response(redirect(url_for('index')))
+    resp.delete_cookie('session_id')
+    return resp
 
 @app.route('/users', methods=['GET', 'POST'])
 @admin_required
