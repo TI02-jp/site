@@ -327,6 +327,7 @@ def editar_setor(id):
 def inclusoes():
     """List and search Consultorias."""
     search_raw = request.args.get('q', '')
+    page = request.args.get('page', 1, type=int)
     query = Inclusao.query
 
     if search_raw:
@@ -339,11 +340,12 @@ def inclusoes():
             )
         )
 
-    inclusoes = query.order_by(Inclusao.data.desc()).all()
+    pagination = query.order_by(Inclusao.data.desc()).paginate(page=page, per_page=50)
 
     return render_template(
         'inclusoes.html',
-        inclusoes=inclusoes,
+        inclusoes=pagination.items,
+        pagination=pagination,
         search=search_raw,
     )
 
