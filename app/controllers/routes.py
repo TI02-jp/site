@@ -319,6 +319,9 @@ def inclusoes():
                 Inclusao.assunto.ilike(like),
                 Inclusao.usuario.ilike(like),
                 Inclusao.consultoria.ilike(like),
+                Inclusao.setor.ilike(like),
+                Inclusao.pergunta.ilike(like),
+                Inclusao.resposta.ilike(like),
             )
         )
 
