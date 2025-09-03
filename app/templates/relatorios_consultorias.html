@@ -29,40 +29,20 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header">Inclusões por Consultoria</div>
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr><th>Consultoria</th><th>Total</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for nome, total in por_consultoria %}
-                            <tr><td>{{ nome or '—' }}</td><td>{{ total }}</td></tr>
-                            {% else %}
-                            <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum registro</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="p-3">
+                    {{ chart_consultoria|safe }}
                 </div>
+                <div id="consultoria-list" class="mt-3 d-flex justify-content-center"></div>
             </div>
         </div>
 
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header">Inclusões por Usuário</div>
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr><th>Usuário</th><th>Total</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for nome, total in por_usuario %}
-                            <tr><td>{{ nome or '—' }}</td><td>{{ total }}</td></tr>
-                            {% else %}
-                            <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum registro</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="p-3">
+                    {{ chart_usuario|safe }}
                 </div>
+                <div id="usuario-list" class="mt-3 d-flex justify-content-center"></div>
             </div>
         </div>
 
@@ -89,4 +69,52 @@
 </div>
 {% endblock %}
 
-{% block scripts %}{% endblock %}
+{% block scripts %}
+<script>
+    const inclusoesPorConsultoria = {{ inclusoes_por_consultoria|tojson }};
+    const consultoriaChart = document.getElementById('consultoria-chart');
+    if (consultoriaChart) {
+        consultoriaChart.on('plotly_click', function(data){
+            const label = data.points[0].x || data.points[0].label;
+            const registros = inclusoesPorConsultoria[label] || [];
+            const container = document.getElementById('consultoria-list');
+            if (!registros.length) {
+                container.innerHTML = '<p class="text-center">Nenhum registro.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Data</th><th>Usuário</th><th>Pergunta</th></tr></thead><tbody>';
+            registros.forEach(r => {
+                const data = r.data || '';
+                const usuario = r.usuario || '';
+                const pergunta = r.pergunta || '';
+                html += `<tr><td>${data}</td><td>${usuario}</td><td>${pergunta}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        });
+    }
+
+    const inclusoesPorUsuario = {{ inclusoes_por_usuario|tojson }};
+    const usuarioChart = document.getElementById('usuario-chart');
+    if (usuarioChart) {
+        usuarioChart.on('plotly_click', function(data){
+            const label = data.points[0].x || data.points[0].label;
+            const registros = inclusoesPorUsuario[label] || [];
+            const container = document.getElementById('usuario-list');
+            if (!registros.length) {
+                container.innerHTML = '<p class="text-center">Nenhum registro.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Data</th><th>Consultoria</th><th>Pergunta</th></tr></thead><tbody>';
+            registros.forEach(r => {
+                const data = r.data || '';
+                const consultoria = r.consultoria || '';
+                const pergunta = r.pergunta || '';
+                html += `<tr><td>${data}</td><td>${consultoria}</td><td>${pergunta}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        });
+    }
+</script>
+{% endblock %}
