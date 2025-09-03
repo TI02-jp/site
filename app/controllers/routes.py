@@ -34,6 +34,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+import jwt
 
 @app.context_processor
 def inject_stats():
@@ -194,8 +195,21 @@ def consultorias():
 @app.route('/sala-reunioes')
 @login_required
 def sala_reunioes():
-    """Display meeting room agenda via external system."""
-    return render_template('sala_reunioes.html')
+    """Display meeting room agenda via external system.
+
+    Generates a JWT containing the current user's ID and username with a
+    one-hour expiration and appends it as a query parameter to the iframe
+    source. The external calendar service can verify this token to
+    identify who is creating events.
+    """
+    payload = {
+        'user_id': current_user.id,
+        'username': current_user.username,
+        'exp': datetime.utcnow() + timedelta(hours=1),
+    }
+    token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+    iframe_src = f"http://192.168.0.211:4000?token={token}"
+    return render_template('sala_reunioes.html', iframe_src=iframe_src)
 
 
 @app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
