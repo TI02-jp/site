@@ -48,50 +48,8 @@
     <h1 class="display-4 mb-0"><i class="bi bi-calendar-event me-3"></i>AGENDA DA SALA DE REUNIÕES</h1>
 </header>
 <div class="container my-4">
-    <p class="text-muted">Aqui você poderá consultar a agenda da sala de reuniões.</p>
-    {% if current_user.role == 'admin' %}
-    <div class="text-end mb-3">
-        <a href="{{ url_for('novo_evento') }}" class="btn btn-primary">Criar Evento</a>
-    </div>
-    {% endif %}
-    <table class="table table-bordered text-start" id="agenda">
-        <thead>
-            <tr>
-                <th style="width: 15%;">Data</th>
-                <th style="width: 15%;">Período</th>
-                <th style="width: 20%;">Usuário</th>
-                <th style="width: 50%;">Evento</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in agenda %}
-            <tr data-end="{{ item.end_iso }}">
-                <td>{{ item.data }}</td>
-                <td>{{ item.inicio }} - {{ item.fim }}</td>
-                <td>{{ item.usuario }}</td>
-                <td>{{ item.evento }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="text-muted">Nenhuma reunião agendada.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <p class="text-muted">A agenda da sala de reuniões agora é exibida pelo sistema externo abaixo.</p>
+    <iframe src="URL_DO_NOVO_SISTEMA" style="width:100%;height:700px;border:0;" allowfullscreen></iframe>
 </div>
-<script>
-function hidePastEvents() {
-    const rows = document.querySelectorAll('#agenda tbody tr[data-end]');
-    const now = new Date();
-    rows.forEach(row => {
-        const endTime = new Date(row.dataset.end);
-        if (now - endTime > 5 * 60 * 1000) {
-            row.style.display = 'none';
-        }
-    });
-}
-hidePastEvents();
-setInterval(hidePastEvents, 60000);
-</script>
 {% endblock %}
 

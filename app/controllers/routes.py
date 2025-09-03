@@ -194,26 +194,8 @@ def consultorias():
 @app.route('/sala-reunioes')
 @login_required
 def sala_reunioes():
-    """Display meeting room agenda."""
-    cutoff = datetime.now() - timedelta(minutes=5)
-    events = (
-        MeetingRoomEvent.query
-        .filter(MeetingRoomEvent.end_time > cutoff)
-        .order_by(MeetingRoomEvent.start_time)
-        .all()
-    )
-    agenda = []
-    for e in events:
-        date_obj = e.date or (e.start_time.date() if e.start_time else None)
-        agenda.append({
-            'data': date_obj.strftime('%d/%m/%Y') if date_obj else '',
-            'inicio': e.start_time.strftime('%H:%M') if e.start_time else '',
-            'fim': e.end_time.strftime('%H:%M') if e.end_time else '',
-            'end_iso': e.end_time.strftime('%Y-%m-%dT%H:%M') if e.end_time else '',
-            'evento': e.title,
-            'usuario': e.user.name if e.user else ''
-        })
-    return render_template('sala_reunioes.html', agenda=agenda)
+    """Display meeting room agenda via external system."""
+    return render_template('sala_reunioes.html')
 
 
 @app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
