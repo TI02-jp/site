@@ -342,6 +342,55 @@ def relatorios_consultorias():
         .all()
     )
 
+    labels_consultoria = [c or '—' for c, _ in por_consultoria]
+    counts_consultoria = [total for _, total in por_consultoria]
+    fig_cons = go.Figure(
+        data=[
+            go.Bar(x=labels_consultoria, y=counts_consultoria, marker_color=qualitative.Pastel)
+        ]
+    )
+    fig_cons.update_layout(
+        title_text="Inclusões por consultoria",
+        template="seaborn",
+        xaxis_title="Consultoria",
+        yaxis_title="Total",
+    )
+    chart_consultoria = fig_cons.to_html(full_html=False, div_id='consultoria-chart')
+
+    labels_usuario = [u or '—' for u, _ in por_usuario]
+    counts_usuario = [total for _, total in por_usuario]
+    fig_user = go.Figure(
+        data=[go.Bar(x=labels_usuario, y=counts_usuario, marker_color=qualitative.Pastel)]
+    )
+    fig_user.update_layout(
+        title_text="Inclusões por usuário",
+        template="seaborn",
+        xaxis_title="Usuário",
+        yaxis_title="Total",
+    )
+    chart_usuario = fig_user.to_html(full_html=False, div_id='usuario-chart')
+
+    inclusoes = query.all()
+    inclusoes_por_consultoria = {}
+    inclusoes_por_usuario = {}
+    for inc in inclusoes:
+        label_cons = inc.consultoria or '—'
+        inclusoes_por_consultoria.setdefault(label_cons, []).append(
+            {
+                'usuario': inc.usuario,
+                'pergunta': inc.pergunta,
+                'data': inc.data.strftime('%d/%m/%Y') if inc.data else '',
+            }
+        )
+        label_user = inc.usuario or '—'
+        inclusoes_por_usuario.setdefault(label_user, []).append(
+            {
+                'consultoria': inc.consultoria,
+                'pergunta': inc.pergunta,
+                'data': inc.data.strftime('%d/%m/%Y') if inc.data else '',
+            }
+        )
+
     por_data = (
         query.filter(Inclusao.data.isnot(None))
         .with_entities(Inclusao.data, db.func.count(Inclusao.id))
@@ -352,8 +401,10 @@ def relatorios_consultorias():
 
     return render_template(
         'relatorios_consultorias.html',
-        por_consultoria=por_consultoria,
-        por_usuario=por_usuario,
+        chart_consultoria=chart_consultoria,
+        chart_usuario=chart_usuario,
+        inclusoes_por_consultoria=inclusoes_por_consultoria,
+        inclusoes_por_usuario=inclusoes_por_usuario,
         por_data=por_data,
         inicio=inicio.strftime('%Y-%m-%d') if inicio else '',
         fim=fim.strftime('%Y-%m-%d') if fim else '',
