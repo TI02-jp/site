@@ -243,6 +243,7 @@ footer {
     padding: 15px;
     width: 100%;
     margin-top: auto;
+    height: 50px;
 }
 
 /* -----------------------------
@@ -1269,7 +1270,7 @@ iframe {
             top: 0;
             left: 0;
             width: calc(100vw - 300px);
-            height: 100dvh;
+            height: calc(100vh - 50px);
             border: none;
             overflow-x: hidden;
         }
