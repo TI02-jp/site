@@ -33,7 +33,6 @@
                             <th class="text-start">Data</th>
                             <th class="text-start">Usuário</th>
                             <th class="text-start">Consultoria</th>
-                            <th class="text-start">Assunto</th>
                             <th class="text-center">Ações</th>
                         </tr>
                     </thead>
@@ -43,7 +42,6 @@
                             <td class="text-start">{{ inc.data_formatada }}</td>
                             <td class="text-start">{{ inc.usuario }}</td>
                             <td class="text-start">{{ inc.consultoria }}</td>
-                            <td class="text-start text-truncate" style="max-width: 400px;">{{ inc.assunto }}</td>
                             <td class="text-center">
                                 <a href="{{ url_for('visualizar_consultoria', codigo=inc.id) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
                                     <i class="bi bi-eye"></i>
@@ -55,7 +53,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
+                            <td colspan="4" class="text-center py-5 text-muted">
                                 <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
                                 Nenhuma consultoria encontrada
                             </td>
