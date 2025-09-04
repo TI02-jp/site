@@ -559,12 +559,18 @@ def google_authorized():
             scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
             redirect_uri = url_for('google_authorized', _external=True, _scheme=scheme)
         token = oauth.google.authorize_access_token(redirect_uri=redirect_uri)
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception('Falha na troca de token com o Google')
         flash('Erro na autenticação com o Google.', 'danger')
         return redirect(url_for('login'))
 
     # Fetch user information from Google and ensure the email is verified
-    userinfo = oauth.google.userinfo(token=token)
+    try:
+        userinfo = oauth.google.userinfo(token=token)
+    except Exception:
+        current_app.logger.exception('Falha ao obter dados do usuário do Google')
+        flash('Erro na autenticação com o Google.', 'danger')
+        return redirect(url_for('login'))
     email = userinfo.get('email') if userinfo else None
     if email and userinfo.get('email_verified'):
         normalized_email = email.lower()
