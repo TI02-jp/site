@@ -28,7 +28,7 @@ from app.forms import (
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -425,12 +425,9 @@ def inclusoes():
         like = f"%{search_raw}%"
         query = query.filter(
             or_(
-                Inclusao.assunto.ilike(like),
+                cast(Inclusao.data, String).ilike(like),
                 Inclusao.usuario.ilike(like),
-                Inclusao.consultoria.ilike(like),
-                Inclusao.setor.ilike(like),
-                Inclusao.pergunta.ilike(like),
-                Inclusao.resposta.ilike(like),
+                Inclusao.assunto.ilike(like),
             )
         )
 
