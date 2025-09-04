@@ -93,6 +93,16 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.tags.label(class="form-label fw-semibold") }}
+                                {{ form.tags(class="form-select", multiple=True) }}
+                                {% for error in form.tags.errors %}
+                                    <div class="form-text text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
                         <!-- Status -->
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Status do Usuário</label>

@@ -986,7 +986,7 @@ def gerenciar_departamentos(empresa_id):
             form_processed_successfully = True
 
         elif form_type == 'financeiro' and financeiro_form.validate():
-            if current_user.role not in ('admin', 'dep_financeiro'):
+            if current_user.role != 'admin' and not current_user.has_tag('dep_financeiro'):
                 abort(403)
             if not financeiro:
                 financeiro = Departamento(empresa_id=empresa_id, tipo='Departamento Financeiro')
@@ -1396,7 +1396,8 @@ def list_users():
                 username=form.username.data,
                 email=form.email.data,
                 name=form.name.data,
-                role=form.role.data
+                role=form.role.data,
+                tags=form.tags.data or []
             )
             user.set_password(form.password.data)
             db.session.add(user)
@@ -1435,7 +1436,8 @@ def novo_usuario():
                 username=form.username.data,
                 email=form.email.data,
                 name=form.name.data,
-                role=form.role.data
+                role=form.role.data,
+                tags=form.tags.data or []
             )
             user.set_password(form.password.data)
             db.session.add(user)
@@ -1450,12 +1452,14 @@ def edit_user(user_id):
     """Edit an existing user."""
     user = User.query.get_or_404(user_id)
     form = EditUserForm(obj=user)
+    form.tags.data = user.tags or []
 
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.name = form.name.data
         user.role = form.role.data
+        user.tags = form.tags.data or []
         user.ativo = form.ativo.data
 
         # Process optional password change

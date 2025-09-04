@@ -43,6 +43,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
+    tags = db.Column(JsonString(255))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -57,6 +58,10 @@ class User(db.Model, UserMixin):
     def is_active(self):
         """Return True if the user is marked as active."""
         return self.ativo
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if user has a specific permission tag."""
+        return tag in (self.tags or [])
 
 class Post(db.Model):
     """User-generated post."""

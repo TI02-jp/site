@@ -37,8 +37,13 @@ class RegistrationForm(FlaskForm):
     confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
     role = SelectField(
         'Perfil',
-        choices=[('user', 'Usuário'), ('admin', 'Administrador'), ('dep_financeiro', 'Dep. Financeiro')],
+        choices=[('user', 'Usuário'), ('admin', 'Administrador')],
         validators=[DataRequired()]
+    )
+    tags = SelectMultipleField(
+        'Tags',
+        choices=[('dep_financeiro', 'Dep. Financeiro')],
+        validators=[Optional()]
     )
     submit = SubmitField('Cadastrar')
 
@@ -99,8 +104,13 @@ class EditUserForm(FlaskForm):
     name = StringField('Nome', validators=[DataRequired()])
     role = SelectField(
         'Perfil',
-        choices=[('user', 'Usuário'), ('admin', 'Administrador'), ('dep_financeiro', 'Dep. Financeiro')],
+        choices=[('user', 'Usuário'), ('admin', 'Administrador')],
         validators=[DataRequired()]
+    )
+    tags = SelectMultipleField(
+        'Tags',
+        choices=[('dep_financeiro', 'Dep. Financeiro')],
+        validators=[Optional()]
     )
     ativo = BooleanField('Usuário Ativo')
 

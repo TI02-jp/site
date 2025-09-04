@@ -70,7 +70,7 @@
                         <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
                         <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
                         <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
-                        {% if current_user.role == 'admin' or current_user.role == 'dep_financeiro' %}
+                        {% if current_user.role == 'admin' or current_user.has_tag('dep_financeiro') %}
                         <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-currency-dollar me-1"></i>Financeiro</a>
                         {% endif %}
                     </div>
@@ -625,7 +625,7 @@
     {% endif %}
     </div>
 
-    {% if current_user.role == 'admin' or current_user.role == 'dep_financeiro' %}
+    {% if current_user.role == 'admin' or current_user.has_tag('dep_financeiro') %}
     <div id="financeiro" class="section-anchor">
     {% if financeiro %}
         <div class="card shadow-lg mb-5">
