@@ -1,7 +1,7 @@
 """Flask application factory and common utilities."""
 
 import os
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
@@ -44,9 +44,30 @@ def _enforce_https():
 
 @app.before_request
 def _update_last_seen():
-    """Update ``current_user.last_seen`` for each request."""
+    """Update ``current_user.last_seen`` and session activity."""
     if current_user.is_authenticated:
+        from app.models.tables import Session, SAO_PAULO_TZ
+
+        now_sp = datetime.now(SAO_PAULO_TZ)
         current_user.last_seen = datetime.utcnow()
+
+        sid = session.get('sid')
+        if sid:
+            sess = Session.query.get(sid)
+            if sess:
+                sess.last_activity = now_sp
+                sess.ip_address = request.remote_addr
+                sess.user_agent = request.headers.get('User-Agent')
+                sess.session_data = dict(session)
+            else:
+                sess = Session(
+                    session_id=sid,
+                    user_id=current_user.id,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    last_activity=now_sp,
+                )
+                db.session.add(sess)
         db.session.commit()
 
 
