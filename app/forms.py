@@ -35,7 +35,11 @@ class RegistrationForm(FlaskForm):
     name = StringField('Nome Completo', validators=[DataRequired()])
     password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
-    role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+    role = SelectField(
+        'Perfil',
+        choices=[('user', 'Usuário'), ('admin', 'Administrador'), ('dep_financeiro', 'Dep. Financeiro')],
+        validators=[DataRequired()]
+    )
     submit = SubmitField('Cadastrar')
 
 # --- Formulários da Aplicação ---
@@ -93,7 +97,11 @@ class EditUserForm(FlaskForm):
     username = StringField('Usuário', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
-    role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+    role = SelectField(
+        'Perfil',
+        choices=[('user', 'Usuário'), ('admin', 'Administrador'), ('dep_financeiro', 'Dep. Financeiro')],
+        validators=[DataRequired()]
+    )
     ativo = BooleanField('Usuário Ativo')
 
 class DepartamentoForm(FlaskForm):
@@ -169,6 +177,11 @@ class DepartamentoPessoalForm(DepartamentoForm):
 
 class DepartamentoAdministrativoForm(FlaskForm):
     """Formulário para o Departamento Administrativo."""
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+
+
+class DepartamentoFinanceiroForm(FlaskForm):
+    """Formulário para o Departamento Financeiro."""
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 

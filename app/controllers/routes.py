@@ -22,6 +22,7 @@ from app.forms import (
     DepartamentoContabilForm,
     DepartamentoPessoalForm,
     DepartamentoAdministrativoForm,
+    DepartamentoFinanceiroForm,
     ConsultoriaForm,
     SetorForm,
 )
@@ -801,6 +802,7 @@ def visualizar_empresa(id):
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+    financeiro = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Financeiro').first()
 
     def _prepare_envio_fisico(departamento):
         if not departamento:
@@ -847,6 +849,8 @@ def visualizar_empresa(id):
         pessoal.envio_fisico = _prepare_envio_fisico(pessoal)
     if administrativo:
         administrativo.envio_fisico = _prepare_envio_fisico(administrativo)
+    if financeiro:
+        financeiro.envio_fisico = _prepare_envio_fisico(financeiro)
 
     return render_template(
         'empresas/visualizar.html',
@@ -854,7 +858,8 @@ def visualizar_empresa(id):
         fiscal=fiscal_view,
         contabil=contabil,
         pessoal=pessoal,
-        administrativo=administrativo
+        administrativo=administrativo,
+        financeiro=financeiro
     )
     
     ## Rota para gerenciar departamentos de uma empresa
@@ -869,11 +874,13 @@ def gerenciar_departamentos(empresa_id):
     contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
+    financeiro = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Financeiro').first()
     
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoAdministrativoForm(request.form, obj=administrativo)
+    financeiro_form = DepartamentoFinanceiroForm(request.form, obj=financeiro)
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
@@ -912,10 +919,12 @@ def gerenciar_departamentos(empresa_id):
                 contabil.envio_fisico if isinstance(contabil.envio_fisico, list)
                 else json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
             )
-            contabil_form.controle_relatorios.data = (
-                contabil.controle_relatorios if isinstance(contabil.controle_relatorios, list)
-                else json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
-            )
+        contabil_form.controle_relatorios.data = (
+            contabil.controle_relatorios if isinstance(contabil.controle_relatorios, list)
+            else json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
+        )
+
+        financeiro_form = DepartamentoFinanceiroForm(obj=financeiro)
 
     form_type = request.form.get('form_type')
 
@@ -971,9 +980,20 @@ def gerenciar_departamentos(empresa_id):
             if not administrativo:
                 administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
                 db.session.add(administrativo)
-            
+
             administrativo_form.populate_obj(administrativo)
             flash('Departamento Administrativo salvo com sucesso!', 'success')
+            form_processed_successfully = True
+
+        elif form_type == 'financeiro' and financeiro_form.validate():
+            if current_user.role not in ('admin', 'dep_financeiro'):
+                abort(403)
+            if not financeiro:
+                financeiro = Departamento(empresa_id=empresa_id, tipo='Departamento Financeiro')
+                db.session.add(financeiro)
+
+            financeiro_form.populate_obj(financeiro)
+            flash('Departamento Financeiro salvo com sucesso!', 'success')
             form_processed_successfully = True
 
         if form_processed_successfully:
@@ -984,7 +1004,8 @@ def gerenciar_departamentos(empresa_id):
                     'fiscal': 'fiscal',
                     'contabil': 'contabil',
                     'pessoal': 'pessoal',
-                    'administrativo': 'administrativo'
+                    'administrativo': 'administrativo',
+                    'financeiro': 'financeiro'
                 }
                 hash_ancora = hash_ancoras.get(form_type, '')
 
@@ -996,10 +1017,11 @@ def gerenciar_departamentos(empresa_id):
         
         else:
             active_form = {
-                'fiscal': fiscal_form, 
-                'contabil': contabil_form, 
+                'fiscal': fiscal_form,
+                'contabil': contabil_form,
                 'pessoal': pessoal_form,
-                'administrativo': administrativo_form
+                'administrativo': administrativo_form,
+                'financeiro': financeiro_form
             }.get(form_type)
             if active_form and active_form.errors:
                 for field, errors in active_form.errors.items():
@@ -1013,10 +1035,12 @@ def gerenciar_departamentos(empresa_id):
         contabil_form=contabil_form,
         pessoal_form=pessoal_form,
         administrativo_form=administrativo_form,
+        financeiro_form=financeiro_form,
         fiscal=fiscal,
         contabil=contabil,
         pessoal=pessoal,
-        administrativo=administrativo
+        administrativo=administrativo,
+        financeiro=financeiro
     )
 
 @app.route('/relatorios')
