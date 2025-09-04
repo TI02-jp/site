@@ -3,7 +3,7 @@
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
-from app import app, db
+from app import app, db, oauth
 from app.utils.security import sanitize_html
 from app.models.tables import (
     User,
@@ -538,6 +538,43 @@ def revoke_cookies():
     resp.delete_cookie('cookie_consent')
     flash('Consentimento de cookies revogado.', 'info')
     return resp
+
+
+@app.route('/google-login')
+def google_login():
+    """Inicia o fluxo de autenticação com o Google."""
+    redirect_uri = url_for('google_authorized', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route('/google-callback')
+def google_authorized():
+    """Processa o retorno do Google e autentica o usuário."""
+    token = oauth.google.authorize_access_token()
+    userinfo = oauth.google.parse_id_token(token)
+    email = userinfo.get('email') if userinfo else None
+    if email:
+        user = User.query.filter_by(email=email).first()
+        if user and user.ativo:
+            login_user(user, remember=True, duration=timedelta(days=30))
+            session.permanent = True
+            sid = uuid4().hex
+            session['sid'] = sid
+            db.session.add(
+                Session(
+                    session_id=sid,
+                    user_id=user.id,
+                    session_data=dict(session),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    last_activity=datetime.now(SAO_PAULO_TZ),
+                )
+            )
+            db.session.commit()
+            flash('Login com Google realizado!')
+            return redirect(url_for('home'))
+    flash('E-mail não autorizado.', 'danger')
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
