@@ -13,6 +13,8 @@ from app.models.tables import (
     Setor,
     Inclusao,
     MeetingRoomEvent,
+    Session,
+    SAO_PAULO_TZ,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -553,6 +555,19 @@ def login():
                 duration=timedelta(days=30),
             )
             session.permanent = form.remember_me.data
+            sid = uuid4().hex
+            session['sid'] = sid
+            db.session.add(
+                Session(
+                    session_id=sid,
+                    user_id=user.id,
+                    session_data=dict(session),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    last_activity=datetime.now(SAO_PAULO_TZ),
+                )
+            )
+            db.session.commit()
             flash('Login bem-sucedido!')
             return redirect(url_for('home'))
         else:
@@ -1362,6 +1377,11 @@ def relatorio_usuarios():
 @login_required
 def logout():
     """Log out the current user."""
+    sid = session.get('sid')
+    if sid:
+        Session.query.filter_by(session_id=sid).delete()
+        db.session.commit()
+        session.pop('sid', None)
     logout_user()
     return redirect(url_for('index'))
 

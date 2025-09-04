@@ -76,7 +76,12 @@ class Session(db.Model):
     session_data = db.Column(db.JSON)
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.Text)
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    last_activity = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        nullable=False,
+    )
 
     user = db.relationship('User', backref=db.backref('sessions', lazy=True))
 
