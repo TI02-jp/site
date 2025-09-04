@@ -621,6 +621,26 @@ document.addEventListener('DOMContentLoaded', function() {
             closeSidebar();
         }
     });
+
+    // Periodically ping the server to keep the session fresh
+    (function() {
+        const pingUrl = "{{ url_for('ping') }}";
+        let lastPing = 0;
+        function sendPing() {
+            lastPing = Date.now();
+            fetch(pingUrl, {cache: 'no-store'}).catch(() => {});
+        }
+        function activity() {
+            if (Date.now() - lastPing > 30000) {
+                sendPing();
+            }
+        }
+        ['mousemove','keydown','click','scroll','touchstart'].forEach(evt => {
+            window.addEventListener(evt, activity, {passive: true});
+        });
+        setInterval(sendPing, 60000);
+        sendPing();
+    })();
 });
 </script>
 

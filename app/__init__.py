@@ -44,12 +44,10 @@ def _enforce_https():
 
 @app.before_request
 def _update_last_seen():
-    """Update ``current_user.last_seen`` periodically for activity tracking."""
+    """Update ``current_user.last_seen`` for each request."""
     if current_user.is_authenticated:
-        now = datetime.utcnow()
-        if not current_user.last_seen or (now - current_user.last_seen) > timedelta(minutes=1):
-            current_user.last_seen = now
-            db.session.commit()
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
 
 
 @app.after_request

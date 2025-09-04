@@ -186,6 +186,14 @@ def home():
     return render_template('home.html')
 
 
+@app.route('/ping')
+@login_required
+def ping():
+    """Endpoint for client pings to keep the session active."""
+    session.modified = True
+    return ('', 204)
+
+
 @app.route('/consultorias')
 @login_required
 def consultorias():
