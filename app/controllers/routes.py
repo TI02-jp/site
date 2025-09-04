@@ -33,7 +33,7 @@ from app.forms import (
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_, cast, String
+from sqlalchemy import or_, cast, String, func
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -551,10 +551,12 @@ def google_login():
 def google_authorized():
     """Processa o retorno do Google e autentica o usuário."""
     token = oauth.google.authorize_access_token()
-    userinfo = oauth.google.parse_id_token(token)
+    # Fetch user information from Google and perform case-insensitive email match
+    userinfo = oauth.google.userinfo(token=token)
     email = userinfo.get('email') if userinfo else None
     if email:
-        user = User.query.filter_by(email=email).first()
+        normalized_email = email.lower()
+        user = User.query.filter(func.lower(User.email) == normalized_email).first()
         if user and user.ativo:
             login_user(user, remember=True, duration=timedelta(days=30))
             session.permanent = True
