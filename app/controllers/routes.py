@@ -5,7 +5,6 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.utils.security import sanitize_html
-from app.loginForms import LoginForm, RegistrationForm
 from app.models.tables import (
     User,
     Empresa,
@@ -16,6 +15,10 @@ from app.models.tables import (
     MeetingRoomEvent,
 )
 from app.forms import (
+    # Formulários de autenticação
+    LoginForm,
+    RegistrationForm,
+    # Demais formulários da aplicação
     EmpresaForm,
     EditUserForm,
     DepartamentoFiscalForm,

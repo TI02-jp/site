@@ -23,19 +23,30 @@ REGIME_LANCAMENTO_CHOICES = [
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
+    # Nome de usuário para autenticação
     username = StringField("Usuário", validators=[DataRequired()])
+    # Campo de senha do usuário
     password = PasswordField("Senha", validators=[DataRequired()])
+    # Checkbox para manter a sessão ativa
     remember_me = BooleanField("Lembrar-me")
+    # Botão de envio do formulário
     submit = SubmitField("Entrar")
 
 class RegistrationForm(FlaskForm):
     """Formulário para registrar novos usuários."""
+    # Usuário para login; entre 4 e 20 caracteres
     username = StringField('Usuário', validators=[DataRequired(), Length(min=4, max=20)])
+    # Email de contato do usuário
     email = StringField('Email', validators=[DataRequired(), Email()])
+    # Nome completo utilizado para identificação
     name = StringField('Nome Completo', validators=[DataRequired()])
+    # Senha de acesso
     password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
+    # Confirmação da senha para evitar erros de digitação
     confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
+    # Perfil do usuário (admin ou comum)
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
+    # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
 # --- Formulários da Aplicação ---
