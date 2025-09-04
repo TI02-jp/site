@@ -543,7 +543,7 @@ def revoke_cookies():
 @app.route('/google-login')
 def google_login():
     """Inicia o fluxo de autenticação com o Google."""
-    redirect_uri = url_for('google_authorized', _external=True)
+    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI') or url_for('google_authorized', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 
