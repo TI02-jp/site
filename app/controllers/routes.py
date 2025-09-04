@@ -550,14 +550,23 @@ def google_login():
 @app.route('/google-callback')
 def google_authorized():
     """Processa o retorno do Google e autentica o usuário."""
-    token = oauth.google.authorize_access_token()
-    # Fetch user information from Google and perform case-insensitive email match
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception:
+        flash('Erro na autenticação com o Google.', 'danger')
+        return redirect(url_for('login'))
+
+    # Fetch user information from Google and ensure the email is verified
     userinfo = oauth.google.userinfo(token=token)
     email = userinfo.get('email') if userinfo else None
-    if email:
+    if email and userinfo.get('email_verified'):
         normalized_email = email.lower()
-        user = User.query.filter(func.lower(User.email) == normalized_email).first()
-        if user and user.ativo:
+        user = (
+            User.query.filter(
+                func.lower(User.email) == normalized_email, User.ativo == True
+            ).first()
+        )
+        if user:
             login_user(user, remember=True, duration=timedelta(days=30))
             session.permanent = True
             sid = uuid4().hex
@@ -575,7 +584,7 @@ def google_authorized():
             db.session.commit()
             flash('Login com Google realizado!')
             return redirect(url_for('home'))
-    flash('E-mail não autorizado.', 'danger')
+    flash('E-mail não autorizado ou não verificado.', 'danger')
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
