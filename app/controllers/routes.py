@@ -3,7 +3,7 @@
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
-from app import app, db
+from app import app, db, oauth
 from app.utils.security import sanitize_html
 from app.models.tables import (
     User,
@@ -33,7 +33,7 @@ from app.forms import (
 import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_, cast, String
+from sqlalchemy import or_, cast, String, func
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -538,6 +538,66 @@ def revoke_cookies():
     resp.delete_cookie('cookie_consent')
     flash('Consentimento de cookies revogado.', 'info')
     return resp
+
+
+@app.route('/google-login')
+def google_login():
+    """Inicia o fluxo de autenticação com o Google."""
+    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+    if not redirect_uri:
+        scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
+        redirect_uri = url_for('google_authorized', _external=True, _scheme=scheme)
+    # ``prompt=consent`` força o Google a solicitar autorização novamente após logout
+    return oauth.google.authorize_redirect(redirect_uri, prompt='consent')
+
+
+@app.route('/google-callback')
+def google_authorized():
+    """Processa o retorno do Google e autentica o usuário."""
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception:
+        current_app.logger.exception('Falha na troca de token com o Google')
+        flash('Erro na autenticação com o Google.', 'danger')
+        return redirect(url_for('login'))
+
+    # Fetch user information from Google and ensure the email is verified
+    try:
+        userinfo = oauth.google.userinfo(token=token)
+    except Exception:
+        current_app.logger.exception('Falha ao obter dados do usuário do Google')
+        flash('Erro na autenticação com o Google.', 'danger')
+        return redirect(url_for('login'))
+    email = userinfo.get('email') if userinfo else None
+    if email and userinfo.get('email_verified'):
+        normalized_email = email.lower()
+        user = (
+            User.query.filter(
+                func.lower(User.email) == normalized_email, User.ativo == True
+            ).first()
+        )
+        if user:
+            login_user(user, remember=True, duration=timedelta(days=30))
+            session.permanent = True
+            # Armazena o token para permitir revogação no logout
+            session['google_token'] = token
+            sid = uuid4().hex
+            session['sid'] = sid
+            db.session.add(
+                Session(
+                    session_id=sid,
+                    user_id=user.id,
+                    session_data=dict(session),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    last_activity=datetime.now(SAO_PAULO_TZ),
+                )
+            )
+            db.session.commit()
+            flash('Login com Google realizado!')
+            return redirect(url_for('home'))
+    flash('E-mail não autorizado ou não verificado.', 'danger')
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1382,6 +1442,12 @@ def logout():
         Session.query.filter_by(session_id=sid).delete()
         db.session.commit()
         session.pop('sid', None)
+    token = session.pop('google_token', None)
+    if token:
+        try:
+            oauth.google.revoke_token(token)
+        except Exception:
+            current_app.logger.exception('Erro ao revogar token do Google')
     logout_user()
     return redirect(url_for('index'))
 
