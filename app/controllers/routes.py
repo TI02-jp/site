@@ -36,6 +36,7 @@ import os, json, re
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String
+from sqlalchemy.orm import joinedload
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -1464,7 +1465,13 @@ def list_users():
 def online_users():
     """List users active within the last five minutes."""
     cutoff = datetime.utcnow() - timedelta(minutes=5)
-    users = User.query.filter(User.last_seen >= cutoff).order_by(User.name).all()
+    users = (
+        User.query
+        .options(joinedload(User.tags))
+        .filter(User.last_seen >= cutoff)
+        .order_by(User.name)
+        .all()
+    )
     return render_template('admin/online_users.html', users=users)
 
 @app.route('/novo_usuario', methods=['GET', 'POST'])
