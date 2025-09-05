@@ -181,6 +181,12 @@ def user_has_tag(tag_name: str) -> bool:
     """Return True if current user has a tag with the given name."""
     return any(tag.nome.lower() == tag_name.lower() for tag in current_user.tags)
 
+
+@app.context_processor
+def inject_user_tag_helpers():
+    """Expose user tag helper utilities to templates."""
+    return dict(user_has_tag=user_has_tag)
+
 @app.route('/')
 def index():
     """Redirect users to the appropriate first page."""
