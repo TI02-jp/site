@@ -96,7 +96,7 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 {{ form.tags.label(class="form-label fw-semibold") }}
-                                {{ form.tags(class="form-select", multiple=true) }}
+                                {{ form.tags() }}
                                 {% for error in form.tags.errors %}
                                     <div class="form-text text-danger">{{ error }}</div>
                                 {% endfor %}

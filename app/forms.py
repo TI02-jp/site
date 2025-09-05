@@ -47,7 +47,12 @@ class RegistrationForm(FlaskForm):
     # Perfil do usuário (admin ou comum)
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
     # Tags adicionais do usuário
-    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
+    tags = SelectMultipleField(
+        'Tags',
+        coerce=int,
+        validators=[Optional()],
+        render_kw={'class': 'form-select'}
+    )
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
@@ -107,7 +112,12 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
-    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
+    tags = SelectMultipleField(
+        'Tags',
+        coerce=int,
+        validators=[Optional()],
+        render_kw={'class': 'form-select'}
+    )
     ativo = BooleanField('Usuário Ativo')
 
 class DepartamentoForm(FlaskForm):
