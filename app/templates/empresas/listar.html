@@ -15,9 +15,9 @@
                     </h1>
                     <p class="text-muted mb-0">Gerencie as empresas e seus departamentos</p>
                 </div>
-                <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novaEmpresaModal">
                     <i class="bi bi-plus-lg me-1"></i>Nova Empresa
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -110,9 +110,9 @@
                                 <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
                                 <h5>Nenhuma empresa cadastrada</h5>
                                 <p class="mb-3">Comece cadastrando sua primeira empresa</p>
-                                <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novaEmpresaModal">
                                     <i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira Empresa
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -146,6 +146,73 @@
         </nav>
     </div>
     {% endif %}
+</div>
+
+<!-- Modal Nova Empresa -->
+<div class="modal fade" id="novaEmpresaModal" tabindex="-1" aria-labelledby="novaEmpresaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" action="{{ url_for('listar_empresas') }}">
+      {{ form.csrf_token }}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="novaEmpresaModalLabel">Cadastrar Nova Empresa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            {{ form.codigo_empresa.label(class="form-label") }}
+            {{ form.codigo_empresa(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.nome_empresa.label(class="form-label") }}
+            {{ form.nome_empresa(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.cnpj.label(class="form-label") }}
+            {{ form.cnpj(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.data_abertura.label(class="form-label") }}
+            {{ form.data_abertura(class="form-control", type="date") }}
+          </div>
+          <div class="mb-3">
+            {{ form.socio_administrador.label(class="form-label") }}
+            {{ form.socio_administrador(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.atividade_principal.label(class="form-label") }}
+            {{ form.atividade_principal(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.tributacao.label(class="form-label d-block") }}
+            {% for subfield in form.tributacao %}
+            <div class="form-check form-check-inline">
+              {{ subfield(class="form-check-input") }}
+              {{ subfield.label(class="form-check-label") }}
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.regime_lancamento.label(class="form-label") }}
+            {{ form.regime_lancamento(class="form-select", multiple=True) }}
+          </div>
+          <div class="mb-3">
+            {{ form.sistemas_consultorias.label(class="form-label") }}
+            {{ form.sistemas_consultorias(class="form-select", multiple=True) }}
+          </div>
+          <div class="mb-3">
+            {{ form.sistema_utilizado.label(class="form-label") }}
+            {{ form.sistema_utilizado(class="form-control") }}
+          </div>
+          {{ form.acessos_json() }}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Cadastrar</button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% block scripts %}
