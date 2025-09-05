@@ -13,7 +13,6 @@ from app.models.tables import (
     Setor,
     Tag,
     Inclusao,
-    MeetingRoomEvent,
     Session,
     SAO_PAULO_TZ,
 )
@@ -211,50 +210,6 @@ def consultorias():
     """List registered consultorias."""
     consultorias = Consultoria.query.all()
     return render_template('consultorias.html', consultorias=consultorias)
-
-
-@app.route('/sala-reunioes')
-@login_required
-def sala_reunioes():
-    """Display meeting room agenda via external system."""
-    return render_template('sala_reunioes.html')
-
-
-@app.route('/sala-reunioes/novo', methods=['GET', 'POST'])
-@admin_required
-def novo_evento():
-    """Create a new meeting room event."""
-    users = User.query.order_by(User.name).all()
-    if request.method == 'POST':
-        title = sanitize_html(request.form.get('title'))
-        date_str = request.form.get('date')
-        start_str = request.form.get('start_time')
-        end_str = request.form.get('end_time')
-        user_id = request.form.get('user_id')
-
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
-        start_time = (
-            datetime.combine(date_obj, datetime.strptime(start_str, '%H:%M').time())
-            if date_obj and start_str
-            else None
-        )
-        end_time = (
-            datetime.combine(date_obj, datetime.strptime(end_str, '%H:%M').time())
-            if date_obj and end_str
-            else None
-        )
-        event = MeetingRoomEvent(
-            title=title,
-            date=date_obj,
-            start_time=start_time,
-            end_time=end_time,
-            user_id=int(user_id) if user_id else None,
-        )
-        db.session.add(event)
-        db.session.commit()
-        flash('Evento criado com sucesso.', 'success')
-        return redirect(url_for('sala_reunioes'))
-    return render_template('novo_evento.html', users=users)
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
