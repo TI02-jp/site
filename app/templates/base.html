@@ -412,16 +412,10 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint in ['listar_empresas', 'cadastrar_empresa', 'editar_empresa', 'visualizar_empresa'] %}active{% endif %}" href="{{ url_for('listar_empresas') }}">
+                            <a class="nav-link {% if request.endpoint in ['listar_empresas', 'editar_empresa', 'visualizar_empresa'] %}active{% endif %}" href="{{ url_for('listar_empresas') }}">
                                 <i class="bi bi-buildings"></i>
                                 Empresas
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'cadastrar_empresa' %}active{% endif %}" href="{{ url_for('cadastrar_empresa') }}">
-                                <i class="bi bi-building-add"></i>
-                                Nova Empresa
                             </a>
                         </li>
                     </ul>

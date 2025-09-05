@@ -608,6 +608,8 @@ def cadastrar_empresa():
     if request.method == 'GET':
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
         form.regime_lancamento.data = form.regime_lancamento.data or []
+        form.acessos_json.data = form.acessos_json.data or '[]'
+        form.acessos_json.data = form.acessos_json.data or '[]'
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
@@ -642,10 +644,44 @@ def cadastrar_empresa():
 
     return render_template('empresas/cadastrar.html', form=form)
 
-@app.route('/listar_empresas')
+@app.route('/listar_empresas', methods=['GET', 'POST'])
 @login_required
 def listar_empresas():
-    """List companies with optional search and pagination."""
+    """List companies with optional search and allow creation."""
+    form = EmpresaForm()
+    if request.method == 'GET':
+        form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
+        form.regime_lancamento.data = form.regime_lancamento.data or []
+        form.acessos_json.data = form.acessos_json.data or '[]'
+    if form.validate_on_submit():
+        try:
+            cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
+            acessos_json = form.acessos_json.data or '[]'
+            try:
+                acessos = json.loads(acessos_json) if acessos_json else []
+            except Exception:
+                acessos = []
+            nova_empresa = Empresa(
+                codigo_empresa=form.codigo_empresa.data,
+                nome_empresa=form.nome_empresa.data,
+                cnpj=cnpj_limpo,
+                data_abertura=form.data_abertura.data,
+                socio_administrador=form.socio_administrador.data,
+                tributacao=form.tributacao.data,
+                regime_lancamento=form.regime_lancamento.data,
+                atividade_principal=form.atividade_principal.data,
+                sistemas_consultorias=form.sistemas_consultorias.data,
+                sistema_utilizado=form.sistema_utilizado.data,
+                acessos=acessos
+            )
+            db.session.add(nova_empresa)
+            db.session.commit()
+            flash('Empresa cadastrada com sucesso!', 'success')
+            return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar empresa: {e}', 'danger')
+
     search = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
     per_page = 20
@@ -683,6 +719,7 @@ def listar_empresas():
         search=search,
         sort=sort,
         order=order,
+        form=form,
     )
 
 def processar_dados_fiscal(request):
