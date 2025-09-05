@@ -78,7 +78,8 @@
                                     <div class="form-text text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            
+
+                            {% if not user.is_master %}
                             <div class="col-md-6 mb-3">
                                 {{ form.role.label(class="form-label fw-semibold") }}
                                 <div class="input-group">
@@ -91,6 +92,9 @@
                                     <div class="form-text text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
+                            {% else %}
+                                <input type="hidden" name="{{ form.role.name }}" value="{{ form.role.data }}">
+                            {% endif %}
                         </div>
 
                         <div class="row">
@@ -120,6 +124,7 @@
                         </div>
 
                         <!-- Status -->
+                        {% if not user.is_master %}
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Status do Usuário</label>
                             <div class="form-check form-switch">
@@ -127,6 +132,7 @@
                                 {{ form.ativo.label(class="form-check-label") }}
                             </div>
                         </div>
+                        {% endif %}
 
                         <hr class="my-4">
 
