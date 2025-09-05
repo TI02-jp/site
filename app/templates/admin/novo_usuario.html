@@ -91,8 +91,26 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-12">
-                        <label class="form-label fw-semibold">{{ form.tags.label }}</label>
-                        {{ form.tags() }}
+                        <div class="d-flex align-items-center">
+                            {{ form.tags.label(class="form-label fw-semibold mb-0") }}
+                            {% if current_user.role == 'admin' %}
+                                <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
+                                    <i class="bi bi-plus-lg"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                        {% if form.tags.choices %}
+                        <div class="mt-2">
+                            {% for tag in form.tags %}
+                                <div class="form-check form-check-inline">
+                                    {{ tag(class="form-check-input") }}
+                                    {{ tag.label(class="form-check-label") }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                            <p class="text-muted">Nenhuma tag disponível</p>
+                        {% endif %}
                         {% for error in form.tags.errors %}
                             <div class="form-text text-danger">
                                 <i class="bi bi-exclamation-circle me-1"></i>{{ error }}

@@ -95,8 +95,24 @@
 
                         <div class="row">
                             <div class="col-12 mb-3">
-                                {{ form.tags.label(class="form-label fw-semibold") }}
-                                {{ form.tags() }}
+                                <div class="d-flex align-items-center">
+                                    {{ form.tags.label(class="form-label fw-semibold mb-0") }}
+                                    <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </a>
+                                </div>
+                                {% if form.tags.choices %}
+                                <div class="mt-2">
+                                    {% for tag in form.tags %}
+                                        <div class="form-check form-check-inline">
+                                            {{ tag(class="form-check-input") }}
+                                            {{ tag.label(class="form-check-label") }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                    <p class="text-muted">Nenhuma tag disponível</p>
+                                {% endif %}
                                 {% for error in form.tags.errors %}
                                     <div class="form-text text-danger">{{ error }}</div>
                                 {% endfor %}
