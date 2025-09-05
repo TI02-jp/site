@@ -554,12 +554,8 @@ def google_login():
 def google_authorized():
     """Processa o retorno do Google e autentica o usuário."""
     try:
-        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
-        if not redirect_uri:
-            scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
-            redirect_uri = url_for('google_authorized', _external=True, _scheme=scheme)
-        token = oauth.google.authorize_access_token(redirect_uri=redirect_uri)
-    except Exception as e:
+        token = oauth.google.authorize_access_token()
+    except Exception:
         current_app.logger.exception('Falha na troca de token com o Google')
         flash('Erro na autenticação com o Google.', 'danger')
         return redirect(url_for('login'))
