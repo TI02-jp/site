@@ -1390,6 +1390,7 @@ def logout():
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
+    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
     show_inactive = request.args.get('show_inactive') in ('1', 'on')
 
     if form.validate_on_submit():
@@ -1406,6 +1407,8 @@ def list_users():
                 role=form.role.data
             )
             user.set_password(form.password.data)
+            if form.setores.data:
+                user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
             db.session.add(user)
             db.session.commit()
             flash('Novo usuário cadastrado com sucesso!', 'success')
@@ -1431,6 +1434,7 @@ def online_users():
 def novo_usuario():
     """Create a new user from the admin interface."""
     form = RegistrationForm()
+    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
     if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.username == form.username.data) | (User.email == form.email.data)
@@ -1445,6 +1449,8 @@ def novo_usuario():
                 role=form.role.data
             )
             user.set_password(form.password.data)
+            if form.setores.data:
+                user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
             db.session.add(user)
             db.session.commit()
             flash('Novo usuário cadastrado com sucesso!', 'success')
@@ -1457,6 +1463,9 @@ def edit_user(user_id):
     """Edit an existing user."""
     user = User.query.get_or_404(user_id)
     form = EditUserForm(obj=user)
+    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
+    if request.method == 'GET':
+        form.setores.data = [s.id for s in user.setores]
 
     if form.validate_on_submit():
         user.username = form.username.data
@@ -1464,6 +1473,10 @@ def edit_user(user_id):
         user.name = form.name.data
         user.role = form.role.data
         user.ativo = form.ativo.data
+        if form.setores.data:
+            user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
+        else:
+            user.setores = []
 
         # Process optional password change
         new_password = request.form.get('new_password')

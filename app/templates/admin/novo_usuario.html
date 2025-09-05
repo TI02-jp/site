@@ -89,6 +89,18 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">{{ form.setores.label }}</label>
+                        {{ form.setores(class="form-select", multiple=true) }}
+                        {% for error in form.setores.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <!-- Seção 3: Definir Senha -->
                 <div class="row mb-4">
                     <div class="col-12">
