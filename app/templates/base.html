@@ -439,24 +439,26 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint in ['list_users', 'novo_usuario'] %}active{% endif %}" href="{{ url_for('list_users') }}">
+                            <a class="nav-link {% if request.endpoint in ['list_users', 'novo_usuario', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}active{% endif %}" href="{{ url_for('list_users') }}">
                                 <i class="bi bi-people"></i>
                                 Usuários
                                 <span class="nav-badge">{{ total_usuarios or 0 }}</span>
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint in ['tags', 'cadastro_tag', 'editar_tag'] %}active{% endif %}" href="{{ url_for('tags') }}">
-                                <i class="bi bi-tags"></i>
-                                Tags
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
-                                <i class="bi bi-person-check"></i>
-                                Usuários Online
-                                <span class="nav-badge">{{ online_users_count or 0 }}</span>
-                            </a>
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
+                                        <i class="bi bi-person-check"></i>
+                                        Usuários Online
+                                        <span class="nav-badge">{{ online_users_count or 0 }}</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint in ['tags', 'cadastro_tag', 'editar_tag'] %}active{% endif %}" href="{{ url_for('tags') }}">
+                                        <i class="bi bi-tags"></i>
+                                        Tags
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" onclick="return false;" style="opacity: 0.6;">
