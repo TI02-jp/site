@@ -21,7 +21,7 @@
                 <tbody>
                     {% for t in tags %}
                     <tr>
-                        <td>{{ t.nome }}</td>
+                        <td class="text-start">{{ t.nome }}</td>
                         {% if current_user.role == 'admin' %}
                         <td class="text-end">
                             <a href="{{ url_for('editar_tag', id=t.id) }}" class="btn btn-custom btn-sm" title="Editar">
