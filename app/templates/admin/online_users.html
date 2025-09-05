@@ -20,6 +20,7 @@
                     <thead class="table-success">
                         <tr>
                             <th>Nome</th>
+                            <th>Tags</th>
                             <th>Última atividade</th>
                         </tr>
                     </thead>
@@ -27,11 +28,20 @@
                         {% for user in users %}
                         <tr>
                             <td>{{ user.name }}</td>
+                            <td>
+                                {% if user.tags %}
+                                    {% for tag in user.tags %}
+                                        <span class="badge bg-secondary">{{ tag.nome }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>{{ user.last_seen | time_since }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="2" class="text-center py-4 text-muted">Nenhum usuário online</td>
+                            <td colspan="3" class="text-center py-4 text-muted">Nenhum usuário online</td>
                         </tr>
                         {% endfor %}
                     </tbody>
