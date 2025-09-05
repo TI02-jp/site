@@ -438,12 +438,14 @@
                                 Relatórios
                             </a>
                         </li>
+                        {% set user_section_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint in ['list_users', 'novo_usuario', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}active{% endif %}" href="{{ url_for('list_users') }}">
+                            <a class="nav-link {% if request.endpoint in user_section_endpoints %}active{% endif %}" href="{{ url_for('list_users') }}">
                                 <i class="bi bi-people"></i>
                                 Usuários
                                 <span class="nav-badge">{{ total_usuarios or 0 }}</span>
                             </a>
+                            {% if request.endpoint in user_section_endpoints %}
                             <ul class="nav flex-column ms-3">
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
@@ -459,6 +461,7 @@
                                     </a>
                                 </li>
                             </ul>
+                            {% endif %}
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" onclick="return false;" style="opacity: 0.6;">
