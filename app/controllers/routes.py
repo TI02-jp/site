@@ -177,6 +177,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def user_has_tag(tag_name: str) -> bool:
+    """Return True if current user has a tag with the given name."""
+    return any(tag.nome.lower() == tag_name.lower() for tag in current_user.tags)
+
 @app.route('/')
 def index():
     """Redirect users to the appropriate first page."""
@@ -863,11 +868,17 @@ def visualizar_empresa(id):
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
 
+    can_access_financeiro = user_has_tag('financeiro')
+
     fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
-    financeiro = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Financeiro').first()
+    financeiro = (
+        Departamento.query.filter_by(empresa_id=id, tipo='Departamento Financeiro').first()
+        if can_access_financeiro
+        else None
+    )
 
     def _prepare_envio_fisico(departamento):
         if not departamento:
@@ -924,7 +935,8 @@ def visualizar_empresa(id):
         contabil=contabil,
         pessoal=pessoal,
         administrativo=administrativo,
-        financeiro=financeiro
+        financeiro=financeiro,
+        can_access_financeiro=can_access_financeiro,
     )
     
     ## Rota para gerenciar departamentos de uma empresa
@@ -935,17 +947,27 @@ def gerenciar_departamentos(empresa_id):
     """Create or update department data for a company."""
     empresa = Empresa.query.get_or_404(empresa_id)
 
+    can_access_financeiro = user_has_tag('financeiro')
+
     fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
     contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
     pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
     administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
-    financeiro = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Financeiro').first()
-    
+    financeiro = (
+        Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Financeiro').first()
+        if can_access_financeiro
+        else None
+    )
+
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoAdministrativoForm(request.form, obj=administrativo)
-    financeiro_form = DepartamentoFinanceiroForm(request.form, obj=financeiro)
+    financeiro_form = (
+        DepartamentoFinanceiroForm(request.form, obj=financeiro)
+        if can_access_financeiro
+        else None
+    )
     
     if request.method == 'GET':
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
@@ -1047,15 +1069,17 @@ def gerenciar_departamentos(empresa_id):
             administrativo_form.populate_obj(administrativo)
             flash('Departamento Administrativo salvo com sucesso!', 'success')
             form_processed_successfully = True
+        elif form_type == 'financeiro':
+            if not can_access_financeiro:
+                abort(403)
+            if financeiro_form and financeiro_form.validate():
+                if not financeiro:
+                    financeiro = Departamento(empresa_id=empresa_id, tipo='Departamento Financeiro')
+                    db.session.add(financeiro)
 
-        elif form_type == 'financeiro' and financeiro_form.validate():
-            if not financeiro:
-                financeiro = Departamento(empresa_id=empresa_id, tipo='Departamento Financeiro')
-                db.session.add(financeiro)
-
-            financeiro_form.populate_obj(financeiro)
-            flash('Departamento Financeiro salvo com sucesso!', 'success')
-            form_processed_successfully = True
+                financeiro_form.populate_obj(financeiro)
+                flash('Departamento Financeiro salvo com sucesso!', 'success')
+                form_processed_successfully = True
 
         if form_processed_successfully:
             try:
@@ -1101,7 +1125,8 @@ def gerenciar_departamentos(empresa_id):
         contabil=contabil,
         pessoal=pessoal,
         administrativo=administrativo,
-        financeiro=financeiro
+        financeiro=financeiro,
+        can_access_financeiro=can_access_financeiro,
     )
 
 @app.route('/relatorios')

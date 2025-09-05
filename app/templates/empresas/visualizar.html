@@ -70,7 +70,9 @@
                         <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
                         <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
                         <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                        {% if can_access_financeiro %}
                         <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -623,6 +625,7 @@
     {% endif %}
     </div>
 
+    {% if can_access_financeiro %}
     <div id="financeiro" class="section-anchor">
     {% if financeiro %}
         <div class="card shadow-lg mb-5">
@@ -655,6 +658,7 @@
         </div>
     {% endif %}
     </div>
+    {% endif %}
 
     <div class="row my-5">
         <div class="col-12">
