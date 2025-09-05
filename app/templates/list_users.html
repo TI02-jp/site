@@ -39,6 +39,7 @@
                             <th style="width: 300px;">Email</th>
                             <th style="width: 150px;">Usuário</th>
                             <th style="width: 120px;">Perfil</th>
+                            <th style="width: 200px;">Setores</th>
                             <th style="width: 100px;" class="text-center">Ações</th>
                         </tr>
                     </thead>
@@ -68,6 +69,15 @@
                                     <span class="badge bg-secondary">{{ user.role }}</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                {% if user.setores %}
+                                    {% for setor in user.setores %}
+                                        <span class="badge bg-secondary">{{ setor.nome }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <a href="{{ url_for('edit_user', user_id=user.id) }}"
                                    class="btn btn-sm btn-outline-primary"
@@ -78,7 +88,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-person-slash fs-1 d-block mb-3"></i>
                                     <h5>Nenhum usuário cadastrado</h5>
@@ -131,6 +141,10 @@
           <div class="mb-3">
             {{ form.role.label(class="form-label") }}
             {{ form.role(class="form-select") }}
+          </div>
+          <div class="mb-3">
+            {{ form.setores.label(class="form-label") }}
+            {{ form.setores(class="form-select", multiple=true) }}
           </div>
         </div>
         <div class="modal-footer">
