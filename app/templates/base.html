@@ -446,6 +446,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint in ['tags', 'cadastro_tag', 'editar_tag'] %}active{% endif %}" href="{{ url_for('tags') }}">
+                                <i class="bi bi-tags"></i>
+                                Tags
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
                                 <i class="bi bi-person-check"></i>
                                 Usuários Online

@@ -11,11 +11,11 @@ SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Association table linking users to setores (tags)
-user_setores = db.Table(
-    'user_setores',
+# Association table linking users to tag records
+user_tags = db.Table(
+    'user_tags',
     db.Column('user_id', db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('setor_id', db.Integer, db.ForeignKey('setores.id', ondelete='CASCADE'), primary_key=True)
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True)
 )
 
 class JsonString(TypeDecorator):
@@ -51,7 +51,7 @@ class User(db.Model, UserMixin):
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    setores = db.relationship('Setor', secondary=user_setores, backref=db.backref('users', lazy=True))
+    tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
 
     def set_password(self, password):
         """Hash and store the user's password."""
@@ -105,6 +105,17 @@ class Consultoria(db.Model):
 
     def __repr__(self):
         return f"<Consultoria {self.nome}>"
+
+
+class Tag(db.Model):
+    """Represents a tag for user categorization."""
+    __tablename__ = 'tags'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(100), nullable=False, unique=True)
+
+    def __repr__(self):
+        return f"<Tag {self.nome}>"
 
 
 class Setor(db.Model):

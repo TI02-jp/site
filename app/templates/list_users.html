@@ -39,7 +39,7 @@
                             <th style="width: 300px;">Email</th>
                             <th style="width: 150px;">Usuário</th>
                             <th style="width: 120px;">Perfil</th>
-                            <th style="width: 200px;">Setores</th>
+                            <th style="width: 200px;">Tags</th>
                             <th style="width: 100px;" class="text-center">Ações</th>
                         </tr>
                     </thead>
@@ -70,9 +70,9 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if user.setores %}
-                                    {% for setor in user.setores %}
-                                        <span class="badge bg-secondary">{{ setor.nome }}</span>
+                                {% if user.tags %}
+                                    {% for tag in user.tags %}
+                                        <span class="badge bg-secondary">{{ tag.nome }}</span>
                                     {% endfor %}
                                 {% else %}
                                     <span class="text-muted">—</span>
@@ -143,8 +143,8 @@
             {{ form.role(class="form-select") }}
           </div>
           <div class="mb-3">
-            {{ form.setores.label(class="form-label") }}
-            {{ form.setores(class="form-select", multiple=true) }}
+            {{ form.tags.label(class="form-label") }}
+            {{ form.tags(class="form-select", multiple=true) }}
           </div>
         </div>
         <div class="modal-footer">
