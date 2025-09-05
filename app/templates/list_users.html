@@ -143,8 +143,24 @@
             {{ form.role(class="form-select") }}
           </div>
           <div class="mb-3">
-            {{ form.tags.label(class="form-label") }}
-            {{ form.tags() }}
+            <div class="d-flex align-items-center">
+              {{ form.tags.label(class="form-label mb-0") }}
+              <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
+                <i class="bi bi-plus-lg"></i>
+              </a>
+            </div>
+            {% if form.tags.choices %}
+            <div class="mt-2">
+              {% for tag in form.tags %}
+                <div class="form-check form-check-inline">
+                  {{ tag(class="form-check-input") }}
+                  {{ tag.label(class="form-check-label") }}
+                </div>
+              {% endfor %}
+            </div>
+            {% else %}
+              <p class="text-muted">Nenhuma tag disponível</p>
+            {% endif %}
           </div>
         </div>
         <div class="modal-footer">

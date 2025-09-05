@@ -11,7 +11,8 @@ from wtforms import (
     TextAreaField,
     PasswordField,
     BooleanField,
-    HiddenField
+    HiddenField,
+    widgets
 )
 from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo, ValidationError
 import re
@@ -51,7 +52,8 @@ class RegistrationForm(FlaskForm):
         'Tags',
         coerce=int,
         validators=[Optional()],
-        render_kw={'class': 'form-select'}
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False)
     )
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
@@ -116,7 +118,8 @@ class EditUserForm(FlaskForm):
         'Tags',
         coerce=int,
         validators=[Optional()],
-        render_kw={'class': 'form-select'}
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False)
     )
     ativo = BooleanField('Usuário Ativo')
 
