@@ -212,6 +212,13 @@ def consultorias():
     return render_template('consultorias.html', consultorias=consultorias)
 
 
+@app.route('/sala-reunioes')
+@login_required
+def sala_reunioes():
+    """Display meeting room agenda via external system."""
+    return render_template('sala_reunioes.html')
+
+
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
 @admin_required
 def cadastro_consultoria():
