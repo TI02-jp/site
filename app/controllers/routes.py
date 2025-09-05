@@ -11,6 +11,7 @@ from app.models.tables import (
     Departamento,
     Consultoria,
     Setor,
+    Tag,
     Inclusao,
     MeetingRoomEvent,
     Session,
@@ -29,6 +30,7 @@ from app.forms import (
     DepartamentoAdministrativoForm,
     ConsultoriaForm,
     SetorForm,
+    TagForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -315,6 +317,42 @@ def editar_setor(id):
         flash('Setor atualizado com sucesso.', 'success')
         return redirect(url_for('setores'))
     return render_template('cadastro_setor.html', form=form, setor=setor)
+
+
+@app.route('/tags')
+@login_required
+def tags():
+    """List registered tags."""
+    tags = Tag.query.all()
+    return render_template('tags.html', tags=tags)
+
+
+@app.route('/tags/cadastro', methods=['GET', 'POST'])
+@admin_required
+def cadastro_tag():
+    """Render and handle the Cadastro de Tag page."""
+    form = TagForm()
+    if form.validate_on_submit():
+        tag = Tag(nome=form.nome.data)
+        db.session.add(tag)
+        db.session.commit()
+        flash('Tag registrada com sucesso.', 'success')
+        return redirect(url_for('tags'))
+    return render_template('cadastro_tag.html', form=form)
+
+
+@app.route('/tags/editar/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def editar_tag(id):
+    """Edit a registered tag."""
+    tag = Tag.query.get_or_404(id)
+    form = TagForm(obj=tag)
+    if form.validate_on_submit():
+        tag.nome = form.nome.data
+        db.session.commit()
+        flash('Tag atualizada com sucesso.', 'success')
+        return redirect(url_for('tags'))
+    return render_template('cadastro_tag.html', form=form, tag=tag)
 
 
 @app.route('/consultorias/relatorios')
@@ -1390,7 +1428,7 @@ def logout():
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
-    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
+    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
     show_inactive = request.args.get('show_inactive') in ('1', 'on')
 
     if form.validate_on_submit():
@@ -1407,8 +1445,8 @@ def list_users():
                 role=form.role.data
             )
             user.set_password(form.password.data)
-            if form.setores.data:
-                user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
+            if form.tags.data:
+                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
             db.session.add(user)
             db.session.commit()
             flash('Novo usuário cadastrado com sucesso!', 'success')
@@ -1434,7 +1472,7 @@ def online_users():
 def novo_usuario():
     """Create a new user from the admin interface."""
     form = RegistrationForm()
-    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
+    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
     if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.username == form.username.data) | (User.email == form.email.data)
@@ -1449,8 +1487,8 @@ def novo_usuario():
                 role=form.role.data
             )
             user.set_password(form.password.data)
-            if form.setores.data:
-                user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
+            if form.tags.data:
+                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
             db.session.add(user)
             db.session.commit()
             flash('Novo usuário cadastrado com sucesso!', 'success')
@@ -1463,9 +1501,9 @@ def edit_user(user_id):
     """Edit an existing user."""
     user = User.query.get_or_404(user_id)
     form = EditUserForm(obj=user)
-    form.setores.choices = [(s.id, s.nome) for s in Setor.query.order_by(Setor.nome).all()]
+    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
     if request.method == 'GET':
-        form.setores.data = [s.id for s in user.setores]
+        form.tags.data = [t.id for t in user.tags]
 
     if form.validate_on_submit():
         user.username = form.username.data
@@ -1473,10 +1511,10 @@ def edit_user(user_id):
         user.name = form.name.data
         user.role = form.role.data
         user.ativo = form.ativo.data
-        if form.setores.data:
-            user.setores = Setor.query.filter(Setor.id.in_(form.setores.data)).all()
+        if form.tags.data:
+            user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
         else:
-            user.setores = []
+            user.tags = []
 
         # Process optional password change
         new_password = request.form.get('new_password')

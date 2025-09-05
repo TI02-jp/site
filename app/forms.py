@@ -46,8 +46,8 @@ class RegistrationForm(FlaskForm):
     confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
     # Perfil do usuário (admin ou comum)
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
-    # Setores (tags) adicionais do usuário
-    setores = SelectMultipleField('Setores', coerce=int, validators=[Optional()])
+    # Tags adicionais do usuário
+    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
@@ -107,7 +107,7 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     name = StringField('Nome', validators=[DataRequired()])
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
-    setores = SelectMultipleField('Setores', coerce=int, validators=[Optional()])
+    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     ativo = BooleanField('Usuário Ativo')
 
 class DepartamentoForm(FlaskForm):
@@ -197,4 +197,10 @@ class ConsultoriaForm(FlaskForm):
 class SetorForm(FlaskForm):
     """Formulário para cadastro de setores."""
     nome = StringField('Setor', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class TagForm(FlaskForm):
+    """Formulário para cadastro de tags."""
+    nome = StringField('Tag', validators=[DataRequired()])
     submit = SubmitField('Salvar')
