@@ -199,6 +199,11 @@ class DepartamentoAdministrativoForm(FlaskForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
+class DepartamentoFinanceiroForm(FlaskForm):
+    """Formulário para o Departamento Financeiro."""
+    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+
+
 class ConsultoriaForm(FlaskForm):
     """Formulário para cadastro de consultorias."""
     nome = StringField('Nome da Consultoria', validators=[DataRequired()])
