@@ -11,13 +11,15 @@ def main():
     username = input("Nome de usuário (para login): ")
     email = input("Email: ")
     password = getpass.getpass("Senha: ")
+    is_master = input("Usuário master? (s/n): " ).strip().lower() == 's'
 
     # Cria uma nova instância do usuário
     new_user = User(
         name=name,
         username=username,
         email=email,
-        role='admin' # Define a role como admin
+        role='admin', # Define a role como admin
+        is_master=is_master
     )
 
     # Usa o método do modelo para gerar e salvar o hash da senha

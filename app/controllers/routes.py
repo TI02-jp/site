@@ -1552,8 +1552,13 @@ def novo_usuario():
 def edit_user(user_id):
     """Edit an existing user."""
     user = User.query.get_or_404(user_id)
+    if user.is_master and current_user.id != user.id:
+        abort(403)
     form = EditUserForm(obj=user)
     form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
+    if user.is_master:
+        form.role.data = user.role
+        form.ativo.data = True
     if request.method == 'GET':
         form.tags.data = [t.id for t in user.tags]
 
@@ -1561,8 +1566,11 @@ def edit_user(user_id):
         user.username = form.username.data
         user.email = form.email.data
         user.name = form.name.data
-        user.role = form.role.data
-        user.ativo = form.ativo.data
+        if not user.is_master:
+            user.role = form.role.data
+            user.ativo = form.ativo.data
+        else:
+            user.ativo = True
         if form.tags.data:
             user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
         else:
@@ -1581,5 +1589,5 @@ def edit_user(user_id):
         flash('Usuário atualizado com sucesso!', 'success')
         return redirect(url_for('list_users'))
 
-    return render_template('edit_user.html', form=form)
+    return render_template('edit_user.html', form=form, user=user)
 

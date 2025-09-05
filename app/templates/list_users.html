@@ -52,6 +52,9 @@
                                     {% if not user.ativo %}
                                         <span class="badge bg-secondary ms-2">Inativo</span>
                                     {% endif %}
+                                    {% if user.is_master %}
+                                        <span class="badge bg-warning text-dark ms-2">Master</span>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
@@ -79,11 +82,15 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
+                                {% if not user.is_master or current_user.id == user.id %}
                                 <a href="{{ url_for('edit_user', user_id=user.id) }}"
                                    class="btn btn-sm btn-outline-primary"
                                    title="Editar usuário">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                {% else %}
+                                    <i class="bi bi-lock text-muted"></i>
+                                {% endif %}
                             </td>
                         </tr>
                         {% else %}

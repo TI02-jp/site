@@ -50,6 +50,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
+    is_master = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
 
