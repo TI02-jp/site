@@ -15,6 +15,7 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
+    SupportTicket,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -31,6 +32,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
     TagForm,
+    SupportTicketForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -581,7 +583,7 @@ def login():
                 )
             )
             db.session.commit()
-            flash('Login bem-sucedido!')
+            flash('Login bem-sucedido!', 'success')
             return redirect(url_for('home'))
         else:
             flash('Credenciais inválidas', 'danger')
@@ -1558,4 +1560,51 @@ def edit_user(user_id):
         return redirect(url_for('list_users'))
 
     return render_template('edit_user.html', form=form, user=user)
+
+
+@app.route('/suporte', methods=['GET', 'POST'])
+@login_required
+def suporte():
+    """Página de chamados de suporte."""
+    form = SupportTicketForm()
+    if form.validate_on_submit():
+        ticket = SupportTicket(user_id=current_user.id, description=form.description.data)
+        db.session.add(ticket)
+        db.session.commit()
+        flash('Chamado aberto com sucesso!', 'success')
+        return redirect(url_for('suporte'))
+
+    if current_user.role == 'dev':
+        tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
+    else:
+        tickets = SupportTicket.query.filter_by(user_id=current_user.id).order_by(SupportTicket.created_at.desc()).all()
+    return render_template('support.html', form=form, tickets=tickets)
+
+
+@app.route('/suporte/<int:ticket_id>/pegar')
+@login_required
+def pegar_chamado(ticket_id):
+    """Permite ao desenvolvedor assumir o atendimento de um chamado."""
+    if current_user.role != 'dev':
+        abort(403)
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    if ticket.status == 'open':
+        ticket.status = 'in_progress'
+        ticket.dev_id = current_user.id
+        db.session.commit()
+        flash('Chamado assumido.', 'success')
+    return redirect(url_for('suporte'))
+
+
+@app.route('/suporte/<int:ticket_id>/resolver')
+@login_required
+def resolver_chamado(ticket_id):
+    """Marca um chamado como resolvido."""
+    if current_user.role != 'dev':
+        abort(403)
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    ticket.status = 'closed'
+    db.session.commit()
+    flash('Chamado resolvido.', 'success')
+    return redirect(url_for('suporte'))
 

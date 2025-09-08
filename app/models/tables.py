@@ -95,6 +95,26 @@ class Session(db.Model):
     user = db.relationship('User', backref=db.backref('sessions', lazy=True))
 
 
+class SupportTicket(db.Model):
+    """Suporte aberto pelos usuários e atendido pelo desenvolvedor."""
+    __tablename__ = 'support_tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='open')
+    dev_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(SAO_PAULO_TZ))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+    )
+
+    user = db.relationship('User', foreign_keys=[user_id])
+    dev = db.relationship('User', foreign_keys=[dev_id])
+
+
 class Consultoria(db.Model):
     """Stores consulting company credentials."""
     __tablename__ = 'consultorias'

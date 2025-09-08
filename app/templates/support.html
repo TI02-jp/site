@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Suporte{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Suporte</h1>
+    <form method="post" class="mb-4">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", rows="3") }}
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+
+    <h2 class="h5">Chamados</h2>
+    <ul class="list-group">
+        {% for ticket in tickets %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>#{{ ticket.id }}</strong> - {{ ticket.description }}
+                {% if ticket.dev %}
+                <small class="text-muted">({{ ticket.dev.name }})</small>
+                {% endif %}
+            </div>
+            <div>
+                {% if current_user.role == 'dev' and ticket.status == 'open' %}
+                <a href="{{ url_for('pegar_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-success">Atender</a>
+                {% elif current_user.role == 'dev' and ticket.status != 'closed' %}
+                <a href="{{ url_for('resolver_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-danger">Resolver</a>
+                {% endif %}
+            </div>
+        </li>
+        {% else %}
+        <li class="list-group-item">Nenhum chamado.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+
