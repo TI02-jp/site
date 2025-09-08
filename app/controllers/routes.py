@@ -1568,6 +1568,9 @@ def suporte():
     """Página para abertura de chamados de suporte."""
     form = SupportTicketForm()
     form.email.data = current_user.email
+    if request.method == 'POST':
+        # Ensure the rich text description from the hidden field is processed
+        form.description.data = request.form.get('description', '')
     if form.validate_on_submit():
         ticket = SupportTicket(
             user_id=current_user.id,
