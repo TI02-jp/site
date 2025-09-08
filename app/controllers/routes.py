@@ -1594,7 +1594,7 @@ def suporte():
     return render_template('support.html', form=form, now=now, tickets=tickets)
 
 
-@app.route('/suporte/chamados')
+@app.route('/suporte/chamados', methods=['GET'])
 @login_required
 def suporte_chamados():
     """Lista de chamados de suporte para desenvolvedores ou usuários master."""
