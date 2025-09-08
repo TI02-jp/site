@@ -41,7 +41,33 @@
 
     <input type="file" id="image-input-descricao" accept="image/*" style="display:none;">
     {% if current_user.role == 'dev' %}
-    <a href="{{ url_for('listar_chamados') }}" class="btn btn-secondary">Ver chamados abertos</a>
+    <h2 class="mt-5 mb-3">Chamados Abertos</h2>
+    <ul class="list-group">
+        {% for ticket in tickets %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>#{{ ticket.id }}</strong> - {{ ticket.subject }}
+                    <div>{{ ticket.description|safe }}</div>
+                    <small class="text-muted">
+                        Usuário: {{ ticket.user.name }} | {{ ticket.email }} |
+                        {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }} | Urgência: {{ ticket.urgency.capitalize() }}
+                        {% if ticket.dev %}| Dev: {{ ticket.dev.name }}{% endif %}
+                    </small>
+                </div>
+                <div>
+                    {% if ticket.status == 'open' %}
+                    <a href="{{ url_for('pegar_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-success">Atender</a>
+                    {% elif ticket.status != 'closed' %}
+                    <a href="{{ url_for('resolver_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-danger">Resolver</a>
+                    {% endif %}
+                </div>
+            </div>
+        </li>
+        {% else %}
+        <li class="list-group-item">Nenhum chamado aberto.</li>
+        {% endfor %}
+    </ul>
     {% endif %}
 </div>
 {% endblock %}
