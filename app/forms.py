@@ -60,7 +60,14 @@ class RegistrationForm(FlaskForm):
 
 class SupportTicketForm(FlaskForm):
     """Formulário para abertura de chamados de suporte."""
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    subject = StringField('Assunto', validators=[DataRequired()])
     description = TextAreaField('Descrição', validators=[DataRequired()])
+    urgency = SelectField(
+        'Urgência',
+        choices=[('baixa', 'Baixa'), ('media', 'Média'), ('alta', 'Alta')],
+        validators=[DataRequired()]
+    )
     submit = SubmitField('Abrir chamado')
 
 # --- Formulários da Aplicação ---

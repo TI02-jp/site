@@ -101,7 +101,10 @@ class SupportTicket(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    urgency = db.Column(db.String(20), default='baixa', nullable=False)
     status = db.Column(db.String(20), default='open')
     dev_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(SAO_PAULO_TZ))
