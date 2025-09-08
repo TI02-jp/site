@@ -581,7 +581,7 @@ def login():
                 )
             )
             db.session.commit()
-            flash('Login bem-sucedido!')
+            flash('Login bem-sucedido!', 'success')
             return redirect(url_for('home'))
         else:
             flash('Credenciais inválidas', 'danger')
