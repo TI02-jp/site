@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Suporte - Chamados{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">
+    <div class="nav-section-title">PRINCIPAL</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-list-task"></i>
+                PARTICULARIDADES
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                ACESSÓRIAS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                SIEG
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('consultorias') }}">
+                <i class="bi bi-buildings"></i>
+                CONSULTORIAS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('sala_reunioes') }}">
+                <i class="bi bi-calendar-event"></i>
+                SALA DE REUNIÕES
+            </a>
+        </li>
+        {% if user_has_tag('Gestão') %}
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="return false;">
+                <i class="bi bi-people"></i>
+                DIRETORIA JP
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</div>
+<div class="nav-section">
+    <div class="nav-section-title">SUPORTE</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link {% if request.endpoint in ['suporte', 'suporte_chamados'] %}active{% endif %}" href="{{ url_for('suporte') }}">
+                <i class="bi bi-question-circle"></i>
+                Suporte
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="return false;">
+                <i class="bi bi-book"></i>
+                Documentação
+            </a>
+        </li>
+    </ul>
+</div>
+<style>
+    .content-breadcrumb { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Chamados Abertos</h1>
+    <ul class="list-group">
+        {% for ticket in tickets %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>#{{ ticket.id }}</strong> - {{ ticket.subject }}
+                    <div>{{ ticket.description|safe }}</div>
+                    <small class="text-muted">
+                        Usuário: {{ ticket.user.name }} | {{ ticket.email }} |
+                        {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }} | Urgência: {{ ticket.urgency.capitalize() }}
+                        {% if ticket.dev %}| Dev: {{ ticket.dev.name }}{% endif %}
+                    </small>
+                </div>
+                <div>
+                    {% if ticket.status == 'open' %}
+                    <a href="{{ url_for('pegar_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-success">Atender</a>
+                    {% elif ticket.status != 'closed' %}
+                    <a href="{{ url_for('resolver_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-danger">Resolver</a>
+                    {% endif %}
+                </div>
+            </div>
+        </li>
+        {% else %}
+        <li class="list-group-item">Nenhum chamado aberto.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
