@@ -1567,8 +1567,16 @@ def edit_user(user_id):
 def suporte():
     """Página de chamados de suporte."""
     form = SupportTicketForm()
+    if request.method == 'GET':
+        form.email.data = current_user.email
     if form.validate_on_submit():
-        ticket = SupportTicket(user_id=current_user.id, description=form.description.data)
+        ticket = SupportTicket(
+            user_id=current_user.id,
+            email=form.email.data,
+            subject=form.subject.data,
+            description=form.description.data,
+            urgency=form.urgency.data,
+        )
         db.session.add(ticket)
         db.session.commit()
         flash('Chamado aberto com sucesso!', 'success')
@@ -1578,7 +1586,8 @@ def suporte():
         tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
     else:
         tickets = SupportTicket.query.filter_by(user_id=current_user.id).order_by(SupportTicket.created_at.desc()).all()
-    return render_template('support.html', form=form, tickets=tickets)
+    now = datetime.now(SAO_PAULO_TZ)
+    return render_template('support.html', form=form, tickets=tickets, now=now)
 
 
 @app.route('/suporte/<int:ticket_id>/pegar')
