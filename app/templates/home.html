@@ -49,11 +49,22 @@
 <div class="nav-section">
     <div class="nav-section-title">SUPORTE</div>
     <ul class="nav flex-column">
+        {% set support_endpoints = ['suporte', 'suporte_chamados'] %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('suporte') }}">
+            <a class="nav-link {% if request.endpoint in support_endpoints %}active{% endif %}" href="{{ url_for('suporte') }}">
                 <i class="bi bi-question-circle"></i>
                 Suporte
             </a>
+            {% if request.endpoint in support_endpoints and (current_user.role == 'dev' or current_user.is_master) %}
+            <ul class="nav flex-column ms-3">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'suporte_chamados' %}active{% endif %}" href="{{ url_for('suporte_chamados') }}">
+                        <i class="bi bi-list-ul"></i>
+                        Chamados Abertos
+                    </a>
+                </li>
+            </ul>
+            {% endif %}
         </li>
         <li class="nav-item">
             <a class="nav-link" href="#" onclick="return false;">
