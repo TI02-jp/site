@@ -1583,22 +1583,29 @@ def suporte():
         return redirect(url_for('suporte'))
 
     now = datetime.now(SAO_PAULO_TZ)
-    tickets = None
-    if current_user.role == 'dev':
-        tickets = (
-            SupportTicket.query
-            .filter(SupportTicket.status != 'closed')
-            .order_by(SupportTicket.created_at.desc())
-            .all()
-        )
-    return render_template('support.html', form=form, now=now, tickets=tickets)
+    return render_template('support.html', form=form, now=now)
+
+
+@app.route('/suporte/chamados')
+@login_required
+def suporte_chamados():
+    """Lista de chamados de suporte para desenvolvedores ou usuários master."""
+    if current_user.role != 'dev' and not current_user.is_master:
+        abort(403)
+    tickets = (
+        SupportTicket.query
+        .filter(SupportTicket.status != 'closed')
+        .order_by(SupportTicket.created_at.desc())
+        .all()
+    )
+    return render_template('support_chamados.html', tickets=tickets)
 
 
 @app.route('/suporte/<int:ticket_id>/pegar')
 @login_required
 def pegar_chamado(ticket_id):
     """Permite ao desenvolvedor assumir o atendimento de um chamado."""
-    if current_user.role != 'dev':
+    if current_user.role != 'dev' and not current_user.is_master:
         abort(403)
     ticket = SupportTicket.query.get_or_404(ticket_id)
     if ticket.status == 'open':
@@ -1606,18 +1613,18 @@ def pegar_chamado(ticket_id):
         ticket.dev_id = current_user.id
         db.session.commit()
         flash('Chamado assumido.', 'success')
-    return redirect(url_for('suporte'))
+    return redirect(url_for('suporte_chamados'))
 
 
 @app.route('/suporte/<int:ticket_id>/resolver')
 @login_required
 def resolver_chamado(ticket_id):
     """Marca um chamado como resolvido."""
-    if current_user.role != 'dev':
+    if current_user.role != 'dev' and not current_user.is_master:
         abort(403)
     ticket = SupportTicket.query.get_or_404(ticket_id)
     ticket.status = 'closed'
     db.session.commit()
     flash('Chamado resolvido.', 'success')
-    return redirect(url_for('suporte'))
+    return redirect(url_for('suporte_chamados'))
 

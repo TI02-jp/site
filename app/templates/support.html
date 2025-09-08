@@ -50,7 +50,7 @@
     <div class="nav-section-title">SUPORTE</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'suporte' %}active{% endif %}" href="{{ url_for('suporte') }}">
+            <a class="nav-link {% if request.endpoint in ['suporte', 'suporte_chamados'] %}active{% endif %}" href="{{ url_for('suporte') }}">
                 <i class="bi bi-question-circle"></i>
                 Suporte
             </a>
@@ -102,38 +102,13 @@
             <div id="editor-descricao" style="height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
             {{ form.description(id='descricao') }}
         </div>
-        {{ form.submit(class="btn btn-primary") }}
+    {{ form.submit(class="btn btn-primary") }}
     </form>
 
     <input type="file" id="image-input-descricao" accept="image/*" style="display:none;">
-    {% if current_user.role == 'dev' %}
-    <h2 class="mt-5 mb-3">Chamados Abertos</h2>
-    <ul class="list-group">
-        {% for ticket in tickets %}
-        <li class="list-group-item">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <strong>#{{ ticket.id }}</strong> - {{ ticket.subject }}
-                    <div>{{ ticket.description|safe }}</div>
-                    <small class="text-muted">
-                        Usuário: {{ ticket.user.name }} | {{ ticket.email }} |
-                        {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }} | Urgência: {{ ticket.urgency.capitalize() }}
-                        {% if ticket.dev %}| Dev: {{ ticket.dev.name }}{% endif %}
-                    </small>
-                </div>
-                <div>
-                    {% if ticket.status == 'open' %}
-                    <a href="{{ url_for('pegar_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-success">Atender</a>
-                    {% elif ticket.status != 'closed' %}
-                    <a href="{{ url_for('resolver_chamado', ticket_id=ticket.id) }}" class="btn btn-sm btn-danger">Resolver</a>
-                    {% endif %}
-                </div>
-            </div>
-        </li>
-        {% else %}
-        <li class="list-group-item">Nenhum chamado aberto.</li>
-        {% endfor %}
-    </ul>
+
+    {% if current_user.role == 'dev' or current_user.is_master %}
+    <a href="{{ url_for('suporte_chamados') }}" class="btn btn-secondary">Ver Chamados Abertos</a>
     {% endif %}
 </div>
 {% endblock %}
