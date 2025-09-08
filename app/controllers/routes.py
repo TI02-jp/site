@@ -1565,7 +1565,7 @@ def edit_user(user_id):
 @app.route('/suporte', methods=['GET', 'POST'])
 @login_required
 def suporte():
-    """Página de chamados de suporte."""
+    """Página para abertura de chamados de suporte."""
     form = SupportTicketForm()
     if request.method == 'GET':
         form.email.data = current_user.email
@@ -1582,12 +1582,23 @@ def suporte():
         flash('Chamado aberto com sucesso!', 'success')
         return redirect(url_for('suporte'))
 
-    if current_user.role == 'dev':
-        tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
-    else:
-        tickets = SupportTicket.query.filter_by(user_id=current_user.id).order_by(SupportTicket.created_at.desc()).all()
     now = datetime.now(SAO_PAULO_TZ)
-    return render_template('support.html', form=form, tickets=tickets, now=now)
+    return render_template('support.html', form=form, now=now)
+
+
+@app.route('/suporte/chamados')
+@login_required
+def listar_chamados():
+    """Lista de chamados em aberto para desenvolvedores."""
+    if current_user.role != 'dev':
+        abort(403)
+    tickets = (
+        SupportTicket.query
+        .filter(SupportTicket.status != 'closed')
+        .order_by(SupportTicket.created_at.desc())
+        .all()
+    )
+    return render_template('support_tickets.html', tickets=tickets)
 
 
 @app.route('/suporte/<int:ticket_id>/pegar')
@@ -1602,7 +1613,7 @@ def pegar_chamado(ticket_id):
         ticket.dev_id = current_user.id
         db.session.commit()
         flash('Chamado assumido.', 'success')
-    return redirect(url_for('suporte'))
+    return redirect(url_for('listar_chamados'))
 
 
 @app.route('/suporte/<int:ticket_id>/resolver')
@@ -1615,5 +1626,5 @@ def resolver_chamado(ticket_id):
     ticket.status = 'closed'
     db.session.commit()
     flash('Chamado resolvido.', 'success')
-    return redirect(url_for('suporte'))
+    return redirect(url_for('listar_chamados'))
 
