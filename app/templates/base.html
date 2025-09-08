@@ -371,8 +371,8 @@
               class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
               role="alert"
             >
-              <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }} me-2"></i>
-              {{ message }}
+              <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }}"></i>
+              <span class="flash-message">{{ message }}</span>
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
             </div>
           {% endfor %}
