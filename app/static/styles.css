@@ -1274,3 +1274,19 @@ iframe {
             border: none;
             overflow-x: hidden;
         }
+
+/* -----------------------------
+Flash Messages
+----------------------------- */
+.flash-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1100;
+}
+
+.flash-container .alert {
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
