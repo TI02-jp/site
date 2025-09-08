@@ -88,7 +88,7 @@
             <div class="d-flex justify-content-between">
                 <div>
                     <strong>#{{ ticket.id }}</strong> - {{ ticket.subject }}
-                    <div class="border rounded p-3 my-2 bg-white editor-content">{{ ticket.description|safe }}</div>
+                    <div class="border rounded p-3 my-2 bg-white editor-content">{{ ticket.description|sanitize }}</div>
                     <small class="text-muted">
                         Usuário: {{ ticket.user.name }} | {{ ticket.email }} |
                         {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }} | Urgência: {{ ticket.urgency.capitalize() }}
