@@ -58,6 +58,11 @@ class RegistrationForm(FlaskForm):
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
+class SupportTicketForm(FlaskForm):
+    """Formulário para abertura de chamados de suporte."""
+    description = TextAreaField('Descrição', validators=[DataRequired()])
+    submit = SubmitField('Abrir chamado')
+
 # --- Formulários da Aplicação ---
 
 def validar_cnpj(form, field):
