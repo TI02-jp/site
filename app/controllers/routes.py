@@ -484,7 +484,7 @@ def nova_inclusao():
             usuario=user.name if user else '',
             setor=request.form.get('setor'),
             consultoria=request.form.get('consultoria'),
-            assunto=request.form.get('assunto'),
+            assunto=(request.form.get('assunto') or '').upper(),
             pergunta=sanitize_html(request.form.get('pergunta')),
             resposta=sanitize_html(request.form.get('resposta')),
         )
@@ -526,7 +526,7 @@ def editar_consultoria(codigo):
         inclusao.usuario = user.name if user else ''
         inclusao.setor = request.form.get('setor')
         inclusao.consultoria = request.form.get('consultoria')
-        inclusao.assunto = request.form.get('assunto')
+        inclusao.assunto = (request.form.get('assunto') or '').upper()
         inclusao.pergunta = sanitize_html(request.form.get('pergunta'))
         inclusao.resposta = sanitize_html(request.form.get('resposta'))
         db.session.commit()
