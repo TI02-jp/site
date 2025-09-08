@@ -50,11 +50,19 @@
     <div class="nav-section-title">SUPORTE</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link {% if request.endpoint in ['suporte', 'suporte_chamados'] %}active{% endif %}" href="{{ url_for('suporte') }}">
-                <i class="bi bi-question-circle"></i>
-                Suporte
+            <a class="nav-link {% if request.endpoint == 'suporte' %}active{% endif %}" href="{{ url_for('suporte') }}">
+                <i class="bi bi-plus-circle"></i>
+                Abrir Chamado
             </a>
         </li>
+        {% if current_user.role == 'dev' or current_user.is_master %}
+        <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'suporte_chamados' %}active{% endif %}" href="{{ url_for('suporte_chamados') }}">
+                <i class="bi bi-list-ul"></i>
+                Chamados Abertos
+            </a>
+        </li>
+        {% endif %}
         <li class="nav-item">
             <a class="nav-link" href="#" onclick="return false;">
                 <i class="bi bi-book"></i>
@@ -106,10 +114,6 @@
     </form>
 
     <input type="file" id="image-input-descricao" accept="image/*" style="display:none;">
-
-    {% if current_user.role == 'dev' or current_user.is_master %}
-    <a href="{{ url_for('suporte_chamados') }}" class="btn btn-secondary">Ver Chamados Abertos</a>
-    {% endif %}
 </div>
 {% endblock %}
 
