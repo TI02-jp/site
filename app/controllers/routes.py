@@ -1582,8 +1582,15 @@ def suporte():
         flash('Chamado aberto com sucesso!', 'success')
         return redirect(url_for('suporte'))
 
+    tickets = (
+        SupportTicket.query
+        .filter_by(user_id=current_user.id)
+        .order_by(SupportTicket.created_at.desc())
+        .all()
+    )
+
     now = datetime.now(SAO_PAULO_TZ)
-    return render_template('support.html', form=form, now=now)
+    return render_template('support.html', form=form, now=now, tickets=tickets)
 
 
 @app.route('/suporte/chamados')

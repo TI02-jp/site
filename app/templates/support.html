@@ -82,6 +82,11 @@
 {% block content %}
 <div class="container py-4">
     <h1 class="mb-4">Suporte</h1>
+    {% if current_user.role == 'dev' or current_user.is_master %}
+    <div class="mb-4">
+        <a class="btn btn-secondary" href="{{ url_for('suporte_chamados') }}">Ver Chamados em Aberto</a>
+    </div>
+    {% endif %}
     <form method="post" class="mb-4">
         {{ form.hidden_tag() }}
         <div class="row mb-3">
@@ -115,6 +120,34 @@
         </div>
     {{ form.submit(class="btn btn-primary") }}
     </form>
+
+    {% if tickets %}
+    <h2 class="mt-5">Seus Chamados</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Assunto</th>
+                    <th>Status</th>
+                    <th>Criado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket.id }}</td>
+                    <td>{{ ticket.subject }}</td>
+                    <td>{{ ticket.status }}</td>
+                    <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mt-5">Você ainda não abriu chamados.</p>
+    {% endif %}
 
     <input type="file" id="image-input-descricao" accept="image/*" style="display:none;">
 </div>
