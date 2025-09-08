@@ -874,37 +874,6 @@ Responsividade
     }
 }
 
-/* -----------------------------
-Mensagem de login flutuante
------------------------------ */
-.flash-floating {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    max-width: 300px;
-    width: auto;
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-    padding: 12px 16px;
-    border-radius: 6px;
-    z-index: 9999; /* Aumenta o z-index para garantir que fique acima */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    opacity: 1;
-    transition: opacity 0.5s ease;
-    font-size: 0.95rem;
-}
-.flash-floating.hide {
-    opacity: 0;
-    pointer-events: none;
-}
-
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
 /* --- Ajustes das colunas --- */
 .codigo-col {
     width: 70px;
@@ -1282,6 +1251,7 @@ Flash Messages
     position: fixed;
     top: 1rem;
     right: 1rem;
+    max-width: 300px;
     z-index: 1100;
 }
 
@@ -1289,4 +1259,17 @@ Flash Messages
     padding: 0.5rem 1rem;
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.flash-container .alert-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border-color: #badbcc;
+}
+
+.flash-container .alert-danger {
+    background-color: #f8d7da;
+    color: #842029;
+    border-color: #f5c2c7;
 }
