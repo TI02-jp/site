@@ -44,7 +44,10 @@ class RegistrationForm(FlaskForm):
     # Senha de acesso
     password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
     # Confirmação da senha para evitar erros de digitação
-    confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')])
+    confirm_password = PasswordField(
+        'Confirmar Senha',
+        validators=[DataRequired(), EqualTo('password', message='As senhas devem ser iguais.')]
+    )
     # Perfil do usuário (admin ou comum)
     role = SelectField('Perfil', choices=[('user', 'Usuário'), ('admin', 'Administrador')], validators=[DataRequired()])
     # Tags adicionais do usuário
@@ -60,9 +63,9 @@ class RegistrationForm(FlaskForm):
 
 class SupportTicketForm(FlaskForm):
     """Formulário para abertura de chamados de suporte."""
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    email = StringField('Email', validators=[DataRequired(), Email()], render_kw={'readonly': True})
     subject = StringField('Assunto', validators=[DataRequired()])
-    description = TextAreaField('Descrição', validators=[DataRequired()])
+    description = HiddenField('Descrição', validators=[DataRequired()])
     urgency = SelectField(
         'Urgência',
         choices=[('baixa', 'Baixa'), ('media', 'Média'), ('alta', 'Alta')],
