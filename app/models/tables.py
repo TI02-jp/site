@@ -67,14 +67,6 @@ class User(db.Model, UserMixin):
         """Return True if the user is marked as active."""
         return self.ativo
 
-class Post(db.Model):
-    """User-generated post."""
-    __tablename__ = "posts"
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    id_user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('posts', lazy=True))
-
 
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
