@@ -61,18 +61,6 @@ class RegistrationForm(FlaskForm):
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
-class SupportTicketForm(FlaskForm):
-    """Formulário para abertura de chamados de suporte."""
-    email = StringField('Email', validators=[DataRequired(), Email()], render_kw={'readonly': True})
-    subject = StringField('Assunto', validators=[DataRequired()])
-    description = HiddenField('Descrição', validators=[DataRequired()])
-    urgency = SelectField(
-        'Urgência',
-        choices=[('baixa', 'Baixa'), ('media', 'Média'), ('alta', 'Alta')],
-        validators=[DataRequired()]
-    )
-    submit = SubmitField('Abrir chamado')
-
 # --- Formulários da Aplicação ---
 
 def validar_cnpj(form, field):
