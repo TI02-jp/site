@@ -15,7 +15,6 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
-    SupportTicket,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -32,7 +31,6 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
     TagForm,
-    SupportTicketForm,
 )
 import os, json, re
 from werkzeug.utils import secure_filename
@@ -1561,81 +1559,4 @@ def edit_user(user_id):
 
     return render_template('edit_user.html', form=form, user=user)
 
-
-@app.route('/suporte', methods=['GET', 'POST'])
-@login_required
-def suporte():
-    """Página para abertura de chamados de suporte."""
-    form = SupportTicketForm()
-    form.email.data = current_user.email
-    if request.method == 'POST':
-        # Ensure the rich text description from the hidden field is processed
-        form.description.data = request.form.get('description', '')
-    if form.validate_on_submit():
-        ticket = SupportTicket(
-            user_id=current_user.id,
-            email=current_user.email,
-            subject=form.subject.data,
-            description=sanitize_html(form.description.data),
-            urgency=form.urgency.data,
-        )
-        db.session.add(ticket)
-        db.session.commit()
-        flash('Chamado aberto com sucesso!', 'success')
-        return redirect(url_for('suporte'))
-    elif request.method == 'POST':
-        flash('Não foi possível abrir o chamado. Verifique os dados e tente novamente.', 'danger')
-
-    tickets = (
-        SupportTicket.query
-        .filter_by(user_id=current_user.id)
-        .order_by(SupportTicket.created_at.desc())
-        .all()
-    )
-
-    now = datetime.now(SAO_PAULO_TZ)
-    return render_template('support.html', form=form, now=now, tickets=tickets)
-
-
-@app.route('/suporte/chamados', methods=['GET'])
-@login_required
-def suporte_chamados():
-    """Lista de chamados de suporte para desenvolvedores ou usuários master."""
-    if current_user.role != 'dev' and not current_user.is_master:
-        abort(403)
-    tickets = (
-        SupportTicket.query
-        .filter(SupportTicket.status != 'closed')
-        .order_by(SupportTicket.created_at.desc())
-        .all()
-    )
-    return render_template('support_chamados.html', tickets=tickets)
-
-
-@app.route('/suporte/<int:ticket_id>/pegar')
-@login_required
-def pegar_chamado(ticket_id):
-    """Permite ao desenvolvedor assumir o atendimento de um chamado."""
-    if current_user.role != 'dev' and not current_user.is_master:
-        abort(403)
-    ticket = SupportTicket.query.get_or_404(ticket_id)
-    if ticket.status == 'open':
-        ticket.status = 'in_progress'
-        ticket.dev_id = current_user.id
-        db.session.commit()
-        flash('Chamado assumido.', 'success')
-    return redirect(url_for('suporte_chamados'))
-
-
-@app.route('/suporte/<int:ticket_id>/resolver')
-@login_required
-def resolver_chamado(ticket_id):
-    """Marca um chamado como resolvido."""
-    if current_user.role != 'dev' and not current_user.is_master:
-        abort(403)
-    ticket = SupportTicket.query.get_or_404(ticket_id)
-    ticket.status = 'closed'
-    db.session.commit()
-    flash('Chamado resolvido.', 'success')
-    return redirect(url_for('suporte_chamados'))
 
