@@ -105,7 +105,7 @@ class SupportTicket(db.Model):
     subject = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
     urgency = db.Column(db.String(20), default='baixa', nullable=False)
-    status = db.Column(db.String(20), default='open')
+    status = db.Column(db.String(20), default='open', nullable=False)
     dev_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(SAO_PAULO_TZ))
     updated_at = db.Column(
