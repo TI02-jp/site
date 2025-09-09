@@ -87,6 +87,25 @@ class Session(db.Model):
     user = db.relationship('User', backref=db.backref('sessions', lazy=True))
 
 
+class SessionActivity(db.Model):
+    """Tracks navigation events for a user session."""
+    __tablename__ = "session_activities"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    session_id = db.Column(
+        db.String(128), db.ForeignKey('sessions.session_id', ondelete='CASCADE'), nullable=False
+    )
+    path = db.Column(db.String(255))
+    method = db.Column(db.String(10))
+    accessed_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(SAO_PAULO_TZ), nullable=False
+    )
+
+    session = db.relationship(
+        'Session', backref=db.backref('activities', lazy=True, cascade='all, delete-orphan')
+    )
+
+
 class Consultoria(db.Model):
     """Stores consulting company credentials."""
     __tablename__ = 'consultorias'

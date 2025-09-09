@@ -46,7 +46,7 @@ def _enforce_https():
 def _update_last_seen():
     """Update ``current_user.last_seen`` and session activity."""
     if current_user.is_authenticated:
-        from app.models.tables import Session, SAO_PAULO_TZ
+        from app.models.tables import Session, SessionActivity, SAO_PAULO_TZ
 
         now_sp = datetime.now(SAO_PAULO_TZ)
         current_user.last_seen = datetime.utcnow()
@@ -68,6 +68,15 @@ def _update_last_seen():
                     last_activity=now_sp,
                 )
                 db.session.add(sess)
+            if request.endpoint != 'static':
+                db.session.add(
+                    SessionActivity(
+                        session_id=sid,
+                        path=request.path,
+                        method=request.method,
+                        accessed_at=now_sp,
+                    )
+                )
         db.session.commit()
 
 
