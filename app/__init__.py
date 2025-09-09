@@ -1,6 +1,7 @@
 """Flask application factory and common utilities."""
 
 import os
+import time
 from flask import Flask, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -41,6 +42,13 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+
+@app.url_defaults
+def add_cache_buster(endpoint, values):
+    """Append a timestamp query parameter to static asset URLs."""
+    if endpoint == 'static' and 'cb' not in values:
+        values['cb'] = int(time.time())
 
 
 @app.before_request
