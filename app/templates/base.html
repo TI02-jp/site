@@ -623,6 +623,11 @@ document.addEventListener('DOMContentLoaded', function() {
         ['mousemove','keydown','click','scroll','touchstart'].forEach(evt => {
             window.addEventListener(evt, sendPing, {passive: true});
         });
+        window.addEventListener('message', (event) => {
+            if (event.data === 'session-activity') {
+                sendPing();
+            }
+        });
         setInterval(sendPing, 60000);
         sendPing();
     })();
