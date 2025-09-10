@@ -305,46 +305,39 @@ def sala_reunioes():
     populate_participants_choices(form)
     events: list[dict] = []
     show_modal = False
-    creds_dict = session.get("credentials")
-    if creds_dict:
-        raw_events, creds = fetch_raw_events(creds_dict)
-        creds_dict = credentials_to_dict(creds)
-        session["credentials"] = creds_dict
-        now = datetime.now(SAO_PAULO_TZ)
-        if form.validate_on_submit():
-            if form.meeting_id.data:
-                meeting = Reuniao.query.get(int(form.meeting_id.data))
-                if (
-                    meeting
-                    and meeting.criador_id == current_user.id
-                    and meeting.status == "agendada"
-                ):
-                    creds = update_meeting(form, raw_events, now, meeting, creds_dict)
-                    if creds:
-                        session["credentials"] = credentials_to_dict(creds)
-                        return redirect(url_for("sala_reunioes"))
-                    show_modal = True
-                else:
-                    flash(
-                        "Você só pode editar reuniões agendadas que você criou.",
-                        "danger",
-                    )
-            else:
-                creds = create_meeting_and_event(
-                    form, raw_events, now, creds_dict, current_user.id
-                )
-                if creds:
-                    session["credentials"] = credentials_to_dict(creds)
+    raw_events = fetch_raw_events()
+    now = datetime.now(SAO_PAULO_TZ)
+    if form.validate_on_submit():
+        if form.meeting_id.data:
+            meeting = Reuniao.query.get(int(form.meeting_id.data))
+            if (
+                meeting
+                and meeting.criador_id == current_user.id
+                and meeting.status == "agendada"
+            ):
+                success = update_meeting(form, raw_events, now, meeting)
+                if success:
                     return redirect(url_for("sala_reunioes"))
                 show_modal = True
-        if request.method == "POST":
+            else:
+                flash(
+                    "Você só pode editar reuniões agendadas que você criou.",
+                    "danger",
+                )
+        else:
+            success = create_meeting_and_event(
+                form, raw_events, now, current_user.id
+            )
+            if success:
+                return redirect(url_for("sala_reunioes"))
             show_modal = True
-        events = combine_events(raw_events, now, current_user.id)
+    if request.method == "POST":
+        show_modal = True
+    events = combine_events(raw_events, now, current_user.id)
     return render_template(
         "sala_reunioes.html",
         form=form,
         events=events,
-        credentials=creds_dict,
         show_modal=show_modal,
     )
 
@@ -357,10 +350,7 @@ def delete_reuniao(meeting_id):
     if meeting.criador_id != current_user.id or meeting.status != "agendada":
         flash("Você só pode excluir reuniões agendadas que você criou.", "danger")
         return redirect(url_for("sala_reunioes"))
-    creds_dict = session.get("credentials")
-    creds = delete_meeting(meeting, creds_dict)
-    if creds:
-        session["credentials"] = credentials_to_dict(creds)
+    delete_meeting(meeting)
     flash("Reunião excluída com sucesso!", "success")
     return redirect(url_for("sala_reunioes"))
 
