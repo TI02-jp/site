@@ -89,7 +89,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
             f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
             "warning",
         )
-        start_dt, end_dt = adjusted_start, adjusted_end
+        return None
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users]
@@ -189,7 +189,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
             "warning",
         )
-        start_dt, end_dt = adjusted_start, adjusted_end
+        return False
 
     meeting.data_reuniao = form.date.data
     meeting.hora_inicio = form.start_time.data
@@ -204,6 +204,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         )
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
+    return True
 
 
 def combine_events(raw_events, now, current_user_id: int):
