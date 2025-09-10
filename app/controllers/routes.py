@@ -1,6 +1,7 @@
 """Flask route handlers for the web application."""
 
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
+from markupsafe import Markup
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -45,7 +46,11 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
-from app.services.google_calendar import list_upcoming_events, create_meet_event
+from app.services.google_calendar import (
+    list_upcoming_events,
+    create_meet_event,
+    create_event,
+)
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -296,14 +301,25 @@ def sala_reunioes():
             if participant_names:
                 description += "\nParticipantes: " + ", ".join(participant_names)
             description += f"\nStatus: {form.status.data}"
-            event, creds = create_meet_event(
-                creds_dict,
-                form.subject.data,
-                start_dt,
-                end_dt,
-                description,
-                participant_emails,
-            )
+            if form.create_meet.data:
+                event, creds = create_meet_event(
+                    creds_dict,
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                )
+            else:
+                event, creds = create_event(
+                    creds_dict,
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                )
+            meet_link = event.get('hangoutLink')
             session['credentials'] = credentials_to_dict(creds)
             meeting = Reuniao(
                 data_reuniao=form.date.data,
@@ -312,6 +328,7 @@ def sala_reunioes():
                 assunto=form.subject.data,
                 descricao=form.description.data,
                 status=form.status.data,
+                meet_link=meet_link,
             )
             db.session.add(meeting)
             db.session.flush()
@@ -324,7 +341,15 @@ def sala_reunioes():
                     )
                 )
             db.session.commit()
-            flash('Reunião criada com sucesso!', 'success')
+            if meet_link:
+                flash(
+                    Markup(
+                        f'Reunião criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
+                    ),
+                    'success',
+                )
+            else:
+                flash('Reunião criada com sucesso!', 'success')
             return redirect(url_for('sala_reunioes'))
         raw_events, creds = list_upcoming_events(creds_dict)
         session['credentials'] = credentials_to_dict(creds)
@@ -348,7 +373,10 @@ def sala_reunioes():
             color = '#198754'
         elif r.status == 'cancelada':
             color = '#ffc107'
-        events.append({'title': r.assunto, 'start': start, 'end': end, 'color': color})
+        event_data = {'title': r.assunto, 'start': start, 'end': end, 'color': color}
+        if r.meet_link:
+            event_data['url'] = r.meet_link
+        events.append(event_data)
     return render_template(
         'sala_reunioes.html', form=form, events=events, credentials=creds_dict
     )

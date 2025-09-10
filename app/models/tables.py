@@ -210,6 +210,7 @@ class Reuniao(db.Model):
     hora_fim = db.Column(db.Time, nullable=False)
     assunto = db.Column(db.String(50), nullable=False)
     descricao = db.Column(db.Text)
+    meet_link = db.Column(db.String(255))
     status = db.Column(db.String(20), nullable=False, default='agendada')
     data_criacao = db.Column(
         db.DateTime(timezone=True),
