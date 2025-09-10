@@ -313,18 +313,19 @@ def sala_reunioes():
         if form.validate_on_submit():
             if form.meeting_id.data:
                 meeting = Reuniao.query.get(int(form.meeting_id.data))
-                if meeting and meeting.criador_id == current_user.id:
-                    if meeting.status == "agendada":
-                        if update_meeting(form, raw_events, now, meeting):
-                            return redirect(url_for("sala_reunioes"))
-                        show_modal = True
-                    else:
-                        flash(
-                            "A reunião só pode ser editada enquanto estiver agendada.",
-                            "warning",
-                        )
+                if (
+                    meeting
+                    and meeting.criador_id == current_user.id
+                    and meeting.status == "agendada"
+                ):
+                    if update_meeting(form, raw_events, now, meeting):
+                        return redirect(url_for("sala_reunioes"))
+                    show_modal = True
                 else:
-                    flash("Você não tem permissão para editar esta reunião.", "danger")
+                    flash(
+                        "Você só pode editar reuniões agendadas que você criou.",
+                        "danger",
+                    )
             else:
                 creds = create_meeting_and_event(
                     form, raw_events, now, creds_dict, current_user.id

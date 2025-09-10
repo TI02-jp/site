@@ -150,6 +150,9 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts."""
+    if meeting.status != "agendada":
+        flash("A reunião só pode ser editada enquanto estiver agendada.", "warning")
+        return False
     start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
         tzinfo=SAO_PAULO_TZ
     )
