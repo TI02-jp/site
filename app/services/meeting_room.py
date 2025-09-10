@@ -17,6 +17,7 @@ from app.services.google_calendar import (
     create_meet_event,
     create_event,
     update_event,
+    delete_event,
 )
 
 MIN_GAP = timedelta(minutes=2)
@@ -32,7 +33,7 @@ def populate_participants_choices(form):
 
 def fetch_raw_events(creds_dict):
     """Fetch upcoming events from Google Calendar."""
-    raw_events, creds = list_upcoming_events(creds_dict)
+    raw_events, creds = list_upcoming_events(creds_dict, max_results=250)
     return raw_events, creds
 
 
@@ -233,10 +234,33 @@ def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
     return creds
 
 
+def delete_meeting(meeting: Reuniao, creds_dict):
+    """Remove meeting from DB and Google Calendar."""
+    creds = None
+    if creds_dict and meeting.google_event_id:
+        try:
+            creds = delete_event(creds_dict, meeting.google_event_id)
+        except Exception:
+            creds = None
+    db.session.delete(meeting)
+    db.session.commit()
+    return creds
+
+
 def combine_events(raw_events, now, current_user_id: int):
     """Combine Google and local events updating their status."""
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
+
+    google_ids = {e.get("id") for e in raw_events if e.get("id")}
+    removed = False
+    for r in Reuniao.query.filter(Reuniao.google_event_id.isnot(None)).all():
+        if r.google_event_id not in google_ids:
+            db.session.delete(r)
+            removed = True
+    if removed:
+        db.session.commit()
+
     updated = False
 
     # Prioritize locally stored meetings so their metadata (including

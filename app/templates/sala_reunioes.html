@@ -163,8 +163,12 @@
                             </div>
                         </div>
                         <div class="modal-footer">
+                            <form id="deleteMeetingForm" method="post" class="d-none">
+                                {{ form.csrf_token(id='csrf_token_delete') }}
+                            </form>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                             <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
+                            <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
                         </div>
                     </div>
                 </div>
@@ -234,10 +238,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 copyBtn.classList.add('d-none');
             }
             var editBtn = document.getElementById('editEventBtn');
+            var deleteBtn = document.getElementById('deleteEventBtn');
+            var deleteForm = document.getElementById('deleteMeetingForm');
             if (e.extendedProps.can_edit) {
                 editBtn.classList.remove('d-none');
+                deleteBtn.classList.remove('d-none');
+                deleteForm.action = '/reuniao/' + e.extendedProps.meeting_id + '/delete';
             } else {
                 editBtn.classList.add('d-none');
+                deleteBtn.classList.add('d-none');
             }
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             modal.show();
@@ -266,6 +275,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
         var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
         meetingModal.show();
+    });
+
+    document.getElementById('deleteEventBtn').addEventListener('click', function() {
+        if (confirm('Deseja excluir esta reunião?')) {
+            document.getElementById('deleteMeetingForm').submit();
+        }
     });
 
     document.getElementById('openMeetingModal').addEventListener('click', function() {
