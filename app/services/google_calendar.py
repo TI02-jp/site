@@ -6,6 +6,7 @@ from uuid import uuid4
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from app.models.tables import SAO_PAULO_TZ
 
@@ -137,3 +138,14 @@ def update_event(
         .execute()
     )
     return updated_event, creds
+
+
+def delete_event(credentials_dict: dict, event_id: str):
+    """Delete an event from the primary calendar."""
+    service, creds = _build_service(credentials_dict)
+    try:
+        service.events().delete(calendarId="primary", eventId=event_id).execute()
+    except HttpError:
+        # If the event is already removed, ignore the error
+        pass
+    return creds

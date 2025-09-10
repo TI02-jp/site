@@ -60,6 +60,7 @@ from app.services.meeting_room import (
     create_meeting_and_event,
     update_meeting,
     combine_events,
+    delete_meeting,
 )
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -346,6 +347,22 @@ def sala_reunioes():
         credentials=creds_dict,
         show_modal=show_modal,
     )
+
+
+@app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])
+@login_required
+def delete_reuniao(meeting_id):
+    """Delete a meeting and its corresponding Google Calendar event."""
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    if meeting.criador_id != current_user.id or meeting.status != "agendada":
+        flash("Você só pode excluir reuniões agendadas que você criou.", "danger")
+        return redirect(url_for("sala_reunioes"))
+    creds_dict = session.get("credentials")
+    creds = delete_meeting(meeting, creds_dict)
+    if creds:
+        session["credentials"] = credentials_to_dict(creds)
+    flash("Reunião excluída com sucesso!", "success")
+    return redirect(url_for("sala_reunioes"))
 
 
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])
