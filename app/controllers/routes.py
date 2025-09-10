@@ -329,30 +329,29 @@ def sala_reunioes():
                 intervals.append((existing_start, existing_end))
 
             proposed_start = max(start_dt, now + MIN_GAP)
-            reason = ''
+            messages: list[str] = []
             if proposed_start != start_dt:
-                reason = (
-                    'Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência. '
+                messages.append(
+                    'Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência.'
                 )
             adjusted_start = next_available(proposed_start, duration, intervals)
             if adjusted_start != proposed_start:
-                reason = 'Horário conflita com outra reunião. '
+                messages.append('Horário conflita com outra reunião.')
             if adjusted_start != start_dt:
                 adjusted_end = adjusted_start + duration
                 form.date.data = adjusted_start.date()
                 form.start_time.data = adjusted_start.time()
                 form.end_time.data = adjusted_end.time()
                 flash(
-                    f"{reason}Horário ajustado para o próximo horário livre.",
-                    'danger',
+                    f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
+                    'warning',
                 )
-                show_modal = True
-            else:
-                selected_users = User.query.filter(
-                    User.id.in_(form.participants.data)
-                ).all()
-                participant_emails = [u.email for u in selected_users]
-                participant_names = [u.name for u in selected_users]
+                start_dt, end_dt = adjusted_start, adjusted_end
+            selected_users = User.query.filter(
+                User.id.in_(form.participants.data)
+            ).all()
+            participant_emails = [u.email for u in selected_users]
+            participant_names = [u.name for u in selected_users]
                 description = form.description.data or ''
                 if participant_names:
                     description += "\nParticipantes: " + ", ".join(participant_names)
