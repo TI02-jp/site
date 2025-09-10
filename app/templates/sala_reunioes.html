@@ -147,16 +147,20 @@
                         </div>
                         <div class="modal-body text-start">
                             <ul class="list-group">
-                                <li class="list-group-item"><strong>Início:</strong> <span id="detailStart"></span></li>
-                                <li class="list-group-item"><strong>Fim:</strong> <span id="detailEnd"></span></li>
-                                <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
+                                <li class="list-group-item"><strong>Data:</strong> <span id="detailDate"></span></li>
+                                <li class="list-group-item"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
                                 <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
-                                <li class="list-group-item d-none" id="detailDescriptionItem"><strong>Descrição:</strong> <span id="detailDescription"></span></li>
+                                <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
-                            <a id="detailMeetLink"
-                               href="#"
-                               target="_blank"
-                               class="btn btn-sm btn-primary mt-3 d-none">Abrir Meet</a>
+                            <div class="d-flex gap-2">
+                                <a id="detailMeetLink"
+                                   href="#"
+                                   target="_blank"
+                                   class="btn btn-sm btn-primary mt-3 d-none">Abrir Meet</a>
+                                <button type="button"
+                                        id="copyMeetLink"
+                                        class="btn btn-sm btn-outline-primary mt-3 d-none">Copiar link</button>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -214,24 +218,22 @@ document.addEventListener('DOMContentLoaded', function() {
             var e = info.event;
             currentEvent = e;
             document.getElementById('detailTitle').textContent = e.title;
-            document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleString() : '';
-            document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleString() : '';
+            document.getElementById('detailDate').textContent = e.start ? e.start.toLocaleDateString() : '';
+            document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+            document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
-            var descItem = document.getElementById('detailDescriptionItem');
-            if (e.extendedProps.description) {
-                document.getElementById('detailDescription').textContent = e.extendedProps.description;
-                descItem.classList.remove('d-none');
-            } else {
-                descItem.classList.add('d-none');
-            }
             var linkEl = document.getElementById('detailMeetLink');
+            var copyBtn = document.getElementById('copyMeetLink');
             if (e.extendedProps.meet_link) {
                 linkEl.href = e.extendedProps.meet_link;
                 linkEl.classList.remove('d-none');
+                copyBtn.classList.remove('d-none');
+                copyBtn.onclick = function() { navigator.clipboard.writeText(e.extendedProps.meet_link); };
             } else {
                 linkEl.classList.add('d-none');
+                copyBtn.classList.add('d-none');
             }
             var editBtn = document.getElementById('editEventBtn');
             if (e.extendedProps.can_edit) {
