@@ -44,7 +44,44 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-agendamento">
-    <iframe src="http://192.168.0.211:8000"></iframe>
+<div class="container mt-4">
+    {% if not credentials %}
+        <div class="alert alert-warning">Conecte-se com sua conta Google para agendar reuniões.</div>
+    {% else %}
+        <form method="post" class="mb-4">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.start.label(class="form-label") }}
+                {{ form.start(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.end.label(class="form-label") }}
+                {{ form.end(class="form-control") }}
+            </div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+        <h3>Próximas reuniões</h3>
+        <ul class="list-group">
+            {% for event in events %}
+                <li class="list-group-item">
+                    {{ event.summary }} -
+                    {% if event.start.dateTime %}
+                        {{ event.start.dateTime }}
+                    {% else %}
+                        {{ event.start.date }}
+                    {% endif %}
+                    {% if event.hangoutLink %}
+                        - <a href="{{ event.hangoutLink }}" target="_blank">Link</a>
+                    {% endif %}
+                </li>
+            {% else %}
+                <li class="list-group-item">Nenhuma reunião agendada.</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 </div>
 {% endblock %}
