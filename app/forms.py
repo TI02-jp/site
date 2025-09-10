@@ -6,6 +6,7 @@ from wtforms import (
     RadioField,
     SubmitField,
     DateField,
+    DateTimeLocalField,
     SelectMultipleField,
     SelectField,
     TextAreaField,
@@ -225,3 +226,11 @@ class TagForm(FlaskForm):
     """Formulário para cadastro de tags."""
     nome = StringField('Tag', validators=[DataRequired()])
     submit = SubmitField('Salvar')
+
+
+class MeetingForm(FlaskForm):
+    """Formulário para agendamento de reuniões."""
+    title = StringField('Título', validators=[DataRequired()])
+    start = DateTimeLocalField('Início', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
+    end = DateTimeLocalField('Fim', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
+    submit = SubmitField('Agendar')

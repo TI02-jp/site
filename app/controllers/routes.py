@@ -31,6 +31,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
     TagForm,
+    MeetingForm,
 )
 import os, json, re, secrets
 import requests
@@ -42,6 +43,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
+from app.services.google_calendar import list_upcoming_events, create_meet_event
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -267,11 +269,28 @@ def consultorias():
     return render_template('consultorias.html', consultorias=consultorias)
 
 
-@app.route('/sala-reunioes')
+@app.route('/sala-reunioes', methods=['GET', 'POST'])
 @login_required
 def sala_reunioes():
-    """Display meeting room agenda via external system."""
-    return render_template('sala_reunioes.html')
+    """List and create meetings using Google Calendar."""
+    form = MeetingForm()
+    events = []
+    creds_dict = session.get('credentials')
+    if creds_dict:
+        if form.validate_on_submit():
+            start = form.start.data.replace(tzinfo=SAO_PAULO_TZ)
+            end = form.end.data.replace(tzinfo=SAO_PAULO_TZ)
+            event, creds = create_meet_event(
+                creds_dict, form.title.data, start, end
+            )
+            session['credentials'] = credentials_to_dict(creds)
+            flash('Reunião criada com sucesso!', 'success')
+            return redirect(url_for('sala_reunioes'))
+        events, creds = list_upcoming_events(creds_dict)
+        session['credentials'] = credentials_to_dict(creds)
+    return render_template(
+        'sala_reunioes.html', form=form, events=events, credentials=creds_dict
+    )
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])
