@@ -392,9 +392,9 @@ body.login-page {
 
 /* Botão de login com Google */
 .login-container .btn-google {
-    background-color: #ffffff;
-    color: #757575;
-    border: 1px solid #dadce0;
+    background-color: #db4437;
+    color: #ffffff;
+    border: 1px solid #db4437;
     padding: 0.75rem;
     font-weight: 500;
     border-radius: 8px;
@@ -402,9 +402,9 @@ body.login-page {
 }
 
 .login-container .btn-google:hover {
-    background-color: #f8f9fa;
-    color: #202124;
-    border-color: #d2d6dc;
+    background-color: #c23321;
+    border-color: #c23321;
+    color: #ffffff;
     transform: translateY(-1px);
 }
 
