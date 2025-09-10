@@ -233,7 +233,7 @@ class ReuniaoParticipante(db.Model):
     reuniao_id = db.Column(
         db.Integer, db.ForeignKey('reunioes.id', ondelete='CASCADE'), nullable=False
     )
-    usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     username_usuario = db.Column(db.String(255), nullable=False)
     status_participacao = db.Column(db.String(20), nullable=False, default='pendente')
     data_criacao = db.Column(
