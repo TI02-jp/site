@@ -228,6 +228,11 @@ def combine_events(raw_events, now, current_user_id: int):
         else:
             color = "#dc3545"
             status_label = "Realizada"
+        attendees = [
+            a.get("displayName") or a.get("email")
+            for a in e.get("attendees", [])
+            if a.get("displayName") or a.get("email")
+        ]
         events.append(
             {
                 "title": e.get("summary", "Sem título"),
@@ -237,6 +242,7 @@ def combine_events(raw_events, now, current_user_id: int):
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
                 "status": status_label,
+                "participants": attendees,
                 "can_edit": False,
             }
         )
@@ -278,7 +284,7 @@ def combine_events(raw_events, now, current_user_id: int):
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
-            "can_edit": r.criador_id == current_user_id,
+            "can_edit": r.criador_id == current_user_id and r.status == "agendada",
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
