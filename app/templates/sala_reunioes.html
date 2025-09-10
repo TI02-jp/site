@@ -148,6 +148,7 @@
 </div>
 <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css');
+.fc-daygrid-event .fc-event-title{display:none;}
 </style>
 {% endblock %}
 
@@ -163,6 +164,16 @@ document.addEventListener('DOMContentLoaded', function() {
         fixedWeekCount: false,
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         events: {{ events|tojson }},
+        eventDidMount: function(info) {
+            var start = info.event.start;
+            var time = start ? start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+            var color = info.event.backgroundColor || info.event.borderColor;
+            var square = '<span style="display:inline-block;width:10px;height:10px;background:'+color+';margin-right:4px;"></span>';
+            info.el.setAttribute('data-bs-toggle', 'tooltip');
+            info.el.setAttribute('data-bs-html', 'true');
+            info.el.setAttribute('title', square + time + ' ' + info.event.title);
+            new bootstrap.Tooltip(info.el);
+        },
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             var e = info.event;
