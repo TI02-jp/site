@@ -278,10 +278,25 @@ def sala_reunioes():
     creds_dict = session.get('credentials')
     if creds_dict:
         if form.validate_on_submit():
-            start = form.start.data.replace(tzinfo=SAO_PAULO_TZ)
-            end = form.end.data.replace(tzinfo=SAO_PAULO_TZ)
+            start_dt = datetime.combine(
+                form.date.data, form.start_time.data
+            ).replace(tzinfo=SAO_PAULO_TZ)
+            end_dt = datetime.combine(
+                form.date.data, form.end_time.data
+            ).replace(tzinfo=SAO_PAULO_TZ)
+            choice_map = dict(form.participants.choices)
+            participant_names = [choice_map[e] for e in form.participants.data]
+            description = form.description.data or ""
+            if participant_names:
+                description += "\nParticipantes: " + ", ".join(participant_names)
+            description += f"\nStatus: {form.status.data}"
             event, creds = create_meet_event(
-                creds_dict, form.title.data, start, end
+                creds_dict,
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                form.participants.data,
             )
             session['credentials'] = credentials_to_dict(creds)
             flash('Reunião criada com sucesso!', 'success')

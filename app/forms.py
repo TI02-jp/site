@@ -6,6 +6,7 @@ from wtforms import (
     RadioField,
     SubmitField,
     DateField,
+    TimeField,
     DateTimeLocalField,
     SelectMultipleField,
     SelectField,
@@ -230,7 +231,32 @@ class TagForm(FlaskForm):
 
 class MeetingForm(FlaskForm):
     """Formulário para agendamento de reuniões."""
-    title = StringField('Título', validators=[DataRequired()])
-    start = DateTimeLocalField('Início', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
-    end = DateTimeLocalField('Fim', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
-    submit = SubmitField('Agendar')
+    PARTICIPANT_CHOICES = [
+        ("gustavo@example.com", "Gustavo Becker"),
+        ("helena@example.com", "Helena Coelho do Rosario"),
+        ("isadora@example.com", "Isadora Monteiro Pereira"),
+        ("contato@jpcontabil.com", "JP Contabil"),
+    ]
+
+    participants = SelectMultipleField(
+        "Participantes",
+        choices=PARTICIPANT_CHOICES,
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+        validators=[DataRequired(message="Selecione pelo menos um participante")],
+    )
+    date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
+    start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
+    end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
+    subject = StringField("Assunto", validators=[DataRequired()])
+    description = TextAreaField("Descrição", validators=[Optional()])
+    status = SelectField(
+        "Status",
+        choices=[
+            ("Agendada", "Agendada"),
+            ("Cancelada", "Cancelada"),
+            ("Realizada", "Realizada"),
+        ],
+        validators=[DataRequired()],
+    )
+    submit = SubmitField("Agendar")

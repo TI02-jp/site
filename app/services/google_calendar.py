@@ -36,7 +36,12 @@ def list_upcoming_events(credentials_dict: dict, max_results: int = 10):
 
 
 def create_meet_event(
-    credentials_dict: dict, summary: str, start: datetime, end: datetime
+    credentials_dict: dict,
+    summary: str,
+    start: datetime,
+    end: datetime,
+    description: str = "",
+    attendees: list[str] | None = None,
 ):
     """Create a calendar event with a Google Meet link."""
     service, creds = _build_service(credentials_dict)
@@ -57,6 +62,10 @@ def create_meet_event(
             }
         },
     }
+    if description:
+        event["description"] = description
+    if attendees:
+        event["attendees"] = [{"email": email} for email in attendees]
     created_event = (
         service.events()
         .insert(
