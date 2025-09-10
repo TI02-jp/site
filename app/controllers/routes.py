@@ -72,6 +72,15 @@ def build_google_flow(state: str | None = None) -> Flow:
         state=state,
     )
 
+
+def get_google_redirect_uri() -> str:
+    """Return the redirect URI registered with Google."""
+    return current_app.config.get("GOOGLE_REDIRECT_URI") or url_for(
+        "google_callback",
+        _external=True,
+        _scheme=current_app.config["PREFERRED_URL_SCHEME"],
+    )
+
 def credentials_to_dict(credentials):
     """Convert Google credentials object to a serializable dict."""
     return {
@@ -597,7 +606,7 @@ def revoke_cookies():
 def google_login():
     """Start OAuth login with Google."""
     flow = build_google_flow()
-    flow.redirect_uri = url_for('google_callback', _external=True, _scheme=current_app.config['PREFERRED_URL_SCHEME'])
+    flow.redirect_uri = get_google_redirect_uri()
     authorization_url, state = flow.authorization_url(
         access_type='offline', include_granted_scopes='true', prompt='consent'
     )
@@ -614,7 +623,7 @@ def google_callback():
         flash('Falha ao validar resposta do Google. Tente novamente.', 'danger')
         return redirect(url_for('login'))
     flow = build_google_flow(state=state)
-    flow.redirect_uri = url_for('google_callback', _external=True, _scheme=current_app.config['PREFERRED_URL_SCHEME'])
+    flow.redirect_uri = get_google_redirect_uri()
     try:
         flow.fetch_token(authorization_response=request.url)
     except Exception:
