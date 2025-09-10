@@ -32,16 +32,56 @@ from app.forms import (
     SetorForm,
     TagForm,
 )
-import os, json, re
+import os, json, re, secrets
+import requests
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String
 from sqlalchemy.orm import joinedload
+from google_auth_oauthlib.flow import Flow
+from google.oauth2 import id_token
+from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+
+GOOGLE_OAUTH_SCOPES = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/calendar",
+]
+
+
+def build_google_flow(state: str | None = None) -> Flow:
+    """Return a configured Google OAuth ``Flow`` instance."""
+    if not (current_app.config.get("GOOGLE_CLIENT_ID") and current_app.config.get("GOOGLE_CLIENT_SECRET")):
+        abort(404)
+    return Flow.from_client_config(
+        {
+            "web": {
+                "client_id": current_app.config["GOOGLE_CLIENT_ID"],
+                "client_secret": current_app.config["GOOGLE_CLIENT_SECRET"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=GOOGLE_OAUTH_SCOPES,
+        state=state,
+    )
+
+def credentials_to_dict(credentials):
+    """Convert Google credentials object to a serializable dict."""
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes,
+    }
 
 @app.context_processor
 def inject_stats():
@@ -552,10 +592,62 @@ def revoke_cookies():
     flash('Consentimento de cookies revogado.', 'info')
     return resp
 
+
+@app.route('/login/google')
+def google_login():
+    """Start OAuth login with Google."""
+    flow = build_google_flow()
+    flow.redirect_uri = url_for('google_callback', _external=True, _scheme=current_app.config['PREFERRED_URL_SCHEME'])
+    authorization_url, state = flow.authorization_url(
+        access_type='offline', include_granted_scopes='true', prompt='consent'
+    )
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+
+@app.route('/oauth2callback')
+def google_callback():
+    """Handle OAuth callback from Google."""
+    state = session.get('oauth_state')
+    flow = build_google_flow(state=state)
+    flow.redirect_uri = url_for('google_callback', _external=True, _scheme=current_app.config['PREFERRED_URL_SCHEME'])
+    flow.fetch_token(authorization_response=request.url)
+    credentials = flow.credentials
+    request_session = requests.Session()
+    token_request = Request(session=request_session)
+    id_info = id_token.verify_oauth2_token(
+        credentials.id_token, token_request, current_app.config['GOOGLE_CLIENT_ID']
+    )
+    google_id = id_info.get('sub')
+    email = id_info.get('email')
+    name = id_info.get('name', email)
+    user = User.query.filter((User.google_id == google_id) | (User.email == email)).first()
+    if not user:
+        base_username = email.split('@')[0]
+        username = base_username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+        user = User(username=username, email=email, name=name, google_id=google_id)
+        random_password = secrets.token_hex(16)
+        user.set_password(random_password)
+        db.session.add(user)
+        db.session.commit()
+    if credentials.refresh_token:
+        user.google_refresh_token = credentials.refresh_token
+        db.session.commit()
+    login_user(user, remember=True, duration=timedelta(days=30))
+    session.permanent = True
+    session['credentials'] = credentials_to_dict(credentials)
+    flash('Login com Google bem-sucedido!', 'success')
+    return redirect(url_for('home'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Render the login page and handle authentication."""
     form = LoginForm()
+    google_enabled = bool(current_app.config.get('GOOGLE_CLIENT_ID') and current_app.config.get('GOOGLE_CLIENT_SECRET'))
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
@@ -585,7 +677,7 @@ def login():
             return redirect(url_for('home'))
         else:
             flash('Credenciais inválidas', 'danger')
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, google_enabled=google_enabled)
 
 @app.route('/dashboard')
 @login_required
