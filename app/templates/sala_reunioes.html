@@ -40,6 +40,7 @@
 </div>
 <style>
     .content-breadcrumb { display: none; }
+    .content-wrapper { padding: 0; }
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 150px; overflow-y: auto; }
     #calendar { height: 70vh; }
@@ -47,7 +48,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container">
     {% if not credentials %}
         <div class="alert alert-warning">Conecte-se com sua conta Google para agendar reuniões.</div>
     {% else %}
