@@ -40,6 +40,7 @@
 </div>
 <style>
     .content-breadcrumb { display: none; }
+    .modal-body { max-height: none; overflow-y: visible; }
 </style>
 {% endblock %}
 
@@ -62,7 +63,7 @@
         <div id="calendar"></div>
 
         <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Agendar Reunião</h5>
@@ -73,12 +74,7 @@
                             {{ form.hidden_tag() }}
                             <div class="mb-3">
                                 {{ form.participants.label(class="form-label") }}
-                                {% for subfield in form.participants %}
-                                    <div class="form-check">
-                                        {{ subfield(class="form-check-input") }}
-                                        {{ subfield.label(class="form-check-label") }}
-                                    </div>
-                                {% endfor %}
+                                {{ form.participants(class="form-select", multiple=True) }}
                                 {% if form.participants.errors %}
                                     <div class="text-danger">{{ form.participants.errors[0] }}</div>
                                 {% endif %}
