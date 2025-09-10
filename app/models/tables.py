@@ -199,3 +199,46 @@ class Departamento(db.Model):
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
 
+
+class Reuniao(db.Model):
+    """Meeting scheduled in the system."""
+    __tablename__ = 'reunioes'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    data_reuniao = db.Column(db.Date, nullable=False)
+    hora_inicio = db.Column(db.Time, nullable=False)
+    hora_fim = db.Column(db.Time, nullable=False)
+    assunto = db.Column(db.String(50), nullable=False)
+    descricao = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default='agendada')
+    data_criacao = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+    )
+
+    participantes = db.relationship(
+        'ReuniaoParticipante',
+        backref='reuniao',
+        cascade='all, delete-orphan',
+        lazy=True,
+    )
+
+
+class ReuniaoParticipante(db.Model):
+    """Participant linked to a meeting."""
+    __tablename__ = 'reuniao_participantes'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reuniao_id = db.Column(
+        db.Integer, db.ForeignKey('reunioes.id', ondelete='CASCADE'), nullable=False
+    )
+    usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    username_usuario = db.Column(db.String(255), nullable=False)
+    status_participacao = db.Column(db.String(20), nullable=False, default='pendente')
+    data_criacao = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+    )
+
+    usuario = db.relationship('User')
+
