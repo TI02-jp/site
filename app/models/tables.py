@@ -53,6 +53,8 @@ class User(db.Model, UserMixin):
     is_master = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
+    google_id = db.Column(db.String(255), unique=True)
+    google_refresh_token = db.Column(db.String(255))
 
     def set_password(self, password):
         """Hash and store the user's password."""
