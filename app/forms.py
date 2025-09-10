@@ -238,6 +238,7 @@ class MeetingForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
+    meeting_id = HiddenField()
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
     start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
     end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
