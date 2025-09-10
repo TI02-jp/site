@@ -15,6 +15,8 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
+    Reuniao,
+    ReuniaoParticipante,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -268,14 +270,13 @@ def consultorias():
     consultorias = Consultoria.query.all()
     return render_template('consultorias.html', consultorias=consultorias)
 
-
 @app.route('/sala-reunioes', methods=['GET', 'POST'])
 @login_required
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
     form.participants.choices = [
-        (u.email, u.name)
+        (u.id, u.name)
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
     events: list[dict] = []
@@ -288,9 +289,10 @@ def sala_reunioes():
             end_dt = datetime.combine(
                 form.date.data, form.end_time.data
             ).replace(tzinfo=SAO_PAULO_TZ)
-            choice_map = dict(form.participants.choices)
-            participant_names = [choice_map[e] for e in form.participants.data]
-            description = form.description.data or ""
+            selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+            participant_emails = [u.email for u in selected_users]
+            participant_names = [u.name for u in selected_users]
+            description = form.description.data or ''
             if participant_names:
                 description += "\nParticipantes: " + ", ".join(participant_names)
             description += f"\nStatus: {form.status.data}"
@@ -300,9 +302,28 @@ def sala_reunioes():
                 start_dt,
                 end_dt,
                 description,
-                form.participants.data,
+                participant_emails,
             )
             session['credentials'] = credentials_to_dict(creds)
+            meeting = Reuniao(
+                data_reuniao=form.date.data,
+                hora_inicio=form.start_time.data,
+                hora_fim=form.end_time.data,
+                assunto=form.subject.data,
+                descricao=form.description.data,
+                status=form.status.data,
+            )
+            db.session.add(meeting)
+            db.session.flush()
+            for u in selected_users:
+                db.session.add(
+                    ReuniaoParticipante(
+                        reuniao_id=meeting.id,
+                        usuario_id=u.id,
+                        username_usuario=u.name,
+                    )
+                )
+            db.session.commit()
             flash('Reunião criada com sucesso!', 'success')
             return redirect(url_for('sala_reunioes'))
         raw_events, creds = list_upcoming_events(creds_dict)
@@ -319,9 +340,19 @@ def sala_reunioes():
                     'color': '#dc3545',
                 }
             )
+    for r in Reuniao.query.all():
+        start = datetime.combine(r.data_reuniao, r.hora_inicio).isoformat()
+        end = datetime.combine(r.data_reuniao, r.hora_fim).isoformat()
+        color = '#dc3545'
+        if r.status == 'realizada':
+            color = '#198754'
+        elif r.status == 'cancelada':
+            color = '#ffc107'
+        events.append({'title': r.assunto, 'start': start, 'end': end, 'color': color})
     return render_template(
         'sala_reunioes.html', form=form, events=events, credentials=creds_dict
     )
+
 
 
 @app.route('/consultorias/cadastro', methods=['GET', 'POST'])

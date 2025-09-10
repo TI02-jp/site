@@ -233,6 +233,7 @@ class MeetingForm(FlaskForm):
     """Formulário para agendamento de reuniões."""
     participants = SelectMultipleField(
         "Participantes",
+        coerce=int,
         validators=[Length(min=1, message="Selecione pelo menos um participante")],
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
@@ -245,9 +246,9 @@ class MeetingForm(FlaskForm):
     status = SelectField(
         "Status",
         choices=[
-            ("Agendada", "Agendada"),
-            ("Cancelada", "Cancelada"),
-            ("Realizada", "Realizada"),
+            ('agendada', 'Agendada'),
+            ('cancelada', 'Cancelada'),
+            ('realizada', 'Realizada'),
         ],
         validators=[DataRequired()],
     )
