@@ -286,6 +286,7 @@ def sala_reunioes():
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
     events: list[dict] = []
+    seen_keys: set[tuple[str, str, str]] = set()
     now = datetime.now(SAO_PAULO_TZ)
     creds_dict = session.get('credentials')
     if creds_dict:
@@ -360,6 +361,9 @@ def sala_reunioes():
             end_str = e['end'].get('dateTime') or e['end'].get('date')
             start_dt = isoparse(start_str)
             end_dt = isoparse(end_str)
+            key = (e.get('summary', 'Sem título'), start_str, end_str)
+            if key in seen_keys:
+                continue
             if now < start_dt:
                 color = '#ffc107'
                 status_label = 'Agendada'
@@ -380,6 +384,7 @@ def sala_reunioes():
                     'status': status_label,
                 }
             )
+            seen_keys.add(key)
     updated = False
     for r in Reuniao.query.all():
         start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
@@ -388,6 +393,9 @@ def sala_reunioes():
         end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
             tzinfo=SAO_PAULO_TZ
         )
+        key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
+        if key in seen_keys:
+            continue
         if now < start_dt:
             status = 'agendada'
             status_label = 'Agendada'
@@ -415,6 +423,7 @@ def sala_reunioes():
         if r.meet_link:
             event_data['meet_link'] = r.meet_link
         events.append(event_data)
+        seen_keys.add(key)
     if updated:
         db.session.commit()
     return render_template(
