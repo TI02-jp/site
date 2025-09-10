@@ -289,7 +289,10 @@ def sala_reunioes():
     seen_keys: set[tuple[str, str, str]] = set()
     now = datetime.now(SAO_PAULO_TZ)
     creds_dict = session.get('credentials')
+    raw_events = []
     if creds_dict:
+        raw_events, creds = list_upcoming_events(creds_dict)
+        session['credentials'] = credentials_to_dict(creds)
         if form.validate_on_submit():
             start_dt = datetime.combine(
                 form.date.data, form.start_time.data
@@ -297,6 +300,33 @@ def sala_reunioes():
             end_dt = datetime.combine(
                 form.date.data, form.end_time.data
             ).replace(tzinfo=SAO_PAULO_TZ)
+            MIN_GAP = timedelta(minutes=2)
+            if start_dt < now + MIN_GAP:
+                flash(
+                    'Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência.',
+                    'danger',
+                )
+                return redirect(url_for('sala_reunioes'))
+            for e in raw_events:
+                existing_start = isoparse(
+                    e['start'].get('dateTime') or e['start'].get('date')
+                )
+                existing_end = isoparse(
+                    e['end'].get('dateTime') or e['end'].get('date')
+                )
+                if start_dt < existing_end + MIN_GAP and end_dt > existing_start - MIN_GAP:
+                    flash('Horário conflita com outra reunião.', 'danger')
+                    return redirect(url_for('sala_reunioes'))
+            for r in Reuniao.query.all():
+                existing_start = datetime.combine(
+                    r.data_reuniao, r.hora_inicio
+                ).replace(tzinfo=SAO_PAULO_TZ)
+                existing_end = datetime.combine(
+                    r.data_reuniao, r.hora_fim
+                ).replace(tzinfo=SAO_PAULO_TZ)
+                if start_dt < existing_end + MIN_GAP and end_dt > existing_start - MIN_GAP:
+                    flash('Horário conflita com outra reunião.', 'danger')
+                    return redirect(url_for('sala_reunioes'))
             selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
             participant_emails = [u.email for u in selected_users]
             participant_names = [u.name for u in selected_users]
@@ -354,8 +384,6 @@ def sala_reunioes():
             else:
                 flash('Reunião criada com sucesso!', 'success')
             return redirect(url_for('sala_reunioes'))
-        raw_events, creds = list_upcoming_events(creds_dict)
-        session['credentials'] = credentials_to_dict(creds)
         for e in raw_events:
             start_str = e['start'].get('dateTime') or e['start'].get('date')
             end_str = e['end'].get('dateTime') or e['end'].get('date')
