@@ -38,6 +38,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
 app.config['GOOGLE_CLIENT_ID'] = os.getenv('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
+app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
