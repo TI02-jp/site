@@ -41,6 +41,7 @@
 <style>
     .content-breadcrumb { display: none; }
     .modal-body { max-height: none; overflow-y: visible; }
+    .participant-list { max-height: 150px; overflow-y: auto; }
 </style>
 {% endblock %}
 
@@ -72,24 +73,35 @@
                     <form method="post">
                         <div class="modal-body">
                             {{ form.hidden_tag() }}
-                            <div class="mb-3">
-                                {{ form.participants.label(class="form-label") }}
-                                {{ form.participants(class="form-select", multiple=True) }}
-                                {% if form.participants.errors %}
-                                    <div class="text-danger">{{ form.participants.errors[0] }}</div>
-                                {% endif %}
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    {{ form.participants.label(class="form-label") }}
+                                    <div class="participant-list border rounded p-2">
+                                        {% for subfield in form.participants %}
+                                            <div class="form-check">
+                                                {{ subfield(class="form-check-input", id=subfield.id) }}
+                                                <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if form.participants.errors %}
+                                        <div class="text-danger">{{ form.participants.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    {{ form.date.label(class="form-label") }}
+                                    {{ form.date(class="form-control", type="date") }}
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                {{ form.date.label(class="form-label") }}
-                                {{ form.date(class="form-control", type="date") }}
-                            </div>
-                            <div class="mb-3">
-                                {{ form.start_time.label(class="form-label") }}
-                                {{ form.start_time(class="form-control", type="time") }}
-                            </div>
-                            <div class="mb-3">
-                                {{ form.end_time.label(class="form-label") }}
-                                {{ form.end_time(class="form-control", type="time") }}
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    {{ form.start_time.label(class="form-label") }}
+                                    {{ form.start_time(class="form-control", type="time") }}
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    {{ form.end_time.label(class="form-label") }}
+                                    {{ form.end_time(class="form-control", type="time") }}
+                                </div>
                             </div>
                             <div class="mb-3">
                                 {{ form.subject.label(class="form-label") }}
@@ -99,9 +111,9 @@
                                 {{ form.description.label(class="form-label") }}
                                 {{ form.description(class="form-control") }}
                             </div>
-                            <div class="mb-3">
-                                {{ form.status.label(class="form-label") }}
-                                {{ form.status(class="form-select") }}
+                            <div class="mb-3 text-end">
+                                {{ form.status.label(class="form-label me-2") }}
+                                {{ form.status(class="form-select d-inline-block w-auto") }}
                             </div>
                         </div>
                         <div class="modal-footer">

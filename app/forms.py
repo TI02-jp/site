@@ -234,6 +234,8 @@ class MeetingForm(FlaskForm):
     participants = SelectMultipleField(
         "Participantes",
         validators=[DataRequired(message="Selecione pelo menos um participante")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
     )
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
     start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
