@@ -96,19 +96,19 @@
                                         </div>
                                         {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
                                     </div>
-                                    <div class="mb-3 col-md-6">
-                                        {{ form.date.label(class="form-label") }}
-                                        {{ form.date(class="form-control", type="date") }}
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="mb-3 col-md-6">
-                                        {{ form.start_time.label(class="form-label") }}
-                                        {{ form.start_time(class="form-control", type="time") }}
-                                    </div>
-                                    <div class="mb-3 col-md-6">
-                                        {{ form.end_time.label(class="form-label") }}
-                                        {{ form.end_time(class="form-control", type="time") }}
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ form.date.label(class="form-label") }}
+                                            {{ form.date(class="form-control", type="date") }}
+                                        </div>
+                                        <div class="mb-3">
+                                            {{ form.start_time.label(class="form-label") }}
+                                            {{ form.start_time(class="form-control", type="time") }}
+                                        </div>
+                                        <div class="mb-3">
+                                            {{ form.end_time.label(class="form-label") }}
+                                            {{ form.end_time(class="form-control", type="time") }}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -117,7 +117,7 @@
                                 </div>
                                 <div class="mb-3">
                                     {{ form.description.label(class="form-label") }}
-                                    {{ form.description(class="form-control") }}
+                                    {{ form.description(class="form-control", rows=3) }}
                                 </div>
                                 <div class="form-check mb-3">
                                     {{ form.create_meet(class="form-check-input", id="create_meet") }}
