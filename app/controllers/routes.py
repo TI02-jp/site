@@ -274,7 +274,7 @@ def consultorias():
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
-    events = []
+    events: list[dict] = []
     creds_dict = session.get('credentials')
     if creds_dict:
         if form.validate_on_submit():
@@ -286,8 +286,20 @@ def sala_reunioes():
             session['credentials'] = credentials_to_dict(creds)
             flash('Reunião criada com sucesso!', 'success')
             return redirect(url_for('sala_reunioes'))
-        events, creds = list_upcoming_events(creds_dict)
+        raw_events, creds = list_upcoming_events(creds_dict)
         session['credentials'] = credentials_to_dict(creds)
+        for e in raw_events:
+            start = e['start'].get('dateTime') or e['start'].get('date')
+            end = e['end'].get('dateTime') or e['end'].get('date')
+            events.append(
+                {
+                    'title': e.get('summary', 'Sem título'),
+                    'start': start,
+                    'end': end,
+                    'url': e.get('hangoutLink'),
+                    'color': '#dc3545',
+                }
+            )
     return render_template(
         'sala_reunioes.html', form=form, events=events, credentials=creds_dict
     )
