@@ -106,3 +106,30 @@ def create_event(
     )
     return created_event, creds
 
+
+def update_event(
+    credentials_dict: dict,
+    event_id: str,
+    summary: str,
+    start: datetime,
+    end: datetime,
+    description: str = "",
+    attendees: list[str] | None = None,
+):
+    """Update an existing calendar event."""
+    service, creds = _build_service(credentials_dict)
+    event = {
+        "summary": summary,
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
+    }
+    if description:
+        event["description"] = description
+    if attendees is not None:
+        event["attendees"] = [{"email": email} for email in attendees]
+    updated_event = (
+        service.events()
+        .patch(calendarId="primary", eventId=event_id, body=event)
+        .execute()
+    )
+    return updated_event, creds

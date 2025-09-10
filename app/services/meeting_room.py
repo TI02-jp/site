@@ -16,6 +16,7 @@ from app.services.google_calendar import (
     list_upcoming_events,
     create_meet_event,
     create_event,
+    update_event,
 )
 
 MIN_GAP = timedelta(minutes=2)
@@ -125,6 +126,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
         descricao=form.description.data,
         status="agendada",
         meet_link=meet_link,
+        google_event_id=event["id"],
         criador_id=user_id,
     )
     db.session.add(meeting)
@@ -148,17 +150,13 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
     return creds
 
 
-def update_meeting(form, raw_events, now, meeting: Reuniao):
-    """Update existing meeting adjusting for conflicts."""
+def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
+    """Update existing meeting adjusting for conflicts and syncing with Google Calendar."""
     if meeting.status != "agendada":
         flash("A reunião só pode ser editada enquanto estiver agendada.", "warning")
-        return False
-    start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
-        tzinfo=SAO_PAULO_TZ
-    )
-    end_dt = datetime.combine(form.date.data, form.end_time.data).replace(
-        tzinfo=SAO_PAULO_TZ
-    )
+        return None
+    start_dt = datetime.combine(form.date.data, form.start_time.data).replace(tzinfo=SAO_PAULO_TZ)
+    end_dt = datetime.combine(form.date.data, form.end_time.data).replace(tzinfo=SAO_PAULO_TZ)
     duration = end_dt - start_dt
     intervals: list[tuple[datetime, datetime]] = []
     for e in raw_events:
@@ -166,20 +164,13 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         existing_end = isoparse(e["end"].get("dateTime") or e["end"].get("date"))
         intervals.append((existing_start, existing_end))
     for r in Reuniao.query.filter(Reuniao.id != meeting.id).all():
-        existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
+        existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(tzinfo=SAO_PAULO_TZ)
+        existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(tzinfo=SAO_PAULO_TZ)
         intervals.append((existing_start, existing_end))
-
     proposed_start = max(start_dt, now + MIN_GAP)
     messages: list[str] = []
     if proposed_start != start_dt:
-        messages.append(
-            "Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência."
-        )
+        messages.append("Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência.")
     adjusted_start = _next_available(proposed_start, duration, intervals)
     if adjusted_start != proposed_start:
         messages.append("Horário conflita com outra reunião.")
@@ -188,12 +179,8 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         form.date.data = adjusted_start.date()
         form.start_time.data = adjusted_start.time()
         form.end_time.data = adjusted_end.time()
-        flash(
-            f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
-            "warning",
-        )
-        return False
-
+        flash(f"{' '.join(messages)} Horário ajustado para o próximo horário livre.", "warning")
+        return None
     meeting.data_reuniao = form.date.data
     meeting.hora_inicio = form.start_time.data
     meeting.hora_fim = form.end_time.data
@@ -202,12 +189,48 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
-        meeting.participantes.append(
-            ReuniaoParticipante(id_usuario=u.id, username_usuario=u.username)
+        meeting.participantes.append(ReuniaoParticipante(id_usuario=u.id, username_usuario=u.username))
+    participant_emails = [u.email for u in selected_users]
+    participant_usernames = [u.username for u in selected_users]
+    description = form.description.data or ""
+    if participant_usernames:
+        description += "\nParticipantes: " + ", ".join(participant_usernames)
+    description += "\nStatus: Agendada"
+    if meeting.google_event_id:
+        updated_event, creds = update_event(
+            creds_dict,
+            meeting.google_event_id,
+            form.subject.data,
+            start_dt,
+            end_dt,
+            description,
+            participant_emails,
         )
+        meeting.meet_link = updated_event.get("hangoutLink", meeting.meet_link)
+    else:
+        if form.create_meet.data:
+            updated_event, creds = create_meet_event(
+                creds_dict,
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+            )
+        else:
+            updated_event, creds = create_event(
+                creds_dict,
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+            )
+        meeting.meet_link = updated_event.get("hangoutLink")
+        meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return True
+    return creds
 
 
 def combine_events(raw_events, now, current_user_id: int):
