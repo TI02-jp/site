@@ -336,7 +336,7 @@ def sala_reunioes():
                 db.session.add(
                     ReuniaoParticipante(
                         reuniao_id=meeting.id,
-                        usuario_id=u.id,
+                        id_usuario=u.id,
                         username_usuario=u.name,
                     )
                 )
