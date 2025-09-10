@@ -288,11 +288,11 @@ def combine_events(raw_events, now, current_user_id: int):
     for e in raw_events:
         start_str = e["start"].get("dateTime") or e["start"].get("date")
         end_str = e["end"].get("dateTime") or e["end"].get("date")
-        key = (e.get("summary", "Sem título"), start_str, end_str)
+        start_dt = isoparse(start_str).astimezone(SAO_PAULO_TZ)
+        end_dt = isoparse(end_str).astimezone(SAO_PAULO_TZ)
+        key = (e.get("summary", "Sem título"), start_dt.isoformat(), end_dt.isoformat())
         if key in seen_keys:
             continue
-        start_dt = isoparse(start_str)
-        end_dt = isoparse(end_str)
         if now < start_dt:
             color = "#ffc107"
             status_label = "Agendada"
@@ -320,8 +320,8 @@ def combine_events(raw_events, now, current_user_id: int):
         events.append(
             {
                 "title": e.get("summary", "Sem título"),
-                "start": start_str,
-                "end": end_str,
+                "start": start_dt.isoformat(),
+                "end": end_dt.isoformat(),
                 "description": e.get("description"),
                 "meet_link": e.get("hangoutLink"),
                 "color": color,

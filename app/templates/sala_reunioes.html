@@ -191,14 +191,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     var currentEvent;
     var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
+        timeZone: 'America/Sao_Paulo',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         events: {{ events|tojson }},
         eventDidMount: function(info) {
             var start = info.event.start;
-            var time = start ? start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+            var time = start ? start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'}) : '';
             var color = info.event.backgroundColor || info.event.borderColor;
             var cls = '';
             if(color === '#ffc107'){cls='tooltip-warning';}
@@ -215,9 +216,9 @@ document.addEventListener('DOMContentLoaded', function() {
             var e = info.event;
             currentEvent = e;
             document.getElementById('detailTitle').textContent = e.title;
-            document.getElementById('detailDate').textContent = e.start ? e.start.toLocaleDateString() : '';
-            document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
-            document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+            document.getElementById('detailDate').textContent = e.start ? e.start.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '';
+            document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'}) : '';
+            document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'}) : '';
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
@@ -250,9 +251,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var form = document.querySelector('#meetingModal form');
         document.getElementById('meeting_id').value = currentEvent.extendedProps.meeting_id || '';
         form.subject.value = currentEvent.title;
-        form.date.value = currentEvent.start.toISOString().slice(0,10);
-        form.start_time.value = currentEvent.start.toISOString().slice(11,16);
-        form.end_time.value = currentEvent.end ? currentEvent.end.toISOString().slice(11,16) : '';
+        form.date.value = currentEvent.start.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        form.start_time.value = currentEvent.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo'});
+        form.end_time.value = currentEvent.end ? currentEvent.end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo'}) : '';
         form.description.value = currentEvent.extendedProps.description || '';
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;

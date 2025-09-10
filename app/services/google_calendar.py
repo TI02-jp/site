@@ -7,6 +7,8 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
+from app.models.tables import SAO_PAULO_TZ
+
 
 def _build_service(credentials_dict: dict):
     """Build a Google Calendar service instance from stored credentials."""
@@ -20,7 +22,9 @@ def _build_service(credentials_dict: dict):
 def list_upcoming_events(credentials_dict: dict, max_results: int = 10):
     """Return upcoming events and refreshed credentials."""
     service, creds = _build_service(credentials_dict)
-    now = datetime.utcnow().isoformat() + "Z"
+    # Use São Paulo timezone (UTC-3) for all calendar queries so the
+    # returned events align with the application's expected time zone.
+    now = datetime.now(SAO_PAULO_TZ).isoformat()
     events_result = (
         service.events()
         .list(
