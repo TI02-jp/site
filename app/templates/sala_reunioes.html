@@ -213,4 +213,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endif %}
+{% if show_modal %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = new bootstrap.Modal(document.getElementById('meetingModal'));
+    modal.show();
+});
+</script>
+{% endif %}
 {% endblock %}
