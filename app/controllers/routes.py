@@ -55,6 +55,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+from dateutil.parser import isoparse
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -285,6 +286,7 @@ def sala_reunioes():
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
     events: list[dict] = []
+    now = datetime.now(SAO_PAULO_TZ)
     creds_dict = session.get('credentials')
     if creds_dict:
         if form.validate_on_submit():
@@ -300,7 +302,7 @@ def sala_reunioes():
             description = form.description.data or ''
             if participant_names:
                 description += "\nParticipantes: " + ", ".join(participant_names)
-            description += f"\nStatus: {form.status.data}"
+            description += "\nStatus: Agendada"
             if form.create_meet.data:
                 event, creds = create_meet_event(
                     creds_dict,
@@ -327,7 +329,7 @@ def sala_reunioes():
                 hora_fim=form.end_time.data,
                 assunto=form.subject.data,
                 descricao=form.description.data,
-                status=form.status.data,
+                status='agendada',
                 meet_link=meet_link,
             )
             db.session.add(meeting)
@@ -354,38 +356,67 @@ def sala_reunioes():
         raw_events, creds = list_upcoming_events(creds_dict)
         session['credentials'] = credentials_to_dict(creds)
         for e in raw_events:
-            start = e['start'].get('dateTime') or e['start'].get('date')
-            end = e['end'].get('dateTime') or e['end'].get('date')
+            start_str = e['start'].get('dateTime') or e['start'].get('date')
+            end_str = e['end'].get('dateTime') or e['end'].get('date')
+            start_dt = isoparse(start_str)
+            end_dt = isoparse(end_str)
+            if now < start_dt:
+                color = '#ffc107'
+                status_label = 'Agendada'
+            elif start_dt <= now <= end_dt:
+                color = '#198754'
+                status_label = 'Em Andamento'
+            else:
+                color = '#dc3545'
+                status_label = 'Realizada'
             events.append(
                 {
                     'title': e.get('summary', 'Sem título'),
-                    'start': start,
-                    'end': end,
+                    'start': start_str,
+                    'end': end_str,
                     'description': e.get('description'),
                     'meet_link': e.get('hangoutLink'),
-                    'color': '#dc3545',
+                    'color': color,
+                    'status': status_label,
                 }
             )
+    updated = False
     for r in Reuniao.query.all():
-        start = datetime.combine(r.data_reuniao, r.hora_inicio).isoformat()
-        end = datetime.combine(r.data_reuniao, r.hora_fim).isoformat()
-        color = '#dc3545'
-        if r.status == 'realizada':
-            color = '#198754'
-        elif r.status == 'cancelada':
+        start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        if now < start_dt:
+            status = 'agendada'
+            status_label = 'Agendada'
             color = '#ffc107'
+        elif start_dt <= now <= end_dt:
+            status = 'em andamento'
+            status_label = 'Em Andamento'
+            color = '#198754'
+        else:
+            status = 'realizada'
+            status_label = 'Realizada'
+            color = '#dc3545'
+        if r.status != status:
+            r.status = status
+            updated = True
         event_data = {
             'title': r.assunto,
-            'start': start,
-            'end': end,
+            'start': start_dt.isoformat(),
+            'end': end_dt.isoformat(),
             'color': color,
             'description': r.descricao,
-            'status': r.status,
+            'status': status_label,
             'participants': [p.username_usuario for p in r.participantes],
         }
         if r.meet_link:
             event_data['meet_link'] = r.meet_link
         events.append(event_data)
+    if updated:
+        db.session.commit()
     return render_template(
         'sala_reunioes.html', form=form, events=events, credentials=creds_dict
     )
