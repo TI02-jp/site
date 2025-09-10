@@ -48,40 +48,71 @@
     {% if not credentials %}
         <div class="alert alert-warning">Conecte-se com sua conta Google para agendar reuniões.</div>
     {% else %}
-        <form method="post" class="mb-4">
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-                {{ form.title.label(class="form-label") }}
-                {{ form.title(class="form-control") }}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Calendário de Agendamentos</h2>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#meetingModal">Agendar Reunião</button>
             </div>
-            <div class="mb-3">
-                {{ form.start.label(class="form-label") }}
-                {{ form.start(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            <span class="badge bg-warning text-dark me-2">Em andamento</span>
+            <span class="badge bg-success me-2">Concluída</span>
+            <span class="badge bg-danger">Agendada</span>
+        </div>
+        <div id="calendar"></div>
+
+        <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Agendar Reunião</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="post">
+                        <div class="modal-body">
+                            {{ form.hidden_tag() }}
+                            <div class="mb-3">
+                                {{ form.title.label(class="form-label") }}
+                                {{ form.title(class="form-control") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.start.label(class="form-label") }}
+                                {{ form.start(class="form-control") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.end.label(class="form-label") }}
+                                {{ form.end(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="mb-3">
-                {{ form.end.label(class="form-label") }}
-                {{ form.end(class="form-control") }}
-            </div>
-            {{ form.submit(class="btn btn-primary") }}
-        </form>
-        <h3>Próximas reuniões</h3>
-        <ul class="list-group">
-            {% for event in events %}
-                <li class="list-group-item">
-                    {{ event.summary }} -
-                    {% if event.start.dateTime %}
-                        {{ event.start.dateTime }}
-                    {% else %}
-                        {{ event.start.date }}
-                    {% endif %}
-                    {% if event.hangoutLink %}
-                        - <a href="{{ event.hangoutLink }}" target="_blank">Link</a>
-                    {% endif %}
-                </li>
-            {% else %}
-                <li class="list-group-item">Nenhuma reunião agendada.</li>
-            {% endfor %}
-        </ul>
+        </div>
     {% endif %}
 </div>
+<style>
+@import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css');
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if credentials %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+        events: {{ events|tojson }}
+    });
+    calendar.render();
+});
+</script>
+{% endif %}
 {% endblock %}
