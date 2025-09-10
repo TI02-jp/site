@@ -390,6 +390,24 @@ body.login-page {
     color: #6c757d;
 }
 
+/* Botão de login com Google */
+.login-container .btn-google {
+    background-color: #ffffff;
+    color: #757575;
+    border: 1px solid #dadce0;
+    padding: 0.75rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.login-container .btn-google:hover {
+    background-color: #f8f9fa;
+    color: #202124;
+    border-color: #d2d6dc;
+    transform: translateY(-1px);
+}
+
 /* Textos de erro no login */
 .login-container .text-danger {
     font-size: 0.875rem;
