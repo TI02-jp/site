@@ -59,9 +59,9 @@
             </div>
         </div>
         <div class="mb-3">
-            <span class="badge bg-danger me-2">Agendada</span>
-            <span class="badge bg-success me-2">Realizada</span>
-            <span class="badge bg-warning text-dark">Cancelada</span>
+            <span class="badge bg-warning text-dark me-2">Agendada</span>
+            <span class="badge bg-success me-2">Em Andamento</span>
+            <span class="badge bg-danger">Realizada</span>
         </div>
         <div id="calendar"></div>
 
@@ -116,10 +116,6 @@
                             <div class="form-check mb-3">
                                 {{ form.create_meet(class="form-check-input", id="create_meet") }}
                                 <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
-                            </div>
-                            <div class="mb-3 text-end">
-                                {{ form.status.label(class="form-label me-2") }}
-                                {{ form.status(class="form-select d-inline-block w-auto") }}
                             </div>
                         </div>
                         <div class="modal-footer">

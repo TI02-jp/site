@@ -243,14 +243,5 @@ class MeetingForm(FlaskForm):
     end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
     subject = StringField("Assunto", validators=[DataRequired()])
     description = TextAreaField("Descrição", validators=[Optional()])
-    status = SelectField(
-        "Status",
-        choices=[
-            ('agendada', 'Agendada'),
-            ('cancelada', 'Cancelada'),
-            ('realizada', 'Realizada'),
-        ],
-        validators=[DataRequired()],
-    )
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
