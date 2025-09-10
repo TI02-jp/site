@@ -72,16 +72,40 @@
                         <div class="modal-body">
                             {{ form.hidden_tag() }}
                             <div class="mb-3">
-                                {{ form.title.label(class="form-label") }}
-                                {{ form.title(class="form-control") }}
+                                {{ form.participants.label(class="form-label") }}
+                                {% for subfield in form.participants %}
+                                    <div class="form-check">
+                                        {{ subfield(class="form-check-input") }}
+                                        {{ subfield.label(class="form-check-label") }}
+                                    </div>
+                                {% endfor %}
+                                {% if form.participants.errors %}
+                                    <div class="text-danger">{{ form.participants.errors[0] }}</div>
+                                {% endif %}
                             </div>
                             <div class="mb-3">
-                                {{ form.start.label(class="form-label") }}
-                                {{ form.start(class="form-control") }}
+                                {{ form.date.label(class="form-label") }}
+                                {{ form.date(class="form-control", type="date") }}
                             </div>
                             <div class="mb-3">
-                                {{ form.end.label(class="form-label") }}
-                                {{ form.end(class="form-control") }}
+                                {{ form.start_time.label(class="form-label") }}
+                                {{ form.start_time(class="form-control", type="time") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.end_time.label(class="form-label") }}
+                                {{ form.end_time(class="form-control", type="time") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.subject.label(class="form-label") }}
+                                {{ form.subject(class="form-control") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.description.label(class="form-label") }}
+                                {{ form.description(class="form-control") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.status.label(class="form-label") }}
+                                {{ form.status(class="form-select") }}
                             </div>
                         </div>
                         <div class="modal-footer">
