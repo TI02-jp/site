@@ -214,14 +214,62 @@ def combine_events(raw_events, now, current_user_id: int):
     """Combine Google and local events updating their status."""
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
+    updated = False
+
+    # Prioritize locally stored meetings so their metadata (including
+    # edit permissions) is preserved. Google events are added later only
+    # if they don't match an existing local meeting.
+    for r in Reuniao.query.all():
+        start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
+        if now < start_dt:
+            status = "agendada"
+            status_label = "Agendada"
+            color = "#ffc107"
+        elif start_dt <= now <= end_dt:
+            status = "em andamento"
+            status_label = "Em Andamento"
+            color = "#198754"
+        else:
+            status = "realizada"
+            status_label = "Realizada"
+            color = "#dc3545"
+        if r.status != status:
+            r.status = status
+            updated = True
+        event_data = {
+            "title": r.assunto,
+            "start": start_dt.isoformat(),
+            "end": end_dt.isoformat(),
+            "color": color,
+            "description": r.descricao,
+            "status": status_label,
+            "participants": [p.username_usuario for p in r.participantes],
+            "participant_ids": [p.id_usuario for p in r.participantes],
+            "meeting_id": r.id,
+            "can_edit": r.criador_id == current_user_id and r.status == "agendada",
+        }
+        if r.meet_link:
+            event_data["meet_link"] = r.meet_link
+        events.append(event_data)
+        seen_keys.add(key)
+
+    if updated:
+        db.session.commit()
+
     for e in raw_events:
         start_str = e["start"].get("dateTime") or e["start"].get("date")
         end_str = e["end"].get("dateTime") or e["end"].get("date")
-        start_dt = isoparse(start_str)
-        end_dt = isoparse(end_str)
         key = (e.get("summary", "Sem título"), start_str, end_str)
         if key in seen_keys:
             continue
+        start_dt = isoparse(start_str)
+        end_dt = isoparse(end_str)
         if now < start_dt:
             color = "#ffc107"
             status_label = "Agendada"
@@ -261,48 +309,4 @@ def combine_events(raw_events, now, current_user_id: int):
         )
         seen_keys.add(key)
 
-    updated = False
-    for r in Reuniao.query.all():
-        start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
-        if key in seen_keys:
-            continue
-        if now < start_dt:
-            status = "agendada"
-            status_label = "Agendada"
-            color = "#ffc107"
-        elif start_dt <= now <= end_dt:
-            status = "em andamento"
-            status_label = "Em Andamento"
-            color = "#198754"
-        else:
-            status = "realizada"
-            status_label = "Realizada"
-            color = "#dc3545"
-        if r.status != status:
-            r.status = status
-            updated = True
-        event_data = {
-            "title": r.assunto,
-            "start": start_dt.isoformat(),
-            "end": end_dt.isoformat(),
-            "color": color,
-            "description": r.descricao,
-            "status": status_label,
-            "participants": [p.username_usuario for p in r.participantes],
-            "participant_ids": [p.id_usuario for p in r.participantes],
-            "meeting_id": r.id,
-            "can_edit": r.criador_id == current_user_id and r.status == "agendada",
-        }
-        if r.meet_link:
-            event_data["meet_link"] = r.meet_link
-        events.append(event_data)
-        seen_keys.add(key)
-    if updated:
-        db.session.commit()
     return events
