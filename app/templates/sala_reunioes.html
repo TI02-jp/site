@@ -130,6 +130,24 @@
                 </div>
             </div>
         </div>
+        <div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="detailTitle"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Início:</strong> <span id="detailStart"></span></p>
+                        <p><strong>Fim:</strong> <span id="detailEnd"></span></p>
+                        <p><strong>Status:</strong> <span id="detailStatus"></span></p>
+                        <p><strong>Participantes:</strong> <span id="detailParticipants"></span></p>
+                        <p id="detailDescription"></p>
+                        <a id="detailMeetLink" href="#" target="_blank" class="btn btn-sm btn-primary d-none">Abrir Meet</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% endif %}
 </div>
 <style>
@@ -148,7 +166,27 @@ document.addEventListener('DOMContentLoaded', function() {
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
-        events: {{ events|tojson }}
+        events: {{ events|tojson }},
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            var e = info.event;
+            document.getElementById('detailTitle').textContent = e.title;
+            document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleString() : '';
+            document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleString() : '';
+            document.getElementById('detailDescription').textContent = e.extendedProps.description || '';
+            document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
+            var participants = e.extendedProps.participants;
+            document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
+            var linkEl = document.getElementById('detailMeetLink');
+            if (e.extendedProps.meet_link) {
+                linkEl.href = e.extendedProps.meet_link;
+                linkEl.classList.remove('d-none');
+            } else {
+                linkEl.classList.add('d-none');
+            }
+            var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+            modal.show();
+        }
     });
     calendar.render();
 });

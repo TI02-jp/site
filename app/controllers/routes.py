@@ -361,7 +361,8 @@ def sala_reunioes():
                     'title': e.get('summary', 'Sem título'),
                     'start': start,
                     'end': end,
-                    'url': e.get('hangoutLink'),
+                    'description': e.get('description'),
+                    'meet_link': e.get('hangoutLink'),
                     'color': '#dc3545',
                 }
             )
@@ -373,9 +374,17 @@ def sala_reunioes():
             color = '#198754'
         elif r.status == 'cancelada':
             color = '#ffc107'
-        event_data = {'title': r.assunto, 'start': start, 'end': end, 'color': color}
+        event_data = {
+            'title': r.assunto,
+            'start': start,
+            'end': end,
+            'color': color,
+            'description': r.descricao,
+            'status': r.status,
+            'participants': [p.username_usuario for p in r.participantes],
+        }
         if r.meet_link:
-            event_data['url'] = r.meet_link
+            event_data['meet_link'] = r.meet_link
         events.append(event_data)
     return render_template(
         'sala_reunioes.html', form=form, events=events, credentials=creds_dict
