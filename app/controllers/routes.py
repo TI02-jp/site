@@ -318,7 +318,9 @@ def sala_reunioes():
                     and meeting.criador_id == current_user.id
                     and meeting.status == "agendada"
                 ):
-                    if update_meeting(form, raw_events, now, meeting):
+                    creds = update_meeting(form, raw_events, now, meeting, creds_dict)
+                    if creds:
+                        session["credentials"] = credentials_to_dict(creds)
                         return redirect(url_for("sala_reunioes"))
                     show_modal = True
                 else:

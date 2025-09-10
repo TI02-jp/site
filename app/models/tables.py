@@ -211,6 +211,7 @@ class Reuniao(db.Model):
     assunto = db.Column(db.String(50), nullable=False)
     descricao = db.Column(db.Text)
     meet_link = db.Column(db.String(255))
+    google_event_id = db.Column(db.String(255))
     status = db.Column(db.String(20), nullable=False, default='agendada')
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_criacao = db.Column(
