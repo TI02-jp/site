@@ -25,6 +25,7 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
+    Reuniao,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -57,6 +58,7 @@ from app.services.meeting_room import (
     populate_participants_choices,
     fetch_raw_events,
     create_meeting_and_event,
+    update_meeting,
     combine_events,
 )
 import plotly.graph_objects as go
@@ -309,12 +311,21 @@ def sala_reunioes():
         session["credentials"] = creds_dict
         now = datetime.now(SAO_PAULO_TZ)
         if form.validate_on_submit():
-            creds = create_meeting_and_event(form, raw_events, now, creds_dict)
-            session["credentials"] = credentials_to_dict(creds)
+            if form.meeting_id.data:
+                meeting = Reuniao.query.get(int(form.meeting_id.data))
+                if meeting and meeting.criador_id == current_user.id:
+                    update_meeting(form, raw_events, now, meeting)
+                else:
+                    flash("Você não tem permissão para editar esta reunião.", "danger")
+            else:
+                creds = create_meeting_and_event(
+                    form, raw_events, now, creds_dict, current_user.id
+                )
+                session["credentials"] = credentials_to_dict(creds)
             return redirect(url_for("sala_reunioes"))
         if request.method == "POST":
             show_modal = True
-        events = combine_events(raw_events, now)
+        events = combine_events(raw_events, now, current_user.id)
     return render_template(
         "sala_reunioes.html",
         form=form,

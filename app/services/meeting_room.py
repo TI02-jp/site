@@ -48,7 +48,7 @@ def _next_available(
             return start
 
 
-def create_meeting_and_event(form, raw_events, now, creds_dict):
+def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
     """Create meeting adjusting times to avoid conflicts."""
     start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
         tzinfo=SAO_PAULO_TZ
@@ -125,6 +125,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict):
         descricao=form.description.data,
         status="agendada",
         meet_link=meet_link,
+        criador_id=user_id,
     )
     db.session.add(meeting)
     db.session.flush()
@@ -147,7 +148,65 @@ def create_meeting_and_event(form, raw_events, now, creds_dict):
     return creds
 
 
-def combine_events(raw_events, now):
+def update_meeting(form, raw_events, now, meeting: Reuniao):
+    """Update existing meeting adjusting for conflicts."""
+    start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
+        tzinfo=SAO_PAULO_TZ
+    )
+    end_dt = datetime.combine(form.date.data, form.end_time.data).replace(
+        tzinfo=SAO_PAULO_TZ
+    )
+    duration = end_dt - start_dt
+    intervals: list[tuple[datetime, datetime]] = []
+    for e in raw_events:
+        existing_start = isoparse(e["start"].get("dateTime") or e["start"].get("date"))
+        existing_end = isoparse(e["end"].get("dateTime") or e["end"].get("date"))
+        intervals.append((existing_start, existing_end))
+    for r in Reuniao.query.filter(Reuniao.id != meeting.id).all():
+        existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(
+            tzinfo=SAO_PAULO_TZ
+        )
+        intervals.append((existing_start, existing_end))
+
+    proposed_start = max(start_dt, now + MIN_GAP)
+    messages: list[str] = []
+    if proposed_start != start_dt:
+        messages.append(
+            "Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência."
+        )
+    adjusted_start = _next_available(proposed_start, duration, intervals)
+    if adjusted_start != proposed_start:
+        messages.append("Horário conflita com outra reunião.")
+    if adjusted_start != start_dt:
+        adjusted_end = adjusted_start + duration
+        form.date.data = adjusted_start.date()
+        form.start_time.data = adjusted_start.time()
+        form.end_time.data = adjusted_end.time()
+        flash(
+            f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
+            "warning",
+        )
+        start_dt, end_dt = adjusted_start, adjusted_end
+
+    meeting.data_reuniao = form.date.data
+    meeting.hora_inicio = form.start_time.data
+    meeting.hora_fim = form.end_time.data
+    meeting.assunto = form.subject.data
+    meeting.descricao = form.description.data
+    meeting.participantes.clear()
+    selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+    for u in selected_users:
+        meeting.participantes.append(
+            ReuniaoParticipante(id_usuario=u.id, username_usuario=u.name)
+        )
+    db.session.commit()
+    flash("Reunião atualizada com sucesso!", "success")
+
+
+def combine_events(raw_events, now, current_user_id: int):
     """Combine Google and local events updating their status."""
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
@@ -177,6 +236,7 @@ def combine_events(raw_events, now):
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
                 "status": status_label,
+                "can_edit": False,
             }
         )
         seen_keys.add(key)
@@ -215,6 +275,9 @@ def combine_events(raw_events, now):
             "description": r.descricao,
             "status": status_label,
             "participants": [p.username_usuario for p in r.participantes],
+            "participant_ids": [p.id_usuario for p in r.participantes],
+            "meeting_id": r.id,
+            "can_edit": r.criador_id == current_user_id,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link

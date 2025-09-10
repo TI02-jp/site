@@ -212,6 +212,7 @@ class Reuniao(db.Model):
     descricao = db.Column(db.Text)
     meet_link = db.Column(db.String(255))
     status = db.Column(db.String(20), nullable=False, default='agendada')
+    criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_criacao = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(SAO_PAULO_TZ),
@@ -223,6 +224,7 @@ class Reuniao(db.Model):
         cascade='all, delete-orphan',
         lazy=True,
     )
+    criador = db.relationship('User', foreign_keys=[criador_id])
 
 
 class ReuniaoParticipante(db.Model):

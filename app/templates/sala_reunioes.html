@@ -58,7 +58,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>Calendário de Agendamentos</h2>
                 <div>
-                    <button class="btn btn-primary"
+                    <button id="openMeetingModal" class="btn btn-primary"
                             data-bs-toggle="modal"
                             data-bs-target="#meetingModal">Agendar Reunião</button>
                 </div>
@@ -82,6 +82,7 @@
                         <form method="post">
                             <div class="modal-body">
                                 {{ form.hidden_tag() }}
+                                {{ form.meeting_id(id='meeting_id') }}
                                 <div class="row">
                                     <div class="mb-3 col-md-6">
                                         {{ form.participants.label(class="form-label") }}
@@ -145,23 +146,21 @@
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p>
-                                <strong>Início:</strong> <span id="detailStart"></span>
-                            </p>
-                            <p>
-                                <strong>Fim:</strong> <span id="detailEnd"></span>
-                            </p>
-                            <p>
-                                <strong>Status:</strong> <span id="detailStatus"></span>
-                            </p>
-                            <p>
-                                <strong>Participantes:</strong> <span id="detailParticipants"></span>
-                            </p>
-                            <p id="detailDescription"></p>
+                            <ul class="list-group">
+                                <li class="list-group-item"><strong>Início:</strong> <span id="detailStart"></span></li>
+                                <li class="list-group-item"><strong>Fim:</strong> <span id="detailEnd"></span></li>
+                                <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
+                                <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
+                                <li class="list-group-item d-none" id="detailDescriptionItem"><strong>Descrição:</strong> <span id="detailDescription"></span></li>
+                            </ul>
                             <a id="detailMeetLink"
                                href="#"
                                target="_blank"
-                               class="btn btn-sm btn-primary d-none">Abrir Meet</a>
+                               class="btn btn-sm btn-primary mt-3 d-none">Abrir Meet</a>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
                         </div>
                     </div>
                 </div>
@@ -189,6 +188,7 @@
         <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
         <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var currentEvent;
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -212,13 +212,20 @@ document.addEventListener('DOMContentLoaded', function() {
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             var e = info.event;
+            currentEvent = e;
             document.getElementById('detailTitle').textContent = e.title;
             document.getElementById('detailStart').textContent = e.start ? e.start.toLocaleString() : '';
             document.getElementById('detailEnd').textContent = e.end ? e.end.toLocaleString() : '';
-            document.getElementById('detailDescription').textContent = e.extendedProps.description || '';
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
+            var descItem = document.getElementById('detailDescriptionItem');
+            if (e.extendedProps.description) {
+                document.getElementById('detailDescription').textContent = e.extendedProps.description;
+                descItem.classList.remove('d-none');
+            } else {
+                descItem.classList.add('d-none');
+            }
             var linkEl = document.getElementById('detailMeetLink');
             if (e.extendedProps.meet_link) {
                 linkEl.href = e.extendedProps.meet_link;
@@ -226,11 +233,46 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 linkEl.classList.add('d-none');
             }
+            var editBtn = document.getElementById('editEventBtn');
+            if (e.extendedProps.can_edit) {
+                editBtn.classList.remove('d-none');
+            } else {
+                editBtn.classList.add('d-none');
+            }
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             modal.show();
         }
     });
     calendar.render();
+
+    document.getElementById('editEventBtn').addEventListener('click', function() {
+        var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
+        detailModal.hide();
+        var form = document.querySelector('#meetingModal form');
+        document.getElementById('meeting_id').value = currentEvent.extendedProps.meeting_id || '';
+        form.subject.value = currentEvent.title;
+        form.date.value = currentEvent.start.toISOString().slice(0,10);
+        form.start_time.value = currentEvent.start.toISOString().slice(11,16);
+        form.end_time.value = currentEvent.end ? currentEvent.end.toISOString().slice(11,16) : '';
+        form.description.value = currentEvent.extendedProps.description || '';
+        if (form.create_meet) {
+            form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
+        }
+        var ids = currentEvent.extendedProps.participant_ids || [];
+        document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
+            cb.checked = ids.includes(parseInt(cb.value));
+        });
+        document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
+        document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
+        var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
+        meetingModal.show();
+    });
+
+    document.getElementById('openMeetingModal').addEventListener('click', function() {
+        document.getElementById('meeting_id').value = '';
+        document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
+        document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
+    });
 });
         </script>
     {% endif %}
