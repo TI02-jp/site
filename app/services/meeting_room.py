@@ -93,10 +93,10 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users]
-    participant_names = [u.name for u in selected_users]
+    participant_usernames = [u.username for u in selected_users]
     description = form.description.data or ""
-    if participant_names:
-        description += "\nParticipantes: " + ", ".join(participant_names)
+    if participant_usernames:
+        description += "\nParticipantes: " + ", ".join(participant_usernames)
     description += "\nStatus: Agendada"
     if form.create_meet.data:
         event, creds = create_meet_event(
@@ -132,7 +132,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
     for u in selected_users:
         db.session.add(
             ReuniaoParticipante(
-                reuniao_id=meeting.id, id_usuario=u.id, username_usuario=u.name
+                reuniao_id=meeting.id, id_usuario=u.id, username_usuario=u.username
             )
         )
     db.session.commit()
@@ -200,7 +200,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
         meeting.participantes.append(
-            ReuniaoParticipante(id_usuario=u.id, username_usuario=u.name)
+            ReuniaoParticipante(id_usuario=u.id, username_usuario=u.username)
         )
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
@@ -228,11 +228,21 @@ def combine_events(raw_events, now, current_user_id: int):
         else:
             color = "#dc3545"
             status_label = "Realizada"
-        attendees = [
-            a.get("displayName") or a.get("email")
-            for a in e.get("attendees", [])
-            if a.get("displayName") or a.get("email")
-        ]
+        attendee_objs = e.get("attendees", [])
+        emails = [a.get("email") for a in attendee_objs if a.get("email")]
+        user_map = {
+            u.email: u.username
+            for u in User.query.filter(User.email.in_(emails)).all()
+        } if emails else {}
+        attendees: list[str] = []
+        for a in attendee_objs:
+            email = a.get("email")
+            if email and email in user_map:
+                attendees.append(user_map[email])
+            elif a.get("displayName"):
+                attendees.append(a.get("displayName"))
+            elif email:
+                attendees.append(email)
         events.append(
             {
                 "title": e.get("summary", "Sem título"),
