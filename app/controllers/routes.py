@@ -314,15 +314,19 @@ def sala_reunioes():
             if form.meeting_id.data:
                 meeting = Reuniao.query.get(int(form.meeting_id.data))
                 if meeting and meeting.criador_id == current_user.id:
-                    update_meeting(form, raw_events, now, meeting)
+                    if update_meeting(form, raw_events, now, meeting):
+                        return redirect(url_for("sala_reunioes"))
+                    show_modal = True
                 else:
                     flash("Você não tem permissão para editar esta reunião.", "danger")
             else:
                 creds = create_meeting_and_event(
                     form, raw_events, now, creds_dict, current_user.id
                 )
-                session["credentials"] = credentials_to_dict(creds)
-            return redirect(url_for("sala_reunioes"))
+                if creds:
+                    session["credentials"] = credentials_to_dict(creds)
+                    return redirect(url_for("sala_reunioes"))
+                show_modal = True
         if request.method == "POST":
             show_modal = True
         events = combine_events(raw_events, now, current_user.id)
