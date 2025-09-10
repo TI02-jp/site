@@ -1,152 +1,174 @@
 {% extends "base.html" %}
-
 {% block title %}SALA DE REUNIÕES{% endblock %}
-
 {% block sidebar_nav %}
-<div class="nav-section">
-    <div class="nav-section-title">PRINCIPAL</div>
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
-                <i class="bi bi-list-task"></i>
-                PARTICULARIDADES
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
-                <i class="bi bi-box-arrow-up-right"></i>
-                ACESSÓRIAS
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
-                <i class="bi bi-box-arrow-up-right"></i>
-                SIEG
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('consultorias') }}">
-                <i class="bi bi-buildings"></i>
-                CONSULTORIAS
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link active" href="{{ url_for('sala_reunioes') }}">
-                <i class="bi bi-calendar-event"></i>
-                SALA DE REUNIÕES
-            </a>
-        </li>
-    </ul>
-</div>
-<style>
+    <div class="nav-section">
+        <div class="nav-section-title">PRINCIPAL</div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for("dashboard") }}">
+                    <i class="bi bi-list-task"></i>
+                    PARTICULARIDADES
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link"
+                   href="https://app.acessorias.com/sysmain.php"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                    ACESSÓRIAS
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link"
+                   href="https://auth.sieg.com/login"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                    SIEG
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for("consultorias") }}">
+                    <i class="bi bi-buildings"></i>
+                    CONSULTORIAS
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for("sala_reunioes") }}">
+                    <i class="bi bi-calendar-event"></i>
+                    SALA DE REUNIÕES
+                </a>
+            </li>
+        </ul>
+    </div>
+    <style>
     .content-breadcrumb { display: none; }
     .content-wrapper { padding: 0; }
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 150px; overflow-y: auto; }
     #calendar { height: 70vh; }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container">
-    {% if not credentials %}
-        <div class="alert alert-warning">Conecte-se com sua conta Google para agendar reuniões.</div>
-    {% else %}
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Calendário de Agendamentos</h2>
-            <div>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#meetingModal">Agendar Reunião</button>
+    <div class="container">
+        {% if not credentials %}
+            <div class="alert alert-warning">Conecte-se com sua conta Google para agendar reuniões.</div>
+        {% else %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Calendário de Agendamentos</h2>
+                <div>
+                    <button class="btn btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#meetingModal">Agendar Reunião</button>
+                </div>
             </div>
-        </div>
-        <div class="mb-3">
-            <span class="badge bg-warning text-dark me-2">Agendada</span>
-            <span class="badge bg-success me-2">Em Andamento</span>
-            <span class="badge bg-danger">Realizada</span>
-        </div>
-        <div id="calendar"></div>
-
-        <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Agendar Reunião</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form method="post">
-                        <div class="modal-body">
-                            {{ form.hidden_tag() }}
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    {{ form.participants.label(class="form-label") }}
-                                    <div class="participant-list border rounded p-2">
-                                        {% for subfield in form.participants %}
-                                            <div class="form-check">
-                                                {{ subfield(class="form-check-input", id=subfield.id) }}
-                                                <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
-                                            </div>
-                                        {% endfor %}
+            <div class="mb-3">
+                <span class="badge bg-warning text-dark me-2">Agendada</span>
+                <span class="badge bg-success me-2">Em Andamento</span>
+                <span class="badge bg-danger">Realizada</span>
+            </div>
+            <div id="calendar"></div>
+            <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Agendar Reunião</h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <form method="post">
+                            <div class="modal-body">
+                                {{ form.hidden_tag() }}
+                                <div class="row">
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.participants.label(class="form-label") }}
+                                        <div class="participant-list border rounded p-2">
+                                            {% for subfield in form.participants %}
+                                                <div class="form-check">
+                                                    {{ subfield(class="form-check-input", id=subfield.id) }}
+                                                    <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
                                     </div>
-                                    {% if form.participants.errors %}
-                                        <div class="text-danger">{{ form.participants.errors[0] }}</div>
-                                    {% endif %}
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.date.label(class="form-label") }}
+                                        {{ form.date(class="form-control", type="date") }}
+                                    </div>
                                 </div>
-                                <div class="mb-3 col-md-6">
-                                    {{ form.date.label(class="form-label") }}
-                                    {{ form.date(class="form-control", type="date") }}
+                                <div class="row">
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.start_time.label(class="form-label") }}
+                                        {{ form.start_time(class="form-control", type="time") }}
+                                    </div>
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.end_time.label(class="form-label") }}
+                                        {{ form.end_time(class="form-control", type="time") }}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.subject.label(class="form-label") }}
+                                    {{ form.subject(class="form-control") }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.description.label(class="form-label") }}
+                                    {{ form.description(class="form-control") }}
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.create_meet(class="form-check-input", id="create_meet") }}
+                                    <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    {{ form.start_time.label(class="form-label") }}
-                                    {{ form.start_time(class="form-control", type="time") }}
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    {{ form.end_time.label(class="form-label") }}
-                                    {{ form.end_time(class="form-control", type="time") }}
-                                </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                {{ form.submit(class="btn btn-primary") }}
                             </div>
-                            <div class="mb-3">
-                                {{ form.subject.label(class="form-label") }}
-                                {{ form.subject(class="form-control") }}
-                            </div>
-                            <div class="mb-3">
-                                {{ form.description.label(class="form-label") }}
-                                {{ form.description(class="form-control") }}
-                            </div>
-                            <div class="form-check mb-3">
-                                {{ form.create_meet(class="form-check-input", id="create_meet") }}
-                                <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="detailTitle"></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p><strong>Início:</strong> <span id="detailStart"></span></p>
-                        <p><strong>Fim:</strong> <span id="detailEnd"></span></p>
-                        <p><strong>Status:</strong> <span id="detailStatus"></span></p>
-                        <p><strong>Participantes:</strong> <span id="detailParticipants"></span></p>
-                        <p id="detailDescription"></p>
-                        <a id="detailMeetLink" href="#" target="_blank" class="btn btn-sm btn-primary d-none">Abrir Meet</a>
+                        </form>
                     </div>
                 </div>
             </div>
-        </div>
-    {% endif %}
-</div>
-<style>
+            <div class="modal fade"
+                 id="eventDetailsModal"
+                 tabindex="-1"
+                 aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="detailTitle"></h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>
+                                <strong>Início:</strong> <span id="detailStart"></span>
+                            </p>
+                            <p>
+                                <strong>Fim:</strong> <span id="detailEnd"></span>
+                            </p>
+                            <p>
+                                <strong>Status:</strong> <span id="detailStatus"></span>
+                            </p>
+                            <p>
+                                <strong>Participantes:</strong> <span id="detailParticipants"></span>
+                            </p>
+                            <p id="detailDescription"></p>
+                            <a id="detailMeetLink"
+                               href="#"
+                               target="_blank"
+                               class="btn btn-sm btn-primary d-none">Abrir Meet</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css');
 .fc-daygrid-event .fc-event-title,
 .fc-daygrid-event .fc-event-time{display:none;}
@@ -159,14 +181,13 @@
 .fc-daygrid-dot-event{display:flex;justify-content:center;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-main{display:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin:0;border:none;}
-</style>
+    </style>
 {% endblock %}
-
 {% block scripts %}
-{{ super() }}
-{% if credentials %}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script>
+    {{ super() }}
+    {% if credentials %}
+        <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+        <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -211,14 +232,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     calendar.render();
 });
-</script>
-{% endif %}
-{% if show_modal %}
-<script>
+        </script>
+    {% endif %}
+    {% if show_modal %}
+        <script>
 document.addEventListener('DOMContentLoaded', function() {
     var modal = new bootstrap.Modal(document.getElementById('meetingModal'));
     modal.show();
 });
-</script>
-{% endif %}
+        </script>
+    {% endif %}
 {% endblock %}
