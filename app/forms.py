@@ -252,4 +252,5 @@ class MeetingForm(FlaskForm):
         ],
         validators=[DataRequired()],
     )
+    create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")

@@ -75,3 +75,34 @@ def create_meet_event(
     )
     return created_event, creds
 
+
+def create_event(
+    credentials_dict: dict,
+    summary: str,
+    start: datetime,
+    end: datetime,
+    description: str = "",
+    attendees: list[str] | None = None,
+):
+    """Create a calendar event without a Google Meet link."""
+    service, creds = _build_service(credentials_dict)
+    event = {
+        "summary": summary,
+        "start": {
+            "dateTime": start.isoformat(),
+            "timeZone": "America/Sao_Paulo",
+        },
+        "end": {
+            "dateTime": end.isoformat(),
+            "timeZone": "America/Sao_Paulo",
+        },
+    }
+    if description:
+        event["description"] = description
+    if attendees:
+        event["attendees"] = [{"email": email} for email in attendees]
+    created_event = (
+        service.events().insert(calendarId="primary", body=event).execute()
+    )
+    return created_event, creds
+
