@@ -148,7 +148,14 @@
 </div>
 <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css');
-.fc-daygrid-event .fc-event-title{display:none;}
+.fc-daygrid-event .fc-event-title,
+.fc-daygrid-event .fc-event-time{display:none;}
+.tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
+.tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
+.tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
+.tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
+.tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
+.tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
 </style>
 {% endblock %}
 
@@ -168,10 +175,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var start = info.event.start;
             var time = start ? start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
             var color = info.event.backgroundColor || info.event.borderColor;
-            var square = '<span style="display:inline-block;width:10px;height:10px;background:'+color+';margin-right:4px;"></span>';
+            var cls = '';
+            if(color === '#ffc107'){cls='tooltip-warning';}
+            else if(color === '#198754'){cls='tooltip-success';}
+            else if(color === '#dc3545'){cls='tooltip-danger';}
             info.el.setAttribute('data-bs-toggle', 'tooltip');
             info.el.setAttribute('data-bs-html', 'true');
-            info.el.setAttribute('title', square + time + ' ' + info.event.title);
+            info.el.setAttribute('data-bs-custom-class', cls);
+            info.el.setAttribute('title', time + ' ' + info.event.title);
             new bootstrap.Tooltip(info.el);
         },
         eventClick: function(info) {
