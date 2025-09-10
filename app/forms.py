@@ -242,7 +242,9 @@ class MeetingForm(FlaskForm):
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
     start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
     end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
-    subject = StringField("Assunto", validators=[DataRequired()])
-    description = TextAreaField("Descrição", validators=[Optional()])
+    subject = StringField("Assunto", validators=[DataRequired()], render_kw={"placeholder": "Assunto"})
+    description = TextAreaField(
+        "Descrição (opcional)", validators=[Optional()], render_kw={"placeholder": "Detalhes", "rows": 3}
+    )
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
