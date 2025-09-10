@@ -231,18 +231,8 @@ class TagForm(FlaskForm):
 
 class MeetingForm(FlaskForm):
     """Formulário para agendamento de reuniões."""
-    PARTICIPANT_CHOICES = [
-        ("gustavo@example.com", "Gustavo Becker"),
-        ("helena@example.com", "Helena Coelho do Rosario"),
-        ("isadora@example.com", "Isadora Monteiro Pereira"),
-        ("contato@jpcontabil.com", "JP Contabil"),
-    ]
-
     participants = SelectMultipleField(
         "Participantes",
-        choices=PARTICIPANT_CHOICES,
-        option_widget=widgets.CheckboxInput(),
-        widget=widgets.ListWidget(prefix_label=False),
         validators=[DataRequired(message="Selecione pelo menos um participante")],
     )
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])

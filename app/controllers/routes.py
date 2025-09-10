@@ -274,6 +274,10 @@ def consultorias():
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
+    form.participants.choices = [
+        (u.email, u.name)
+        for u in User.query.filter_by(ativo=True).order_by(User.name).all()
+    ]
     events: list[dict] = []
     creds_dict = session.get('credentials')
     if creds_dict:
