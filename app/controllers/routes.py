@@ -1,7 +1,16 @@
 """Flask route handlers for the web application."""
 
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app, session
-from markupsafe import Markup
+from flask import (
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    request,
+    abort,
+    jsonify,
+    current_app,
+    session,
+)
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
@@ -16,8 +25,6 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
-    Reuniao,
-    ReuniaoParticipante,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -46,16 +53,16 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
-from app.services.google_calendar import (
-    list_upcoming_events,
-    create_meet_event,
-    create_event,
+from app.services.meeting_room import (
+    populate_participants_choices,
+    fetch_raw_events,
+    create_meeting_and_event,
+    combine_events,
 )
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
-from dateutil.parser import isoparse
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -67,7 +74,10 @@ GOOGLE_OAUTH_SCOPES = [
 
 def build_google_flow(state: str | None = None) -> Flow:
     """Return a configured Google OAuth ``Flow`` instance."""
-    if not (current_app.config.get("GOOGLE_CLIENT_ID") and current_app.config.get("GOOGLE_CLIENT_SECRET")):
+    if not (
+        current_app.config.get("GOOGLE_CLIENT_ID")
+        and current_app.config.get("GOOGLE_CLIENT_SECRET")
+    ):
         abort(404)
     return Flow.from_client_config(
         {
@@ -91,48 +101,50 @@ def get_google_redirect_uri() -> str:
         _scheme=current_app.config["PREFERRED_URL_SCHEME"],
     )
 
+
 def credentials_to_dict(credentials):
     """Convert Google credentials object to a serializable dict."""
     return {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes,
+        "token": credentials.token,
+        "refresh_token": credentials.refresh_token,
+        "token_uri": credentials.token_uri,
+        "client_id": credentials.client_id,
+        "client_secret": credentials.client_secret,
+        "scopes": credentials.scopes,
     }
+
 
 @app.context_processor
 def inject_stats():
     """Inject global statistics into templates."""
     if current_user.is_authenticated:
         total_empresas = Empresa.query.count()
-        total_usuarios = User.query.count() if current_user.role == 'admin' else 0
+        total_usuarios = User.query.count() if current_user.role == "admin" else 0
         online_count = 0
-        if current_user.role == 'admin':
+        if current_user.role == "admin":
             cutoff = datetime.utcnow() - timedelta(minutes=5)
             online_count = User.query.filter(User.last_seen >= cutoff).count()
         return {
-            'total_empresas': total_empresas,
-            'total_usuarios': total_usuarios,
-            'online_users_count': online_count
+            "total_empresas": total_empresas,
+            "total_usuarios": total_usuarios,
+            "online_users_count": online_count,
         }
     return {}
 
+
 # Allowed image file extensions for uploads
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
 
 def allowed_file(filename):
     """Check if a filename has an allowed extension."""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
     """Return JSON error when uploaded file exceeds limit."""
-    return jsonify({'error': 'Arquivo excede o tamanho permitido'}), 413
+    return jsonify({"error": "Arquivo excede o tamanho permitido"}), 413
 
 
 def format_phone(digits: str) -> str:
@@ -148,91 +160,95 @@ def normalize_contatos(contatos):
     """Normalize contact entries into a consistent structure."""
     if not contatos:
         return []
-    if all(isinstance(c, dict) and 'meios' in c for c in contatos):
+    if all(isinstance(c, dict) and "meios" in c for c in contatos):
         for c in contatos:
-            meios = c.get('meios') or []
+            meios = c.get("meios") or []
             for m in meios:
-                if 'valor' in m and 'endereco' not in m:
-                    m['endereco'] = m.pop('valor')
-                if m.get('tipo') in ('telefone', 'whatsapp'):
-                    digits = re.sub(r'\D', '', m.get('endereco', ''))
-                    m['endereco'] = format_phone(digits)
+                if "valor" in m and "endereco" not in m:
+                    m["endereco"] = m.pop("valor")
+                if m.get("tipo") in ("telefone", "whatsapp"):
+                    digits = re.sub(r"\D", "", m.get("endereco", ""))
+                    m["endereco"] = format_phone(digits)
         return contatos
     grouped = {}
     for c in contatos:
         if not isinstance(c, dict):
             continue
-        nome = c.get('nome', '')
-        tipo = c.get('tipo')
-        endereco = c.get('endereco') or c.get('valor', '')
-        if tipo in ('telefone', 'whatsapp'):
-            digits = re.sub(r'\D', '', endereco)
+        nome = c.get("nome", "")
+        tipo = c.get("tipo")
+        endereco = c.get("endereco") or c.get("valor", "")
+        if tipo in ("telefone", "whatsapp"):
+            digits = re.sub(r"\D", "", endereco)
             endereco = format_phone(digits)
-        contato = grouped.setdefault(nome, {'nome': nome, 'meios': []})
-        contato['meios'].append({'tipo': tipo, 'endereco': endereco})
+        contato = grouped.setdefault(nome, {"nome": nome, "meios": []})
+        contato["meios"].append({"tipo": tipo, "endereco": endereco})
     return list(grouped.values())
 
 
 def validate_contatos(contatos):
     """Validate contact data ensuring proper formats."""
-    email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+    email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     for c in contatos:
-        meios = c.get('meios')
+        meios = c.get("meios")
         if meios is None:
-            meios = [{'tipo': c.get('tipo'), 'endereco': c.get('endereco', '')}]
+            meios = [{"tipo": c.get("tipo"), "endereco": c.get("endereco", "")}]
         validated = []
         for m in meios:
-            tipo = m.get('tipo')
-            endereco = m.get('endereco', '')
-            if tipo == 'email':
+            tipo = m.get("tipo")
+            endereco = m.get("endereco", "")
+            if tipo == "email":
                 if not email_re.match(endereco):
                     raise ValueError(f"E-mail inválido: {endereco}")
-            elif tipo in ('telefone', 'whatsapp'):
-                digits = re.sub(r'\D', '', endereco)
+            elif tipo in ("telefone", "whatsapp"):
+                digits = re.sub(r"\D", "", endereco)
                 if not digits:
                     raise ValueError(f"Número inválido: {endereco}")
                 endereco = format_phone(digits)
-            validated.append({'tipo': tipo, 'endereco': endereco})
-        c['meios'] = validated
-        c.pop('tipo', None)
-        c.pop('endereco', None)
+            validated.append({"tipo": tipo, "endereco": endereco})
+        c["meios"] = validated
+        c.pop("tipo", None)
+        c.pop("endereco", None)
     return contatos
 
-@app.route('/upload_image', methods=['POST'])
+
+@app.route("/upload_image", methods=["POST"])
 @login_required
 def upload_image():
     """Handle image uploads from the WYSIWYG editor."""
-    if 'image' not in request.files:
-        return jsonify({'error': 'Nenhuma imagem enviada'}), 400
+    if "image" not in request.files:
+        return jsonify({"error": "Nenhuma imagem enviada"}), 400
 
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'Nome de arquivo vazio'}), 400
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "Nome de arquivo vazio"}), 400
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
-        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+        upload_folder = os.path.join(current_app.root_path, "static", "uploads")
         file_path = os.path.join(upload_folder, unique_name)
 
         try:
             os.makedirs(upload_folder, exist_ok=True)
             file.save(file_path)
-            file_url = url_for('static', filename=f'uploads/{unique_name}')
-            return jsonify({'image_url': file_url})
+            file_url = url_for("static", filename=f"uploads/{unique_name}")
+            return jsonify({"image_url": file_url})
         except Exception as e:
-            return jsonify({'error': f'Erro no servidor ao salvar: {e}'}), 500
+            return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
 
-    return jsonify({'error': 'Arquivo inválido ou não permitido'}), 400
+    return jsonify({"error": "Arquivo inválido ou não permitido"}), 400
+
 
 def admin_required(f):
     """Decorator that restricts access to admin users."""
+
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if current_user.role != 'admin':
+        if current_user.role != "admin":
             abort(403)
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -246,238 +262,61 @@ def inject_user_tag_helpers():
     """Expose user tag helper utilities to templates."""
     return dict(user_has_tag=user_has_tag)
 
-@app.route('/')
+
+@app.route("/")
 def index():
     """Redirect users to the appropriate first page."""
     if current_user.is_authenticated:
-        return redirect(url_for('home'))
-    return redirect(url_for('login'))
+        return redirect(url_for("home"))
+    return redirect(url_for("login"))
 
 
-@app.route('/home')
+@app.route("/home")
 @login_required
 def home():
     """Render the authenticated home page."""
-    return render_template('home.html')
+    return render_template("home.html")
 
 
-@app.route('/ping')
+@app.route("/ping")
 @login_required
 def ping():
     """Endpoint for client pings to keep the session active."""
     session.modified = True
-    return ('', 204)
+    return ("", 204)
 
 
-@app.route('/consultorias')
+@app.route("/consultorias")
 @login_required
 def consultorias():
     """List registered consultorias."""
     consultorias = Consultoria.query.all()
-    return render_template('consultorias.html', consultorias=consultorias)
+    return render_template("consultorias.html", consultorias=consultorias)
 
-@app.route('/sala-reunioes', methods=['GET', 'POST'])
+
+@app.route("/sala-reunioes", methods=["GET", "POST"])
 @login_required
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
-    form.participants.choices = [
-        (u.id, u.name)
-        for u in User.query.filter_by(ativo=True).order_by(User.name).all()
-    ]
+    populate_participants_choices(form)
     events: list[dict] = []
-    seen_keys: set[tuple[str, str, str]] = set()
-    now = datetime.now(SAO_PAULO_TZ)
-    creds_dict = session.get('credentials')
-    raw_events: list[dict] = []
     show_modal = False
+    creds_dict = session.get("credentials")
     if creds_dict:
-        raw_events, creds = list_upcoming_events(creds_dict)
-        session['credentials'] = credentials_to_dict(creds)
+        raw_events, creds = fetch_raw_events(creds_dict)
+        creds_dict = credentials_to_dict(creds)
+        session["credentials"] = creds_dict
+        now = datetime.now(SAO_PAULO_TZ)
         if form.validate_on_submit():
-            start_dt = datetime.combine(
-                form.date.data, form.start_time.data
-            ).replace(tzinfo=SAO_PAULO_TZ)
-            end_dt = datetime.combine(
-                form.date.data, form.end_time.data
-            ).replace(tzinfo=SAO_PAULO_TZ)
-            duration = end_dt - start_dt
-            MIN_GAP = timedelta(minutes=2)
-
-            def next_available(start: datetime, dur: timedelta, intervals: list[tuple[datetime, datetime]]):
-                intervals = sorted(intervals, key=lambda x: x[0])
-                while True:
-                    for s, e in intervals:
-                        if start < e + MIN_GAP and start + dur > s - MIN_GAP:
-                            start = e + MIN_GAP
-                            break
-                    else:
-                        return start
-
-            intervals: list[tuple[datetime, datetime]] = []
-            for e in raw_events:
-                existing_start = isoparse(e['start'].get('dateTime') or e['start'].get('date'))
-                existing_end = isoparse(e['end'].get('dateTime') or e['end'].get('date'))
-                intervals.append((existing_start, existing_end))
-            for r in Reuniao.query.all():
-                existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-                    tzinfo=SAO_PAULO_TZ
-                )
-                existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-                    tzinfo=SAO_PAULO_TZ
-                )
-                intervals.append((existing_start, existing_end))
-
-            proposed_start = max(start_dt, now + MIN_GAP)
-            messages: list[str] = []
-            if proposed_start != start_dt:
-                messages.append(
-                    'Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência.'
-                )
-            adjusted_start = next_available(proposed_start, duration, intervals)
-            if adjusted_start != proposed_start:
-                messages.append('Horário conflita com outra reunião.')
-            if adjusted_start != start_dt:
-                adjusted_end = adjusted_start + duration
-                form.date.data = adjusted_start.date()
-                form.start_time.data = adjusted_start.time()
-                form.end_time.data = adjusted_end.time()
-                flash(
-                    f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
-                    'warning',
-                )
-                start_dt, end_dt = adjusted_start, adjusted_end
-            selected_users = User.query.filter(
-                User.id.in_(form.participants.data)
-            ).all()
-            participant_emails = [u.email for u in selected_users]
-            participant_names = [u.name for u in selected_users]
-                description = form.description.data or ''
-                if participant_names:
-                    description += "\nParticipantes: " + ", ".join(participant_names)
-                description += "\nStatus: Agendada"
-                if form.create_meet.data:
-                    event, creds = create_meet_event(
-                        creds_dict,
-                        form.subject.data,
-                        start_dt,
-                        end_dt,
-                        description,
-                        participant_emails,
-                    )
-                else:
-                    event, creds = create_event(
-                        creds_dict,
-                        form.subject.data,
-                        start_dt,
-                        end_dt,
-                        description,
-                        participant_emails,
-                    )
-                meet_link = event.get('hangoutLink')
-                session['credentials'] = credentials_to_dict(creds)
-                meeting = Reuniao(
-                    data_reuniao=form.date.data,
-                    hora_inicio=form.start_time.data,
-                    hora_fim=form.end_time.data,
-                    assunto=form.subject.data,
-                    descricao=form.description.data,
-                    status='agendada',
-                    meet_link=meet_link,
-                )
-                db.session.add(meeting)
-                db.session.flush()
-                for u in selected_users:
-                    db.session.add(
-                        ReuniaoParticipante(
-                            reuniao_id=meeting.id,
-                            id_usuario=u.id,
-                            username_usuario=u.name,
-                        )
-                    )
-                db.session.commit()
-                if meet_link:
-                    flash(
-                        Markup(
-                            f'Reunião criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
-                        ),
-                        'success',
-                    )
-                else:
-                    flash('Reunião criada com sucesso!', 'success')
-                return redirect(url_for('sala_reunioes'))
-        for e in raw_events:
-            start_str = e['start'].get('dateTime') or e['start'].get('date')
-            end_str = e['end'].get('dateTime') or e['end'].get('date')
-            start_dt = isoparse(start_str)
-            end_dt = isoparse(end_str)
-            key = (e.get('summary', 'Sem título'), start_str, end_str)
-            if key in seen_keys:
-                continue
-            if now < start_dt:
-                color = '#ffc107'
-                status_label = 'Agendada'
-            elif start_dt <= now <= end_dt:
-                color = '#198754'
-                status_label = 'Em Andamento'
-            else:
-                color = '#dc3545'
-                status_label = 'Realizada'
-            events.append(
-                {
-                    'title': e.get('summary', 'Sem título'),
-                    'start': start_str,
-                    'end': end_str,
-                    'description': e.get('description'),
-                    'meet_link': e.get('hangoutLink'),
-                    'color': color,
-                    'status': status_label,
-                }
-            )
-            seen_keys.add(key)
-    updated = False
-    for r in Reuniao.query.all():
-        start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
-        if key in seen_keys:
-            continue
-        if now < start_dt:
-            status = 'agendada'
-            status_label = 'Agendada'
-            color = '#ffc107'
-        elif start_dt <= now <= end_dt:
-            status = 'em andamento'
-            status_label = 'Em Andamento'
-            color = '#198754'
-        else:
-            status = 'realizada'
-            status_label = 'Realizada'
-            color = '#dc3545'
-        if r.status != status:
-            r.status = status
-            updated = True
-        event_data = {
-            'title': r.assunto,
-            'start': start_dt.isoformat(),
-            'end': end_dt.isoformat(),
-            'color': color,
-            'description': r.descricao,
-            'status': status_label,
-            'participants': [p.username_usuario for p in r.participantes],
-        }
-        if r.meet_link:
-            event_data['meet_link'] = r.meet_link
-        events.append(event_data)
-        seen_keys.add(key)
-    if updated:
-        db.session.commit()
+            creds = create_meeting_and_event(form, raw_events, now, creds_dict)
+            session["credentials"] = credentials_to_dict(creds)
+            return redirect(url_for("sala_reunioes"))
+        if request.method == "POST":
+            show_modal = True
+        events = combine_events(raw_events, now)
     return render_template(
-        'sala_reunioes.html',
+        "sala_reunioes.html",
         form=form,
         events=events,
         credentials=creds_dict,
@@ -485,8 +324,7 @@ def sala_reunioes():
     )
 
 
-
-@app.route('/consultorias/cadastro', methods=['GET', 'POST'])
+@app.route("/consultorias/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_consultoria():
     """Render and handle the Cadastro de Consultoria page."""
@@ -499,12 +337,12 @@ def cadastro_consultoria():
         )
         db.session.add(consultoria)
         db.session.commit()
-        flash('Consultoria registrada com sucesso.', 'success')
-        return redirect(url_for('consultorias'))
-    return render_template('cadastro_consultoria.html', form=form)
+        flash("Consultoria registrada com sucesso.", "success")
+        return redirect(url_for("consultorias"))
+    return render_template("cadastro_consultoria.html", form=form)
 
 
-@app.route('/consultorias/editar/<int:id>', methods=['GET', 'POST'])
+@app.route("/consultorias/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
 def editar_consultoria_cadastro(id):
     """Edit an existing consultoria entry."""
@@ -515,19 +353,22 @@ def editar_consultoria_cadastro(id):
         consultoria.usuario = form.usuario.data
         consultoria.senha = form.senha.data
         db.session.commit()
-        flash('Consultoria atualizada com sucesso.', 'success')
-        return redirect(url_for('consultorias'))
-    return render_template('cadastro_consultoria.html', form=form, consultoria=consultoria)
+        flash("Consultoria atualizada com sucesso.", "success")
+        return redirect(url_for("consultorias"))
+    return render_template(
+        "cadastro_consultoria.html", form=form, consultoria=consultoria
+    )
 
-@app.route('/consultorias/setores')
+
+@app.route("/consultorias/setores")
 @login_required
 def setores():
     """List registered setores."""
     setores = Setor.query.all()
-    return render_template('setores.html', setores=setores)
+    return render_template("setores.html", setores=setores)
 
 
-@app.route('/consultorias/setores/cadastro', methods=['GET', 'POST'])
+@app.route("/consultorias/setores/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_setor():
     """Render and handle the Cadastro de Setor page."""
@@ -536,12 +377,12 @@ def cadastro_setor():
         setor = Setor(nome=form.nome.data)
         db.session.add(setor)
         db.session.commit()
-        flash('Setor registrado com sucesso.', 'success')
-        return redirect(url_for('setores'))
-    return render_template('cadastro_setor.html', form=form)
+        flash("Setor registrado com sucesso.", "success")
+        return redirect(url_for("setores"))
+    return render_template("cadastro_setor.html", form=form)
 
 
-@app.route('/consultorias/setores/editar/<int:id>', methods=['GET', 'POST'])
+@app.route("/consultorias/setores/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
 def editar_setor(id):
     """Edit a registered setor."""
@@ -550,20 +391,20 @@ def editar_setor(id):
     if form.validate_on_submit():
         setor.nome = form.nome.data
         db.session.commit()
-        flash('Setor atualizado com sucesso.', 'success')
-        return redirect(url_for('setores'))
-    return render_template('cadastro_setor.html', form=form, setor=setor)
+        flash("Setor atualizado com sucesso.", "success")
+        return redirect(url_for("setores"))
+    return render_template("cadastro_setor.html", form=form, setor=setor)
 
 
-@app.route('/tags')
+@app.route("/tags")
 @login_required
 def tags():
     """List registered tags."""
     tags = Tag.query.all()
-    return render_template('tags.html', tags=tags)
+    return render_template("tags.html", tags=tags)
 
 
-@app.route('/tags/cadastro', methods=['GET', 'POST'])
+@app.route("/tags/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_tag():
     """Render and handle the Cadastro de Tag page."""
@@ -572,12 +413,12 @@ def cadastro_tag():
         tag = Tag(nome=form.nome.data)
         db.session.add(tag)
         db.session.commit()
-        flash('Tag registrada com sucesso.', 'success')
-        return redirect(url_for('tags'))
-    return render_template('cadastro_tag.html', form=form)
+        flash("Tag registrada com sucesso.", "success")
+        return redirect(url_for("tags"))
+    return render_template("cadastro_tag.html", form=form)
 
 
-@app.route('/tags/editar/<int:id>', methods=['GET', 'POST'])
+@app.route("/tags/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
 def editar_tag(id):
     """Edit a registered tag."""
@@ -586,23 +427,23 @@ def editar_tag(id):
     if form.validate_on_submit():
         tag.nome = form.nome.data
         db.session.commit()
-        flash('Tag atualizada com sucesso.', 'success')
-        return redirect(url_for('tags'))
-    return render_template('cadastro_tag.html', form=form, tag=tag)
+        flash("Tag atualizada com sucesso.", "success")
+        return redirect(url_for("tags"))
+    return render_template("cadastro_tag.html", form=form, tag=tag)
 
 
-@app.route('/consultorias/relatorios')
+@app.route("/consultorias/relatorios")
 @admin_required
 def relatorios_consultorias():
     """Display reports of inclusões grouped by consultoria, user, and date."""
-    inicio_raw = request.args.get('inicio')
-    fim_raw = request.args.get('fim')
+    inicio_raw = request.args.get("inicio")
+    fim_raw = request.args.get("fim")
     query = Inclusao.query
 
     inicio = None
     if inicio_raw:
         try:
-            inicio = datetime.strptime(inicio_raw, '%Y-%m-%d').date()
+            inicio = datetime.strptime(inicio_raw, "%Y-%m-%d").date()
             query = query.filter(Inclusao.data >= inicio)
         except ValueError:
             inicio = None
@@ -610,7 +451,7 @@ def relatorios_consultorias():
     fim = None
     if fim_raw:
         try:
-            fim = datetime.strptime(fim_raw, '%Y-%m-%d').date()
+            fim = datetime.strptime(fim_raw, "%Y-%m-%d").date()
             query = query.filter(Inclusao.data <= fim)
         except ValueError:
             fim = None
@@ -629,11 +470,15 @@ def relatorios_consultorias():
         .all()
     )
 
-    labels_consultoria = [c or '—' for c, _ in por_consultoria]
+    labels_consultoria = [c or "—" for c, _ in por_consultoria]
     counts_consultoria = [total for _, total in por_consultoria]
     fig_cons = go.Figure(
         data=[
-            go.Bar(x=labels_consultoria, y=counts_consultoria, marker_color=qualitative.Pastel)
+            go.Bar(
+                x=labels_consultoria,
+                y=counts_consultoria,
+                marker_color=qualitative.Pastel,
+            )
         ]
     )
     fig_cons.update_layout(
@@ -642,12 +487,14 @@ def relatorios_consultorias():
         xaxis_title="Consultoria",
         yaxis_title="Total",
     )
-    chart_consultoria = fig_cons.to_html(full_html=False, div_id='consultoria-chart')
+    chart_consultoria = fig_cons.to_html(full_html=False, div_id="consultoria-chart")
 
-    labels_usuario = [u or '—' for u, _ in por_usuario]
+    labels_usuario = [u or "—" for u, _ in por_usuario]
     counts_usuario = [total for _, total in por_usuario]
     fig_user = go.Figure(
-        data=[go.Bar(x=labels_usuario, y=counts_usuario, marker_color=qualitative.Pastel)]
+        data=[
+            go.Bar(x=labels_usuario, y=counts_usuario, marker_color=qualitative.Pastel)
+        ]
     )
     fig_user.update_layout(
         title_text="Inclusões por usuário",
@@ -655,26 +502,26 @@ def relatorios_consultorias():
         xaxis_title="Usuário",
         yaxis_title="Total",
     )
-    chart_usuario = fig_user.to_html(full_html=False, div_id='usuario-chart')
+    chart_usuario = fig_user.to_html(full_html=False, div_id="usuario-chart")
 
     inclusoes = query.all()
     inclusoes_por_consultoria = {}
     inclusoes_por_usuario = {}
     for inc in inclusoes:
-        label_cons = inc.consultoria or '—'
+        label_cons = inc.consultoria or "—"
         inclusoes_por_consultoria.setdefault(label_cons, []).append(
             {
-                'usuario': inc.usuario,
-                'pergunta': inc.pergunta,
-                'data': inc.data.strftime('%d/%m/%Y') if inc.data else '',
+                "usuario": inc.usuario,
+                "pergunta": inc.pergunta,
+                "data": inc.data.strftime("%d/%m/%Y") if inc.data else "",
             }
         )
-        label_user = inc.usuario or '—'
+        label_user = inc.usuario or "—"
         inclusoes_por_usuario.setdefault(label_user, []).append(
             {
-                'consultoria': inc.consultoria,
-                'pergunta': inc.pergunta,
-                'data': inc.data.strftime('%d/%m/%Y') if inc.data else '',
+                "consultoria": inc.consultoria,
+                "pergunta": inc.pergunta,
+                "data": inc.data.strftime("%d/%m/%Y") if inc.data else "",
             }
         )
 
@@ -689,23 +536,23 @@ def relatorios_consultorias():
         )
 
     return render_template(
-        'relatorios_consultorias.html',
+        "relatorios_consultorias.html",
         chart_consultoria=chart_consultoria,
         chart_usuario=chart_usuario,
         inclusoes_por_consultoria=inclusoes_por_consultoria,
         inclusoes_por_usuario=inclusoes_por_usuario,
         por_data=por_data,
-        inicio=inicio.strftime('%Y-%m-%d') if inicio else '',
-        fim=fim.strftime('%Y-%m-%d') if fim else '',
+        inicio=inicio.strftime("%Y-%m-%d") if inicio else "",
+        fim=fim.strftime("%Y-%m-%d") if fim else "",
     )
 
 
-@app.route('/consultorias/inclusoes')
+@app.route("/consultorias/inclusoes")
 @login_required
 def inclusoes():
     """List and search Consultorias."""
-    search_raw = request.args.get('q', '')
-    page = request.args.get('page', 1, type=int)
+    search_raw = request.args.get("q", "")
+    page = request.args.get("page", 1, type=int)
     query = Inclusao.query
 
     if search_raw:
@@ -721,138 +568,143 @@ def inclusoes():
     pagination = query.order_by(Inclusao.data.desc()).paginate(page=page, per_page=50)
 
     return render_template(
-        'inclusoes.html',
+        "inclusoes.html",
         inclusoes=pagination.items,
         pagination=pagination,
         search=search_raw,
     )
 
 
-@app.route('/consultorias/inclusoes/nova', methods=['GET', 'POST'])
+@app.route("/consultorias/inclusoes/nova", methods=["GET", "POST"])
 @login_required
 def nova_inclusao():
     """Render and handle Consultoria form."""
     users = User.query.order_by(User.name).all()
-    if request.method == 'POST':
-        user_id = request.form.get('usuario')
+    if request.method == "POST":
+        user_id = request.form.get("usuario")
         user = User.query.get(int(user_id)) if user_id else None
-        data_str = request.form.get('data')
-        data = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else None
+        data_str = request.form.get("data")
+        data = datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else None
         inclusao = Inclusao(
             data=data,
-            usuario=user.name if user else '',
-            setor=request.form.get('setor'),
-            consultoria=request.form.get('consultoria'),
-            assunto=(request.form.get('assunto') or '').upper(),
-            pergunta=sanitize_html(request.form.get('pergunta')),
-            resposta=sanitize_html(request.form.get('resposta')),
+            usuario=user.name if user else "",
+            setor=request.form.get("setor"),
+            consultoria=request.form.get("consultoria"),
+            assunto=(request.form.get("assunto") or "").upper(),
+            pergunta=sanitize_html(request.form.get("pergunta")),
+            resposta=sanitize_html(request.form.get("resposta")),
         )
         db.session.add(inclusao)
         db.session.commit()
-        flash('Consultoria registrada com sucesso.', 'success')
-        return redirect(url_for('inclusoes'))
+        flash("Consultoria registrada com sucesso.", "success")
+        return redirect(url_for("inclusoes"))
     return render_template(
-        'nova_inclusao.html',
+        "nova_inclusao.html",
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 
 
-@app.route('/consultorias/inclusoes/<int:codigo>')
+@app.route("/consultorias/inclusoes/<int:codigo>")
 @login_required
 def visualizar_consultoria(codigo):
     """Display details for a single consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     return render_template(
-        'visualizar_consultoria.html',
+        "visualizar_consultoria.html",
         inclusao=inclusao,
         data_formatada=inclusao.data_formatada,
     )
 
 
-@app.route('/consultorias/inclusoes/<int:codigo>/editar', methods=['GET', 'POST'])
+@app.route("/consultorias/inclusoes/<int:codigo>/editar", methods=["GET", "POST"])
 @login_required
 def editar_consultoria(codigo):
     """Render and handle editing of a consultoria."""
     inclusao = Inclusao.query.get_or_404(codigo)
     users = User.query.order_by(User.name).all()
-    if request.method == 'POST':
-        user_id = request.form.get('usuario')
+    if request.method == "POST":
+        user_id = request.form.get("usuario")
         user = User.query.get(int(user_id)) if user_id else None
-        data_str = request.form.get('data')
-        inclusao.data = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else None
-        inclusao.usuario = user.name if user else ''
-        inclusao.setor = request.form.get('setor')
-        inclusao.consultoria = request.form.get('consultoria')
-        inclusao.assunto = (request.form.get('assunto') or '').upper()
-        inclusao.pergunta = sanitize_html(request.form.get('pergunta'))
-        inclusao.resposta = sanitize_html(request.form.get('resposta'))
+        data_str = request.form.get("data")
+        inclusao.data = (
+            datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else None
+        )
+        inclusao.usuario = user.name if user else ""
+        inclusao.setor = request.form.get("setor")
+        inclusao.consultoria = request.form.get("consultoria")
+        inclusao.assunto = (request.form.get("assunto") or "").upper()
+        inclusao.pergunta = sanitize_html(request.form.get("pergunta"))
+        inclusao.resposta = sanitize_html(request.form.get("resposta"))
         db.session.commit()
-        flash('Consultoria atualizada com sucesso.', 'success')
-        return redirect(url_for('inclusoes'))
+        flash("Consultoria atualizada com sucesso.", "success")
+        return redirect(url_for("inclusoes"))
     return render_template(
-        'nova_inclusao.html',
+        "nova_inclusao.html",
         users=users,
         setores=Setor.query.order_by(Setor.nome).all(),
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
         inclusao=inclusao,
     )
 
-@app.route('/cookies')
+
+@app.route("/cookies")
 def cookies():
     """Render the cookie policy page."""
-    return render_template('cookie_policy.html')
+    return render_template("cookie_policy.html")
 
 
-@app.route('/cookies/revoke')
+@app.route("/cookies/revoke")
 def revoke_cookies():
     """Revoke cookie consent and redirect to index."""
-    resp = redirect(url_for('index'))
-    resp.delete_cookie('cookie_consent')
-    flash('Consentimento de cookies revogado.', 'info')
+    resp = redirect(url_for("index"))
+    resp.delete_cookie("cookie_consent")
+    flash("Consentimento de cookies revogado.", "info")
     return resp
 
 
-@app.route('/login/google')
+@app.route("/login/google")
 def google_login():
     """Start OAuth login with Google."""
     flow = build_google_flow()
     flow.redirect_uri = get_google_redirect_uri()
     authorization_url, state = flow.authorization_url(
-        access_type='offline', include_granted_scopes='true', prompt='consent'
+        access_type="offline", include_granted_scopes="true", prompt="consent"
     )
-    session['oauth_state'] = state
+    session["oauth_state"] = state
     return redirect(authorization_url)
 
 
-@app.route('/oauth2callback')
+@app.route("/oauth2callback")
 def google_callback():
     """Handle OAuth callback from Google."""
-    state = session.get('oauth_state')
-    session.pop('oauth_state', None)
-    if state is None or state != request.args.get('state'):
-        flash('Falha ao validar resposta do Google. Tente novamente.', 'danger')
-        return redirect(url_for('login'))
+    state = session.get("oauth_state")
+    session.pop("oauth_state", None)
+    if state is None or state != request.args.get("state"):
+        flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
+        return redirect(url_for("login"))
     flow = build_google_flow(state=state)
     flow.redirect_uri = get_google_redirect_uri()
     try:
         flow.fetch_token(authorization_response=request.url)
     except Exception:
-        flash('Não foi possível completar a autenticação com o Google.', 'danger')
-        return redirect(url_for('login'))
+        flash("Não foi possível completar a autenticação com o Google.", "danger")
+        return redirect(url_for("login"))
     credentials = flow.credentials
     request_session = requests.Session()
     token_request = Request(session=request_session)
     id_info = id_token.verify_oauth2_token(
-        credentials.id_token, token_request, current_app.config['GOOGLE_CLIENT_ID']
+        credentials.id_token, token_request, current_app.config["GOOGLE_CLIENT_ID"]
     )
-    google_id = id_info.get('sub')
-    email = id_info.get('email')
-    name = id_info.get('name', email)
-    user = User.query.filter((User.google_id == google_id) | (User.email == email)).first()
+    google_id = id_info.get("sub")
+    email = id_info.get("email")
+    name = id_info.get("name", email)
+    user = User.query.filter(
+        (User.google_id == google_id) | (User.email == email)
+    ).first()
     if not user:
-        base_username = email.split('@')[0]
+        base_username = email.split("@")[0]
         username = base_username
         counter = 1
         while User.query.filter_by(username=username).first():
@@ -869,33 +721,37 @@ def google_callback():
     login_user(user, remember=True, duration=timedelta(days=30))
     session.permanent = True
     sid = uuid4().hex
-    session['sid'] = sid
-    session['credentials'] = credentials_to_dict(credentials)
+    session["sid"] = sid
+    session["credentials"] = credentials_to_dict(credentials)
     db.session.add(
         Session(
             session_id=sid,
             user_id=user.id,
             session_data=dict(session),
             ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent'),
+            user_agent=request.headers.get("User-Agent"),
             last_activity=datetime.now(SAO_PAULO_TZ),
         )
     )
     db.session.commit()
-    flash('Login com Google bem-sucedido!', 'success')
-    return redirect(url_for('home'))
+    flash("Login com Google bem-sucedido!", "success")
+    return redirect(url_for("home"))
 
-@app.route('/login', methods=['GET', 'POST'])
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
     """Render the login page and handle authentication."""
     form = LoginForm()
-    google_enabled = bool(current_app.config.get('GOOGLE_CLIENT_ID') and current_app.config.get('GOOGLE_CLIENT_SECRET'))
+    google_enabled = bool(
+        current_app.config.get("GOOGLE_CLIENT_ID")
+        and current_app.config.get("GOOGLE_CLIENT_SECRET")
+    )
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             if not user.ativo:
-                flash('Seu usuário está inativo. Contate o administrador.', 'danger')
-                return redirect(url_for('login'))
+                flash("Seu usuário está inativo. Contate o administrador.", "danger")
+                return redirect(url_for("login"))
             login_user(
                 user,
                 remember=form.remember_me.data,
@@ -903,31 +759,33 @@ def login():
             )
             session.permanent = form.remember_me.data
             sid = uuid4().hex
-            session['sid'] = sid
+            session["sid"] = sid
             db.session.add(
                 Session(
                     session_id=sid,
                     user_id=user.id,
                     session_data=dict(session),
                     ip_address=request.remote_addr,
-                    user_agent=request.headers.get('User-Agent'),
+                    user_agent=request.headers.get("User-Agent"),
                     last_activity=datetime.now(SAO_PAULO_TZ),
                 )
             )
             db.session.commit()
-            flash('Login bem-sucedido!', 'success')
-            return redirect(url_for('home'))
+            flash("Login bem-sucedido!", "success")
+            return redirect(url_for("home"))
         else:
-            flash('Credenciais inválidas', 'danger')
-    return render_template('login.html', form=form, google_enabled=google_enabled)
+            flash("Credenciais inválidas", "danger")
+    return render_template("login.html", form=form, google_enabled=google_enabled)
 
-@app.route('/dashboard')
+
+@app.route("/dashboard")
 @login_required
 def dashboard():
     """Admin dashboard placeholder page."""
-    return render_template('dashboard.html')
+    return render_template("dashboard.html")
 
-@app.route('/api/cnpj/<cnpj>')
+
+@app.route("/api/cnpj/<cnpj>")
 @login_required
 def api_cnpj(cnpj):
     """Provide a JSON API for CNPJ lookups."""
@@ -935,30 +793,31 @@ def api_cnpj(cnpj):
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
         msg = str(e)
-        status = 400 if 'inválido' in msg.lower() or 'invalido' in msg.lower() else 404
+        status = 400 if "inválido" in msg.lower() or "invalido" in msg.lower() else 404
         if status == 404:
-            msg = 'CNPJ não está cadastrado'
-        return jsonify({'error': msg}), status
+            msg = "CNPJ não está cadastrado"
+        return jsonify({"error": msg}), status
     except Exception:
-        return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
+        return jsonify({"error": "Erro ao consultar CNPJ"}), 500
     if not dados:
-        return jsonify({'error': 'CNPJ não está cadastrado'}), 404
+        return jsonify({"error": "CNPJ não está cadastrado"}), 404
     return jsonify(dados)
 
     ## Rota para cadastrar uma nova empresa
 
-@app.route('/cadastrar_empresa', methods=['GET', 'POST'])
+
+@app.route("/cadastrar_empresa", methods=["GET", "POST"])
 @login_required
 def cadastrar_empresa():
     """Create a new company record."""
     form = EmpresaForm()
-    if request.method == 'GET':
+    if request.method == "GET":
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
         form.regime_lancamento.data = form.regime_lancamento.data or []
     if form.validate_on_submit():
         try:
-            cnpj_limpo = re.sub(r'\D', '', form.cnpj.data)
-            acessos_json = form.acessos_json.data or '[]'
+            cnpj_limpo = re.sub(r"\D", "", form.cnpj.data)
+            acessos_json = form.acessos_json.data or "[]"
             try:
                 acessos = json.loads(acessos_json) if acessos_json else []
             except Exception:
@@ -974,27 +833,30 @@ def cadastrar_empresa():
                 atividade_principal=form.atividade_principal.data,
                 sistemas_consultorias=form.sistemas_consultorias.data,
                 sistema_utilizado=form.sistema_utilizado.data,
-                acessos=acessos
+                acessos=acessos,
             )
             db.session.add(nova_empresa)
             db.session.commit()
-            flash('Empresa cadastrada com sucesso!', 'success')
-            return redirect(url_for('gerenciar_departamentos', empresa_id=nova_empresa.id))
+            flash("Empresa cadastrada com sucesso!", "success")
+            return redirect(
+                url_for("gerenciar_departamentos", empresa_id=nova_empresa.id)
+            )
         except Exception as e:
             db.session.rollback()
-            flash(f'Erro ao cadastrar empresa: {e}', 'danger')
+            flash(f"Erro ao cadastrar empresa: {e}", "danger")
     else:
         print("Formulário não validado:")
         print(form.errors)
 
-    return render_template('empresas/cadastrar.html', form=form)
+    return render_template("empresas/cadastrar.html", form=form)
 
-@app.route('/listar_empresas')
+
+@app.route("/listar_empresas")
 @login_required
 def listar_empresas():
     """List companies with optional search and pagination."""
-    search = request.args.get('q', '').strip()
-    page = request.args.get('page', 1, type=int)
+    search = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
     per_page = 20
     query = Empresa.query
 
@@ -1003,19 +865,19 @@ def listar_empresas():
         query = query.filter(
             or_(
                 Empresa.nome_empresa.ilike(like_pattern),
-                Empresa.codigo_empresa.ilike(like_pattern)
+                Empresa.codigo_empresa.ilike(like_pattern),
             )
         )
 
-    sort = request.args.get('sort', 'nome')
-    order = request.args.get('order', 'asc')
+    sort = request.args.get("sort", "nome")
+    order = request.args.get("order", "asc")
 
-    if sort == 'codigo':
+    if sort == "codigo":
         order_column = Empresa.codigo_empresa
     else:
         order_column = Empresa.nome_empresa
 
-    if order == 'desc':
+    if order == "desc":
         query = query.order_by(order_column.desc())
     else:
         query = query.order_by(order_column.asc())
@@ -1024,7 +886,7 @@ def listar_empresas():
     empresas = pagination.items
 
     return render_template(
-        'empresas/listar.html',
+        "empresas/listar.html",
         empresas=empresas,
         pagination=pagination,
         search=search,
@@ -1032,134 +894,144 @@ def listar_empresas():
         order=order,
     )
 
+
 def processar_dados_fiscal(request):
     """Função auxiliar para processar dados do departamento fiscal"""
-    responsavel = request.form.get('responsavel')
-    descricao = request.form.get('descricao')
-    acessos_json = request.form.get('acessos_json', '[]')
+    responsavel = request.form.get("responsavel")
+    descricao = request.form.get("descricao")
+    acessos_json = request.form.get("acessos_json", "[]")
     try:
         acessos = json.loads(acessos_json) if acessos_json else []
     except Exception:
         acessos = []
-    forma_movimento = request.form.get('forma_movimento')
-    observacao_movimento = request.form.get('observacao_movimento')
-    observacao_importacao = request.form.get('observacao_importacao')
-    observacao_contato = request.form.get('observacao_contato')
-    particularidades = sanitize_html(request.form.get('particularidades'))
-    formas_importacao_json = request.form.get('formas_importacao_json', '[]')
-    formas_importacao = json.loads(formas_importacao_json) if formas_importacao_json else []
-    envio_digital = request.form.getlist('envio_digital')
-    envio_fisico = request.form.getlist('envio_fisico')
-    malote_coleta = request.form.get('malote_coleta')
-    contatos_json = request.form.get('contatos_json', 'null')
-    contatos = json.loads(contatos_json) if contatos_json != 'null' else None
+    forma_movimento = request.form.get("forma_movimento")
+    observacao_movimento = request.form.get("observacao_movimento")
+    observacao_importacao = request.form.get("observacao_importacao")
+    observacao_contato = request.form.get("observacao_contato")
+    particularidades = sanitize_html(request.form.get("particularidades"))
+    formas_importacao_json = request.form.get("formas_importacao_json", "[]")
+    formas_importacao = (
+        json.loads(formas_importacao_json) if formas_importacao_json else []
+    )
+    envio_digital = request.form.getlist("envio_digital")
+    envio_fisico = request.form.getlist("envio_fisico")
+    malote_coleta = request.form.get("malote_coleta")
+    contatos_json = request.form.get("contatos_json", "null")
+    contatos = json.loads(contatos_json) if contatos_json != "null" else None
     if contatos is not None:
         contatos = validate_contatos(contatos)
-    
+
     return {
-        'responsavel': responsavel,
-        'descricao': descricao,
-        'formas_importacao': formas_importacao,
-        'acessos': acessos,
-        'forma_movimento': forma_movimento,
-        'envio_digital': envio_digital,
-        'envio_fisico': envio_fisico,
-        'malote_coleta': malote_coleta,
-        'observacao_movimento': observacao_movimento,
-        'observacao_importacao': observacao_importacao,
-        'observacao_contato': observacao_contato,
-        'contatos': contatos,
-        'particularidades_texto': particularidades
+        "responsavel": responsavel,
+        "descricao": descricao,
+        "formas_importacao": formas_importacao,
+        "acessos": acessos,
+        "forma_movimento": forma_movimento,
+        "envio_digital": envio_digital,
+        "envio_fisico": envio_fisico,
+        "malote_coleta": malote_coleta,
+        "observacao_movimento": observacao_movimento,
+        "observacao_importacao": observacao_importacao,
+        "observacao_contato": observacao_contato,
+        "contatos": contatos,
+        "particularidades_texto": particularidades,
     }
+
 
 def processar_dados_contabil(request):
     """Função auxiliar para processar dados do departamento contábil"""
-    responsavel = request.form.get('responsavel')
-    descricao = request.form.get('descricao')
-    metodo_importacao = request.form.getlist('metodo_importacao')
-    forma_movimento = request.form.get('forma_movimento')
-    particularidades = sanitize_html(request.form.get('particularidades'))
-    envio_digital = request.form.getlist('envio_digital')
-    envio_fisico = request.form.getlist('envio_fisico')
-    malote_coleta = request.form.get('malote_coleta')
-    controle_relatorios_json = request.form.get('controle_relatorios_json', '[]')
-    controle_relatorios = json.loads(controle_relatorios_json) if controle_relatorios_json else []
-    observacao_movimento = request.form.get('observacao_movimento')
-    observacao_controle_relatorios = request.form.get('observacao_controle_relatorios')
-    
+    responsavel = request.form.get("responsavel")
+    descricao = request.form.get("descricao")
+    metodo_importacao = request.form.getlist("metodo_importacao")
+    forma_movimento = request.form.get("forma_movimento")
+    particularidades = sanitize_html(request.form.get("particularidades"))
+    envio_digital = request.form.getlist("envio_digital")
+    envio_fisico = request.form.getlist("envio_fisico")
+    malote_coleta = request.form.get("malote_coleta")
+    controle_relatorios_json = request.form.get("controle_relatorios_json", "[]")
+    controle_relatorios = (
+        json.loads(controle_relatorios_json) if controle_relatorios_json else []
+    )
+    observacao_movimento = request.form.get("observacao_movimento")
+    observacao_controle_relatorios = request.form.get("observacao_controle_relatorios")
+
     return {
-        'responsavel': responsavel,
-        'descricao': descricao,
-        'metodo_importacao': metodo_importacao,
-        'forma_movimento': forma_movimento,
-        'envio_digital': envio_digital,
-        'envio_fisico': envio_fisico,
-        'malote_coleta': malote_coleta,
-        'controle_relatorios': controle_relatorios,
-        'observacao_movimento': observacao_movimento,
-        'observacao_controle_relatorios': observacao_controle_relatorios,
-        'particularidades_texto': particularidades
+        "responsavel": responsavel,
+        "descricao": descricao,
+        "metodo_importacao": metodo_importacao,
+        "forma_movimento": forma_movimento,
+        "envio_digital": envio_digital,
+        "envio_fisico": envio_fisico,
+        "malote_coleta": malote_coleta,
+        "controle_relatorios": controle_relatorios,
+        "observacao_movimento": observacao_movimento,
+        "observacao_controle_relatorios": observacao_controle_relatorios,
+        "particularidades_texto": particularidades,
     }
+
 
 def processar_dados_pessoal(request):
     """Função auxiliar para processar dados do departamento pessoal"""
     return {
-        'responsavel': request.form.get('responsavel'),
-        'descricao': request.form.get('descricao'),
-        'data_envio': request.form.get('data_envio'),
-        'registro_funcionarios': request.form.get('registro_funcionarios'),
-        'ponto_eletronico': request.form.get('ponto_eletronico'),
-        'pagamento_funcionario': request.form.get('pagamento_funcionario'),
-        'particularidades_texto': sanitize_html(request.form.get('particularidades'))
+        "responsavel": request.form.get("responsavel"),
+        "descricao": request.form.get("descricao"),
+        "data_envio": request.form.get("data_envio"),
+        "registro_funcionarios": request.form.get("registro_funcionarios"),
+        "ponto_eletronico": request.form.get("ponto_eletronico"),
+        "pagamento_funcionario": request.form.get("pagamento_funcionario"),
+        "particularidades_texto": sanitize_html(request.form.get("particularidades")),
     }
+
 
 def processar_dados_administrativo(request):
     """Função auxiliar para processar dados do departamento administrativo"""
     return {
-        'particularidades_texto': sanitize_html(request.form.get('particularidades'))
+        "particularidades_texto": sanitize_html(request.form.get("particularidades"))
     }
 
-@app.route('/empresa/editar/<int:id>', methods=['GET', 'POST'])
+
+@app.route("/empresa/editar/<int:id>", methods=["GET", "POST"])
 @login_required
 def editar_empresa(id):
     """Edit an existing company and its details."""
     empresa = Empresa.query.get_or_404(id)
     empresa_form = EmpresaForm(request.form, obj=empresa)
 
-    if request.method == 'GET':
+    if request.method == "GET":
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         empresa_form.regime_lancamento.data = empresa.regime_lancamento or []
         empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
 
-    if request.method == 'POST':
+    if request.method == "POST":
         if empresa_form.validate():
             empresa_form.populate_obj(empresa)
-            empresa.cnpj = re.sub(r'\D', '', empresa_form.cnpj.data)
+            empresa.cnpj = re.sub(r"\D", "", empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
             try:
-                empresa.acessos = json.loads(empresa_form.acessos_json.data or '[]')
+                empresa.acessos = json.loads(empresa_form.acessos_json.data or "[]")
             except Exception:
                 empresa.acessos = []
             db.session.add(empresa)
             try:
                 db.session.commit()
-                flash('Dados da Empresa salvos com sucesso!', 'success')
-                return redirect(url_for('visualizar_empresa', id=id) + '#dados-empresa')
+                flash("Dados da Empresa salvos com sucesso!", "success")
+                return redirect(url_for("visualizar_empresa", id=id) + "#dados-empresa")
             except Exception as e:
                 db.session.rollback()
-                flash(f'Erro ao salvar: {str(e)}', 'danger')
+                flash(f"Erro ao salvar: {str(e)}", "danger")
         else:
             for field, errors in empresa_form.errors.items():
                 for error in errors:
-                    flash(f"Erro: {error}", 'danger')
+                    flash(f"Erro: {error}", "danger")
 
     return render_template(
-        'empresas/editar_empresa.html',
+        "empresas/editar_empresa.html",
         empresa=empresa,
         empresa_form=empresa_form,
     )
 
-@app.route('/empresa/visualizar/<int:id>')
+
+@app.route("/empresa/visualizar/<int:id>")
 @login_required
 def visualizar_empresa(id):
     """Display a detailed view of a company."""
@@ -1170,14 +1042,24 @@ def visualizar_empresa(id):
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
 
-    can_access_financeiro = user_has_tag('financeiro')
+    can_access_financeiro = user_has_tag("financeiro")
 
-    fiscal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Fiscal').first()
-    contabil = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Contábil').first()
-    pessoal = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Pessoal').first()
-    administrativo = Departamento.query.filter_by(empresa_id=id, tipo='Departamento Administrativo').first()
+    fiscal = Departamento.query.filter_by(
+        empresa_id=id, tipo="Departamento Fiscal"
+    ).first()
+    contabil = Departamento.query.filter_by(
+        empresa_id=id, tipo="Departamento Contábil"
+    ).first()
+    pessoal = Departamento.query.filter_by(
+        empresa_id=id, tipo="Departamento Pessoal"
+    ).first()
+    administrativo = Departamento.query.filter_by(
+        empresa_id=id, tipo="Departamento Administrativo"
+    ).first()
     financeiro = (
-        Departamento.query.filter_by(empresa_id=id, tipo='Departamento Financeiro').first()
+        Departamento.query.filter_by(
+            empresa_id=id, tipo="Departamento Financeiro"
+        ).first()
         if can_access_financeiro
         else None
     )
@@ -1186,17 +1068,28 @@ def visualizar_empresa(id):
         if not departamento:
             return []
         try:
-            lista = json.loads(departamento.envio_fisico) if isinstance(departamento.envio_fisico, str) else (departamento.envio_fisico or [])
+            lista = (
+                json.loads(departamento.envio_fisico)
+                if isinstance(departamento.envio_fisico, str)
+                else (departamento.envio_fisico or [])
+            )
         except Exception:
             lista = []
-        if 'malote' in lista and getattr(departamento, 'malote_coleta', None):
-            lista = ['Malote - ' + departamento.malote_coleta if item == 'malote' else item for item in lista]
+        if "malote" in lista and getattr(departamento, "malote_coleta", None):
+            lista = [
+                "Malote - " + departamento.malote_coleta if item == "malote" else item
+                for item in lista
+            ]
         return lista
 
     # monta contatos_list
     if fiscal and getattr(fiscal, "contatos", None):
         try:
-            contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
+            contatos_list = (
+                json.loads(fiscal.contatos)
+                if isinstance(fiscal.contatos, str)
+                else fiscal.contatos
+            )
         except Exception:
             contatos_list = []
     else:
@@ -1205,7 +1098,9 @@ def visualizar_empresa(id):
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
-        fiscal_view = SimpleNamespace(formas_importacao=[], contatos_list=contatos_list, envio_fisico=[])
+        fiscal_view = SimpleNamespace(
+            formas_importacao=[], contatos_list=contatos_list, envio_fisico=[]
+        )
     else:
         fiscal_view = fiscal
         # normaliza formas_importacao
@@ -1231,7 +1126,7 @@ def visualizar_empresa(id):
         financeiro.envio_fisico = _prepare_envio_fisico(financeiro)
 
     return render_template(
-        'empresas/visualizar.html',
+        "empresas/visualizar.html",
         empresa=empresa,
         fiscal=fiscal_view,
         contabil=contabil,
@@ -1240,23 +1135,34 @@ def visualizar_empresa(id):
         financeiro=financeiro,
         can_access_financeiro=can_access_financeiro,
     )
-    
+
     ## Rota para gerenciar departamentos de uma empresa
 
-@app.route('/empresa/<int:empresa_id>/departamentos', methods=['GET', 'POST'])
+
+@app.route("/empresa/<int:empresa_id>/departamentos", methods=["GET", "POST"])
 @login_required
 def gerenciar_departamentos(empresa_id):
     """Create or update department data for a company."""
     empresa = Empresa.query.get_or_404(empresa_id)
 
-    can_access_financeiro = user_has_tag('financeiro')
+    can_access_financeiro = user_has_tag("financeiro")
 
-    fiscal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Fiscal').first()
-    contabil = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Contábil').first()
-    pessoal = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Pessoal').first()
-    administrativo = Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Administrativo').first()
+    fiscal = Departamento.query.filter_by(
+        empresa_id=empresa_id, tipo="Departamento Fiscal"
+    ).first()
+    contabil = Departamento.query.filter_by(
+        empresa_id=empresa_id, tipo="Departamento Contábil"
+    ).first()
+    pessoal = Departamento.query.filter_by(
+        empresa_id=empresa_id, tipo="Departamento Pessoal"
+    ).first()
+    administrativo = Departamento.query.filter_by(
+        empresa_id=empresa_id, tipo="Departamento Administrativo"
+    ).first()
     financeiro = (
-        Departamento.query.filter_by(empresa_id=empresa_id, tipo='Departamento Financeiro').first()
+        Departamento.query.filter_by(
+            empresa_id=empresa_id, tipo="Departamento Financeiro"
+        ).first()
         if can_access_financeiro
         else None
     )
@@ -1264,28 +1170,36 @@ def gerenciar_departamentos(empresa_id):
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
-    administrativo_form = DepartamentoAdministrativoForm(request.form, obj=administrativo)
+    administrativo_form = DepartamentoAdministrativoForm(
+        request.form, obj=administrativo
+    )
     financeiro_form = (
         DepartamentoFinanceiroForm(request.form, obj=financeiro)
         if can_access_financeiro
         else None
     )
-    
-    if request.method == 'GET':
+
+    if request.method == "GET":
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
         if fiscal:
             fiscal_form.envio_digital.data = (
-                fiscal.envio_digital if isinstance(fiscal.envio_digital, list)
+                fiscal.envio_digital
+                if isinstance(fiscal.envio_digital, list)
                 else json.loads(fiscal.envio_digital) if fiscal.envio_digital else []
             )
             fiscal_form.envio_fisico.data = (
-                fiscal.envio_fisico if isinstance(fiscal.envio_fisico, list)
+                fiscal.envio_fisico
+                if isinstance(fiscal.envio_fisico, list)
                 else json.loads(fiscal.envio_fisico) if fiscal.envio_fisico else []
             )
 
             if fiscal.contatos:
                 try:
-                    contatos_list = json.loads(fiscal.contatos) if isinstance(fiscal.contatos, str) else fiscal.contatos
+                    contatos_list = (
+                        json.loads(fiscal.contatos)
+                        if isinstance(fiscal.contatos, str)
+                        else fiscal.contatos
+                    )
                 except Exception:
                     contatos_list = []
             else:
@@ -1293,55 +1207,70 @@ def gerenciar_departamentos(empresa_id):
             contatos_list = normalize_contatos(contatos_list)
             fiscal_form.contatos_json.data = json.dumps(contatos_list)
 
-
         contabil_form = DepartamentoContabilForm(obj=contabil)
         if contabil:
             contabil_form.metodo_importacao.data = (
-                contabil.metodo_importacao if isinstance(contabil.metodo_importacao, list)
-                else json.loads(contabil.metodo_importacao) if contabil.metodo_importacao else []
+                contabil.metodo_importacao
+                if isinstance(contabil.metodo_importacao, list)
+                else (
+                    json.loads(contabil.metodo_importacao)
+                    if contabil.metodo_importacao
+                    else []
+                )
             )
             contabil_form.envio_digital.data = (
-                contabil.envio_digital if isinstance(contabil.envio_digital, list)
-                else json.loads(contabil.envio_digital) if contabil.envio_digital else []
+                contabil.envio_digital
+                if isinstance(contabil.envio_digital, list)
+                else (
+                    json.loads(contabil.envio_digital) if contabil.envio_digital else []
+                )
             )
             contabil_form.envio_fisico.data = (
-                contabil.envio_fisico if isinstance(contabil.envio_fisico, list)
+                contabil.envio_fisico
+                if isinstance(contabil.envio_fisico, list)
                 else json.loads(contabil.envio_fisico) if contabil.envio_fisico else []
             )
             contabil_form.controle_relatorios.data = (
-                contabil.controle_relatorios if isinstance(contabil.controle_relatorios, list)
-                else json.loads(contabil.controle_relatorios) if contabil.controle_relatorios else []
+                contabil.controle_relatorios
+                if isinstance(contabil.controle_relatorios, list)
+                else (
+                    json.loads(contabil.controle_relatorios)
+                    if contabil.controle_relatorios
+                    else []
+                )
             )
 
-    form_type = request.form.get('form_type')
+    form_type = request.form.get("form_type")
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form_processed_successfully = False
 
-        if form_type == 'fiscal' and fiscal_form.validate():
+        if form_type == "fiscal" and fiscal_form.validate():
             if not fiscal:
-                fiscal = Departamento(empresa_id=empresa_id, tipo='Departamento Fiscal')
+                fiscal = Departamento(empresa_id=empresa_id, tipo="Departamento Fiscal")
                 db.session.add(fiscal)
 
             fiscal_form.populate_obj(fiscal)
-            if 'malote' not in (fiscal_form.envio_fisico.data or []):
+            if "malote" not in (fiscal_form.envio_fisico.data or []):
                 fiscal.malote_coleta = None
             else:
                 fiscal.malote_coleta = fiscal_form.malote_coleta.data
             try:
-                fiscal.contatos = json.loads(fiscal_form.contatos_json.data or '[]')
+                fiscal.contatos = json.loads(fiscal_form.contatos_json.data or "[]")
             except Exception:
                 fiscal.contatos = []
-            flash('Departamento Fiscal salvo com sucesso!', 'success')
+            flash("Departamento Fiscal salvo com sucesso!", "success")
             form_processed_successfully = True
 
-        elif form_type == 'contabil' and contabil_form.validate():
+        elif form_type == "contabil" and contabil_form.validate():
             if not contabil:
-                contabil = Departamento(empresa_id=empresa_id, tipo='Departamento Contábil')
+                contabil = Departamento(
+                    empresa_id=empresa_id, tipo="Departamento Contábil"
+                )
                 db.session.add(contabil)
 
             contabil_form.populate_obj(contabil)
-            if 'malote' not in (contabil_form.envio_fisico.data or []):
+            if "malote" not in (contabil_form.envio_fisico.data or []):
                 contabil.malote_coleta = None
             else:
                 contabil.malote_coleta = contabil_form.malote_coleta.data
@@ -1350,37 +1279,43 @@ def gerenciar_departamentos(empresa_id):
             contabil.envio_digital = contabil_form.envio_digital.data or []
             contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
-            
-            flash('Departamento Contábil salvo com sucesso!', 'success')
+
+            flash("Departamento Contábil salvo com sucesso!", "success")
             form_processed_successfully = True
 
-        elif form_type == 'pessoal' and pessoal_form.validate():
+        elif form_type == "pessoal" and pessoal_form.validate():
             if not pessoal:
-                pessoal = Departamento(empresa_id=empresa_id, tipo='Departamento Pessoal')
+                pessoal = Departamento(
+                    empresa_id=empresa_id, tipo="Departamento Pessoal"
+                )
                 db.session.add(pessoal)
 
             pessoal_form.populate_obj(pessoal)
-            flash('Departamento Pessoal salvo com sucesso!', 'success')
+            flash("Departamento Pessoal salvo com sucesso!", "success")
             form_processed_successfully = True
-        
-        elif form_type == 'administrativo' and administrativo_form.validate():
+
+        elif form_type == "administrativo" and administrativo_form.validate():
             if not administrativo:
-                administrativo = Departamento(empresa_id=empresa_id, tipo='Departamento Administrativo')
+                administrativo = Departamento(
+                    empresa_id=empresa_id, tipo="Departamento Administrativo"
+                )
                 db.session.add(administrativo)
 
             administrativo_form.populate_obj(administrativo)
-            flash('Departamento Administrativo salvo com sucesso!', 'success')
+            flash("Departamento Administrativo salvo com sucesso!", "success")
             form_processed_successfully = True
-        elif form_type == 'financeiro':
+        elif form_type == "financeiro":
             if not can_access_financeiro:
                 abort(403)
             if financeiro_form and financeiro_form.validate():
                 if not financeiro:
-                    financeiro = Departamento(empresa_id=empresa_id, tipo='Departamento Financeiro')
+                    financeiro = Departamento(
+                        empresa_id=empresa_id, tipo="Departamento Financeiro"
+                    )
                     db.session.add(financeiro)
 
                 financeiro_form.populate_obj(financeiro)
-                flash('Departamento Financeiro salvo com sucesso!', 'success')
+                flash("Departamento Financeiro salvo com sucesso!", "success")
                 form_processed_successfully = True
 
         if form_processed_successfully:
@@ -1388,35 +1323,40 @@ def gerenciar_departamentos(empresa_id):
                 db.session.commit()
 
                 hash_ancoras = {
-                    'fiscal': 'fiscal',
-                    'contabil': 'contabil',
-                    'pessoal': 'pessoal',
-                    'administrativo': 'administrativo',
-                    'financeiro': 'financeiro'
+                    "fiscal": "fiscal",
+                    "contabil": "contabil",
+                    "pessoal": "pessoal",
+                    "administrativo": "administrativo",
+                    "financeiro": "financeiro",
                 }
-                hash_ancora = hash_ancoras.get(form_type, '')
+                hash_ancora = hash_ancoras.get(form_type, "")
 
-                return redirect(url_for('visualizar_empresa', id=empresa_id) + f'#{hash_ancora}')
+                return redirect(
+                    url_for("visualizar_empresa", id=empresa_id) + f"#{hash_ancora}"
+                )
 
             except Exception as e:
                 db.session.rollback()
-                flash(f'Ocorreu um erro ao salvar: {str(e)}', 'danger')
-        
+                flash(f"Ocorreu um erro ao salvar: {str(e)}", "danger")
+
         else:
             active_form = {
-                'fiscal': fiscal_form,
-                'contabil': contabil_form,
-                'pessoal': pessoal_form,
-                'administrativo': administrativo_form,
-                'financeiro': financeiro_form
+                "fiscal": fiscal_form,
+                "contabil": contabil_form,
+                "pessoal": pessoal_form,
+                "administrativo": administrativo_form,
+                "financeiro": financeiro_form,
             }.get(form_type)
             if active_form and active_form.errors:
                 for field, errors in active_form.errors.items():
                     for error in errors:
-                        flash(f"Erro no formulário {form_type.capitalize()}: {error}", 'danger')
+                        flash(
+                            f"Erro no formulário {form_type.capitalize()}: {error}",
+                            "danger",
+                        )
 
     return render_template(
-        'empresas/departamentos.html',
+        "empresas/departamentos.html",
         empresa=empresa,
         fiscal_form=fiscal_form,
         contabil_form=contabil_form,
@@ -1431,14 +1371,15 @@ def gerenciar_departamentos(empresa_id):
         can_access_financeiro=can_access_financeiro,
     )
 
-@app.route('/relatorios')
+
+@app.route("/relatorios")
 @admin_required
 def relatorios():
     """Render the reports landing page."""
-    return render_template('admin/relatorios.html')
+    return render_template("admin/relatorios.html")
 
 
-@app.route('/relatorio_empresas')
+@app.route("/relatorio_empresas")
 @admin_required
 def relatorio_empresas():
     """Display aggregated company statistics."""
@@ -1450,38 +1391,38 @@ def relatorio_empresas():
         Empresa.sistema_utilizado,
     ).all()
 
-    categorias = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
+    categorias = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
     grouped = {cat: [] for cat in categorias}
     grouped_sistemas = {}
 
     for nome, cnpj, codigo, trib, sistema in empresas:
-        label = trib if trib in categorias else 'Outros'
+        label = trib if trib in categorias else "Outros"
         grouped.setdefault(label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
 
-        sistema_label = sistema.strip() if sistema else 'Não informado'
+        sistema_label = sistema.strip() if sistema else "Não informado"
         grouped_sistemas.setdefault(sistema_label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
 
     labels = list(grouped.keys())
     counts = [len(grouped[l]) for l in labels]
-    fig = go.Figure(
-        data=[go.Bar(x=labels, y=counts, marker_color=qualitative.Pastel)]
-    )
+    fig = go.Figure(data=[go.Bar(x=labels, y=counts, marker_color=qualitative.Pastel)])
     fig.update_layout(
         title_text="Empresas por regime de tributação",
         template="seaborn",
         xaxis_title="Regime",
         yaxis_title="Quantidade",
     )
-    chart_div = fig.to_html(full_html=False, div_id='empresa-tributacao-chart')
+    chart_div = fig.to_html(full_html=False, div_id="empresa-tributacao-chart")
 
     sistema_labels = list(grouped_sistemas.keys())
     sistema_counts = [len(grouped_sistemas[l]) for l in sistema_labels]
     fig_sistemas = go.Figure(
-        data=[go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)]
+        data=[
+            go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)
+        ]
     )
     fig_sistemas.update_layout(
         title_text="Empresas por sistema utilizado",
@@ -1490,11 +1431,11 @@ def relatorio_empresas():
         yaxis_title="Quantidade",
     )
     chart_div_sistema = fig_sistemas.to_html(
-        full_html=False, div_id='empresa-sistema-chart'
+        full_html=False, div_id="empresa-sistema-chart"
     )
 
     return render_template(
-        'admin/relatorio_empresas.html',
+        "admin/relatorio_empresas.html",
         chart_div=chart_div,
         empresas_por_slice=grouped,
         chart_div_sistema=chart_div_sistema,
@@ -1502,12 +1443,12 @@ def relatorio_empresas():
     )
 
 
-@app.route('/relatorio_fiscal')
+@app.route("/relatorio_fiscal")
 @admin_required
 def relatorio_fiscal():
     """Show summary charts for the fiscal department."""
     departamentos = (
-        Departamento.query.filter_by(tipo='Departamento Fiscal')
+        Departamento.query.filter_by(tipo="Departamento Fiscal")
         .join(Empresa)
         .with_entities(
             Empresa.nome_empresa,
@@ -1524,22 +1465,18 @@ def relatorio_fiscal():
     envio_grouped = {}
     malote_grouped = {}
     for nome, codigo, formas, envio, malote in departamentos:
-        formas_list = (
-            json.loads(formas)
-            if isinstance(formas, str)
-            else (formas or [])
-        )
+        formas_list = json.loads(formas) if isinstance(formas, str) else (formas or [])
         for f in formas_list:
             label = choice_map.get(f, f)
             import_grouped.setdefault(label, []).append(
                 {"nome": nome, "codigo": codigo}
             )
-        label_envio = envio if envio else 'Não informado'
+        label_envio = envio if envio else "Não informado"
         envio_grouped.setdefault(label_envio, []).append(
             {"nome": nome, "codigo": codigo}
         )
-        if envio in ('Fisico', 'Digital e Físico'):
-            label_malote = malote if malote else 'Não informado'
+        if envio in ("Fisico", "Digital e Físico"):
+            label_malote = malote if malote else "Não informado"
             malote_grouped.setdefault(label_malote, []).append(
                 {"nome": nome, "codigo": codigo}
             )
@@ -1554,9 +1491,7 @@ def relatorio_fiscal():
         xaxis_title="Forma",
         yaxis_title="Quantidade",
     )
-    import_chart = fig_imp.to_html(
-        full_html=False, div_id='fiscal-importacao-chart'
-    )
+    import_chart = fig_imp.to_html(full_html=False, div_id="fiscal-importacao-chart")
     labels_env = list(envio_grouped.keys())
     counts_env = [len(envio_grouped[l]) for l in labels_env]
     fig_env = go.Figure(
@@ -1578,7 +1513,7 @@ def relatorio_fiscal():
         template="seaborn",
         legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
     )
-    envio_chart = fig_env.to_html(full_html=False, div_id='fiscal-envio-chart')
+    envio_chart = fig_env.to_html(full_html=False, div_id="fiscal-envio-chart")
     labels_mal = list(malote_grouped.keys())
     counts_mal = [len(malote_grouped[l]) for l in labels_mal]
     fig_mal = go.Figure(
@@ -1590,9 +1525,9 @@ def relatorio_fiscal():
         xaxis_title="Coleta",
         yaxis_title="Quantidade",
     )
-    malote_chart = fig_mal.to_html(full_html=False, div_id='fiscal-malote-chart')
+    malote_chart = fig_mal.to_html(full_html=False, div_id="fiscal-malote-chart")
     return render_template(
-        'admin/relatorio_fiscal.html',
+        "admin/relatorio_fiscal.html",
         importacao_chart=import_chart,
         envio_chart=envio_chart,
         malote_chart=malote_chart,
@@ -1602,12 +1537,12 @@ def relatorio_fiscal():
     )
 
 
-@app.route('/relatorio_contabil')
+@app.route("/relatorio_contabil")
 @admin_required
 def relatorio_contabil():
     """Show summary charts for the accounting department."""
     departamentos = (
-        Departamento.query.filter_by(tipo='Departamento Contábil')
+        Departamento.query.filter_by(tipo="Departamento Contábil")
         .join(Empresa)
         .with_entities(
             Empresa.nome_empresa,
@@ -1627,23 +1562,31 @@ def relatorio_contabil():
     malote_grouped = {}
     relatorios_grouped = {}
     for nome, codigo, metodo, envio, malote, relatorios in departamentos:
-        metodo_list = (
-            json.loads(metodo) if isinstance(metodo, str) else (metodo or [])
-        )
+        metodo_list = json.loads(metodo) if isinstance(metodo, str) else (metodo or [])
         for m in metodo_list:
             label = metodo_map.get(m, m)
-            import_grouped.setdefault(label, []).append({"nome": nome, "codigo": codigo})
-        label_envio = envio if envio else 'Não informado'
-        envio_grouped.setdefault(label_envio, []).append({"nome": nome, "codigo": codigo})
-        if envio in ('Fisico', 'Digital e Físico'):
-            label_malote = malote if malote else 'Não informado'
-            malote_grouped.setdefault(label_malote, []).append({"nome": nome, "codigo": codigo})
+            import_grouped.setdefault(label, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
+        label_envio = envio if envio else "Não informado"
+        envio_grouped.setdefault(label_envio, []).append(
+            {"nome": nome, "codigo": codigo}
+        )
+        if envio in ("Fisico", "Digital e Físico"):
+            label_malote = malote if malote else "Não informado"
+            malote_grouped.setdefault(label_malote, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
         rel_list = (
-            json.loads(relatorios) if isinstance(relatorios, str) else (relatorios or [])
+            json.loads(relatorios)
+            if isinstance(relatorios, str)
+            else (relatorios or [])
         )
         for r in rel_list:
             label = relatorio_map.get(r, r)
-            relatorios_grouped.setdefault(label, []).append({"nome": nome, "codigo": codigo})
+            relatorios_grouped.setdefault(label, []).append(
+                {"nome": nome, "codigo": codigo}
+            )
     labels_imp = list(import_grouped.keys())
     counts_imp = [len(import_grouped[l]) for l in labels_imp]
     fig_imp = go.Figure(
@@ -1655,9 +1598,7 @@ def relatorio_contabil():
         xaxis_title="Método",
         yaxis_title="Quantidade",
     )
-    import_chart = fig_imp.to_html(
-        full_html=False, div_id='contabil-importacao-chart'
-    )
+    import_chart = fig_imp.to_html(full_html=False, div_id="contabil-importacao-chart")
     labels_env = list(envio_grouped.keys())
     counts_env = [len(envio_grouped[l]) for l in labels_env]
     fig_env = go.Figure(
@@ -1679,7 +1620,7 @@ def relatorio_contabil():
         template="seaborn",
         legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
     )
-    envio_chart = fig_env.to_html(full_html=False, div_id='contabil-envio-chart')
+    envio_chart = fig_env.to_html(full_html=False, div_id="contabil-envio-chart")
     labels_mal = list(malote_grouped.keys())
     counts_mal = [len(malote_grouped[l]) for l in labels_mal]
     fig_mal = go.Figure(
@@ -1691,7 +1632,7 @@ def relatorio_contabil():
         xaxis_title="Coleta",
         yaxis_title="Quantidade",
     )
-    malote_chart = fig_mal.to_html(full_html=False, div_id='contabil-malote-chart')
+    malote_chart = fig_mal.to_html(full_html=False, div_id="contabil-malote-chart")
     labels_rel = list(relatorios_grouped.keys())
     counts_rel = [len(relatorios_grouped[l]) for l in labels_rel]
     fig_rel = go.Figure(
@@ -1703,9 +1644,11 @@ def relatorio_contabil():
         xaxis_title="Relatório",
         yaxis_title="Quantidade",
     )
-    relatorios_chart = fig_rel.to_html(full_html=False, div_id='contabil-relatorios-chart')
+    relatorios_chart = fig_rel.to_html(
+        full_html=False, div_id="contabil-relatorios-chart"
+    )
     return render_template(
-        'admin/relatorio_contabil.html',
+        "admin/relatorio_contabil.html",
         importacao_chart=import_chart,
         envio_chart=envio_chart,
         malote_chart=malote_chart,
@@ -1716,7 +1659,8 @@ def relatorio_contabil():
         empresas_por_relatorios=relatorios_grouped,
     )
 
-@app.route('/relatorio_usuarios')
+
+@app.route("/relatorio_usuarios")
 @admin_required
 def relatorio_usuarios():
     """Visualize user counts by role and status."""
@@ -1727,9 +1671,9 @@ def relatorio_usuarios():
     labels = []
     counts = []
     for username, name, email, role, ativo in users:
-        tipo = 'Admin' if role == 'admin' else 'Usuário'
-        status = 'Ativo' if ativo else 'Inativo'
-        label = f'{tipo} {status}'
+        tipo = "Admin" if role == "admin" else "Usuário"
+        status = "Ativo" if ativo else "Inativo"
+        label = f"{tipo} {status}"
         grouped.setdefault(label, []).append(
             {"username": username, "name": name, "email": email}
         )
@@ -1742,7 +1686,9 @@ def relatorio_usuarios():
                 labels=labels,
                 values=counts,
                 hole=0.4,
-                marker=dict(colors=qualitative.Pastel, line=dict(color="#FFFFFF", width=2)),
+                marker=dict(
+                    colors=qualitative.Pastel, line=dict(color="#FFFFFF", width=2)
+                ),
                 textinfo="label+percent",
             )
         ]
@@ -1752,76 +1698,80 @@ def relatorio_usuarios():
         template="seaborn",
         legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
     )
-    chart_div = fig.to_html(full_html=False, div_id='user-role-chart')
+    chart_div = fig.to_html(full_html=False, div_id="user-role-chart")
     return render_template(
-        'admin/relatorio_usuarios.html',
+        "admin/relatorio_usuarios.html",
         chart_div=chart_div,
         users_by_slice=grouped,
     )
 
-@app.route('/logout', methods=['GET'])
+
+@app.route("/logout", methods=["GET"])
 @login_required
 def logout():
     """Log out the current user."""
-    sid = session.get('sid')
+    sid = session.get("sid")
     if sid:
         Session.query.filter_by(session_id=sid).delete()
         db.session.commit()
-        session.pop('sid', None)
+        session.pop("sid", None)
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
-@app.route('/users', methods=['GET', 'POST'])
+
+@app.route("/users", methods=["GET", "POST"])
 @admin_required
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
     form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
-    show_inactive = request.args.get('show_inactive') in ('1', 'on')
+    show_inactive = request.args.get("show_inactive") in ("1", "on")
 
     if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.username == form.username.data) | (User.email == form.email.data)
         ).first()
         if existing_user:
-            flash('Usuário ou email já cadastrado.', 'warning')
+            flash("Usuário ou email já cadastrado.", "warning")
         else:
             user = User(
                 username=form.username.data,
                 email=form.email.data,
                 name=form.name.data,
-                role=form.role.data
+                role=form.role.data,
             )
             user.set_password(form.password.data)
             if form.tags.data:
                 user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
             db.session.add(user)
             db.session.commit()
-            flash('Novo usuário cadastrado com sucesso!', 'success')
-        return redirect(url_for('list_users'))
+            flash("Novo usuário cadastrado com sucesso!", "success")
+        return redirect(url_for("list_users"))
 
     users_query = User.query
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
     users = users_query.order_by(User.ativo.desc(), User.name).all()
-    return render_template('list_users.html', users=users, form=form, show_inactive=show_inactive)
+    return render_template(
+        "list_users.html", users=users, form=form, show_inactive=show_inactive
+    )
 
 
-@app.route('/admin/online-users')
+@app.route("/admin/online-users")
 @admin_required
 def online_users():
     """List users active within the last five minutes."""
     cutoff = datetime.utcnow() - timedelta(minutes=5)
     users = (
-        User.query
-        .options(joinedload(User.tags))
+        User.query.options(joinedload(User.tags))
         .filter(User.last_seen >= cutoff)
         .order_by(User.name)
         .all()
     )
-    return render_template('admin/online_users.html', users=users)
+    return render_template("admin/online_users.html", users=users)
 
-@app.route('/novo_usuario', methods=['GET', 'POST'])
+
+@app.route("/novo_usuario", methods=["GET", "POST"])
 @admin_required
 def novo_usuario():
     """Create a new user from the admin interface."""
@@ -1832,24 +1782,25 @@ def novo_usuario():
             (User.username == form.username.data) | (User.email == form.email.data)
         ).first()
         if existing_user:
-            flash('Usuário ou email já cadastrado.', 'warning')
+            flash("Usuário ou email já cadastrado.", "warning")
         else:
             user = User(
                 username=form.username.data,
                 email=form.email.data,
                 name=form.name.data,
-                role=form.role.data
+                role=form.role.data,
             )
             user.set_password(form.password.data)
             if form.tags.data:
                 user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
             db.session.add(user)
             db.session.commit()
-            flash('Novo usuário cadastrado com sucesso!', 'success')
-            return redirect(url_for('list_users'))
-    return render_template('admin/novo_usuario.html', form=form)
+            flash("Novo usuário cadastrado com sucesso!", "success")
+            return redirect(url_for("list_users"))
+    return render_template("admin/novo_usuario.html", form=form)
 
-@app.route('/user/edit/<int:user_id>', methods=['GET', 'POST'])
+
+@app.route("/user/edit/<int:user_id>", methods=["GET", "POST"])
 @admin_required
 def edit_user(user_id):
     """Edit an existing user."""
@@ -1861,7 +1812,7 @@ def edit_user(user_id):
     if user.is_master:
         form.role.data = user.role
         form.ativo.data = True
-    if request.method == 'GET':
+    if request.method == "GET":
         form.tags.data = [t.id for t in user.tags]
 
     if form.validate_on_submit():
@@ -1879,18 +1830,16 @@ def edit_user(user_id):
             user.tags = []
 
         # Process optional password change
-        new_password = request.form.get('new_password')
-        confirm_new_password = request.form.get('confirm_new_password')
+        new_password = request.form.get("new_password")
+        confirm_new_password = request.form.get("confirm_new_password")
         if new_password:
             if new_password != confirm_new_password:
-                flash('As senhas devem ser iguais.', 'danger')
-                return redirect(url_for('edit_user', user_id=user.id))
+                flash("As senhas devem ser iguais.", "danger")
+                return redirect(url_for("edit_user", user_id=user.id))
             user.set_password(new_password)
 
         db.session.commit()
-        flash('Usuário atualizado com sucesso!', 'success')
-        return redirect(url_for('list_users'))
+        flash("Usuário atualizado com sucesso!", "success")
+        return redirect(url_for("list_users"))
 
-    return render_template('edit_user.html', form=form, user=user)
-
-
+    return render_template("edit_user.html", form=form, user=user)
