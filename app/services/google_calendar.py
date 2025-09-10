@@ -1,35 +1,51 @@
-"""Utilities for interacting with the Google Calendar API."""
+"""Utilities for interacting with Google Calendar using a service account.
 
+This module centralizes all access to the meeting room agenda. Instead of
+relying on each user's OAuth credentials, a service account impersonates the
+dedicated room e-mail and performs all calendar operations.
+"""
+
+from __future__ import annotations
+
+import os
 from datetime import datetime
 from uuid import uuid4
 
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.models.tables import SAO_PAULO_TZ
 
+# Scopes required to manage calendar events.
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
-def _build_service(credentials_dict: dict):
-    """Build a Google Calendar service instance from stored credentials."""
-    creds = Credentials(**credentials_dict)
-    if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    service = build("calendar", "v3", credentials=creds)
-    return service, creds
+# Environment driven configuration for the meeting room.
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+MEETING_ROOM_EMAIL = os.getenv("GOOGLE_MEETING_ROOM_EMAIL")
 
 
-def list_upcoming_events(credentials_dict: dict, max_results: int = 10):
-    """Return upcoming events and refreshed credentials."""
-    service, creds = _build_service(credentials_dict)
-    # Use São Paulo timezone (UTC-3) for all calendar queries so the
-    # returned events align with the application's expected time zone.
+def _build_service():
+    """Create a Calendar API service authorized as the meeting room account."""
+    if not SERVICE_ACCOUNT_FILE or not MEETING_ROOM_EMAIL:
+        raise RuntimeError(
+            "Service account file and meeting room e-mail must be configured"
+        )
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    delegated = creds.with_subject(MEETING_ROOM_EMAIL)
+    return build("calendar", "v3", credentials=delegated)
+
+
+def list_upcoming_events(max_results: int = 10):
+    """Return upcoming events for the meeting room calendar."""
+    service = _build_service()
     now = datetime.now(SAO_PAULO_TZ).isoformat()
     events_result = (
         service.events()
         .list(
-            calendarId="primary",
+            calendarId=MEETING_ROOM_EMAIL,
             timeMin=now,
             maxResults=max_results,
             singleEvents=True,
@@ -37,11 +53,10 @@ def list_upcoming_events(credentials_dict: dict, max_results: int = 10):
         )
         .execute()
     )
-    return events_result.get("items", []), creds
+    return events_result.get("items", [])
 
 
 def create_meet_event(
-    credentials_dict: dict,
     summary: str,
     start: datetime,
     end: datetime,
@@ -49,17 +64,11 @@ def create_meet_event(
     attendees: list[str] | None = None,
 ):
     """Create a calendar event with a Google Meet link."""
-    service, creds = _build_service(credentials_dict)
+    service = _build_service()
     event = {
         "summary": summary,
-        "start": {
-            "dateTime": start.isoformat(),
-            "timeZone": "America/Sao_Paulo",
-        },
-        "end": {
-            "dateTime": end.isoformat(),
-            "timeZone": "America/Sao_Paulo",
-        },
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
         "conferenceData": {
             "createRequest": {
                 "requestId": uuid4().hex,
@@ -74,15 +83,14 @@ def create_meet_event(
     created_event = (
         service.events()
         .insert(
-            calendarId="primary", body=event, conferenceDataVersion=1
+            calendarId=MEETING_ROOM_EMAIL, body=event, conferenceDataVersion=1
         )
         .execute()
     )
-    return created_event, creds
+    return created_event
 
 
 def create_event(
-    credentials_dict: dict,
     summary: str,
     start: datetime,
     end: datetime,
@@ -90,30 +98,23 @@ def create_event(
     attendees: list[str] | None = None,
 ):
     """Create a calendar event without a Google Meet link."""
-    service, creds = _build_service(credentials_dict)
+    service = _build_service()
     event = {
         "summary": summary,
-        "start": {
-            "dateTime": start.isoformat(),
-            "timeZone": "America/Sao_Paulo",
-        },
-        "end": {
-            "dateTime": end.isoformat(),
-            "timeZone": "America/Sao_Paulo",
-        },
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
     }
     if description:
         event["description"] = description
     if attendees:
         event["attendees"] = [{"email": email} for email in attendees]
     created_event = (
-        service.events().insert(calendarId="primary", body=event).execute()
+        service.events().insert(calendarId=MEETING_ROOM_EMAIL, body=event).execute()
     )
-    return created_event, creds
+    return created_event
 
 
 def update_event(
-    credentials_dict: dict,
     event_id: str,
     summary: str,
     start: datetime,
@@ -122,7 +123,7 @@ def update_event(
     attendees: list[str] | None = None,
 ):
     """Update an existing calendar event."""
-    service, creds = _build_service(credentials_dict)
+    service = _build_service()
     event = {
         "summary": summary,
         "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
@@ -134,18 +135,18 @@ def update_event(
         event["attendees"] = [{"email": email} for email in attendees]
     updated_event = (
         service.events()
-        .patch(calendarId="primary", eventId=event_id, body=event)
+        .patch(calendarId=MEETING_ROOM_EMAIL, eventId=event_id, body=event)
         .execute()
     )
-    return updated_event, creds
+    return updated_event
 
 
-def delete_event(credentials_dict: dict, event_id: str):
-    """Delete an event from the primary calendar."""
-    service, creds = _build_service(credentials_dict)
+def delete_event(event_id: str):
+    """Delete an event from the meeting room calendar."""
+    service = _build_service()
     try:
-        service.events().delete(calendarId="primary", eventId=event_id).execute()
+        service.events().delete(calendarId=MEETING_ROOM_EMAIL, eventId=event_id).execute()
     except HttpError:
-        # If the event is already removed, ignore the error
+        # Ignore errors when the event has already been removed.
         pass
-    return creds
+

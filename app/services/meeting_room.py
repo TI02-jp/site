@@ -31,10 +31,9 @@ def populate_participants_choices(form):
     ]
 
 
-def fetch_raw_events(creds_dict):
+def fetch_raw_events():
     """Fetch upcoming events from Google Calendar."""
-    raw_events, creds = list_upcoming_events(creds_dict, max_results=250)
-    return raw_events, creds
+    return list_upcoming_events(max_results=250)
 
 
 def _next_available(
@@ -50,7 +49,7 @@ def _next_available(
             return start
 
 
-def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
+def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts."""
     start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
         tzinfo=SAO_PAULO_TZ
@@ -101,8 +100,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
         description += "\nParticipantes: " + ", ".join(participant_usernames)
     description += "\nStatus: Agendada"
     if form.create_meet.data:
-        event, creds = create_meet_event(
-            creds_dict,
+        event = create_meet_event(
             form.subject.data,
             start_dt,
             end_dt,
@@ -110,8 +108,7 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
             participant_emails,
         )
     else:
-        event, creds = create_event(
-            creds_dict,
+        event = create_event(
             form.subject.data,
             start_dt,
             end_dt,
@@ -148,10 +145,10 @@ def create_meeting_and_event(form, raw_events, now, creds_dict, user_id: int):
         )
     else:
         flash("Reunião criada com sucesso!", "success")
-    return creds
+    return True
 
 
-def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
+def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar."""
     if meeting.status != "agendada":
         flash("A reunião só pode ser editada enquanto estiver agendada.", "warning")
@@ -198,8 +195,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
         description += "\nParticipantes: " + ", ".join(participant_usernames)
     description += "\nStatus: Agendada"
     if meeting.google_event_id:
-        updated_event, creds = update_event(
-            creds_dict,
+        updated_event = update_event(
             meeting.google_event_id,
             form.subject.data,
             start_dt,
@@ -210,8 +206,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
         meeting.meet_link = updated_event.get("hangoutLink", meeting.meet_link)
     else:
         if form.create_meet.data:
-            updated_event, creds = create_meet_event(
-                creds_dict,
+            updated_event = create_meet_event(
                 form.subject.data,
                 start_dt,
                 end_dt,
@@ -219,8 +214,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
                 participant_emails,
             )
         else:
-            updated_event, creds = create_event(
-                creds_dict,
+            updated_event = create_event(
                 form.subject.data,
                 start_dt,
                 end_dt,
@@ -231,20 +225,18 @@ def update_meeting(form, raw_events, now, meeting: Reuniao, creds_dict):
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return creds
+    return True
 
 
-def delete_meeting(meeting: Reuniao, creds_dict):
+def delete_meeting(meeting: Reuniao):
     """Remove meeting from DB and Google Calendar."""
-    creds = None
-    if creds_dict and meeting.google_event_id:
+    if meeting.google_event_id:
         try:
-            creds = delete_event(creds_dict, meeting.google_event_id)
+            delete_event(meeting.google_event_id)
         except Exception:
-            creds = None
+            pass
     db.session.delete(meeting)
     db.session.commit()
-    return creds
 
 
 def combine_events(raw_events, now, current_user_id: int):
