@@ -25,6 +25,7 @@ from app.models.tables import (
     Inclusao,
     Session,
     BRASILIA_TZ,
+    BRASILIA_TZ_NAME,
     Reuniao,
 )
 from app.forms import (
@@ -335,6 +336,7 @@ def sala_reunioes():
         form=form,
         events=events,
         show_modal=show_modal,
+        tz_name=BRASILIA_TZ_NAME,
     )
 
 

@@ -11,6 +11,7 @@ try:
     BRASILIA_TZ = ZoneInfo("America/Brasilia")
 except ZoneInfoNotFoundError:
     BRASILIA_TZ = ZoneInfo("America/Sao_Paulo")
+BRASILIA_TZ_NAME = BRASILIA_TZ.key
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 

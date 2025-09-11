@@ -193,12 +193,12 @@
         var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
-        timeZone: 'America/Brasilia',
+        timeZone: '{{ tz_name }}',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         events: {{ events|tojson }},
         eventDidMount: function(info) {
             var time = info.event.start
-                ? info.event.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Brasilia'})
+                ? info.event.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'})
                 : '';
             var color = info.event.backgroundColor || info.event.borderColor;
             var cls = '';
@@ -218,9 +218,9 @@
             var start = e.start;
             var end = e.end;
             document.getElementById('detailTitle').textContent = e.title;
-            document.getElementById('detailDate').textContent = start.toLocaleDateString('pt-BR', {timeZone: 'America/Brasilia'});
-            document.getElementById('detailStart').textContent = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Brasilia'});
-            document.getElementById('detailEnd').textContent = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Brasilia'}) : '';
+            document.getElementById('detailDate').textContent = start.toLocaleDateString('pt-BR', {timeZone: '{{ tz_name }}'});
+            document.getElementById('detailStart').textContent = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'});
+            document.getElementById('detailEnd').textContent = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'}) : '';
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
@@ -263,9 +263,9 @@
         form.subject.value = currentEvent.title;
         var start = currentEvent.start;
         var end = currentEvent.end;
-        form.date.value = start.toLocaleDateString('en-CA', {timeZone: 'America/Brasilia'});
-        form.start_time.value = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Brasilia'});
-        form.end_time.value = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Brasilia'}) : '';
+        form.date.value = start.toLocaleDateString('en-CA', {timeZone: '{{ tz_name }}'});
+        form.start_time.value = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ tz_name }}'});
+        form.end_time.value = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ tz_name }}'}) : '';
         form.description.value = currentEvent.extendedProps.description || '';
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;

@@ -15,7 +15,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.models.tables import BRASILIA_TZ
+from app.models.tables import BRASILIA_TZ, BRASILIA_TZ_NAME
 
 # Scopes required to manage calendar events.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -67,8 +67,8 @@ def create_meet_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Brasilia"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Brasilia"},
+        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
         "conferenceData": {
             "createRequest": {
                 "requestId": uuid4().hex,
@@ -101,8 +101,8 @@ def create_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Brasilia"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Brasilia"},
+        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
     }
     if description:
         event["description"] = description
@@ -126,8 +126,8 @@ def update_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Brasilia"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Brasilia"},
+        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
     }
     if description:
         event["description"] = description
