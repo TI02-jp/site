@@ -55,6 +55,38 @@ python run.py
 
 A aplicação estará disponível em `http://localhost:5000`.
 
+## Docker
+
+Este projeto inclui arquivos de configuração para executar o sistema em
+containers Docker, permitindo separar ambientes de **teste** e
+**produção**.
+
+### Ambiente de teste
+
+1. Copie `.env.example` para `.env` e ajuste as variáveis conforme o seu
+   ambiente.
+2. Inicie os serviços com o Compose padrão:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   A aplicação ficará disponível em `http://localhost:5000` e um banco de
+   dados MySQL será iniciado como serviço auxiliar.
+
+### Ambiente de produção
+
+1. Após testar a imagem localmente, execute o Compose de produção:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+   O serviço web será exposto na porta `8000`. Ajuste portas e variáveis
+   conforme a sua infraestrutura de produção.
+
+
+
 ## Contribuição
 
 Pull requests são bem-vindos. Para grandes mudanças, por favor abra uma issue primeiro para discutir o que você gostaria de alterar.
