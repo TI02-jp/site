@@ -15,6 +15,7 @@ from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf
 from app.utils.security import sanitize_html
+from app.utils.event_stream import sse_response
 from app.models.tables import (
     User,
     Empresa,
@@ -46,7 +47,7 @@ from app.forms import (
     TagForm,
     MeetingForm,
 )
-import os, json, re, secrets
+import os, json, re, secrets, calendar
 import requests
 from werkzeug.utils import secure_filename
 from uuid import uuid4
@@ -63,6 +64,7 @@ from app.services.meeting_room import (
     update_meeting,
     combine_events,
     delete_meeting,
+    monthly_meeting_stats,
 )
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -871,8 +873,6 @@ def api_reunioes():
 @login_required
 def reunioes_stream():
     """Stream meeting updates as server-sent events."""
-    from app.utils.event_stream import sse_response
-
     return sse_response()
 
     ## Rota para cadastrar uma nova empresa
@@ -1729,6 +1729,54 @@ def relatorio_contabil():
         empresas_por_envio=envio_grouped,
         empresas_por_malote=malote_grouped,
         empresas_por_relatorios=relatorios_grouped,
+    )
+
+
+@app.route("/relatorio_reunioes")
+@admin_required
+def relatorio_reunioes():
+    """Show monthly meeting counts and average durations."""
+    calendar_tz = get_calendar_timezone()
+    year = datetime.now(calendar_tz).year
+    stats = monthly_meeting_stats(year)
+    months = [calendar.month_name[s["month"]] for s in stats]
+    counts = [s["count"] for s in stats]
+    avgs = [s["avg_duration_minutes"] for s in stats]
+
+    fig_count = go.Figure(
+        data=[go.Bar(x=months, y=counts, marker_color=qualitative.Plotly[0])]
+    )
+    fig_count.update_layout(
+        title_text="Reuniões por mês",
+        template="seaborn",
+        xaxis_title="Mês",
+        yaxis_title="Quantidade",
+    )
+    count_chart = fig_count.to_html(full_html=False, div_id="meetings-per-month")
+
+    fig_avg = go.Figure(
+        data=[go.Bar(x=months, y=avgs, marker_color=qualitative.Plotly[1])]
+    )
+    fig_avg.update_layout(
+        title_text="Duração média (min)",
+        template="seaborn",
+        xaxis_title="Mês",
+        yaxis_title="Minutos",
+    )
+    avg_chart = fig_avg.to_html(
+        full_html=False, div_id="meetings-avg-duration"
+    )
+
+    table_stats = [
+        {"month_name": months[i], "count": counts[i], "avg": avgs[i]}
+        for i in range(len(months))
+    ]
+
+    return render_template(
+        "admin/relatorio_reunioes.html",
+        count_chart=count_chart,
+        avg_chart=avg_chart,
+        stats=table_stats,
     )
 
 

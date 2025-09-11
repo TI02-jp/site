@@ -185,6 +185,37 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Relatório de Reuniões -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-info text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar-event me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório de Reuniões</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Dados de reuniões mensais e duração média.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-info-subtle text-info">
+                            <i class="bi bi-check-circle me-1"></i>Disponível
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Quantidade por mês</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Duração média</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('relatorio_reunioes') }}" class="btn btn-info w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <!-- Dashboards Gerenciais -->
         <div class="col-lg-4 col-md-6">

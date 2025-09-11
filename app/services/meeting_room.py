@@ -400,3 +400,31 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         seen_keys.add(key)
 
     return events
+
+
+def monthly_meeting_stats(year: int) -> list[dict]:
+    """Return meeting count and average duration per month for ``year``."""
+    stats: list[dict] = []
+    for month in range(1, 13):
+        start = datetime(year, month, 1, tzinfo=CALENDAR_TZ)
+        if month == 12:
+            end = datetime(year + 1, 1, 1, tzinfo=CALENDAR_TZ)
+        else:
+            end = datetime(year, month + 1, 1, tzinfo=CALENDAR_TZ)
+        meetings = Reuniao.query.filter(
+            Reuniao.inicio >= start, Reuniao.inicio < end
+        ).all()
+        count = len(meetings)
+        if count:
+            total = sum((m.fim - m.inicio for m in meetings), timedelta())
+            avg_minutes = (total / count).total_seconds() / 60
+        else:
+            avg_minutes = 0.0
+        stats.append(
+            {
+                "month": month,
+                "count": count,
+                "avg_duration_minutes": round(avg_minutes, 2),
+            }
+        )
+    return stats
