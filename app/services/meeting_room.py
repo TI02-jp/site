@@ -286,6 +286,7 @@ def combine_events(raw_events, now, current_user_id: int):
             r.status = status
             updated = True
         event_data = {
+            "id": r.id,
             "title": r.assunto,
             "start": start_dt.isoformat(),
             "end": end_dt.isoformat(),
