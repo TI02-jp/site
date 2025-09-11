@@ -240,10 +240,13 @@
             var deleteForm = document.getElementById('deleteMeetingForm');
             if (e.extendedProps.can_edit) {
                 editBtn.classList.remove('d-none');
+            } else {
+                editBtn.classList.add('d-none');
+            }
+            if (e.extendedProps.can_delete) {
                 deleteBtn.classList.remove('d-none');
                 deleteForm.action = '/reuniao/' + e.extendedProps.meeting_id + '/delete';
             } else {
-                editBtn.classList.add('d-none');
                 deleteBtn.classList.add('d-none');
             }
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));

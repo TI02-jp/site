@@ -299,6 +299,7 @@ def combine_events(raw_events, now, current_user_id: int):
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
             "can_edit": r.criador_id == current_user_id and r.status == "agendada",
+            "can_delete": r.criador_id == current_user_id,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
@@ -351,6 +352,7 @@ def combine_events(raw_events, now, current_user_id: int):
                 "status": status_label,
                 "participants": attendees,
                 "can_edit": False,
+                "can_delete": False,
             }
         )
         seen_keys.add(key)
