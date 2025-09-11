@@ -194,12 +194,11 @@
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
         timeZone: '{{ calendar_timezone }}',
+        locale: 'pt-br',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         events: {{ events|tojson }},
         eventDidMount: function(info) {
-            var time = info.event.start
-                ? info.event.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ calendar_timezone }}'})
-                : '';
+            var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
             var cls = '';
             if(color === '#ffc107'){cls='tooltip-warning';}
@@ -215,12 +214,11 @@
             info.jsEvent.preventDefault();
             var e = info.event;
             currentEvent = e;
-            var start = e.start;
-            var end = e.end;
             document.getElementById('detailTitle').textContent = e.title;
-            document.getElementById('detailDate').textContent = start.toLocaleDateString('pt-BR', {timeZone: '{{ calendar_timezone }}'});
-            document.getElementById('detailStart').textContent = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ calendar_timezone }}'});
-            document.getElementById('detailEnd').textContent = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ calendar_timezone }}'}) : '';
+            var dateParts = e.startStr.slice(0,10).split('-');
+            document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
+            document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
+            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
@@ -261,11 +259,11 @@
         var form = document.querySelector('#meetingModal form');
         document.getElementById('meeting_id').value = currentEvent.id || '';
         form.subject.value = currentEvent.title;
-        var start = currentEvent.start;
-        var end = currentEvent.end;
-        form.date.value = start.toLocaleDateString('en-CA', {timeZone: '{{ calendar_timezone }}'});
-        form.start_time.value = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ calendar_timezone }}'});
-        form.end_time.value = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ calendar_timezone }}'}) : '';
+        var start = currentEvent.startStr;
+        var end = currentEvent.endStr;
+        form.date.value = start.slice(0,10);
+        form.start_time.value = start.slice(11,16);
+        form.end_time.value = end ? end.slice(11,16) : '';
         form.description.value = currentEvent.extendedProps.description || '';
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
