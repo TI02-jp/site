@@ -361,7 +361,7 @@
       }
     </style>
 </head>
-<body class="bg-light text-dark" style="font-family: 'Inter', sans-serif;">
+<body class="bg-light text-dark" style="font-family: 'Inter', sans-serif;" data-username="{{ current_user.username }}">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="{{ url_for('static', filename='javascript/reminders.js') }}"></script>
 {% block scripts %}{% endblock %}
 
 </body>
