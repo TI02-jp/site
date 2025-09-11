@@ -70,16 +70,16 @@ def _enforce_https():
 def _update_last_seen():
     """Update ``current_user.last_seen`` and session activity."""
     if current_user.is_authenticated:
-        from app.models.tables import Session, SAO_PAULO_TZ
+        from app.models.tables import Session, BRASILIA_TZ
 
-        now_sp = datetime.now(SAO_PAULO_TZ)
-        current_user.last_seen = datetime.utcnow()
+        now_br = datetime.now(BRASILIA_TZ)
+        current_user.last_seen = datetime.now(BRASILIA_TZ)
 
         sid = session.get('sid')
         if sid:
             sess = Session.query.get(sid)
             if sess:
-                sess.last_activity = now_sp
+                sess.last_activity = now_br
                 sess.ip_address = request.remote_addr
                 sess.user_agent = request.headers.get('User-Agent')
                 sess.session_data = dict(session)
@@ -89,7 +89,7 @@ def _update_last_seen():
                     user_id=current_user.id,
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent'),
-                    last_activity=now_sp,
+                    last_activity=now_br,
                 )
                 db.session.add(sess)
         db.session.commit()
@@ -117,8 +117,8 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    """Inject current UTC time into templates as ``now()``."""
-    return {'now': datetime.utcnow}
+    """Inject current Brasília time into templates as ``now()``."""
+    return {"now": lambda: datetime.now(BRASILIA_TZ)}
 
 
 @app.template_filter('time_since')
@@ -130,7 +130,7 @@ def _time_since(value):
     """
     if not value:
         return 'agora'
-    delta = datetime.utcnow() - value
+    delta = datetime.now(BRASILIA_TZ) - value
     seconds = int(delta.total_seconds())
     if seconds < 60:
         return 'agora'
