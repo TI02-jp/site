@@ -15,7 +15,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.models.tables import BRASILIA_TZ, BRASILIA_TZ_NAME
+from app.models.tables import SAO_PAULO_TZ
 
 # Scopes required to manage calendar events.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -41,7 +41,7 @@ def _build_service():
 def list_upcoming_events(max_results: int = 10):
     """Return upcoming events for the meeting room calendar."""
     service = _build_service()
-    now = datetime.now(BRASILIA_TZ).isoformat()
+    now = datetime.now(SAO_PAULO_TZ).isoformat()
     events_result = (
         service.events()
         .list(
@@ -67,8 +67,8 @@ def create_meet_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
-        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
         "conferenceData": {
             "createRequest": {
                 "requestId": uuid4().hex,
@@ -101,8 +101,8 @@ def create_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
-        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
     }
     if description:
         event["description"] = description
@@ -126,8 +126,8 @@ def update_event(
     service = _build_service()
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": BRASILIA_TZ_NAME},
-        "end": {"dateTime": end.isoformat(), "timeZone": BRASILIA_TZ_NAME},
+        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
     }
     if description:
         event["description"] = description

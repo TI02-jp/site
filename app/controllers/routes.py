@@ -24,8 +24,7 @@ from app.models.tables import (
     Tag,
     Inclusao,
     Session,
-    BRASILIA_TZ,
-    BRASILIA_TZ_NAME,
+    SAO_PAULO_TZ,
     Reuniao,
 )
 from app.forms import (
@@ -127,7 +126,7 @@ def inject_stats():
         total_usuarios = User.query.count() if current_user.role == "admin" else 0
         online_count = 0
         if current_user.role == "admin":
-            cutoff = datetime.now(BRASILIA_TZ) - timedelta(minutes=5)
+            cutoff = datetime.utcnow() - timedelta(minutes=5)
             online_count = User.query.filter(User.last_seen >= cutoff).count()
         return {
             "total_empresas": total_empresas,
@@ -308,7 +307,7 @@ def sala_reunioes():
     events: list[dict] = []
     show_modal = False
     raw_events = fetch_raw_events()
-    now = datetime.now(BRASILIA_TZ)
+    now = datetime.now(SAO_PAULO_TZ)
     if form.validate_on_submit():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
@@ -339,8 +338,10 @@ def sala_reunioes():
         "#dc3545": "danger",
     }
     for e in events_raw:
-        start_dt = isoparse(e["start"]).astimezone(BRASILIA_TZ)
-        end_dt = isoparse(e["end"]).astimezone(BRASILIA_TZ) if e.get("end") else None
+        start_dt = isoparse(e["start"]).astimezone(SAO_PAULO_TZ)
+        end_dt = (
+            isoparse(e["end"]).astimezone(SAO_PAULO_TZ) if e.get("end") else None
+        )
         events.append(
             {
                 "id": e.get("id"),
@@ -365,7 +366,7 @@ def sala_reunioes():
         form=form,
         events=events,
         show_modal=show_modal,
-        tz_name=BRASILIA_TZ_NAME,
+        tz_name="America/Sao_Paulo",
     )
 
 
@@ -790,7 +791,7 @@ def google_callback():
             session_data=dict(session),
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
-            last_activity=datetime.now(BRASILIA_TZ),
+            last_activity=datetime.now(SAO_PAULO_TZ),
         )
     )
     db.session.commit()
@@ -827,7 +828,7 @@ def login():
                     session_data=dict(session),
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get("User-Agent"),
-                    last_activity=datetime.now(BRASILIA_TZ),
+                    last_activity=datetime.now(SAO_PAULO_TZ),
                 )
             )
             db.session.commit()
@@ -1821,7 +1822,7 @@ def list_users():
 @admin_required
 def online_users():
     """List users active within the last five minutes."""
-    cutoff = datetime.now(BRASILIA_TZ) - timedelta(minutes=5)
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
     users = (
         User.query.options(joinedload(User.tags))
         .filter(User.last_seen >= cutoff)
