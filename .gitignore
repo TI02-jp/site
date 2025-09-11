@@ -9,7 +9,9 @@ __pycache__/
 
 # Ignorar diretórios específicos do ambiente virtual
 venv/
+venv-test/
 env/
+env.test/
 
 # Ignorar o arquivo SQLite (se você estiver usando SQLite para o desenvolvimento local)
 *.db
