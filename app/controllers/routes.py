@@ -312,8 +312,10 @@ def sala_reunioes():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
             if meeting and meeting.criador_id == current_user.id:
-                success = update_meeting(form, raw_events, now, meeting)
+                success, meet_link = update_meeting(form, raw_events, now, meeting)
                 if success:
+                    if meet_link:
+                        session["meet_link"] = meet_link
                     return redirect(url_for("sala_reunioes"))
                 show_modal = True
             else:
@@ -322,19 +324,23 @@ def sala_reunioes():
                     "danger",
                 )
         else:
-            success = create_meeting_and_event(
+            success, meet_link = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
             if success:
+                if meet_link:
+                    session["meet_link"] = meet_link
                 return redirect(url_for("sala_reunioes"))
             show_modal = True
     if request.method == "POST":
         show_modal = True
+    meet_popup_link = session.pop("meet_link", None)
     return render_template(
         "sala_reunioes.html",
         form=form,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
+        meet_popup_link=meet_popup_link,
     )
 
 
