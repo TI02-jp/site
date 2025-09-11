@@ -155,6 +155,8 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     duration = end_dt - start_dt
     intervals: list[tuple[datetime, datetime]] = []
     for e in raw_events:
+        if meeting.google_event_id and e.get("id") == meeting.google_event_id:
+            continue
         existing_start = isoparse(e["start"].get("dateTime") or e["start"].get("date"))
         existing_end = isoparse(e["end"].get("dateTime") or e["end"].get("date"))
         intervals.append((existing_start, existing_end))
