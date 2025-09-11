@@ -316,6 +316,8 @@
         document.getElementById('meeting_id').value = '';
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
+        var cb = document.getElementById('create_meet');
+        if (cb) { cb.checked = false; }
     });
     });
     </script>

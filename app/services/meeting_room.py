@@ -210,8 +210,9 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             end_dt,
             description,
             participant_emails,
+            create_meet=form.create_meet.data,
         )
-        meeting.meet_link = updated_event.get("hangoutLink", meeting.meet_link)
+        meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
     else:
         if form.create_meet.data:
             updated_event = create_meet_event(
