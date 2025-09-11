@@ -228,15 +228,22 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     return True
 
 
-def delete_meeting(meeting: Reuniao):
-    """Remove meeting from DB and Google Calendar."""
+def delete_meeting(meeting: Reuniao) -> bool:
+    """Remove meeting from DB and Google Calendar.
+
+    Returns ``True`` when both the local record and the external calendar
+    event are deleted successfully. If the Google Calendar removal fails,
+    the meeting is left untouched in the database and ``False`` is
+    returned so the caller can warn the user.
+    """
     if meeting.google_event_id:
         try:
             delete_event(meeting.google_event_id)
         except Exception:
-            pass
+            return False
     db.session.delete(meeting)
     db.session.commit()
+    return True
 
 
 def combine_events(raw_events, now, current_user_id: int):

@@ -350,8 +350,10 @@ def delete_reuniao(meeting_id):
     if meeting.criador_id != current_user.id or meeting.status != "agendada":
         flash("Você só pode excluir reuniões agendadas que você criou.", "danger")
         return redirect(url_for("sala_reunioes"))
-    delete_meeting(meeting)
-    flash("Reunião excluída com sucesso!", "success")
+    if delete_meeting(meeting):
+        flash("Reunião excluída com sucesso!", "success")
+    else:
+        flash("Não foi possível remover o evento do Google Calendar.", "danger")
     return redirect(url_for("sala_reunioes"))
 
 
