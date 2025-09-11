@@ -26,6 +26,7 @@ from app.models.tables import (
     Session,
     SAO_PAULO_TZ,
     Reuniao,
+    ReuniaoStatus,
 )
 from app.services.google_calendar import get_calendar_timezone
 from app.forms import (
@@ -312,6 +313,12 @@ def sala_reunioes():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
             if meeting and meeting.criador_id == current_user.id:
+                if meeting.status != ReuniaoStatus.AGENDADA:
+                    flash(
+                        "Reuniões em andamento ou realizadas não podem ser editadas.",
+                        "danger",
+                    )
+                    return redirect(url_for("sala_reunioes"))
                 success, meet_link = update_meeting(form, raw_events, now, meeting)
                 if success:
                     if meet_link:
@@ -351,6 +358,12 @@ def delete_reuniao(meeting_id):
     meeting = Reuniao.query.get_or_404(meeting_id)
     if meeting.criador_id != current_user.id:
         flash("Você só pode excluir reuniões que você criou.", "danger")
+        return redirect(url_for("sala_reunioes"))
+    if meeting.status != ReuniaoStatus.AGENDADA:
+        flash(
+            "Reuniões em andamento ou realizadas não podem ser excluídas.",
+            "danger",
+        )
         return redirect(url_for("sala_reunioes"))
     if delete_meeting(meeting):
         flash("Reunião excluída com sucesso!", "success")

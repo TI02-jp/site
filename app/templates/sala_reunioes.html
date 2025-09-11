@@ -268,7 +268,8 @@
             document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
             document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
             document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
-            document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
+            var statusText = e.extendedProps.status || '';
+            document.getElementById('detailStatus').textContent = statusText;
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
             var linkContainer = document.getElementById('meetLinkContainer');
@@ -276,13 +277,24 @@
             var copyBtn = document.getElementById('copyMeetLink');
             if (e.extendedProps.meet_link) {
                 linkEl.textContent = e.extendedProps.meet_link;
-                linkEl.href = e.extendedProps.meet_link;
                 linkContainer.classList.remove('d-none');
-                copyBtn.onclick = function() {
-                    navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
-                        showFlashMessage('Link copiado!', 'success');
-                    });
-                };
+                if (statusText === 'Realizada') {
+                    linkEl.removeAttribute('href');
+                    linkEl.classList.add('text-muted', 'user-select-none');
+                    linkEl.style.pointerEvents = 'none';
+                    copyBtn.classList.add('d-none');
+                    copyBtn.onclick = null;
+                } else {
+                    linkEl.href = e.extendedProps.meet_link;
+                    linkEl.classList.remove('text-muted', 'user-select-none');
+                    linkEl.style.pointerEvents = '';
+                    copyBtn.classList.remove('d-none');
+                    copyBtn.onclick = function() {
+                        navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
+                            showFlashMessage('Link copiado!', 'success');
+                        });
+                    };
+                }
             } else {
                 linkContainer.classList.add('d-none');
             }
@@ -317,6 +329,12 @@
                     if (existing) {
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
+                        }
+                        if (existing.extendedProps.can_edit !== evData.can_edit) {
+                            existing.setExtendedProp('can_edit', evData.can_edit);
+                        }
+                        if (existing.extendedProps.can_delete !== evData.can_delete) {
+                            existing.setExtendedProp('can_delete', evData.can_delete);
                         }
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
