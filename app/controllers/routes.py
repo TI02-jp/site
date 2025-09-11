@@ -13,7 +13,7 @@ from flask import (
 )
 from functools import wraps
 from flask_login import current_user, login_required, login_user, logout_user
-from app import app, db
+from app import app, db, csrf
 from app.utils.security import sanitize_html
 from app.models.tables import (
     User,
@@ -835,6 +835,7 @@ def api_cnpj(cnpj):
 
 @app.route("/api/reunioes")
 @login_required
+@csrf.exempt
 def api_reunioes():
     """Return meetings with up-to-date status as JSON."""
     raw_events = fetch_raw_events()
