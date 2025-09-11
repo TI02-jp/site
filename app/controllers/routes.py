@@ -866,6 +866,15 @@ def api_reunioes():
     )
     return jsonify(events)
 
+
+@app.route("/api/reunioes/stream")
+@login_required
+def reunioes_stream():
+    """Stream meeting updates as server-sent events."""
+    from app.utils.event_stream import sse_response
+
+    return sse_response()
+
     ## Rota para cadastrar uma nova empresa
 
 

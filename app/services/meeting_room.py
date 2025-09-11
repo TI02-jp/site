@@ -20,10 +20,23 @@ from app.services.google_calendar import (
     delete_event,
     get_calendar_timezone,
 )
+from app.utils.event_stream import publish
 
 CALENDAR_TZ = get_calendar_timezone()
 
 MIN_GAP = timedelta(minutes=2)
+
+
+def serialize_meeting(meeting: Reuniao) -> dict:
+    """Return minimal meeting info for client notifications."""
+    start_dt = meeting.inicio.astimezone(CALENDAR_TZ)
+    return {
+        "id": meeting.id,
+        "title": meeting.assunto,
+        "start": start_dt.isoformat(),
+        "creator": meeting.criador.username,
+        "participants": [p.username_usuario for p in meeting.participantes],
+    }
 
 
 def populate_participants_choices(form):
@@ -143,6 +156,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             )
         )
     db.session.commit()
+    publish({"type": "created", "meeting": serialize_meeting(meeting)})
     if meet_link:
         flash(
             Markup(
@@ -242,6 +256,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.meet_link = updated_event.get("hangoutLink")
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
+    publish({"type": "updated", "meeting": serialize_meeting(meeting)})
     flash("Reunião atualizada com sucesso!", "success")
     return True, meeting.meet_link
 
@@ -254,6 +269,7 @@ def delete_meeting(meeting: Reuniao) -> bool:
     the meeting is left untouched in the database and ``False`` is
     returned so the caller can warn the user.
     """
+    meeting_id = meeting.id
     if meeting.google_event_id:
         try:
             delete_event(meeting.google_event_id)
@@ -261,6 +277,7 @@ def delete_meeting(meeting: Reuniao) -> bool:
             return False
     db.session.delete(meeting)
     db.session.commit()
+    publish({"type": "deleted", "id": meeting_id})
     return True
 
 

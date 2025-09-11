@@ -7,14 +7,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!username) {
         return;
     }
-    const scheduled = new Set();
+    const scheduled = new Map();
 
     function scheduleEvents(events) {
         const now = new Date();
         events.forEach(function(ev) {
             const id = String(ev.id);
-            if (scheduled.has(id)) {
-                return;
+            const existing = scheduled.get(id);
+            if (existing) {
+                clearTimeout(existing);
+                scheduled.delete(id);
             }
             const participants = ev.participants || [];
             if (ev.creator !== username && !participants.includes(username)) {
@@ -33,11 +35,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`Lembrete 10 minutos antes da reunião ${ev.title}`);
             };
             if (delay > 0) {
-                scheduled.add(id);
-                setTimeout(showReminder, delay);
+                scheduled.set(id, setTimeout(function() {
+                    showReminder();
+                    scheduled.set(id, null);
+                }, delay));
             } else if (start > now) {
-                scheduled.add(id);
                 showReminder();
+                scheduled.set(id, null);
             }
         });
     }
@@ -50,5 +54,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     fetchEvents();
-    setInterval(fetchEvents, 5 * 60 * 1000);
+
+    const source = new EventSource('/api/reunioes/stream');
+    source.onmessage = function(evt) {
+        try {
+            const data = JSON.parse(evt.data);
+            if (data.type === 'deleted') {
+                const t = scheduled.get(String(data.id));
+                if (t) {
+                    clearTimeout(t);
+                }
+                scheduled.delete(String(data.id));
+            } else if (data.type === 'updated') {
+                scheduleEvents([data.meeting]);
+            } else if (data.type === 'created') {
+                scheduleEvents([data.meeting]);
+            }
+        } catch (e) {
+            // ignore malformed messages
+        }
+    };
 });
