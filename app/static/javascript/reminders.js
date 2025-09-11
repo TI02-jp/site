@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     const scheduled = new Map();
+    // Track which reminders have already been displayed so they are only shown once
+    const displayed = new Set();
 
     function scheduleEvents(events) {
         const now = new Date();
@@ -34,7 +36,12 @@ document.addEventListener('DOMContentLoaded', function() {
             [30, 10, 5, 2].forEach(function(mins) {
                 const reminderTime = new Date(start.getTime() - mins * 60 * 1000);
                 const delay = reminderTime.getTime() - now.getTime();
+                const key = `${id}-${mins}`;
                 const showReminder = function() {
+                    if (displayed.has(key)) {
+                        return;
+                    }
+                    displayed.add(key);
                     alert(`Lembrete ${mins} minutos antes da reunião ${ev.title}`);
                 };
                 if (delay > 0) {
@@ -66,6 +73,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     timers.forEach(function(t) { clearTimeout(t); });
                 }
                 scheduled.delete(String(data.id));
+                // Allow reminders to fire again if a meeting with the same id is recreated
+                const prefix = `${data.id}-`;
+                [...displayed].forEach(function(key) {
+                    if (key.startsWith(prefix)) {
+                        displayed.delete(key);
+                    }
+                });
             } else if (data.type === 'updated') {
                 scheduleEvents([data.meeting]);
             } else if (data.type === 'created') {
