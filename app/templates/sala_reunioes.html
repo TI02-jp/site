@@ -362,6 +362,20 @@
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
                         }
+                        var el = existing.el;
+                        if (el) {
+                            var tip = bootstrap.Tooltip.getInstance(el);
+                            if (tip) { tip.dispose(); }
+                            var time = existing.allDay ? '' : existing.startStr.substring(11,16);
+                            var color = existing.backgroundColor || existing.borderColor;
+                            var cls = '';
+                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
+                            else if (color === '#198754') { cls = 'tooltip-success'; }
+                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
+                            el.setAttribute('data-bs-custom-class', cls);
+                            el.setAttribute('title', time + ' ' + existing.title);
+                            new bootstrap.Tooltip(el);
+                        }
                     } else {
                         calendar.addEvent(evData);
                     }
