@@ -27,6 +27,7 @@ from app.models.tables import (
     SAO_PAULO_TZ,
     Reuniao,
 )
+from app.services.google_calendar import get_calendar_timezone
 from app.forms import (
     # Formulários de autenticação
     LoginForm,
@@ -306,7 +307,8 @@ def sala_reunioes():
     events: list[dict] = []
     show_modal = False
     raw_events = fetch_raw_events()
-    now = datetime.now(SAO_PAULO_TZ)
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
     if form.validate_on_submit():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
@@ -335,6 +337,7 @@ def sala_reunioes():
         form=form,
         events=events,
         show_modal=show_modal,
+        calendar_timezone=calendar_tz.key,
     )
 
 

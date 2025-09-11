@@ -5,9 +5,13 @@ from sqlalchemy.types import TypeDecorator, String
 from app import db
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from app.services.google_calendar import get_calendar_timezone
 
 # Timezone for timestamp fields
+# Default application timezone
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
+# Timezone used for calendar-related timestamps
+CALENDAR_TZ = get_calendar_timezone()
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -216,7 +220,7 @@ class Reuniao(db.Model):
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_criacao = db.Column(
         db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(CALENDAR_TZ),
     )
 
     participantes = db.relationship(
@@ -241,7 +245,7 @@ class ReuniaoParticipante(db.Model):
     status_participacao = db.Column(db.String(20), nullable=False, default='pendente')
     data_criacao = db.Column(
         db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(CALENDAR_TZ),
     )
 
     usuario = db.relationship('User')
