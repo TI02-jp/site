@@ -245,7 +245,6 @@
         timeZone: '{{ calendar_timezone }}',
         locale: 'pt-br',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
-        events: '/api/reunioes',
         dateClick: function(info) {
             openNewMeeting(info.dateStr);
         },
@@ -338,23 +337,32 @@
                     newIds.add(id);
                     var existing = calendar.getEventById(id);
                     if (existing) {
+                        if (existing.startStr !== evData.start || existing.endStr !== evData.end) {
+                            existing.setDates(evData.start, evData.end);
+                        }
+                        if (existing.title !== evData.title) {
+                            existing.setProp('title', evData.title);
+                        }
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
                         }
                         if (existing.extendedProps.can_edit !== evData.can_edit) {
                             existing.setExtendedProp('can_edit', evData.can_edit);
                         }
-                    if (existing.extendedProps.can_delete !== evData.can_delete) {
-                        existing.setExtendedProp('can_delete', evData.can_delete);
-                    }
-                    if (existing.extendedProps.creator !== evData.creator) {
-                        existing.setExtendedProp('creator', evData.creator);
-                    }
-                    if (existing.backgroundColor !== evData.color) {
-                        existing.setProp('backgroundColor', evData.color);
-                        existing.setProp('borderColor', evData.color);
-                    }
-                } else {
+                        if (existing.extendedProps.can_delete !== evData.can_delete) {
+                            existing.setExtendedProp('can_delete', evData.can_delete);
+                        }
+                        if (existing.extendedProps.meet_link !== evData.meet_link) {
+                            existing.setExtendedProp('meet_link', evData.meet_link);
+                        }
+                        if (existing.extendedProps.creator !== evData.creator) {
+                            existing.setExtendedProp('creator', evData.creator);
+                        }
+                        if (existing.backgroundColor !== evData.color) {
+                            existing.setProp('backgroundColor', evData.color);
+                            existing.setProp('borderColor', evData.color);
+                        }
+                    } else {
                         calendar.addEvent(evData);
                     }
                 });

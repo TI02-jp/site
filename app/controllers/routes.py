@@ -356,15 +356,16 @@ def sala_reunioes():
 def delete_reuniao(meeting_id):
     """Delete a meeting and its corresponding Google Calendar event."""
     meeting = Reuniao.query.get_or_404(meeting_id)
-    if meeting.criador_id != current_user.id:
-        flash("Você só pode excluir reuniões que você criou.", "danger")
-        return redirect(url_for("sala_reunioes"))
-    if meeting.status != ReuniaoStatus.AGENDADA:
-        flash(
-            "Reuniões em andamento ou realizadas não podem ser excluídas.",
-            "danger",
-        )
-        return redirect(url_for("sala_reunioes"))
+    if current_user.role != "admin":
+        if meeting.criador_id != current_user.id:
+            flash("Você só pode excluir reuniões que você criou.", "danger")
+            return redirect(url_for("sala_reunioes"))
+        if meeting.status != ReuniaoStatus.AGENDADA:
+            flash(
+                "Reuniões em andamento ou realizadas não podem ser excluídas.",
+                "danger",
+            )
+            return redirect(url_for("sala_reunioes"))
     if delete_meeting(meeting):
         flash("Reunião excluída com sucesso!", "success")
     else:
@@ -860,7 +861,9 @@ def api_reunioes():
     raw_events = fetch_raw_events()
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
-    events = combine_events(raw_events, now, current_user.id)
+    events = combine_events(
+        raw_events, now, current_user.id, current_user.role == "admin"
+    )
     return jsonify(events)
 
     ## Rota para cadastrar uma nova empresa

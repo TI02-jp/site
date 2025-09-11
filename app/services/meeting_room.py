@@ -264,8 +264,12 @@ def delete_meeting(meeting: Reuniao) -> bool:
     return True
 
 
-def combine_events(raw_events, now, current_user_id: int):
-    """Combine Google and local events updating their status."""
+def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
+    """Combine Google and local events updating their status.
+
+    ``is_admin`` indicates if the requester has admin privileges, allowing
+    them to delete meetings regardless of status.
+    """
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
 
@@ -293,7 +297,8 @@ def combine_events(raw_events, now, current_user_id: int):
         if r.status != status:
             r.status = status
             updated = True
-        can_modify = r.criador_id == current_user_id and status == ReuniaoStatus.AGENDADA
+        can_edit = r.criador_id == current_user_id and status == ReuniaoStatus.AGENDADA
+        can_delete = can_edit or is_admin
         event_data = {
             "id": r.id,
             "title": r.assunto,
@@ -306,8 +311,8 @@ def combine_events(raw_events, now, current_user_id: int):
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
-            "can_edit": can_modify,
-            "can_delete": can_modify,
+            "can_edit": can_edit,
+            "can_delete": can_delete,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
@@ -361,6 +366,7 @@ def combine_events(raw_events, now, current_user_id: int):
             creator_name = ""
         events.append(
             {
+                "id": e.get("id"),
                 "title": e.get("summary", "Sem título"),
                 "start": start_dt.isoformat(),
                 "end": end_dt.isoformat(),
