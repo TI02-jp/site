@@ -10,12 +10,12 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from uuid import uuid4
+from functools import lru_cache
+from zoneinfo import ZoneInfo
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-from app.models.tables import SAO_PAULO_TZ
 
 # Scopes required to manage calendar events.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -38,10 +38,28 @@ def _build_service():
     return build("calendar", "v3", credentials=delegated)
 
 
+@lru_cache(maxsize=1)
+def get_calendar_timezone() -> ZoneInfo:
+    """Return the calendar's configured timezone.
+
+    The result is cached to avoid repeating the API call on every request.
+    """
+    try:
+        service = _build_service()
+        tz_name = (
+            service.calendars().get(calendarId=MEETING_ROOM_EMAIL).execute().get(
+                "timeZone", "UTC"
+            )
+        )
+    except Exception:
+        tz_name = "UTC"
+    return ZoneInfo(tz_name)
+
+
 def list_upcoming_events(max_results: int = 10):
     """Return upcoming events for the meeting room calendar."""
     service = _build_service()
-    now = datetime.now(SAO_PAULO_TZ).isoformat()
+    now = datetime.now(get_calendar_timezone()).isoformat()
     events_result = (
         service.events()
         .list(
@@ -65,10 +83,11 @@ def create_meet_event(
 ):
     """Create a calendar event with a Google Meet link."""
     service = _build_service()
+    tz_name = get_calendar_timezone().key
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
         "conferenceData": {
             "createRequest": {
                 "requestId": uuid4().hex,
@@ -99,10 +118,11 @@ def create_event(
 ):
     """Create a calendar event without a Google Meet link."""
     service = _build_service()
+    tz_name = get_calendar_timezone().key
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
     }
     if description:
         event["description"] = description
@@ -124,10 +144,11 @@ def update_event(
 ):
     """Update an existing calendar event."""
     service = _build_service()
+    tz_name = get_calendar_timezone().key
     event = {
         "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": "America/Sao_Paulo"},
-        "end": {"dateTime": end.isoformat(), "timeZone": "America/Sao_Paulo"},
+        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
     }
     if description:
         event["description"] = description

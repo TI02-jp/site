@@ -6,19 +6,17 @@ from markupsafe import Markup
 from dateutil.parser import isoparse
 
 from app import db
-from app.models.tables import (
-    User,
-    Reuniao,
-    ReuniaoParticipante,
-    SAO_PAULO_TZ,
-)
+from app.models.tables import User, Reuniao, ReuniaoParticipante
 from app.services.google_calendar import (
     list_upcoming_events,
     create_meet_event,
     create_event,
     update_event,
     delete_event,
+    get_calendar_timezone,
 )
+
+CALENDAR_TZ = get_calendar_timezone()
 
 MIN_GAP = timedelta(minutes=2)
 
@@ -51,25 +49,25 @@ def _next_available(
 
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts."""
-    start_dt = datetime.combine(form.date.data, form.start_time.data).replace(
-        tzinfo=SAO_PAULO_TZ
+    start_dt = datetime.combine(
+        form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
-    end_dt = datetime.combine(form.date.data, form.end_time.data).replace(
-        tzinfo=SAO_PAULO_TZ
+    end_dt = datetime.combine(
+        form.date.data, form.end_time.data, tzinfo=CALENDAR_TZ
     )
     duration = end_dt - start_dt
     intervals: list[tuple[datetime, datetime]] = []
     for e in raw_events:
-        existing_start = isoparse(e["start"].get("dateTime") or e["start"].get("date"))
-        existing_end = isoparse(e["end"].get("dateTime") or e["end"].get("date"))
+        existing_start = isoparse(
+            e["start"].get("dateTime") or e["start"].get("date")
+        ).astimezone(CALENDAR_TZ)
+        existing_end = isoparse(
+            e["end"].get("dateTime") or e["end"].get("date")
+        ).astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
     for r in Reuniao.query.all():
-        existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
+        existing_start = r.inicio.astimezone(CALENDAR_TZ)
+        existing_end = r.fim.astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
 
     proposed_start = max(start_dt, now + MIN_GAP)
@@ -117,9 +115,8 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
     meet_link = event.get("hangoutLink")
     meeting = Reuniao(
-        data_reuniao=form.date.data,
-        hora_inicio=form.start_time.data,
-        hora_fim=form.end_time.data,
+        inicio=start_dt,
+        fim=end_dt,
         assunto=form.subject.data,
         descricao=form.description.data,
         status="agendada",
@@ -150,19 +147,27 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar."""
-    start_dt = datetime.combine(form.date.data, form.start_time.data).replace(tzinfo=SAO_PAULO_TZ)
-    end_dt = datetime.combine(form.date.data, form.end_time.data).replace(tzinfo=SAO_PAULO_TZ)
+    start_dt = datetime.combine(
+        form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
+    )
+    end_dt = datetime.combine(
+        form.date.data, form.end_time.data, tzinfo=CALENDAR_TZ
+    )
     duration = end_dt - start_dt
     intervals: list[tuple[datetime, datetime]] = []
     for e in raw_events:
         if meeting.google_event_id and e.get("id") == meeting.google_event_id:
             continue
-        existing_start = isoparse(e["start"].get("dateTime") or e["start"].get("date"))
-        existing_end = isoparse(e["end"].get("dateTime") or e["end"].get("date"))
+        existing_start = isoparse(
+            e["start"].get("dateTime") or e["start"].get("date")
+        ).astimezone(CALENDAR_TZ)
+        existing_end = isoparse(
+            e["end"].get("dateTime") or e["end"].get("date")
+        ).astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
     for r in Reuniao.query.filter(Reuniao.id != meeting.id).all():
-        existing_start = datetime.combine(r.data_reuniao, r.hora_inicio).replace(tzinfo=SAO_PAULO_TZ)
-        existing_end = datetime.combine(r.data_reuniao, r.hora_fim).replace(tzinfo=SAO_PAULO_TZ)
+        existing_start = r.inicio.astimezone(CALENDAR_TZ)
+        existing_end = r.fim.astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
     proposed_start = max(start_dt, now + MIN_GAP)
     messages: list[str] = []
@@ -178,9 +183,8 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         form.end_time.data = adjusted_end.time()
         flash(f"{' '.join(messages)} Horário ajustado para o próximo horário livre.", "warning")
         return None
-    meeting.data_reuniao = form.date.data
-    meeting.hora_inicio = form.start_time.data
-    meeting.hora_fim = form.end_time.data
+    meeting.inicio = start_dt
+    meeting.fim = end_dt
     meeting.assunto = form.subject.data
     meeting.descricao = form.description.data
     meeting.participantes.clear()
@@ -265,12 +269,8 @@ def combine_events(raw_events, now, current_user_id: int):
     # edit permissions) is preserved. Google events are added later only
     # if they don't match an existing local meeting.
     for r in Reuniao.query.all():
-        start_dt = datetime.combine(r.data_reuniao, r.hora_inicio).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
-        end_dt = datetime.combine(r.data_reuniao, r.hora_fim).replace(
-            tzinfo=SAO_PAULO_TZ
-        )
+        start_dt = r.inicio.astimezone(CALENDAR_TZ)
+        end_dt = r.fim.astimezone(CALENDAR_TZ)
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
         if now < start_dt:
             status = "agendada"
@@ -312,8 +312,8 @@ def combine_events(raw_events, now, current_user_id: int):
     for e in raw_events:
         start_str = e["start"].get("dateTime") or e["start"].get("date")
         end_str = e["end"].get("dateTime") or e["end"].get("date")
-        start_dt = isoparse(start_str).astimezone(SAO_PAULO_TZ)
-        end_dt = isoparse(end_str).astimezone(SAO_PAULO_TZ)
+        start_dt = isoparse(start_str).astimezone(CALENDAR_TZ)
+        end_dt = isoparse(end_str).astimezone(CALENDAR_TZ)
         key = (e.get("summary", "Sem título"), start_dt.isoformat(), end_dt.isoformat())
         if key in seen_keys:
             continue
