@@ -1,6 +1,7 @@
-// Schedule meeting reminders 10 minutes before start
-// This script fetches upcoming meetings and shows a popup reminder
-// for meetings involving the current user.
+// Schedule multiple meeting reminders before the start time
+// This script fetches upcoming meetings and shows popup reminders
+// for meetings involving the current user at 30, 10, 5 and 2 minutes
+// before the meeting begins.
 
 document.addEventListener('DOMContentLoaded', function() {
     const username = document.body.dataset.username;
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = String(ev.id);
             const existing = scheduled.get(id);
             if (existing) {
-                clearTimeout(existing);
+                existing.forEach(function(t) { clearTimeout(t); });
                 scheduled.delete(id);
             }
             const participants = ev.participants || [];
@@ -29,20 +30,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isNaN(start.getTime())) {
                 return;
             }
-            const reminderTime = new Date(start.getTime() - 10 * 60 * 1000);
-            const delay = reminderTime.getTime() - now.getTime();
-            const showReminder = function() {
-                alert(`Lembrete 10 minutos antes da reunião ${ev.title}`);
-            };
-            if (delay > 0) {
-                scheduled.set(id, setTimeout(function() {
+            const timers = [];
+            [30, 10, 5, 2].forEach(function(mins) {
+                const reminderTime = new Date(start.getTime() - mins * 60 * 1000);
+                const delay = reminderTime.getTime() - now.getTime();
+                const showReminder = function() {
+                    alert(`Lembrete ${mins} minutos antes da reunião ${ev.title}`);
+                };
+                if (delay > 0) {
+                    timers.push(setTimeout(showReminder, delay));
+                } else if (start > now) {
                     showReminder();
-                    scheduled.set(id, null);
-                }, delay));
-            } else if (start > now) {
-                showReminder();
-                scheduled.set(id, null);
-            }
+                }
+            });
+            scheduled.set(id, timers);
         });
     }
 
@@ -60,9 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const data = JSON.parse(evt.data);
             if (data.type === 'deleted') {
-                const t = scheduled.get(String(data.id));
-                if (t) {
-                    clearTimeout(t);
+                const timers = scheduled.get(String(data.id));
+                if (timers) {
+                    timers.forEach(function(t) { clearTimeout(t); });
                 }
                 scheduled.delete(String(data.id));
             } else if (data.type === 'updated') {
