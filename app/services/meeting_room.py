@@ -302,6 +302,7 @@ def combine_events(raw_events, now, current_user_id: int):
             "color": color,
             "description": r.descricao,
             "status": status_label,
+            "creator": r.criador.username,
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
@@ -348,6 +349,16 @@ def combine_events(raw_events, now, current_user_id: int):
                 attendees.append(a.get("displayName"))
             elif email:
                 attendees.append(email)
+        creator_info = e.get("creator") or e.get("organizer", {})
+        creator_email = creator_info.get("email")
+        if creator_email and creator_email in user_map:
+            creator_name = user_map[creator_email]
+        elif creator_info.get("displayName"):
+            creator_name = creator_info.get("displayName")
+        elif creator_email:
+            creator_name = creator_email
+        else:
+            creator_name = ""
         events.append(
             {
                 "title": e.get("summary", "Sem título"),
@@ -358,6 +369,7 @@ def combine_events(raw_events, now, current_user_id: int):
                 "color": color,
                 "status": status_label,
                 "participants": attendees,
+                "creator": creator_name,
                 "can_edit": False,
                 "can_delete": False,
             }
