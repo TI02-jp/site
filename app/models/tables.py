@@ -4,10 +4,13 @@ import json
 from sqlalchemy.types import TypeDecorator, String
 from app import db
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Timezone for timestamp fields
-SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
+try:
+    BRASILIA_TZ = ZoneInfo("America/Brasilia")
+except ZoneInfoNotFoundError:
+    BRASILIA_TZ = ZoneInfo("America/Sao_Paulo")
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -51,7 +54,7 @@ class User(db.Model, UserMixin):
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
     is_master = db.Column(db.Boolean, default=False)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=lambda: datetime.now(BRASILIA_TZ))
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
     google_id = db.Column(db.String(255), unique=True)
     google_refresh_token = db.Column(db.String(255))
@@ -81,8 +84,8 @@ class Session(db.Model):
     user_agent = db.Column(db.Text)
     last_activity = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(BRASILIA_TZ),
+        onupdate=lambda: datetime.now(BRASILIA_TZ),
         nullable=False,
     )
 
@@ -191,8 +194,8 @@ class Departamento(db.Model):
     particularidades_texto = db.Column(db.Text)
     updated_at = db.Column(
         db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(BRASILIA_TZ),
+        onupdate=lambda: datetime.now(BRASILIA_TZ),
     )
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
@@ -216,7 +219,7 @@ class Reuniao(db.Model):
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_criacao = db.Column(
         db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(BRASILIA_TZ),
     )
 
     participantes = db.relationship(
@@ -241,7 +244,7 @@ class ReuniaoParticipante(db.Model):
     status_participacao = db.Column(db.String(20), nullable=False, default='pendente')
     data_criacao = db.Column(
         db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
+        default=lambda: datetime.now(BRASILIA_TZ),
     )
 
     usuario = db.relationship('User')

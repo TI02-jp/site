@@ -24,7 +24,7 @@ from app.models.tables import (
     Tag,
     Inclusao,
     Session,
-    SAO_PAULO_TZ,
+    BRASILIA_TZ,
     Reuniao,
 )
 from app.forms import (
@@ -125,7 +125,7 @@ def inject_stats():
         total_usuarios = User.query.count() if current_user.role == "admin" else 0
         online_count = 0
         if current_user.role == "admin":
-            cutoff = datetime.utcnow() - timedelta(minutes=5)
+            cutoff = datetime.now(BRASILIA_TZ) - timedelta(minutes=5)
             online_count = User.query.filter(User.last_seen >= cutoff).count()
         return {
             "total_empresas": total_empresas,
@@ -306,7 +306,7 @@ def sala_reunioes():
     events: list[dict] = []
     show_modal = False
     raw_events = fetch_raw_events()
-    now = datetime.now(SAO_PAULO_TZ)
+    now = datetime.now(BRASILIA_TZ)
     if form.validate_on_submit():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
@@ -759,7 +759,7 @@ def google_callback():
             session_data=dict(session),
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
-            last_activity=datetime.now(SAO_PAULO_TZ),
+            last_activity=datetime.now(BRASILIA_TZ),
         )
     )
     db.session.commit()
@@ -796,7 +796,7 @@ def login():
                     session_data=dict(session),
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get("User-Agent"),
-                    last_activity=datetime.now(SAO_PAULO_TZ),
+                    last_activity=datetime.now(BRASILIA_TZ),
                 )
             )
             db.session.commit()
@@ -1790,7 +1790,7 @@ def list_users():
 @admin_required
 def online_users():
     """List users active within the last five minutes."""
-    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    cutoff = datetime.now(BRASILIA_TZ) - timedelta(minutes=5)
     users = (
         User.query.options(joinedload(User.tags))
         .filter(User.last_seen >= cutoff)
