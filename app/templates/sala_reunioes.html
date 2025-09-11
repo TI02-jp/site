@@ -165,6 +165,27 @@
                     </div>
                 </div>
             </div>
+            {% if meet_popup_link %}
+            <div class="modal fade" id="meetLinkModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Sala do Google Meet</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-start">
+                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 mb-3">
+                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20" class="me-2">Abrir Meet
+                            </a>
+                            <div class="input-group">
+                                <input type="text" id="meetLinkInput" class="form-control" value="{{ meet_popup_link }}" readonly>
+                                <button class="btn btn-outline-primary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
     </div>
     <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
@@ -329,6 +350,17 @@
     });
     });
     </script>
+    {% if meet_popup_link %}
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var popup = new bootstrap.Modal(document.getElementById('meetLinkModal'));
+        document.getElementById('copyMeetLinkPopup').addEventListener('click', function() {
+            navigator.clipboard.writeText(document.getElementById('meetLinkInput').value);
+        });
+        popup.show();
+    });
+        </script>
+    {% endif %}
     {% if show_modal %}
         <script>
 document.addEventListener('DOMContentLoaded', function() {

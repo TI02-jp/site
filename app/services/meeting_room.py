@@ -53,7 +53,12 @@ def _next_available(
 
 
 def create_meeting_and_event(form, raw_events, now, user_id: int):
-    """Create meeting adjusting times to avoid conflicts."""
+    """Create meeting adjusting times to avoid conflicts.
+
+    Returns a tuple ``(success, meet_link)`` where ``success`` indicates
+    whether the meeting was created and ``meet_link`` contains the generated
+    Google Meet URL when available.
+    """
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
@@ -93,7 +98,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
             "warning",
         )
-        return None
+        return False, None
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users]
@@ -147,11 +152,15 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
     else:
         flash("Reunião criada com sucesso!", "success")
-    return True
+    return True, meet_link
 
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
-    """Update existing meeting adjusting for conflicts and syncing with Google Calendar."""
+    """Update existing meeting adjusting for conflicts and syncing with Google Calendar.
+
+    Returns a tuple ``(success, meet_link)`` similar to
+    :func:`create_meeting_and_event`.
+    """
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
@@ -187,7 +196,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         form.start_time.data = adjusted_start.time()
         form.end_time.data = adjusted_end.time()
         flash(f"{' '.join(messages)} Horário ajustado para o próximo horário livre.", "warning")
-        return None
+        return False, None
     meeting.inicio = start_dt
     meeting.fim = end_dt
     meeting.assunto = form.subject.data
@@ -234,7 +243,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return True
+    return True, meeting.meet_link
 
 
 def delete_meeting(meeting: Reuniao) -> bool:
