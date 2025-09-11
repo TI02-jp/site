@@ -52,7 +52,6 @@
 {% endblock %}
 {% block content %}
     <div class="container">
-            <div class="flash-messages-container"></div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>Calendário de Agendamentos</h2>
                 <div>
@@ -151,7 +150,7 @@
                                 <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
-                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20">
+                                <i class="bi bi-camera-video"></i>
                                 <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
                                 <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
                             </div>
@@ -177,10 +176,10 @@
                         </div>
                         <div class="modal-body text-start">
                             <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
-                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20" class="me-2">Abrir Meet
+                                <i class="bi bi-camera-video me-2"></i>Abrir Meet
                             </a>
                             <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
-                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20">
+                                <i class="bi bi-camera-video"></i>
                                 <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
                                 <button class="btn btn-outline-secondary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
                             </div>
@@ -207,8 +206,12 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
     <script>
     function showFlashMessage(message, category = 'success') {
-        const container = document.querySelector('.flash-messages-container');
-        if (!container) return;
+        let container = document.querySelector('.flash-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'flash-container';
+            document.body.appendChild(container);
+        }
         const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
