@@ -52,6 +52,7 @@
 {% endblock %}
 {% block content %}
     <div class="container">
+            <div class="flash-messages-container"></div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>Calendário de Agendamentos</h2>
                 <div>
@@ -149,9 +150,10 @@
                                 <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
                                 <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
-                            <div id="meetLinkContainer" class="d-flex align-items-center gap-2 mt-3 d-none">
-                                <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none"></a>
-                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-primary"><i class="bi bi-clipboard"></i></button>
+                            <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
+                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20">
+                                <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
+                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -174,12 +176,13 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
-                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 mb-3">
+                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
                                 <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20" class="me-2">Abrir Meet
                             </a>
-                            <div class="input-group">
-                                <input type="text" id="meetLinkInput" class="form-control" value="{{ meet_popup_link }}" readonly>
-                                <button class="btn btn-outline-primary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
+                            <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
+                                <img src="https://www.gstatic.com/images/icons/material/product/1x/meet_24dp.png" alt="Meet" width="20">
+                                <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
+                                <button class="btn btn-outline-secondary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
                             </div>
                         </div>
                     </div>
@@ -203,6 +206,20 @@
     {{ super() }}
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
     <script>
+    function showFlashMessage(message, category = 'success') {
+        const container = document.querySelector('.flash-messages-container');
+        if (!container) return;
+        const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>`;
+        container.appendChild(alertDiv);
+        setTimeout(() => {
+            bootstrap.Alert.getOrCreateInstance(alertDiv).close();
+        }, 3000);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
     var currentEvent;
     var calendarEl = document.getElementById('calendar');
@@ -259,7 +276,9 @@
                 linkEl.href = e.extendedProps.meet_link;
                 linkContainer.classList.remove('d-none');
                 copyBtn.onclick = function() {
-                    navigator.clipboard.writeText(e.extendedProps.meet_link);
+                    navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
+                        showFlashMessage('Link copiado!', 'success');
+                    });
                 };
             } else {
                 linkContainer.classList.add('d-none');
@@ -355,7 +374,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         var popup = new bootstrap.Modal(document.getElementById('meetLinkModal'));
         document.getElementById('copyMeetLinkPopup').addEventListener('click', function() {
-            navigator.clipboard.writeText(document.getElementById('meetLinkInput').value);
+            navigator.clipboard.writeText(document.getElementById('meetLinkInput').value).then(function(){
+                showFlashMessage('Link copiado!', 'success');
+            });
         });
         popup.show();
     });
