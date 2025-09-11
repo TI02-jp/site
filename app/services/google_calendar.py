@@ -141,8 +141,14 @@ def update_event(
     end: datetime,
     description: str = "",
     attendees: list[str] | None = None,
+    create_meet: bool | None = None,
 ):
-    """Update an existing calendar event."""
+    """Update an existing calendar event.
+
+    When ``create_meet`` is ``True``, a Google Meet conference is generated for
+    the event. When ``False``, any existing conference data is removed. If
+    ``None``, the conference configuration is left unchanged.
+    """
     service = _build_service()
     tz_name = get_calendar_timezone().key
     event = {
@@ -154,9 +160,26 @@ def update_event(
         event["description"] = description
     if attendees is not None:
         event["attendees"] = [{"email": email} for email in attendees]
+    kwargs = {}
+    if create_meet is True:
+        event["conferenceData"] = {
+            "createRequest": {
+                "requestId": uuid4().hex,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
+        }
+        kwargs["conferenceDataVersion"] = 1
+    elif create_meet is False:
+        event["conferenceData"] = None
+        kwargs["conferenceDataVersion"] = 1
     updated_event = (
         service.events()
-        .patch(calendarId=MEETING_ROOM_EMAIL, eventId=event_id, body=event)
+        .patch(
+            calendarId=MEETING_ROOM_EMAIL,
+            eventId=event_id,
+            body=event,
+            **kwargs,
+        )
         .execute()
     )
     return updated_event
