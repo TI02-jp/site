@@ -149,14 +149,9 @@
                                 <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
                                 <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
-                            <div class="d-flex gap-2">
-                                <a id="detailMeetLink"
-                                   href="#"
-                                   target="_blank"
-                                   class="btn btn-sm btn-primary mt-3 d-none">Abrir Meet</a>
-                                <button type="button"
-                                        id="copyMeetLink"
-                                        class="btn btn-sm btn-outline-primary mt-3 d-none">Copiar link</button>
+                            <div id="meetLinkContainer" class="d-flex align-items-center gap-2 mt-3 d-none">
+                                <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none"></a>
+                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-primary"><i class="bi bi-clipboard"></i></button>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -190,13 +185,26 @@
     document.addEventListener('DOMContentLoaded', function() {
     var currentEvent;
     var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
+    function openNewMeeting(dateStr) {
+        var form = document.querySelector('#meetingModal form');
+        form.reset();
+        document.getElementById('meeting_id').value = '';
+        if (dateStr) { form.date.value = dateStr; }
+        document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
+        document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
+        var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
+        meetingModal.show();
+    }
+    var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
         timeZone: '{{ calendar_timezone }}',
         locale: 'pt-br',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         events: '/api/reunioes',
+        dateClick: function(info) {
+            openNewMeeting(info.dateStr);
+        },
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
@@ -222,16 +230,18 @@
             document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
+            var linkContainer = document.getElementById('meetLinkContainer');
             var linkEl = document.getElementById('detailMeetLink');
             var copyBtn = document.getElementById('copyMeetLink');
             if (e.extendedProps.meet_link) {
+                linkEl.textContent = e.extendedProps.meet_link;
                 linkEl.href = e.extendedProps.meet_link;
-                linkEl.classList.remove('d-none');
-                copyBtn.classList.remove('d-none');
-                copyBtn.onclick = function() { navigator.clipboard.writeText(e.extendedProps.meet_link); };
+                linkContainer.classList.remove('d-none');
+                copyBtn.onclick = function() {
+                    navigator.clipboard.writeText(e.extendedProps.meet_link);
+                };
             } else {
-                linkEl.classList.add('d-none');
-                copyBtn.classList.add('d-none');
+                linkContainer.classList.add('d-none');
             }
             var editBtn = document.getElementById('editEventBtn');
             var deleteBtn = document.getElementById('deleteEventBtn');
@@ -266,7 +276,8 @@
                             existing.setExtendedProp('status', evData.status);
                         }
                         if (existing.backgroundColor !== evData.color) {
-                            existing.setProp('color', evData.color);
+                            existing.setProp('backgroundColor', evData.color);
+                            existing.setProp('borderColor', evData.color);
                         }
                     } else {
                         calendar.addEvent(evData);
@@ -279,7 +290,8 @@
                 });
             });
     }
-    setInterval(refreshStatuses, 30000);
+    refreshStatuses();
+    setInterval(refreshStatuses, 5000);
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
@@ -313,11 +325,7 @@
     });
 
     document.getElementById('openMeetingModal').addEventListener('click', function() {
-        document.getElementById('meeting_id').value = '';
-        document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
-        document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
-        var cb = document.getElementById('create_meet');
-        if (cb) { cb.checked = false; }
+        openNewMeeting('');
     });
     });
     </script>
