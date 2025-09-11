@@ -835,6 +835,17 @@ def api_cnpj(cnpj):
         return jsonify({"error": "CNPJ não está cadastrado"}), 404
     return jsonify(dados)
 
+
+@app.route("/api/reunioes")
+@login_required
+def api_reunioes():
+    """Return meetings with up-to-date status as JSON."""
+    raw_events = fetch_raw_events()
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
+    events = combine_events(raw_events, now, current_user.id)
+    return jsonify(events)
+
     ## Rota para cadastrar uma nova empresa
 
 
