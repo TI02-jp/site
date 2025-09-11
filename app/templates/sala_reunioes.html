@@ -252,9 +252,34 @@
         }
     });
     calendar.render();
-    setInterval(function() {
-        calendar.refetchEvents();
-    }, 30000);
+    function refreshStatuses() {
+        fetch('/api/reunioes')
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                var newIds = new Set();
+                data.forEach(function(evData) {
+                    var id = String(evData.id);
+                    newIds.add(id);
+                    var existing = calendar.getEventById(id);
+                    if (existing) {
+                        if (existing.extendedProps.status !== evData.status) {
+                            existing.setExtendedProp('status', evData.status);
+                        }
+                        if (existing.backgroundColor !== evData.color) {
+                            existing.setProp('color', evData.color);
+                        }
+                    } else {
+                        calendar.addEvent(evData);
+                    }
+                });
+                calendar.getEvents().forEach(function(ev) {
+                    if (!newIds.has(ev.id)) {
+                        ev.remove();
+                    }
+                });
+            });
+    }
+    setInterval(refreshStatuses, 30000);
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
