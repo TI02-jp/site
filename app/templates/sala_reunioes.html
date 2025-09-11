@@ -11,19 +11,13 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link"
-                   href="https://app.acessorias.com/sysmain.php"
-                   target="_blank"
-                   rel="noopener">
+                <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
                     <i class="bi bi-box-arrow-up-right"></i>
                     ACESSÓRIAS
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link"
-                   href="https://auth.sieg.com/login"
-                   target="_blank"
-                   rel="noopener">
+                <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
                     <i class="bi bi-box-arrow-up-right"></i>
                     SIEG
                 </a>
@@ -47,258 +41,157 @@
     .content-wrapper { padding: 0; }
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 150px; overflow-y: auto; }
-    #calendar { height: 70vh; }
     </style>
 {% endblock %}
 {% block content %}
     <div class="container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2>Calendário de Agendamentos</h2>
-                <div>
-                    <button id="openMeetingModal" class="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#meetingModal">Agendar Reunião</button>
-                </div>
-            </div>
-            <div class="mb-3">
-                <span class="badge bg-warning text-dark me-2">Agendada</span>
-                <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger">Realizada</span>
-            </div>
-            <div id="calendar"></div>
-            <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Agendar Reunião</h5>
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Próximas Reuniões</h2>
+            <button id="openMeetingModal" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#meetingModal">Agendar Reunião</button>
+        </div>
+        <div class="mb-3">
+            <span class="badge bg-warning text-dark me-2">Agendada</span>
+            <span class="badge bg-success me-2">Em Andamento</span>
+            <span class="badge bg-danger">Realizada</span>
+        </div>
+        {% for ev in events %}
+            <div class="card border-{{ ev.status_class }} mb-3">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title mb-1">{{ ev.title }}</h5>
+                        <div class="text-muted small mb-2">
+                            {{ ev.start_dt.strftime('%d/%m/%Y %H:%M') }} - {{ ev.end_dt.strftime('%H:%M') }} • {{ ev.status }}
                         </div>
-                        <form method="post">
-                            <div class="modal-body text-start">
+                        {% if ev.participants %}
+                            <div class="small mb-2">Participantes: {{ ev.participants|join(', ') }}</div>
+                        {% endif %}
+                        {% if ev.description %}
+                            <p class="mb-0">{{ ev.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="ms-2 text-nowrap">
+                        {% if ev.meet_link %}
+                            <a href="{{ ev.meet_link }}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">Meet</a>
+                        {% endif %}
+                        {% if ev.can_edit %}
+                            <button class="btn btn-sm btn-primary mb-1 edit-event-btn" data-bs-toggle="modal" data-bs-target="#meetingModal" data-meeting='{{ {"id":ev.id,"title":ev.title,"start":ev.start,"end":ev.end,"description":ev.description,"participant_ids":ev.participant_ids,"meet_link":ev.meet_link}|tojson|e }}'>Editar</button>
+                        {% endif %}
+                        {% if ev.can_delete %}
+                            <form method="post" action="{{ url_for('delete_reuniao', meeting_id=ev.id) }}" class="d-inline">
                                 {{ form.csrf_token }}
-                                {{ form.meeting_id(id='meeting_id') }}
-                                <div class="row">
-                                    <div class="mb-3 col-md-6">
-                                        {{ form.participants.label(class="form-label") }}
-                                        <div class="participant-list border rounded p-2">
-                                            {% for subfield in form.participants %}
-                                                <div class="form-check">
-                                                    {{ subfield(class="form-check-input", id=subfield.id) }}
-                                                    <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                        {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            {{ form.date.label(class="form-label") }}
-                                            {{ form.date(class="form-control", type="date") }}
-                                        </div>
-                                        <div class="mb-3">
-                                            {{ form.start_time.label(class="form-label") }}
-                                            {{ form.start_time(class="form-control", type="time") }}
-                                        </div>
-                                        <div class="mb-3">
-                                            {{ form.end_time.label(class="form-label") }}
-                                            {{ form.end_time(class="form-control", type="time") }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    {{ form.subject.label(class="form-label") }}
-                                    {{ form.subject(class="form-control") }}
-                                </div>
-                                <div class="mb-3">
-                                    {{ form.description.label(class="form-label") }}
-                                    {{ form.description(class="form-control", rows=3) }}
-                                </div>
-                                <div class="form-check mb-3">
-                                    {{ form.create_meet(class="form-check-input", id="create_meet") }}
-                                    <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                {{ form.submit(class="btn btn-primary") }}
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="modal fade"
-                 id="eventDetailsModal"
-                 tabindex="-1"
-                 aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="detailTitle"></h5>
-                            <button type="button"
-                                    class="btn-close"
-                                    data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body text-start">
-                            <ul class="list-group">
-                                <li class="list-group-item"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
-                                <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
-                                <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
-                            </ul>
-                            <div class="d-flex gap-2">
-                                <a id="detailMeetLink"
-                                   href="#"
-                                   target="_blank"
-                                   class="btn btn-sm btn-primary mt-3 d-none">Abrir Meet</a>
-                                <button type="button"
-                                        id="copyMeetLink"
-                                        class="btn btn-sm btn-outline-primary mt-3 d-none">Copiar link</button>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <form id="deleteMeetingForm" method="post" class="d-none">
-                                {{ form.csrf_token(id='csrf_token_delete') }}
+                                <button type="submit" class="btn btn-sm btn-danger mb-1">Excluir</button>
                             </form>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                            <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
-                            <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
+        {% else %}
+            <p>Nenhuma reunião encontrada.</p>
+        {% endfor %}
     </div>
-    <style>
-@import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css');
-.tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
-.tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
-.tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
-.tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
-.tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
-.tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
-.fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
-.fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
-    </style>
+
+    <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agendar Reunião</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post">
+                    <div class="modal-body text-start">
+                        {{ form.csrf_token }}
+                        {{ form.meeting_id(id='meeting_id') }}
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                {{ form.participants.label(class="form-label") }}
+                                <div class="participant-list border rounded p-2">
+                                    {% for subfield in form.participants %}
+                                        <div class="form-check">
+                                            {{ subfield(class="form-check-input", id=subfield.id) }}
+                                            <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.date.label(class="form-label") }}
+                                    {{ form.date(class="form-control", type="date") }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.start_time.label(class="form-label") }}
+                                    {{ form.start_time(class="form-control", type="time") }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.end_time.label(class="form-label") }}
+                                    {{ form.end_time(class="form-control", type="time") }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.subject.label(class="form-label") }}
+                            {{ form.subject(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                        </div>
+                        <div class="form-check mb-3">
+                            {{ form.create_meet(class="form-check-input", id="create_meet") }}
+                            <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 {% block scripts %}
     {{ super() }}
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-    var currentEvent;
-    var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        fixedWeekCount: false,
-        timeZone: '{{ tz_name }}',
-        headerToolbar: { left: 'prev,next', center: 'title', right: '' },
-        events: {{ events|tojson }},
-        eventDidMount: function(info) {
-            var time = info.event.start
-                ? info.event.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'})
-                : '';
-            var color = info.event.backgroundColor || info.event.borderColor;
-            var cls = '';
-            if(color === '#ffc107'){cls='tooltip-warning';}
-            else if(color === '#198754'){cls='tooltip-success';}
-            else if(color === '#dc3545'){cls='tooltip-danger';}
-            info.el.setAttribute('data-bs-toggle', 'tooltip');
-            info.el.setAttribute('data-bs-html', 'true');
-            info.el.setAttribute('data-bs-custom-class', cls);
-            info.el.setAttribute('title', time + ' ' + info.event.title);
-            new bootstrap.Tooltip(info.el);
-        },
-        eventClick: function(info) {
-            info.jsEvent.preventDefault();
-            var e = info.event;
-            currentEvent = e;
-            var start = e.start;
-            var end = e.end;
-            document.getElementById('detailTitle').textContent = e.title;
-            document.getElementById('detailDate').textContent = start.toLocaleDateString('pt-BR', {timeZone: '{{ tz_name }}'});
-            document.getElementById('detailStart').textContent = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'});
-            document.getElementById('detailEnd').textContent = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', timeZone: '{{ tz_name }}'}) : '';
-            document.getElementById('detailStatus').textContent = e.extendedProps.status || '';
-            var participants = e.extendedProps.participants;
-            document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
-            var linkEl = document.getElementById('detailMeetLink');
-            var copyBtn = document.getElementById('copyMeetLink');
-            if (e.extendedProps.meet_link) {
-                linkEl.href = e.extendedProps.meet_link;
-                linkEl.classList.remove('d-none');
-                copyBtn.classList.remove('d-none');
-                copyBtn.onclick = function() { navigator.clipboard.writeText(e.extendedProps.meet_link); };
-            } else {
-                linkEl.classList.add('d-none');
-                copyBtn.classList.add('d-none');
-            }
-            var editBtn = document.getElementById('editEventBtn');
-            var deleteBtn = document.getElementById('deleteEventBtn');
-            var deleteForm = document.getElementById('deleteMeetingForm');
-            if (e.extendedProps.can_edit) {
-                editBtn.classList.remove('d-none');
-            } else {
-                editBtn.classList.add('d-none');
-            }
-            if (e.extendedProps.can_delete) {
-                deleteBtn.classList.remove('d-none');
-                deleteForm.action = '/reuniao/' + e.id + '/delete';
-            } else {
-                deleteBtn.classList.add('d-none');
-            }
-            var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
-            modal.show();
-        }
-    });
-    calendar.render();
-
-    document.getElementById('editEventBtn').addEventListener('click', function() {
-        var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
-        detailModal.hide();
-        var form = document.querySelector('#meetingModal form');
-        document.getElementById('meeting_id').value = currentEvent.id || '';
-        form.subject.value = currentEvent.title;
-        var start = currentEvent.start;
-        var end = currentEvent.end;
-        form.date.value = start.toLocaleDateString('en-CA', {timeZone: '{{ tz_name }}'});
-        form.start_time.value = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ tz_name }}'});
-        form.end_time.value = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: '{{ tz_name }}'}) : '';
-        form.description.value = currentEvent.extendedProps.description || '';
-        if (form.create_meet) {
-            form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
-        }
-        var ids = currentEvent.extendedProps.participant_ids || [];
-        document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
-            cb.checked = ids.includes(parseInt(cb.value));
+        var tz = '{{ tz_name }}';
+        document.querySelectorAll('.edit-event-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var data = JSON.parse(this.dataset.meeting);
+                var form = document.querySelector('#meetingModal form');
+                form.meeting_id.value = data.id || '';
+                form.subject.value = data.title || '';
+                var start = new Date(data.start);
+                var end = data.end ? new Date(data.end) : null;
+                form.date.value = start.toLocaleDateString('en-CA', {timeZone: tz});
+                form.start_time.value = start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz});
+                form.end_time.value = end ? end.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz}) : '';
+                form.description.value = data.description || '';
+                if (form.create_meet) { form.create_meet.checked = !!data.meet_link; }
+                var ids = data.participant_ids || [];
+                document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
+                    cb.checked = ids.includes(parseInt(cb.value));
+                });
+                document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
+                document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
+            });
         });
-        document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
-        document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
-        var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
-        meetingModal.show();
-    });
-
-    document.getElementById('deleteEventBtn').addEventListener('click', function() {
-        if (confirm('Deseja excluir esta reunião?')) {
-            document.getElementById('deleteMeetingForm').submit();
-        }
-    });
-
-    document.getElementById('openMeetingModal').addEventListener('click', function() {
-        document.getElementById('meeting_id').value = '';
-        document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
-        document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
-    });
+        document.getElementById('openMeetingModal').addEventListener('click', function() {
+            var form = document.querySelector('#meetingModal form');
+            form.reset();
+            form.meeting_id.value = '';
+            document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
+            document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
+        });
     });
     </script>
     {% if show_modal %}
-        <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var modal = new bootstrap.Modal(document.getElementById('meetingModal'));
-    modal.show();
-});
-        </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modal = new bootstrap.Modal(document.getElementById('meetingModal'));
+        modal.show();
+    });
+    </script>
     {% endif %}
 {% endblock %}

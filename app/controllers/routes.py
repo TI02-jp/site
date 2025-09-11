@@ -67,6 +67,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta
+from dateutil.parser import isoparse
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -330,7 +331,35 @@ def sala_reunioes():
             show_modal = True
     if request.method == "POST":
         show_modal = True
-    events = combine_events(raw_events, now, current_user.id)
+    events_raw = combine_events(raw_events, now, current_user.id)
+    events = []
+    color_map = {
+        "#ffc107": "warning",
+        "#198754": "success",
+        "#dc3545": "danger",
+    }
+    for e in events_raw:
+        start_dt = isoparse(e["start"]).astimezone(BRASILIA_TZ)
+        end_dt = isoparse(e["end"]).astimezone(BRASILIA_TZ) if e.get("end") else None
+        events.append(
+            {
+                "id": e.get("id"),
+                "title": e.get("title"),
+                "start_dt": start_dt,
+                "end_dt": end_dt,
+                "status": e.get("status"),
+                "participants": e.get("participants", []),
+                "participant_ids": e.get("participant_ids", []),
+                "description": e.get("description"),
+                "meet_link": e.get("meet_link"),
+                "can_edit": e.get("can_edit"),
+                "can_delete": e.get("can_delete"),
+                "start": e.get("start"),
+                "end": e.get("end"),
+                "status_class": color_map.get(e.get("color"), "secondary"),
+            }
+        )
+    events.sort(key=lambda x: x["start_dt"])
     return render_template(
         "sala_reunioes.html",
         form=form,
