@@ -150,9 +150,6 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar."""
-    if meeting.status != "agendada":
-        flash("A reunião só pode ser editada enquanto estiver agendada.", "warning")
-        return None
     start_dt = datetime.combine(form.date.data, form.start_time.data).replace(tzinfo=SAO_PAULO_TZ)
     end_dt = datetime.combine(form.date.data, form.end_time.data).replace(tzinfo=SAO_PAULO_TZ)
     duration = end_dt - start_dt
@@ -298,7 +295,7 @@ def combine_events(raw_events, now, current_user_id: int):
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
-            "can_edit": r.criador_id == current_user_id and r.status == "agendada",
+            "can_edit": r.criador_id == current_user_id,
             "can_delete": r.criador_id == current_user_id,
         }
         if r.meet_link:
