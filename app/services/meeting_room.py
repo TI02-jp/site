@@ -6,7 +6,12 @@ from markupsafe import Markup
 from dateutil.parser import isoparse
 
 from app import db
-from app.models.tables import User, Reuniao, ReuniaoParticipante
+from app.models.tables import (
+    User,
+    Reuniao,
+    ReuniaoParticipante,
+    ReuniaoStatus,
+)
 from app.services.google_calendar import (
     list_upcoming_events,
     create_meet_event,
@@ -119,7 +124,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         fim=end_dt,
         assunto=form.subject.data,
         descricao=form.description.data,
-        status="agendada",
+        status=ReuniaoStatus.AGENDADA,
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
@@ -254,15 +259,6 @@ def combine_events(raw_events, now, current_user_id: int):
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
 
-    google_ids = {e.get("id") for e in raw_events if e.get("id")}
-    removed = False
-    for r in Reuniao.query.filter(Reuniao.google_event_id.isnot(None)).all():
-        if r.google_event_id not in google_ids:
-            db.session.delete(r)
-            removed = True
-    if removed:
-        db.session.commit()
-
     updated = False
 
     # Prioritize locally stored meetings so their metadata (including
@@ -273,15 +269,15 @@ def combine_events(raw_events, now, current_user_id: int):
         end_dt = r.fim.astimezone(CALENDAR_TZ)
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
         if now < start_dt:
-            status = "agendada"
+            status = ReuniaoStatus.AGENDADA
             status_label = "Agendada"
             color = "#ffc107"
         elif start_dt <= now <= end_dt:
-            status = "em andamento"
+            status = ReuniaoStatus.EM_ANDAMENTO
             status_label = "Em Andamento"
             color = "#198754"
         else:
-            status = "realizada"
+            status = ReuniaoStatus.REALIZADA
             status_label = "Realizada"
             color = "#dc3545"
         if r.status != status:
