@@ -69,7 +69,7 @@
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
-                        <div class="modal-header">
+                        <div class="modal-header align-items-start">
                             <h5 class="modal-title">Agendar Reunião</h5>
                             <button type="button"
                                     class="btn-close"
@@ -135,10 +135,10 @@
                  aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header">
+                        <div class="modal-header align-items-start">
                             <div class="flex-grow-1">
-                                <small id="detailCreator" class="text-muted d-block d-none"></small>
-                                <h5 class="modal-title" id="detailTitle"></h5>
+                                <div id="detailCreator" class="text-muted small d-none mb-1"></div>
+                                <h5 class="modal-title mb-0" id="detailTitle"></h5>
                             </div>
                             <button type="button"
                                     class="btn-close"
@@ -146,11 +146,11 @@
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
-                            <ul class="list-group">
-                                <li class="list-group-item"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
-                                <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
-                                <li class="list-group-item"><strong>Status:</strong> <span id="detailStatus"></span></li>
+                            <ul class="list-group text-start">
+                                <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
+                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
+                                <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
+                                <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
                                 <i class="bi bi-camera-video"></i>
