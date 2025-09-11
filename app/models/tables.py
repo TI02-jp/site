@@ -6,6 +6,7 @@ from app import db
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from app.services.google_calendar import get_calendar_timezone
+from enum import Enum
 
 # Timezone for timestamp fields
 # Default application timezone
@@ -204,6 +205,13 @@ class Departamento(db.Model):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
 
 
+class ReuniaoStatus(str, Enum):
+    """Enumeration of possible meeting states."""
+    AGENDADA = "agendada"
+    EM_ANDAMENTO = "em andamento"
+    REALIZADA = "realizada"
+
+
 class Reuniao(db.Model):
     """Meeting scheduled in the system."""
     __tablename__ = 'reunioes'
@@ -215,7 +223,11 @@ class Reuniao(db.Model):
     descricao = db.Column(db.Text)
     meet_link = db.Column(db.String(255))
     google_event_id = db.Column(db.String(255))
-    status = db.Column(db.String(20), nullable=False, default='agendada')
+    status = db.Column(
+        db.Enum(ReuniaoStatus, name="reuniao_status"),
+        nullable=False,
+        default=ReuniaoStatus.AGENDADA,
+    )
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_criacao = db.Column(
         db.DateTime(timezone=True),
