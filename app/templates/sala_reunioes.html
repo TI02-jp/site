@@ -196,7 +196,7 @@
         timeZone: '{{ calendar_timezone }}',
         locale: 'pt-br',
         headerToolbar: { left: 'prev,next', center: 'title', right: '' },
-        events: {{ events|tojson }},
+        events: '/api/reunioes',
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
@@ -252,6 +252,9 @@
         }
     });
     calendar.render();
+    setInterval(function() {
+        calendar.refetchEvents();
+    }, 30000);
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));

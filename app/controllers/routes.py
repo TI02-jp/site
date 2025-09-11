@@ -304,7 +304,6 @@ def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
     populate_participants_choices(form)
-    events: list[dict] = []
     show_modal = False
     raw_events = fetch_raw_events()
     calendar_tz = get_calendar_timezone()
@@ -331,11 +330,9 @@ def sala_reunioes():
             show_modal = True
     if request.method == "POST":
         show_modal = True
-    events = combine_events(raw_events, now, current_user.id)
     return render_template(
         "sala_reunioes.html",
         form=form,
-        events=events,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
     )
