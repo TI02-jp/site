@@ -1963,16 +1963,13 @@ def tasks_overview():
 
 
 @app.route("/tasks/new", methods=["GET", "POST"])
-@login_required
+@admin_required
 def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
     parent_task = Task.query.get(parent_id) if parent_id else None
-    if parent_task:
-        if parent_task.tag.nome.lower() == "reunião":
-            abort(404)
-        if current_user.role != "admin" and parent_task.tag not in current_user.tags:
-            abort(403)
+    if parent_task and parent_task.tag.nome.lower() == "reunião":
+        abort(404)
     form = TaskForm()
     if parent_task:
         form.parent_id.data = parent_task.id
@@ -1981,17 +1978,9 @@ def tasks_new():
         form.tag_id.render_kw = {"disabled": True}
     else:
         tags_query = Tag.query.filter(Tag.nome != "Reunião").order_by(Tag.nome)
-        if current_user.role != "admin":
-            user_tag_ids = [t.id for t in current_user.tags if t.nome.lower() != "reunião"]
-            tags_query = tags_query.filter(Tag.id.in_(user_tag_ids))
         form.tag_id.choices = [(t.id, t.nome) for t in tags_query.all()]
     if form.validate_on_submit():
-        if parent_task:
-            tag_id = parent_task.tag_id
-        else:
-            if current_user.role != "admin" and form.tag_id.data not in [t.id for t in current_user.tags]:
-                abort(403)
-            tag_id = form.tag_id.data
+        tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         task = Task(
             title=form.title.data,
             description=form.description.data,
@@ -2008,15 +1997,7 @@ def tasks_new():
     cancel_url = (
         url_for("tasks_sector", tag_id=parent_task.tag_id)
         if parent_task
-        else (
-            url_for("tasks_overview")
-            if current_user.role == "admin"
-            else (
-                url_for("tasks_sector", tag_id=current_user.tags[0].id)
-                if current_user.tags
-                else url_for("home")
-            )
-        )
+        else url_for("tasks_overview")
     )
     return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
 

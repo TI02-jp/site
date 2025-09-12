@@ -32,7 +32,9 @@
       {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
       <button class="action change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
+      {% if current_user.role == 'admin' %}
       <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-plus-lg"></i></a>
+      {% endif %}
     </div>
   </div>
   {% if task.children %}
