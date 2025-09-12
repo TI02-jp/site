@@ -1946,7 +1946,15 @@ def tasks_overview():
     )
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
-        tasks_by_status[t.status].append(t)
+        status = t.status
+        if isinstance(status, str):
+            try:
+                status = TaskStatus(status)
+            except Exception:
+                status = TaskStatus.PENDING
+        if status not in tasks_by_status:
+            status = TaskStatus.PENDING
+        tasks_by_status[status].append(t)
     return render_template(
         "tasks_overview.html",
         tasks_by_status=tasks_by_status,
@@ -2034,7 +2042,15 @@ def tasks_sector(tag_id):
     )
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
-        tasks_by_status[t.status].append(t)
+        status = t.status
+        if isinstance(status, str):
+            try:
+                status = TaskStatus(status)
+            except Exception:
+                status = TaskStatus.PENDING
+        if status not in tasks_by_status:
+            status = TaskStatus.PENDING
+        tasks_by_status[status].append(t)
     return render_template(
         "tasks_board.html",
         tag=tag,
