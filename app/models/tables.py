@@ -261,3 +261,63 @@ class ReuniaoParticipante(db.Model):
 
     usuario = db.relationship('User')
 
+
+class TaskStatus(Enum):
+    """Enumeration of possible task states."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+
+class TaskPriority(Enum):
+    """Enumeration of task priority levels."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class Task(db.Model):
+    """Represents a task assigned to a specific tag/sector."""
+    __tablename__ = "tasks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.Enum(TaskStatus), nullable=False, default=TaskStatus.PENDING)
+    priority = db.Column(db.Enum(TaskPriority), nullable=False, default=TaskPriority.MEDIUM)
+    due_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    tag = db.relationship("Tag")
+    creator = db.relationship("User")
+
+    def __repr__(self):
+        return f"<Task {self.title}>"
+
+
+class TaskStatusHistory(db.Model):
+    """Tracks changes to task statuses over time."""
+    __tablename__ = "task_status_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(
+        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    from_status = db.Column(db.Enum(TaskStatus))
+    to_status = db.Column(db.Enum(TaskStatus), nullable=False)
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    changed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+    task = db.relationship(
+        "Task", backref=db.backref("status_history", lazy=True, cascade="all, delete-orphan")
+    )
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<TaskStatusHistory task={self.task_id} {self.from_status}->{self.to_status}>"
+

@@ -248,3 +248,19 @@ class MeetingForm(FlaskForm):
     )
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
+
+
+class TaskForm(FlaskForm):
+    """Formulário para criação de tarefas."""
+
+    title = StringField("Título", validators=[DataRequired()])
+    description = TextAreaField("Descrição", validators=[Optional()])
+    tag_id = SelectField("Setor", coerce=int, validators=[DataRequired()])
+    priority = SelectField(
+        "Prioridade",
+        choices=[("low", "Baixa"), ("medium", "Média"), ("high", "Alta")],
+        default="medium",
+        validators=[DataRequired()],
+    )
+    due_date = DateField("Prazo", format="%Y-%m-%d", validators=[Optional()])
+    submit = SubmitField("Salvar")
