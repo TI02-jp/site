@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Nova tarefa no Mural{% endblock %}
+{% block content %}
+<h1>Nova tarefa no Mural</h1>
+<form method="post">
+  {{ csrf_token() }}
+  <div class="mb-3">
+    <label class="form-label">Setor:</label>
+    <select name="setor_id" class="form-select" required>
+      {% for s in setores %}
+        <option value="{{ s.id }}">{{ s.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Título:</label>
+    <input type="text" name="titulo" class="form-control" required maxlength="200">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Descrição:</label>
+    <textarea name="descricao" class="form-control" rows="4"></textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Prioridade:</label>
+    <select name="prioridade" class="form-select">
+      <option value="baixa">Baixa</option>
+      <option value="media" selected>Média</option>
+      <option value="alta">Alta</option>
+      <option value="critica">Crítica</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Prazo:</label>
+    <input type="date" name="data_limite" class="form-control">
+  </div>
+  <button class="btn btn-primary" type="submit">Criar</button>
+</form>
+{% endblock %}

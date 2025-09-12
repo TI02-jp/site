@@ -438,6 +438,28 @@
                     </ul>
                 </div>
 
+                <!-- Seção Mural -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Mural</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'mural.index' %}active{% endif %}" href="{{ url_for('mural.index') }}">
+                                <i class="bi bi-kanban"></i>
+                                Visão geral
+                            </a>
+                        </li>
+                        {% set current_slug = request.view_args.slug if request.view_args and 'slug' in request.view_args else None %}
+                        {% for s in setores_sidebar %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'mural.board' and current_slug == s.slug %}active{% endif %}" href="{{ url_for('mural.board', slug=s.slug) }}">
+                                <i class="bi bi-circle"></i>
+                                {{ s.nome }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
                 <!-- Seção Administrativa -->
                 {% if current_user.role == 'admin' %}
                 <div class="nav-section">

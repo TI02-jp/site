@@ -106,8 +106,10 @@ def _set_security_headers(response):
     return response
 
 # Importa rotas e modelos depois da criação do db
-from app.models import tables
+from app.models import tables, mural
 from app.controllers import routes
+from app.controllers.mural import mural_bp
+app.register_blueprint(mural_bp)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -119,6 +121,16 @@ def load_user(user_id):
 def inject_now():
     """Inject current UTC time into templates as ``now()``."""
     return {'now': datetime.utcnow}
+
+
+@app.context_processor
+def inject_setores_sidebar():
+    from app.models.tables import Setor
+    try:
+        setores = Setor.query.filter_by(mural_habilitado=True).order_by(Setor.nome).all()
+    except Exception:
+        setores = []
+    return {"setores_sidebar": setores}
 
 
 @app.template_filter('time_since')
@@ -149,6 +161,12 @@ def render_badge_list(items, classes, icon, placeholder):
         for item in items
     ]
     return Markup(' '.join(badges))
+
+
+@app.template_global()
+def enum(name):
+    from app.models.mural import StatusTarefa, Prioridade
+    return {"StatusTarefa": StatusTarefa, "Prioridade": Prioridade}.get(name)
 
 
 @app.template_filter('sanitize')

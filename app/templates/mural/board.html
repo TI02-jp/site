@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Mural – {{ setor.nome }}{% endblock %}
+{% block content %}
+<h1>Mural – {{ setor.nome }}</h1>
+
+<div class="toolbar mb-3 d-flex justify-content-between">
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="me-2">Status:</label>
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="">Abertas (pendente/andamento)</option>
+      {% for s in ['pendente','andamento','concluida','bloqueada'] %}
+        <option value="{{ s }}" {{ 'selected' if status_filtro == s else '' }}>{{ s|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% if current_user.role == 'admin' %}
+    <a class="btn btn-primary" href="{{ url_for('mural.nova') }}">+ Nova tarefa</a>
+  {% endif %}
+</div>
+
+<div id="lista-tarefas" class="d-grid gap-3">
+  {% for t in tarefas %}
+    <div class="border rounded p-3 tarefa-card" data-id="{{ t.id }}">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <h3 class="flex-grow-1 h5 mb-0">{{ t.titulo }}</h3>
+        <span class="badge bg-secondary">{{ t.prioridade.value|capitalize }}</span>
+        <span class="badge bg-info" id="status-{{ t.id }}">{{ t.status.value|capitalize }}</span>
+      </div>
+      {% if t.descricao %}<p>{{ t.descricao }}</p>{% endif %}
+      <div class="text-muted small mb-2 d-flex gap-3">
+        <span>Criada por: {{ t.criada_por.name }}</span>
+        {% if t.data_limite %}<span>Prazo: {{ t.data_limite.strftime('%d/%m/%Y') }}</span>{% endif %}
+        <span>Criada em: {{ t.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <label class="form-check">
+          <input type="checkbox" class="form-check-input andamento-checkbox" {% if t.status == enum('StatusTarefa').ANDAMENTO %}checked{% endif %} {% if t.status in [enum('StatusTarefa').CONCLUIDA, enum('StatusTarefa').BLOQUEADA] %}disabled{% endif %}>
+          <span class="form-check-label">Em andamento</span>
+        </label>
+        <button class="btn btn-success concluir-btn" {% if t.status in [enum('StatusTarefa').CONCLUIDA, enum('StatusTarefa').BLOQUEADA] %}disabled{% endif %}>Concluir</button>
+        {% if current_user.role == 'admin' and t.status in [enum('StatusTarefa').CONCLUIDA, enum('StatusTarefa').ANDAMENTO] %}
+        <button class="btn btn-secondary reabrir-btn">Reabrir</button>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <p>Nenhuma tarefa para este filtro.</p>
+  {% endfor %}
+</div>
+
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script>
+function getCSRF(){ return document.querySelector('meta[name="csrf-token"]').getAttribute('content'); }
+
+document.addEventListener('change', async (ev) => {
+  if(!ev.target.matches('.andamento-checkbox')) return;
+  const card = ev.target.closest('.tarefa-card');
+  const id = card.dataset.id;
+  try {
+    const resp = await fetch(`{{ url_for('mural.toggle_andamento', tarefa_id=0) }}`.replace('0', id), {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCSRF() }
+    });
+    if(!resp.ok){ throw new Error('Falha ao atualizar.'); }
+    const data = await resp.json();
+    document.querySelector('#status-'+id).textContent = data.novo_status.charAt(0).toUpperCase()+data.novo_status.slice(1);
+    document.querySelector('#status-'+id).className = 'badge bg-info';
+  } catch(e){
+    alert(e.message);
+    ev.target.checked = !ev.target.checked;
+  }
+});
+
+document.addEventListener('click', async (ev) => {
+  if(ev.target.matches('.concluir-btn')){
+    const card = ev.target.closest('.tarefa-card');
+    const id = card.dataset.id;
+    try{
+      const resp = await fetch(`{{ url_for('mural.concluir', tarefa_id=0) }}`.replace('0', id), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCSRF() }
+      });
+      if(!resp.ok) throw new Error('Falha ao concluir.');
+      document.querySelector('#status-'+id).textContent = 'Concluida';
+      ev.target.disabled = true;
+      card.querySelector('.andamento-checkbox').disabled = true;
+    }catch(e){ alert(e.message); }
+  }
+  if(ev.target.matches('.reabrir-btn')){
+    const card = ev.target.closest('.tarefa-card');
+    const id = card.dataset.id;
+    try{
+      const resp = await fetch(`{{ url_for('mural.reabrir', tarefa_id=0) }}`.replace('0', id), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCSRF() }
+      });
+      if(!resp.ok) throw new Error('Falha ao reabrir.');
+      document.querySelector('#status-'+id).textContent = 'Pendente';
+      const chk = card.querySelector('.andamento-checkbox');
+      chk.disabled = false;
+      chk.checked = false;
+      card.querySelector('.concluir-btn').disabled = false;
+    }catch(e){ alert(e.message); }
+  }
+});
+</script>
+{% endblock %}

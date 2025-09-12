@@ -23,6 +23,13 @@ user_tags = db.Table(
     db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True)
 )
 
+# Association table linking users to sector records
+user_setores = db.Table(
+    'user_setores',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('setor_id', db.Integer, db.ForeignKey('setores.id', ondelete='CASCADE'), primary_key=True),
+)
+
 class JsonString(TypeDecorator):
     """Store JSON as a serialized string."""
     impl = String
@@ -58,6 +65,7 @@ class User(db.Model, UserMixin):
     is_master = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
+    setores = db.relationship('Setor', secondary=user_setores, backref=db.backref('users', lazy=True))
     google_id = db.Column(db.String(255), unique=True)
     google_refresh_token = db.Column(db.String(255))
 
@@ -124,6 +132,8 @@ class Setor(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(50), unique=True)
+    mural_habilitado = db.Column(db.Boolean, default=True, nullable=False)
 
     def __repr__(self):
         return f"<Setor {self.nome}>"
