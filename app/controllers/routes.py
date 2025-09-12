@@ -272,7 +272,8 @@ def inject_user_tag_helpers():
 def restrict_reuniao_tag_users():
     """Redirect users tagged with 'reunião' to the meeting room."""
     if current_user.is_authenticated and user_has_tag("reunião"):
-        allowed = {"sala_reunioes", "delete_reuniao", "logout", "ping", "static"}
+        # Meeting-tagged users must only access the meeting room and related assets
+        allowed = {"sala_reunioes", "api_reunioes", "logout", "static"}
         if request.endpoint not in allowed:
             return redirect(url_for("sala_reunioes"))
 
