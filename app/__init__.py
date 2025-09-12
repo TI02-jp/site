@@ -177,3 +177,10 @@ def _sanitize_filter(value):
 
 with app.app_context():
     db.create_all()
+    try:
+        from seeds_mural import seed_murais
+
+        seed_murais(db)
+    except Exception:
+        # Seeding is best-effort; ignore failures during app startup
+        pass
