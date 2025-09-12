@@ -872,6 +872,8 @@ def api_reunioes():
 @login_required
 def bb_extrato():
     """Página para consulta de extratos via API do Banco do Brasil."""
+    if not user_has_tag("Gestão"):
+        abort(403)
     form = BBExtratoForm()
     extrato = None
     if form.validate_on_submit():

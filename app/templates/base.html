@@ -435,6 +435,14 @@
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
                             </a>
                         </li>
+                        {% if user_has_tag('Gestão') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'bb_extrato' %}active{% endif %}" href="{{ url_for('bb_extrato') }}">
+                                <i class="bi bi-bank"></i>
+                                Extrato BB
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
                 </div>
 
