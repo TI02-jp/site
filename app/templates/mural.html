@@ -3,43 +3,68 @@
 {% block content %}
 <div class="container py-4">
     <h2 class="mb-4">Mural</h2>
-    {% if user_has_tag('Administrativo') or current_user.role == 'admin' %}
-    <form method="POST" class="mb-4">
-        {{ form.hidden_tag() }}
-        <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                {{ form.tag_id.label(class='form-label') }}
-                {{ form.tag_id(class='form-select') }}
-            </div>
-            <div class="col-md-7">
-                {{ form.descricao.label(class='form-label') }}
-                {{ form.descricao(class='form-control') }}
-            </div>
-            <div class="col-md-2">
-                {{ form.submit(class='btn btn-primary w-100') }}
-            </div>
-        </div>
-    </form>
-    {% endif %}
-
-    {% for tag_name, tasks in tasks_by_tag.items() %}
-    <h4>{{ tag_name }}</h4>
-    <ul class="list-group mb-4">
-        {% if tasks %}
-        {% for task in tasks %}
-        <li class="list-group-item d-flex align-items-center">
-            <form method="POST" action="{{ url_for('toggle_mural_task', task_id=task.id) }}" class="me-2">
+    <ul class="tree list-group">
+        {% for tag in allowed_tags %}
+        <li class="list-group-item">
+            <div class="fw-bold">{{ tag.nome }}</div>
+            {% if user_has_tag('Administrativo') or current_user.role == 'admin' %}
+            <form method="POST" class="input-group my-2">
                 {{ csrf_token() }}
-                <input type="checkbox" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}
-                {% if not user_has_tag(task.tag.nome) and not user_has_tag('Administrativo') and current_user.role != 'admin' %}disabled{% endif %}>
+                <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                <input type="text" name="descricao" class="form-control" placeholder="Nova tarefa">
+                <button class="btn btn-outline-secondary" type="submit">Adicionar</button>
             </form>
-            <span class="flex-grow-1 {% if task.completed %}text-decoration-line-through text-muted{% endif %}">{{ task.descricao }}</span>
+            {% endif %}
+            <ul class="list-group ms-3">
+                {% for task in tasks_by_tag[tag.id] %}
+                <li class="list-group-item d-flex align-items-center">
+                    <form method="POST" action="{{ url_for('toggle_mural_task', task_id=task.id, action='complete') }}" class="me-2">
+                        {{ csrf_token() }}
+                        <input type="checkbox" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}
+                        {% if not user_has_tag(tag.nome) and not user_has_tag('Administrativo') and current_user.role != 'admin' %}disabled{% endif %}>
+                    </form>
+                    <form method="POST" action="{{ url_for('toggle_mural_task', task_id=task.id, action='cancel') }}" class="me-2">
+                        {{ csrf_token() }}
+                        <input type="checkbox" onchange="this.form.submit()" {% if task.cancelled %}checked{% endif %}
+                        {% if not user_has_tag(tag.nome) and not user_has_tag('Administrativo') and current_user.role != 'admin' %}disabled{% endif %}>
+                    </form>
+                    <span class="flex-grow-1 {% if task.completed %}text-decoration-line-through text-muted{% elif task.cancelled %}text-decoration-line-through text-danger{% endif %}">{{ task.descricao }}</span>
+                </li>
+                {% else %}
+                <li class="list-group-item text-muted">Nenhuma tarefa.</li>
+                {% endfor %}
+            </ul>
         </li>
         {% endfor %}
-        {% else %}
-        <li class="list-group-item text-muted">Nenhuma tarefa.</li>
-        {% endif %}
     </ul>
-    {% endfor %}
 </div>
+<style>
+.tree, .tree ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 1rem;
+    position: relative;
+}
+.tree ul::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-left: 1px solid #ccc;
+}
+.tree li {
+    margin: 0;
+    padding: 0 0 0 1rem;
+    position: relative;
+}
+.tree li::before {
+    content: '';
+    position: absolute;
+    top: 0.75rem;
+    left: 0;
+    width: 1rem;
+    border-top: 1px solid #ccc;
+}
+</style>
 {% endblock %}

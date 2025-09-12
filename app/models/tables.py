@@ -129,10 +129,14 @@ class MuralTask(db.Model):
     completed = db.Column(db.Boolean, default=False)
     completed_at = db.Column(db.DateTime)
     completed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    cancelled = db.Column(db.Boolean, default=False)
+    cancelled_at = db.Column(db.DateTime)
+    cancelled_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     tag = db.relationship('Tag')
     creator = db.relationship('User', foreign_keys=[creator_id])
     completed_by = db.relationship('User', foreign_keys=[completed_by_id])
+    cancelled_by = db.relationship('User', foreign_keys=[cancelled_by_id])
 
     def __repr__(self):
         return f"<MuralTask {self.descricao[:20]}>"

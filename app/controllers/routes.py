@@ -843,38 +843,42 @@ def mural():
     allowed_tags = Tag.query.filter(
         Tag.nome.in_(["Fiscal", "Contabil", "Pessoal", "Simples Nacional"])
     ).all()
-    form = MuralTaskForm()
-    form.tag_id.choices = [(t.id, t.nome) for t in allowed_tags]
+    allowed_tag_ids = [t.id for t in allowed_tags]
 
-    if form.validate_on_submit():
+    if request.method == "POST":
         if not (current_user.role == "admin" or user_has_tag("Administrativo")):
             abort(403)
-        task = MuralTask(
-            descricao=form.descricao.data,
-            tag_id=form.tag_id.data,
-            creator_id=current_user.id,
-        )
-        db.session.add(task)
-        db.session.commit()
-        flash("Tarefa adicionada ao mural.", "success")
+        form = MuralTaskForm()
+        form.tag_id.choices = [(t.id, t.nome) for t in allowed_tags]
+        if form.validate_on_submit():
+            task = MuralTask(
+                descricao=form.descricao.data,
+                tag_id=form.tag_id.data,
+                creator_id=current_user.id,
+            )
+            db.session.add(task)
+            db.session.commit()
+            flash("Tarefa adicionada ao mural.", "success")
+        else:
+            flash("Descrição é obrigatória.", "danger")
         return redirect(url_for("mural"))
 
-    tasks_by_tag = {t.nome: [] for t in allowed_tags}
+    tasks_by_tag = {t.id: [] for t in allowed_tags}
     tasks = (
-        MuralTask.query.filter(MuralTask.tag_id.in_([t.id for t in allowed_tags]))
+        MuralTask.query.filter(MuralTask.tag_id.in_(allowed_tag_ids))
         .order_by(MuralTask.id.desc())
         .all()
     )
     for task in tasks:
-        tasks_by_tag[task.tag.nome].append(task)
+        tasks_by_tag[task.tag_id].append(task)
 
-    return render_template("mural.html", form=form, tasks_by_tag=tasks_by_tag)
+    return render_template("mural.html", allowed_tags=allowed_tags, tasks_by_tag=tasks_by_tag)
 
 
-@app.route("/mural/toggle/<int:task_id>", methods=["POST"])
+@app.route("/mural/toggle/<int:task_id>/<string:action>", methods=["POST"])
 @login_required
-def toggle_mural_task(task_id):
-    """Toggle completion status for a mural task."""
+def toggle_mural_task(task_id, action):
+    """Toggle completion or cancellation status for a mural task."""
     task = MuralTask.query.get_or_404(task_id)
     user_tag_ids = [t.id for t in current_user.tags]
     if not (
@@ -883,13 +887,32 @@ def toggle_mural_task(task_id):
         or task.tag_id in user_tag_ids
     ):
         abort(403)
-    task.completed = not task.completed
-    if task.completed:
-        task.completed_by_id = current_user.id
-        task.completed_at = datetime.utcnow()
+
+    if action == "complete":
+        task.completed = not task.completed
+        if task.completed:
+            task.completed_by_id = current_user.id
+            task.completed_at = datetime.utcnow()
+            task.cancelled = False
+            task.cancelled_by_id = None
+            task.cancelled_at = None
+        else:
+            task.completed_by_id = None
+            task.completed_at = None
+    elif action == "cancel":
+        task.cancelled = not task.cancelled
+        if task.cancelled:
+            task.cancelled_by_id = current_user.id
+            task.cancelled_at = datetime.utcnow()
+            task.completed = False
+            task.completed_by_id = None
+            task.completed_at = None
+        else:
+            task.cancelled_by_id = None
+            task.cancelled_at = None
     else:
-        task.completed_by_id = None
-        task.completed_at = None
+        abort(400)
+
     db.session.commit()
     return redirect(url_for("mural"))
 
