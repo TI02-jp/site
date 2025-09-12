@@ -276,7 +276,13 @@ def inject_user_tag_helpers():
 @app.context_processor
 def inject_task_tags():
     """Provide task-related tags for dynamic sidebar menus."""
-    return {"tasks_tags": Tag.query.order_by(Tag.nome).all()}
+    if not current_user.is_authenticated:
+        return {"tasks_tags": []}
+    if current_user.role == "admin":
+        tags = Tag.query.order_by(Tag.nome).all()
+    else:
+        tags = sorted(current_user.tags, key=lambda t: t.nome)
+    return {"tasks_tags": tags}
 
 
 @app.route("/")
@@ -1926,7 +1932,12 @@ def edit_user(user_id):
 @admin_required
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
-    tasks = Task.query.order_by(Task.due_date).all()
+    tasks = (
+        Task.query.filter_by(parent_id=None)
+        .options(joinedload(Task.children))
+        .order_by(Task.due_date)
+        .all()
+    )
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
         tasks_by_status[t.status].append(t)
@@ -1938,25 +1949,58 @@ def tasks_overview():
 
 
 @app.route("/tasks/new", methods=["GET", "POST"])
-@admin_required
+@login_required
 def tasks_new():
-    """Form to create a new task."""
+    """Form to create a new task or subtask."""
+    parent_id = request.args.get("parent_id", type=int)
+    parent_task = Task.query.get(parent_id) if parent_id else None
+    if parent_task and current_user.role != "admin" and parent_task.tag not in current_user.tags:
+        abort(403)
     form = TaskForm()
-    form.tag_id.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
+    if parent_task:
+        form.parent_id.data = parent_task.id
+        form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
+        form.tag_id.data = parent_task.tag_id
+        form.tag_id.render_kw = {"disabled": True}
+    else:
+        tags_query = Tag.query.order_by(Tag.nome)
+        if current_user.role != "admin":
+            tags_query = tags_query.filter(Tag.id.in_([t.id for t in current_user.tags]))
+        form.tag_id.choices = [(t.id, t.nome) for t in tags_query.all()]
     if form.validate_on_submit():
+        if parent_task:
+            tag_id = parent_task.tag_id
+        else:
+            if current_user.role != "admin" and form.tag_id.data not in [t.id for t in current_user.tags]:
+                abort(403)
+            tag_id = form.tag_id.data
         task = Task(
             title=form.title.data,
             description=form.description.data,
-            tag_id=form.tag_id.data,
+            tag_id=tag_id,
             priority=TaskPriority(form.priority.data),
             due_date=form.due_date.data,
             created_by=current_user.id,
+            parent_id=parent_id,
         )
         db.session.add(task)
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
-        return redirect(url_for("tasks_sector", tag_id=form.tag_id.data))
-    return render_template("tasks_new.html", form=form)
+        return redirect(url_for("tasks_sector", tag_id=tag_id))
+    cancel_url = (
+        url_for("tasks_sector", tag_id=parent_task.tag_id)
+        if parent_task
+        else (
+            url_for("tasks_overview")
+            if current_user.role == "admin"
+            else (
+                url_for("tasks_sector", tag_id=current_user.tags[0].id)
+                if current_user.tags
+                else url_for("home")
+            )
+        )
+    )
+    return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
 
 
 @app.route("/tasks/sector/<int:tag_id>")
@@ -1967,7 +2011,10 @@ def tasks_sector(tag_id):
     if current_user.role != "admin" and tag not in current_user.tags:
         abort(403)
     tasks = (
-        Task.query.filter_by(tag_id=tag_id).order_by(Task.due_date).all()
+        Task.query.filter_by(tag_id=tag_id, parent_id=None)
+        .options(joinedload(Task.children))
+        .order_by(Task.due_date)
+        .all()
     )
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
@@ -1995,10 +2042,11 @@ def update_task_status(task_id):
         abort(400)
     if current_user.role != "admin":
         allowed = {
-            TaskStatus.PENDING: TaskStatus.IN_PROGRESS,
-            TaskStatus.IN_PROGRESS: TaskStatus.DONE,
+            TaskStatus.PENDING: {TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED},
+            TaskStatus.IN_PROGRESS: {TaskStatus.DONE, TaskStatus.BLOCKED},
+            TaskStatus.BLOCKED: {TaskStatus.IN_PROGRESS},
         }
-        if allowed.get(task.status) != new_status:
+        if new_status not in allowed.get(task.status, set()):
             abort(403)
     if task.status != new_status:
         history = TaskStatusHistory(

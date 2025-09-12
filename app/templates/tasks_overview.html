@@ -7,31 +7,15 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0"><i class="bi bi-kanban me-2"></i>Visão Geral de Tarefas</h2>
     </div>
-    {% set status_labels = {'pending': 'Pendente', 'in_progress': 'Em andamento', 'done': 'Concluída'} %}
+    {% from "tasks_macros.html" import render_task %}
+    {% set status_labels = {'pending': 'Pendente', 'in_progress': 'Em andamento', 'done': 'Concluída', 'blocked': 'Bloqueada'} %}
     <div class="row">
         {% for status in TaskStatus %}
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <h5 class="text-center">{{ status_labels[status.value] }}</h5>
             <ul class="list-group min-vh-50" data-status="{{ status.value }}">
                 {% for task in tasks_by_status[status] %}
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="me-2">
-                        <strong>{{ task.title }}</strong>
-                        <span class="badge bg-secondary">{{ task.tag.nome }}</span>
-                        {% if task.due_date %}
-                        <small class="text-muted d-block">Prazo: {{ task.due_date.strftime('%d/%m/%Y') }}</small>
-                        {% endif %}
-                    </div>
-                    <div class="ms-auto">
-                        {% if status == TaskStatus.PENDING %}
-                        <button class="btn btn-sm btn-outline-primary change-status" data-id="{{ task.id }}" data-status="in_progress">Iniciar</button>
-                        {% elif status == TaskStatus.IN_PROGRESS %}
-                        <button class="btn btn-sm btn-outline-success change-status" data-id="{{ task.id }}" data-status="done">Concluir</button>
-                        {% elif status == TaskStatus.DONE %}
-                        <button class="btn btn-sm btn-outline-secondary change-status" data-id="{{ task.id }}" data-status="in_progress">Reabrir</button>
-                        {% endif %}
-                    </div>
-                </li>
+                    {{ render_task(task, TaskStatus, show_tag=True) }}
                 {% else %}
                 <li class="list-group-item text-center">Nenhuma tarefa.</li>
                 {% endfor %}

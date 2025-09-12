@@ -267,6 +267,7 @@ class TaskStatus(Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     DONE = "done"
+    BLOCKED = "blocked"
 
 
 class TaskPriority(Enum):
@@ -292,9 +293,22 @@ class Task(db.Model):
     )
     tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("tasks.id"))
 
     tag = db.relationship("Tag")
     creator = db.relationship("User")
+    children = db.relationship(
+        "Task", backref=db.backref("parent", remote_side=[id]), lazy="joined"
+    )
+
+    @property
+    def progress(self) -> int:
+        """Return completion percentage based on direct subtasks."""
+        if not self.children:
+            return 100 if self.status == TaskStatus.DONE else 0
+        total = len(self.children)
+        completed = len([c for c in self.children if c.status == TaskStatus.DONE])
+        return int((completed / total) * 100)
 
     def __repr__(self):
         return f"<Task {self.title}>"

@@ -1,0 +1,41 @@
+{% macro render_task(task, TaskStatus, show_tag=False) %}
+<li class="list-group-item">
+    <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1">
+            <strong>{{ task.title }}</strong>
+            {% if show_tag %}
+            <span class="badge bg-secondary">{{ task.tag.nome }}</span>
+            {% endif %}
+            {% if task.due_date %}
+            <small class="text-muted d-block">Prazo: {{ task.due_date.strftime('%d/%m/%Y') }}</small>
+            {% endif %}
+            {% if task.children %}
+            <div class="progress mt-1" style="height: 4px;">
+                <div class="progress-bar" style="width: {{ task.progress }}%;"></div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="ms-auto d-flex gap-1">
+            {% if task.status == TaskStatus.PENDING %}
+            <button class="btn btn-sm btn-outline-primary change-status" data-id="{{ task.id }}" data-status="in_progress">Iniciar</button>
+            <button class="btn btn-sm btn-outline-warning change-status" data-id="{{ task.id }}" data-status="blocked">Bloquear</button>
+            {% elif task.status == TaskStatus.IN_PROGRESS %}
+            <button class="btn btn-sm btn-outline-success change-status" data-id="{{ task.id }}" data-status="done">Concluir</button>
+            <button class="btn btn-sm btn-outline-warning change-status" data-id="{{ task.id }}" data-status="blocked">Bloquear</button>
+            {% elif task.status == TaskStatus.BLOCKED %}
+            <button class="btn btn-sm btn-outline-primary change-status" data-id="{{ task.id }}" data-status="in_progress">Retomar</button>
+            {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
+            <button class="btn btn-sm btn-outline-secondary change-status" data-id="{{ task.id }}" data-status="in_progress">Reabrir</button>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks_new', parent_id=task.id) }}">Subtarefa</a>
+        </div>
+    </div>
+    {% if task.children %}
+    <ul class="list-group mt-2">
+        {% for child in task.children %}
+            {{ render_task(child, TaskStatus, show_tag=show_tag) }}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>
+{% endmacro %}
