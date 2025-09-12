@@ -447,12 +447,12 @@
                                         <a class="nav-link {% if request.endpoint == 'tasks_sector' and request.view_args.get('tag_id') == t.id %}active{% endif %}" href="{{ url_for('tasks_sector', tag_id=t.id) }}">{{ t.nome }}</a>
                                     </li>
                                     {% endfor %}
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.endpoint == 'tasks_new' %}active{% endif %}" href="{{ url_for('tasks_new') }}">Nova Tarefa</a>
+                                    </li>
                                     {% if current_user.role == 'admin' %}
                                     <li class="nav-item">
                                         <a class="nav-link {% if request.endpoint == 'tasks_overview' %}active{% endif %}" href="{{ url_for('tasks_overview') }}">Visão Geral</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.endpoint == 'tasks_new' %}active{% endif %}" href="{{ url_for('tasks_new') }}">Nova Tarefa</a>
                                     </li>
                                     {% endif %}
                                 </ul>

@@ -263,4 +263,5 @@ class TaskForm(FlaskForm):
         validators=[DataRequired()],
     )
     due_date = DateField("Prazo", format="%Y-%m-%d", validators=[Optional()])
+    parent_id = HiddenField()
     submit = SubmitField("Salvar")
