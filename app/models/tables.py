@@ -298,7 +298,7 @@ class Task(db.Model):
     completed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     tag = db.relationship("Tag")
-    creator = db.relationship("User")
+    creator = db.relationship("User", foreign_keys=[created_by])
     assignee = db.relationship("User", foreign_keys=[assigned_to])
     finisher = db.relationship("User", foreign_keys=[completed_by])
     children = db.relationship(
