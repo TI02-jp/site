@@ -268,10 +268,21 @@ def inject_user_tag_helpers():
     return dict(user_has_tag=user_has_tag)
 
 
+@app.before_request
+def restrict_reuniao_tag_users():
+    """Redirect users tagged with 'reunião' to the meeting room."""
+    if current_user.is_authenticated and user_has_tag("reunião"):
+        allowed = {"sala_reunioes", "delete_reuniao", "logout", "ping", "static"}
+        if request.endpoint not in allowed:
+            return redirect(url_for("sala_reunioes"))
+
+
 @app.route("/")
 def index():
     """Redirect users to the appropriate first page."""
     if current_user.is_authenticated:
+        if user_has_tag("reunião"):
+            return redirect(url_for("sala_reunioes"))
         return redirect(url_for("home"))
     return redirect(url_for("login"))
 
@@ -821,6 +832,8 @@ def login():
             )
             db.session.commit()
             flash("Login bem-sucedido!", "success")
+            if user_has_tag("reunião"):
+                return redirect(url_for("sala_reunioes"))
             return redirect(url_for("home"))
         else:
             flash("Credenciais inválidas", "danger")
