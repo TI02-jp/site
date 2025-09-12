@@ -10,7 +10,9 @@
 <section class="kanban">
   <div class="kanban-header">
     <h2><i class="bi bi-list-task"></i>Mural - {{ tag.nome }}</h2>
+    {% if current_user.role == 'admin' %}
     <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
+    {% endif %}
   </div>
   {% from "tasks_macros.html" import render_task with context %}
   {% set status_labels = {'pending': 'Pendente', 'in_progress': 'Em andamento', 'done': 'Concluída', 'blocked': 'Bloqueada'} %}
