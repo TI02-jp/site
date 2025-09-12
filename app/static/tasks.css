@@ -142,3 +142,14 @@
   padding-left: 1rem;
   margin-top: 0.5rem;
 }
+
+.toggle-children {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.1rem;
+}
+
+.task-card.collapsed > .subtasks {
+  display: none;
+}
