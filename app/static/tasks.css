@@ -1,0 +1,144 @@
+.kanban-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.kanban {
+  padding: 1rem;
+}
+
+.kanban-header h2 i {
+  margin-right: 0.5rem;
+}
+
+.btn-new-task {
+  background: var(--accent);
+  color: #fff;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-new-task:hover {
+  background: var(--accent-hover);
+}
+
+.kanban-board {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.kanban-column {
+  flex: 1;
+  background: #f0f2f5;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.kanban-column h3 {
+  text-align: center;
+  font-size: 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.kanban-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-height: 50vh;
+}
+
+.kanban-list .empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1rem;
+}
+
+.task-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-title {
+  font-weight: 600;
+  margin: 0;
+}
+
+.task-tag {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+  margin-left: 0.25rem;
+}
+
+.task-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.progress {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.progress div {
+  height: 100%;
+  background: var(--accent);
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.task-actions .action {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  padding: 0.25rem 0.35rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.task-actions .action:hover {
+  background: var(--accent-hover);
+}
+
+.task-actions .subtask {
+  background: var(--primary);
+}
+
+.task-actions .subtask:hover {
+  background: var(--primary-hover);
+}
+
+.subtasks {
+  list-style: none;
+  padding-left: 1rem;
+  margin-top: 0.5rem;
+}

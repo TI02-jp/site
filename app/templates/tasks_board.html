@@ -2,31 +2,35 @@
 
 {% block title %}Mural - {{ tag.nome }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0"><i class="bi bi-list-task me-2"></i>Mural - {{ tag.nome }}</h2>
-        <a href="{{ url_for('tasks_new') }}" class="btn btn-sm btn-primary">Nova Tarefa</a>
-    </div>
-    {% from "tasks_macros.html" import render_task with context %}
-    {% set status_labels = {'pending': 'Pendente', 'in_progress': 'Em andamento', 'done': 'Concluída', 'blocked': 'Bloqueada'} %}
-    <div class="row">
-        {% for status in TaskStatus %}
-        <div class="col-md-3 mb-3">
-            <h5 class="text-center">{{ status_labels[status.value] }}</h5>
-            <ul class="list-group min-vh-50" data-status="{{ status.value }}">
-                {% for task in tasks_by_status[status] %}
-                    {{ render_task(task, TaskStatus) }}
-                {% else %}
-                <li class="list-group-item text-center">Nenhuma tarefa.</li>
-                {% endfor %}
-            </ul>
-        </div>
+<section class="kanban">
+  <div class="kanban-header">
+    <h2><i class="bi bi-list-task"></i>Mural - {{ tag.nome }}</h2>
+    <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
+  </div>
+  {% from "tasks_macros.html" import render_task with context %}
+  {% set status_labels = {'pending': 'Pendente', 'in_progress': 'Em andamento', 'done': 'Concluída', 'blocked': 'Bloqueada'} %}
+  <div class="kanban-board">
+    {% for status in TaskStatus %}
+    <div class="kanban-column">
+      <h3>{{ status_labels[status.value] }}</h3>
+      <ul class="kanban-list" data-status="{{ status.value }}">
+        {% for task in tasks_by_status[status] %}
+          {{ render_task(task, TaskStatus) }}
+        {% else %}
+          <li class="empty">Nenhuma tarefa.</li>
         {% endfor %}
+      </ul>
     </div>
-</div>
+    {% endfor %}
+  </div>
+</section>
 <script>
-    const csrfToken = "{{ csrf_token() }}";
+  const csrfToken = "{{ csrf_token() }}";
 </script>
 <script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
 {% endblock %}
