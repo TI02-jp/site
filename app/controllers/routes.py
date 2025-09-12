@@ -2057,9 +2057,8 @@ def update_task_status(task_id):
         abort(400)
     if current_user.role != "admin":
         allowed = {
-            TaskStatus.PENDING: {TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED},
-            TaskStatus.IN_PROGRESS: {TaskStatus.DONE, TaskStatus.BLOCKED},
-            TaskStatus.BLOCKED: {TaskStatus.IN_PROGRESS},
+            TaskStatus.PENDING: {TaskStatus.IN_PROGRESS},
+            TaskStatus.IN_PROGRESS: {TaskStatus.DONE},
         }
         if new_status not in allowed.get(task.status, set()):
             abort(403)
