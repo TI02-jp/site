@@ -294,9 +294,13 @@ class Task(db.Model):
     tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey("tasks.id"))
+    assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"))
+    completed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     tag = db.relationship("Tag")
     creator = db.relationship("User")
+    assignee = db.relationship("User", foreign_keys=[assigned_to])
+    finisher = db.relationship("User", foreign_keys=[completed_by])
     children = db.relationship(
         "Task", backref=db.backref("parent", remote_side=[id]), lazy="joined"
     )

@@ -1936,7 +1936,11 @@ def tasks_overview():
     tasks = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), Tag.nome != "Reunião")
-        .options(joinedload(Task.children))
+        .options(
+            joinedload(Task.children),
+            joinedload(Task.assignee),
+            joinedload(Task.finisher),
+        )
         .order_by(Task.due_date)
         .all()
     )
@@ -2020,7 +2024,11 @@ def tasks_sector(tag_id):
         abort(403)
     tasks = (
         Task.query.filter_by(tag_id=tag_id, parent_id=None)
-        .options(joinedload(Task.children))
+        .options(
+            joinedload(Task.children),
+            joinedload(Task.assignee),
+            joinedload(Task.finisher),
+        )
         .order_by(Task.due_date)
         .all()
     )
@@ -2065,7 +2073,19 @@ def update_task_status(task_id):
             to_status=new_status,
             changed_by=current_user.id,
         )
+        old_status = task.status
         task.status = new_status
+        if new_status == TaskStatus.IN_PROGRESS:
+            if old_status != TaskStatus.DONE or current_user.role != "admin":
+                task.assigned_to = current_user.id
+            task.completed_by = None
+        elif new_status == TaskStatus.DONE:
+            task.completed_by = current_user.id
+        elif new_status == TaskStatus.PENDING:
+            task.assigned_to = None
+            task.completed_by = None
+        else:
+            task.completed_by = None
         db.session.add(history)
         db.session.commit()
     return jsonify({"success": True})
