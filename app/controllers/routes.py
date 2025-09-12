@@ -267,9 +267,12 @@ def inject_task_tags():
     if not current_user.is_authenticated:
         return {"tasks_tags": []}
     if current_user.role == "admin":
-        tags = Tag.query.order_by(Tag.nome).all()
+        tags = Tag.query.filter(Tag.nome != "Reunião").order_by(Tag.nome).all()
     else:
-        tags = sorted(current_user.tags, key=lambda t: t.nome)
+        tags = sorted(
+            [t for t in current_user.tags if t.nome.lower() != "reunião"],
+            key=lambda t: t.nome,
+        )
     return {"tasks_tags": tags}
 
 
@@ -1831,7 +1834,8 @@ def edit_user(user_id):
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
     tasks = (
-        Task.query.filter_by(parent_id=None)
+        Task.query.join(Tag)
+        .filter(Task.parent_id.is_(None), Tag.nome != "Reunião")
         .options(joinedload(Task.children))
         .order_by(Task.due_date)
         .all()
@@ -1852,8 +1856,11 @@ def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
     parent_task = Task.query.get(parent_id) if parent_id else None
-    if parent_task and current_user.role != "admin" and parent_task.tag not in current_user.tags:
-        abort(403)
+    if parent_task:
+        if parent_task.tag.nome.lower() == "reunião":
+            abort(404)
+        if current_user.role != "admin" and parent_task.tag not in current_user.tags:
+            abort(403)
     form = TaskForm()
     if parent_task:
         form.parent_id.data = parent_task.id
@@ -1861,9 +1868,10 @@ def tasks_new():
         form.tag_id.data = parent_task.tag_id
         form.tag_id.render_kw = {"disabled": True}
     else:
-        tags_query = Tag.query.order_by(Tag.nome)
+        tags_query = Tag.query.filter(Tag.nome != "Reunião").order_by(Tag.nome)
         if current_user.role != "admin":
-            tags_query = tags_query.filter(Tag.id.in_([t.id for t in current_user.tags]))
+            user_tag_ids = [t.id for t in current_user.tags if t.nome.lower() != "reunião"]
+            tags_query = tags_query.filter(Tag.id.in_(user_tag_ids))
         form.tag_id.choices = [(t.id, t.nome) for t in tags_query.all()]
     if form.validate_on_submit():
         if parent_task:
@@ -1906,6 +1914,8 @@ def tasks_new():
 def tasks_sector(tag_id):
     """Kanban board of tasks for a specific sector/tag."""
     tag = Tag.query.get_or_404(tag_id)
+    if tag.nome.lower() == "reunião":
+        abort(404)
     if current_user.role != "admin" and tag not in current_user.tags:
         abort(403)
     tasks = (
@@ -1930,6 +1940,8 @@ def tasks_sector(tag_id):
 def update_task_status(task_id):
     """Update a task status and record its history."""
     task = Task.query.get_or_404(task_id)
+    if task.tag.nome.lower() == "reunião":
+        abort(404)
     if current_user.role != "admin" and task.tag not in current_user.tags:
         abort(403)
     data = request.get_json() or {}
