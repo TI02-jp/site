@@ -124,13 +124,14 @@ def inject_now():
 
 
 @app.context_processor
-def inject_setores_sidebar():
-    from app.models.tables import Setor
+def inject_murais_sidebar():
+    from app.models.mural import Mural
+
     try:
-        setores = Setor.query.filter_by(mural_habilitado=True).order_by(Setor.nome).all()
+        murais = Mural.query.filter_by(habilitado=True).order_by(Mural.nome).all()
     except Exception:
-        setores = []
-    return {"setores_sidebar": setores}
+        murais = []
+    return {"murais_sidebar": murais}
 
 
 @app.template_filter('time_since')

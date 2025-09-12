@@ -1,8 +1,9 @@
 from app import app, db
 from app.models.tables import Setor
+from app.models.mural import Mural
 
 
-def seed_setores():
+def seed_murais():
     base = [
         ("fiscal", "Fiscal"),
         ("contabil", "Contábil"),
@@ -11,10 +12,15 @@ def seed_setores():
     ]
     with app.app_context():
         for slug, nome in base:
-            if not Setor.query.filter_by(slug=slug).first():
-                db.session.add(Setor(slug=slug, nome=nome, mural_habilitado=True))
+            setor = Setor.query.filter_by(slug=slug).first()
+            if not setor:
+                setor = Setor(slug=slug, nome=nome, mural_habilitado=True)
+                db.session.add(setor)
+                db.session.flush()
+            if not Mural.query.filter_by(slug=slug).first():
+                db.session.add(Mural(slug=slug, nome=nome, setor_id=setor.id, habilitado=True))
         db.session.commit()
 
 
 if __name__ == "__main__":
-    seed_setores()
+    seed_murais()

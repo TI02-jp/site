@@ -5,7 +5,7 @@
 <div class="cards">
   {% for c in contagens %}
   <div class="card p-3 mb-3">
-    <h3><a href="{{ url_for('mural.board', slug=c.setor.slug) }}">{{ c.setor.nome }}</a></h3>
+    <h3><a href="{{ url_for('mural.board', slug=c.mural.slug) }}">{{ c.mural.nome }}</a></h3>
     <p>Pendentes: <strong>{{ c.pendentes }}</strong></p>
     <p>Em andamento: <strong>{{ c.andamento }}</strong></p>
     <p>Concluídas: <strong>{{ c.concluidas }}</strong></p>

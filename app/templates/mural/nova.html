@@ -5,10 +5,10 @@
 <form method="post">
   {{ csrf_token() }}
   <div class="mb-3">
-    <label class="form-label">Setor:</label>
-    <select name="setor_id" class="form-select" required>
-      {% for s in setores %}
-        <option value="{{ s.id }}">{{ s.nome }}</option>
+    <label class="form-label">Mural:</label>
+    <select name="mural_id" class="form-select" required>
+      {% for m in murais %}
+        <option value="{{ m.id }}">{{ m.nome }}</option>
       {% endfor %}
     </select>
   </div>

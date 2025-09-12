@@ -449,11 +449,11 @@
                             </a>
                         </li>
                         {% set current_slug = request.view_args.slug if request.view_args and 'slug' in request.view_args else None %}
-                        {% for s in setores_sidebar %}
+                        {% for m in murais_sidebar %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'mural.board' and current_slug == s.slug %}active{% endif %}" href="{{ url_for('mural.board', slug=s.slug) }}">
+                            <a class="nav-link {% if request.endpoint == 'mural.board' and current_slug == m.slug %}active{% endif %}" href="{{ url_for('mural.board', slug=m.slug) }}">
                                 <i class="bi bi-circle"></i>
-                                {{ s.nome }}
+                                {{ m.nome }}
                             </a>
                         </li>
                         {% endfor %}

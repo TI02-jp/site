@@ -21,3 +21,15 @@ def user_pode_atuar_no_setor(setor_id: int) -> bool:
     if current_user.role == "admin":
         return True
     return any(s.id == setor_id for s in current_user.setores)
+
+
+def user_pode_atuar_no_mural(mural_id: int) -> bool:
+    """Return True if the current user can operate on the given mural board."""
+    if current_user.role == "admin":
+        return True
+    from app.models.mural import Mural
+
+    mural = Mural.query.get(mural_id)
+    if not mural:
+        return False
+    return any(s.id == mural.setor_id for s in current_user.setores)
