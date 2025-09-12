@@ -36,6 +36,12 @@
                 SALA DE REUNIÕES
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('mural') }}">
+                <i class="bi bi-card-checklist"></i>
+                MURAL
+            </a>
+        </li>
         {% if user_has_tag('Gestão') %}
         <li class="nav-item">
             <a class="nav-link" href="#" onclick="return false;">
