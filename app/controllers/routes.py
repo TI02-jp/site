@@ -27,6 +27,10 @@ from app.models.tables import (
     SAO_PAULO_TZ,
     Reuniao,
     ReuniaoStatus,
+    Task,
+    TaskStatus,
+    TaskPriority,
+    TaskStatusHistory,
 )
 from app.services.google_calendar import get_calendar_timezone
 from app.forms import (
@@ -45,6 +49,7 @@ from app.forms import (
     SetorForm,
     TagForm,
     MeetingForm,
+    TaskForm,
 )
 import os, json, re, secrets
 import requests
@@ -266,6 +271,12 @@ def user_has_tag(tag_name: str) -> bool:
 def inject_user_tag_helpers():
     """Expose user tag helper utilities to templates."""
     return dict(user_has_tag=user_has_tag)
+
+
+@app.context_processor
+def inject_task_tags():
+    """Provide task-related tags for dynamic sidebar menus."""
+    return {"tasks_tags": Tag.query.order_by(Tag.nome).all()}
 
 
 @app.route("/")
@@ -1906,3 +1917,97 @@ def edit_user(user_id):
         return redirect(url_for("list_users"))
 
     return render_template("edit_user.html", form=form, user=user)
+
+
+# ---------------------- Task Management Routes ----------------------
+
+
+@app.route("/tasks/overview")
+@admin_required
+def tasks_overview():
+    """Kanban view of all tasks grouped by status."""
+    tasks = Task.query.order_by(Task.due_date).all()
+    tasks_by_status = {status: [] for status in TaskStatus}
+    for t in tasks:
+        tasks_by_status[t.status].append(t)
+    return render_template(
+        "tasks_overview.html",
+        tasks_by_status=tasks_by_status,
+        TaskStatus=TaskStatus,
+    )
+
+
+@app.route("/tasks/new", methods=["GET", "POST"])
+@admin_required
+def tasks_new():
+    """Form to create a new task."""
+    form = TaskForm()
+    form.tag_id.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
+    if form.validate_on_submit():
+        task = Task(
+            title=form.title.data,
+            description=form.description.data,
+            tag_id=form.tag_id.data,
+            priority=TaskPriority(form.priority.data),
+            due_date=form.due_date.data,
+            created_by=current_user.id,
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash("Tarefa criada com sucesso!", "success")
+        return redirect(url_for("tasks_sector", tag_id=form.tag_id.data))
+    return render_template("tasks_new.html", form=form)
+
+
+@app.route("/tasks/sector/<int:tag_id>")
+@login_required
+def tasks_sector(tag_id):
+    """Kanban board of tasks for a specific sector/tag."""
+    tag = Tag.query.get_or_404(tag_id)
+    if current_user.role != "admin" and tag not in current_user.tags:
+        abort(403)
+    tasks = (
+        Task.query.filter_by(tag_id=tag_id).order_by(Task.due_date).all()
+    )
+    tasks_by_status = {status: [] for status in TaskStatus}
+    for t in tasks:
+        tasks_by_status[t.status].append(t)
+    return render_template(
+        "tasks_board.html",
+        tag=tag,
+        tasks_by_status=tasks_by_status,
+        TaskStatus=TaskStatus,
+    )
+
+
+@app.route("/tasks/<int:task_id>/status", methods=["POST"])
+@login_required
+def update_task_status(task_id):
+    """Update a task status and record its history."""
+    task = Task.query.get_or_404(task_id)
+    if current_user.role != "admin" and task.tag not in current_user.tags:
+        abort(403)
+    data = request.get_json() or {}
+    status_value = data.get("status")
+    try:
+        new_status = TaskStatus(status_value)
+    except Exception:
+        abort(400)
+    if current_user.role != "admin":
+        allowed = {
+            TaskStatus.PENDING: TaskStatus.IN_PROGRESS,
+            TaskStatus.IN_PROGRESS: TaskStatus.DONE,
+        }
+        if allowed.get(task.status) != new_status:
+            abort(403)
+    if task.status != new_status:
+        history = TaskStatusHistory(
+            task_id=task.id,
+            from_status=task.status,
+            to_status=new_status,
+            changed_by=current_user.id,
+        )
+        task.status = new_status
+        db.session.add(history)
+        db.session.commit()
+    return jsonify({"success": True})
