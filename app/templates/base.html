@@ -211,24 +211,6 @@
         max-width: 100%;
       }
 
-      /* Breadcrumb */
-      .content-breadcrumb {
-        background: white;
-        padding: 1rem 2rem;
-        border-bottom: 1px solid var(--border-color);
-        margin-bottom: 0;
-      }
-
-      .breadcrumb {
-        margin: 0;
-        background: none;
-        padding: 0;
-      }
-
-      .breadcrumb-item a {
-        color: var(--accent);
-        text-decoration: none;
-      }
 
       /* Toggle Button para Mobile */
       .sidebar-toggle {
@@ -436,29 +418,6 @@
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint.startswith('tasks_') %}active{% endif %}" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="{% if request.endpoint.startswith('tasks_') %}true{% else %}false{% endif %}" aria-controls="tasksMenu">
-                                <i class="bi bi-list-task"></i>
-                                Mural
-                            </a>
-                            <div class="collapse {% if request.endpoint.startswith('tasks_') %}show{% endif %}" id="tasksMenu">
-                                <ul class="nav flex-column ms-3">
-                                    {% for t in tasks_tags %}
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.endpoint == 'tasks_sector' and request.view_args.get('tag_id') == t.id %}active{% endif %}" href="{{ url_for('tasks_sector', tag_id=t.id) }}">{{ t.nome }}</a>
-                                    </li>
-                                    {% endfor %}
-                                    {% if current_user.role == 'admin' %}
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.endpoint == 'tasks_new' %}active{% endif %}" href="{{ url_for('tasks_new') }}">Nova Tarefa</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.endpoint == 'tasks_overview' %}active{% endif %}" href="{{ url_for('tasks_overview') }}">Visão Geral</a>
-                                    </li>
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </li>
                     </ul>
                 </div>
 
@@ -509,18 +468,6 @@
 
         <!-- Área de Conteúdo -->
         <main class="content-area">
-            <!-- Breadcrumb -->
-            <nav class="content-breadcrumb" aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('dashboard') }}">
-                            <i class="bi bi-house-door me-1"></i>Início
-                        </a>
-                    </li>
-                    {% block breadcrumb %}{% endblock %}
-                </ol>
-            </nav>
-
             <!-- Conteúdo -->
             <div class="content-wrapper">
                 {% block content %}{% endblock %}

@@ -25,18 +25,14 @@
     </div>
     <div class="task-actions">
       {% if task.status == TaskStatus.PENDING %}
-      <button class="action change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play"></i></button>
-      <button class="action change-status" data-id="{{ task.id }}" data-status="blocked" title="Bloquear"><i class="bi bi-slash-circle"></i></button>
+      <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
       {% elif task.status == TaskStatus.IN_PROGRESS %}
-      <button class="action change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-lg"></i></button>
-      <button class="action change-status" data-id="{{ task.id }}" data-status="blocked" title="Bloquear"><i class="bi bi-slash-circle"></i></button>
-      {% elif task.status == TaskStatus.BLOCKED %}
-      <button class="action change-status" data-id="{{ task.id }}" data-status="in_progress" title="Retomar"><i class="bi bi-play"></i></button>
+      <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
       {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
-      <button class="action change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
+      <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
       {% if current_user.role == 'admin' %}
-      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-plus-lg"></i></a>
+      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
       {% endif %}
     </div>
   </div>
