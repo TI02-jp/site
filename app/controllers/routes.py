@@ -25,6 +25,8 @@ from app.models.tables import (
     Inclusao,
     Session,
     SAO_PAULO_TZ,
+    Reuniao,
+    ReuniaoStatus,
     Task,
     TaskStatus,
     TaskPriority,
@@ -45,6 +47,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
     TagForm,
+    MeetingForm,
     TaskForm,
 )
 import os, json, re, secrets
@@ -57,6 +60,15 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
+from app.services.google_calendar import get_calendar_timezone
+from app.services.meeting_room import (
+    populate_participants_choices,
+    fetch_raw_events,
+    create_meeting_and_event,
+    update_meeting,
+    combine_events,
+    delete_meeting,
+)
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -305,6 +317,80 @@ def consultorias():
     """List registered consultorias."""
     consultorias = Consultoria.query.all()
     return render_template("consultorias.html", consultorias=consultorias)
+
+
+@app.route("/sala-reunioes", methods=["GET", "POST"])
+@login_required
+def sala_reunioes():
+    """List and create meetings using Google Calendar."""
+    form = MeetingForm()
+    populate_participants_choices(form)
+    show_modal = False
+    raw_events = fetch_raw_events()
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
+    if form.validate_on_submit():
+        if form.meeting_id.data:
+            meeting = Reuniao.query.get(int(form.meeting_id.data))
+            if meeting and meeting.criador_id == current_user.id:
+                if meeting.status != ReuniaoStatus.AGENDADA:
+                    flash(
+                        "Reuniões em andamento ou realizadas não podem ser editadas.",
+                        "danger",
+                    )
+                    return redirect(url_for("sala_reunioes"))
+                success, meet_link = update_meeting(form, raw_events, now, meeting)
+                if success:
+                    if meet_link:
+                        session["meet_link"] = meet_link
+                    return redirect(url_for("sala_reunioes"))
+                show_modal = True
+            else:
+                flash(
+                    "Você só pode editar reuniões que você criou.",
+                    "danger",
+                )
+        else:
+            success, meet_link = create_meeting_and_event(
+                form, raw_events, now, current_user.id
+            )
+            if success:
+                if meet_link:
+                    session["meet_link"] = meet_link
+                return redirect(url_for("sala_reunioes"))
+            show_modal = True
+    if request.method == "POST":
+        show_modal = True
+    meet_popup_link = session.pop("meet_link", None)
+    return render_template(
+        "sala_reunioes.html",
+        form=form,
+        show_modal=show_modal,
+        calendar_timezone=calendar_tz.key,
+        meet_popup_link=meet_popup_link,
+    )
+
+
+@app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])
+@login_required
+def delete_reuniao(meeting_id):
+    """Delete a meeting and its corresponding Google Calendar event."""
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    if current_user.role != "admin":
+        if meeting.criador_id != current_user.id:
+            flash("Você só pode excluir reuniões que você criou.", "danger")
+            return redirect(url_for("sala_reunioes"))
+        if meeting.status != ReuniaoStatus.AGENDADA:
+            flash(
+                "Reuniões em andamento ou realizadas não podem ser excluídas.",
+                "danger",
+            )
+            return redirect(url_for("sala_reunioes"))
+    if delete_meeting(meeting):
+        flash("Reunião excluída com sucesso!", "success")
+    else:
+        flash("Não foi possível remover o evento do Google Calendar.", "danger")
+    return redirect(url_for("sala_reunioes"))
 
 
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])
@@ -785,6 +871,20 @@ def api_cnpj(cnpj):
     if not dados:
         return jsonify({"error": "CNPJ não está cadastrado"}), 404
     return jsonify(dados)
+
+
+@app.route("/api/reunioes")
+@login_required
+@csrf.exempt
+def api_reunioes():
+    """Return meetings with up-to-date status as JSON."""
+    raw_events = fetch_raw_events()
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
+    events = combine_events(
+        raw_events, now, current_user.id, current_user.role == "admin"
+    )
+    return jsonify(events)
 
 
 @app.route("/cadastrar_empresa", methods=["GET", "POST"])
