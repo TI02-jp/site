@@ -435,6 +435,12 @@
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'mural' %}active{% endif %}" href="{{ url_for('mural') }}">
+                                <i class="bi bi-card-checklist"></i>
+                                Mural
+                            </a>
+                        </li>
                     </ul>
                 </div>
 

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Mural{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Mural</h2>
+    {% if user_has_tag('Administrativo') or current_user.role == 'admin' %}
+    <form method="POST" class="mb-4">
+        {{ form.hidden_tag() }}
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                {{ form.tag_id.label(class='form-label') }}
+                {{ form.tag_id(class='form-select') }}
+            </div>
+            <div class="col-md-7">
+                {{ form.descricao.label(class='form-label') }}
+                {{ form.descricao(class='form-control') }}
+            </div>
+            <div class="col-md-2">
+                {{ form.submit(class='btn btn-primary w-100') }}
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% for tag_name, tasks in tasks_by_tag.items() %}
+    <h4>{{ tag_name }}</h4>
+    <ul class="list-group mb-4">
+        {% if tasks %}
+        {% for task in tasks %}
+        <li class="list-group-item d-flex align-items-center">
+            <form method="POST" action="{{ url_for('toggle_mural_task', task_id=task.id) }}" class="me-2">
+                {{ csrf_token() }}
+                <input type="checkbox" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}
+                {% if not user_has_tag(task.tag.nome) and not user_has_tag('Administrativo') and current_user.role != 'admin' %}disabled{% endif %}>
+            </form>
+            <span class="flex-grow-1 {% if task.completed %}text-decoration-line-through text-muted{% endif %}">{{ task.descricao }}</span>
+        </li>
+        {% endfor %}
+        {% else %}
+        <li class="list-group-item text-muted">Nenhuma tarefa.</li>
+        {% endif %}
+    </ul>
+    {% endfor %}
+</div>
+{% endblock %}

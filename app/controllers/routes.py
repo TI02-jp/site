@@ -22,6 +22,7 @@ from app.models.tables import (
     Consultoria,
     Setor,
     Tag,
+    MuralTask,
     Inclusao,
     Session,
     SAO_PAULO_TZ,
@@ -45,6 +46,7 @@ from app.forms import (
     SetorForm,
     TagForm,
     MeetingForm,
+    MuralTaskForm,
 )
 import os, json, re, secrets
 import requests
@@ -832,6 +834,64 @@ def login():
 def dashboard():
     """Admin dashboard placeholder page."""
     return render_template("dashboard.html")
+
+
+@app.route("/mural", methods=["GET", "POST"])
+@login_required
+def mural():
+    """Display mural tasks and allow administrative users to add new ones."""
+    allowed_tags = Tag.query.filter(
+        Tag.nome.in_(["Fiscal", "Contabil", "Pessoal", "Simples Nacional"])
+    ).all()
+    form = MuralTaskForm()
+    form.tag_id.choices = [(t.id, t.nome) for t in allowed_tags]
+
+    if form.validate_on_submit():
+        if not (current_user.role == "admin" or user_has_tag("Administrativo")):
+            abort(403)
+        task = MuralTask(
+            descricao=form.descricao.data,
+            tag_id=form.tag_id.data,
+            creator_id=current_user.id,
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash("Tarefa adicionada ao mural.", "success")
+        return redirect(url_for("mural"))
+
+    tasks_by_tag = {t.nome: [] for t in allowed_tags}
+    tasks = (
+        MuralTask.query.filter(MuralTask.tag_id.in_([t.id for t in allowed_tags]))
+        .order_by(MuralTask.id.desc())
+        .all()
+    )
+    for task in tasks:
+        tasks_by_tag[task.tag.nome].append(task)
+
+    return render_template("mural.html", form=form, tasks_by_tag=tasks_by_tag)
+
+
+@app.route("/mural/toggle/<int:task_id>", methods=["POST"])
+@login_required
+def toggle_mural_task(task_id):
+    """Toggle completion status for a mural task."""
+    task = MuralTask.query.get_or_404(task_id)
+    user_tag_ids = [t.id for t in current_user.tags]
+    if not (
+        current_user.role == "admin"
+        or user_has_tag("Administrativo")
+        or task.tag_id in user_tag_ids
+    ):
+        abort(403)
+    task.completed = not task.completed
+    if task.completed:
+        task.completed_by_id = current_user.id
+        task.completed_at = datetime.utcnow()
+    else:
+        task.completed_by_id = None
+        task.completed_at = None
+    db.session.commit()
+    return redirect(url_for("mural"))
 
 
 @app.route("/api/cnpj/<cnpj>")

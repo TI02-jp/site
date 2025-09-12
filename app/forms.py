@@ -248,3 +248,10 @@ class MeetingForm(FlaskForm):
     )
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
+
+
+class MuralTaskForm(FlaskForm):
+    """Formulário para criação de tarefas no mural."""
+    tag_id = SelectField("Tag", coerce=int, validators=[DataRequired()])
+    descricao = StringField("Descrição", validators=[DataRequired(), Length(max=255)])
+    submit = SubmitField("Adicionar")

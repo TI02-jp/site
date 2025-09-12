@@ -118,6 +118,26 @@ class Tag(db.Model):
         return f"<Tag {self.nome}>"
 
 
+class MuralTask(db.Model):
+    """Task item displayed on the mural for a specific tag."""
+    __tablename__ = 'mural_tasks'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    descricao = db.Column(db.String(255), nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+    completed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    tag = db.relationship('Tag')
+    creator = db.relationship('User', foreign_keys=[creator_id])
+    completed_by = db.relationship('User', foreign_keys=[completed_by_id])
+
+    def __repr__(self):
+        return f"<MuralTask {self.descricao[:20]}>"
+
+
 class Setor(db.Model):
     """Represents a business sector."""
     __tablename__ = 'setores'
