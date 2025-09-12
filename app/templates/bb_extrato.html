@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Extrato Banco do Brasil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Consulta de Extrato - Banco do Brasil</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label class="form-label">{{ form.agencia.label }}</label>
+                {{ form.agencia(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ form.conta.label }}</label>
+                {{ form.conta(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ form.inicio.label }}</label>
+                {{ form.inicio(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ form.fim.label }}</label>
+                {{ form.fim(class="form-control") }}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+    </form>
+
+    {% if extrato %}
+    <hr>
+    <h2 class="mt-4">Resultados</h2>
+    <pre class="bg-light p-3">{{ extrato | tojson(indent=2, ensure_ascii=False) }}</pre>
+    {% endif %}
+</div>
+{% endblock %}

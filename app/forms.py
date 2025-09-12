@@ -63,6 +63,15 @@ class RegistrationForm(FlaskForm):
     # Botão de envio do formulário de cadastro
     submit = SubmitField('Cadastrar')
 
+
+class BBExtratoForm(FlaskForm):
+    """Formulário para consulta de extratos no Banco do Brasil."""
+    agencia = StringField('Agência', validators=[DataRequired()])
+    conta = StringField('Conta', validators=[DataRequired()])
+    inicio = DateField('Data Inicial', format='%Y-%m-%d', validators=[DataRequired()])
+    fim = DateField('Data Final', format='%Y-%m-%d', validators=[DataRequired()])
+    submit = SubmitField('Consultar')
+
 # --- Formulários da Aplicação ---
 
 def validar_cnpj(form, field):

@@ -45,6 +45,7 @@ from app.forms import (
     SetorForm,
     TagForm,
     MeetingForm,
+    BBExtratoForm,
 )
 import os, json, re, secrets
 import requests
@@ -865,6 +866,25 @@ def api_reunioes():
         raw_events, now, current_user.id, current_user.role == "admin"
     )
     return jsonify(events)
+
+
+@app.route("/bb/extrato", methods=["GET", "POST"])
+@login_required
+def bb_extrato():
+    """Página para consulta de extratos via API do Banco do Brasil."""
+    form = BBExtratoForm()
+    extrato = None
+    if form.validate_on_submit():
+        from app.services import bb
+        extrato = bb.get_statement(
+            form.conta.data,
+            form.agencia.data,
+            form.inicio.data.strftime("%Y-%m-%d"),
+            form.fim.data.strftime("%Y-%m-%d"),
+        )
+        if extrato is None:
+            flash("Não foi possível recuperar o extrato.", "error")
+    return render_template("bb_extrato.html", form=form, extrato=extrato)
 
     ## Rota para cadastrar uma nova empresa
 
