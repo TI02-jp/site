@@ -13,4 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }).then(() => window.location.reload());
         });
     });
+
+    document.querySelectorAll('.toggle-children').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.task-card');
+            card.classList.toggle('collapsed');
+            const icon = btn.querySelector('i');
+            icon.classList.toggle('bi-chevron-down');
+            icon.classList.toggle('bi-chevron-right');
+        });
+    });
 });

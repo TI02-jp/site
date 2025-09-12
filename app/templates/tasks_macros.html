@@ -1,6 +1,9 @@
 {% macro render_task(task, TaskStatus, show_tag=False) %}
-<li class="task-card">
+<li class="task-card{% if task.children %} has-children{% endif %}">
   <div class="task-header">
+    {% if task.children %}
+    <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
+    {% endif %}
     <div class="task-info">
       <span class="task-title">{{ task.title }}</span>
       {% if show_tag %}
