@@ -3,10 +3,11 @@
 {% block content %}
 <h1>Nova tarefa no Mural</h1>
 <form method="post">
-  {{ csrf_token() }}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
     <label class="form-label">Mural:</label>
     <select name="mural_id" class="form-select" required>
+      <option value="" disabled selected>Selecione um mural</option>
       {% for m in murais %}
         <option value="{{ m.id }}">{{ m.nome }}</option>
       {% endfor %}
