@@ -198,32 +198,6 @@ def normalize_contatos(contatos):
     return list(grouped.values())
 
 
-def validate_contatos(contatos):
-    """Validate contact data ensuring proper formats."""
-    email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-    for c in contatos:
-        meios = c.get("meios")
-        if meios is None:
-            meios = [{"tipo": c.get("tipo"), "endereco": c.get("endereco", "")}]
-        validated = []
-        for m in meios:
-            tipo = m.get("tipo")
-            endereco = m.get("endereco", "")
-            if tipo == "email":
-                if not email_re.match(endereco):
-                    raise ValueError(f"E-mail inválido: {endereco}")
-            elif tipo in ("telefone", "whatsapp"):
-                digits = re.sub(r"\D", "", endereco)
-                if not digits:
-                    raise ValueError(f"Número inválido: {endereco}")
-                endereco = format_phone(digits)
-            validated.append({"tipo": tipo, "endereco": endereco})
-        c["meios"] = validated
-        c.pop("tipo", None)
-        c.pop("endereco", None)
-    return contatos
-
-
 @app.route("/upload_image", methods=["POST"])
 @login_required
 def upload_image():
@@ -984,101 +958,6 @@ def listar_empresas():
         sort=sort,
         order=order,
     )
-
-
-def processar_dados_fiscal(request):
-    """Função auxiliar para processar dados do departamento fiscal"""
-    responsavel = request.form.get("responsavel")
-    descricao = request.form.get("descricao")
-    acessos_json = request.form.get("acessos_json", "[]")
-    try:
-        acessos = json.loads(acessos_json) if acessos_json else []
-    except Exception:
-        acessos = []
-    forma_movimento = request.form.get("forma_movimento")
-    observacao_movimento = request.form.get("observacao_movimento")
-    observacao_importacao = request.form.get("observacao_importacao")
-    observacao_contato = request.form.get("observacao_contato")
-    particularidades = sanitize_html(request.form.get("particularidades"))
-    formas_importacao_json = request.form.get("formas_importacao_json", "[]")
-    formas_importacao = (
-        json.loads(formas_importacao_json) if formas_importacao_json else []
-    )
-    envio_digital = request.form.getlist("envio_digital")
-    envio_fisico = request.form.getlist("envio_fisico")
-    malote_coleta = request.form.get("malote_coleta")
-    contatos_json = request.form.get("contatos_json", "null")
-    contatos = json.loads(contatos_json) if contatos_json != "null" else None
-    if contatos is not None:
-        contatos = validate_contatos(contatos)
-
-    return {
-        "responsavel": responsavel,
-        "descricao": descricao,
-        "formas_importacao": formas_importacao,
-        "acessos": acessos,
-        "forma_movimento": forma_movimento,
-        "envio_digital": envio_digital,
-        "envio_fisico": envio_fisico,
-        "malote_coleta": malote_coleta,
-        "observacao_movimento": observacao_movimento,
-        "observacao_importacao": observacao_importacao,
-        "observacao_contato": observacao_contato,
-        "contatos": contatos,
-        "particularidades_texto": particularidades,
-    }
-
-
-def processar_dados_contabil(request):
-    """Função auxiliar para processar dados do departamento contábil"""
-    responsavel = request.form.get("responsavel")
-    descricao = request.form.get("descricao")
-    metodo_importacao = request.form.getlist("metodo_importacao")
-    forma_movimento = request.form.get("forma_movimento")
-    particularidades = sanitize_html(request.form.get("particularidades"))
-    envio_digital = request.form.getlist("envio_digital")
-    envio_fisico = request.form.getlist("envio_fisico")
-    malote_coleta = request.form.get("malote_coleta")
-    controle_relatorios_json = request.form.get("controle_relatorios_json", "[]")
-    controle_relatorios = (
-        json.loads(controle_relatorios_json) if controle_relatorios_json else []
-    )
-    observacao_movimento = request.form.get("observacao_movimento")
-    observacao_controle_relatorios = request.form.get("observacao_controle_relatorios")
-
-    return {
-        "responsavel": responsavel,
-        "descricao": descricao,
-        "metodo_importacao": metodo_importacao,
-        "forma_movimento": forma_movimento,
-        "envio_digital": envio_digital,
-        "envio_fisico": envio_fisico,
-        "malote_coleta": malote_coleta,
-        "controle_relatorios": controle_relatorios,
-        "observacao_movimento": observacao_movimento,
-        "observacao_controle_relatorios": observacao_controle_relatorios,
-        "particularidades_texto": particularidades,
-    }
-
-
-def processar_dados_pessoal(request):
-    """Função auxiliar para processar dados do departamento pessoal"""
-    return {
-        "responsavel": request.form.get("responsavel"),
-        "descricao": request.form.get("descricao"),
-        "data_envio": request.form.get("data_envio"),
-        "registro_funcionarios": request.form.get("registro_funcionarios"),
-        "ponto_eletronico": request.form.get("ponto_eletronico"),
-        "pagamento_funcionario": request.form.get("pagamento_funcionario"),
-        "particularidades_texto": sanitize_html(request.form.get("particularidades")),
-    }
-
-
-def processar_dados_administrativo(request):
-    """Função auxiliar para processar dados do departamento administrativo"""
-    return {
-        "particularidades_texto": sanitize_html(request.form.get("particularidades"))
-    }
 
 
 @app.route("/empresa/editar/<int:id>", methods=["GET", "POST"])
