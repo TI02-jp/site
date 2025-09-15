@@ -281,17 +281,10 @@ def inject_task_tags():
     """Provide task-related tags for dynamic sidebar menus."""
     if not current_user.is_authenticated:
         return {"tasks_tags": []}
-    if current_user.role == "admin":
-        tags = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-            .order_by(Tag.nome)
-            .all()
-        )
-    else:
-        tags = sorted(
-            [t for t in current_user.tags if t.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER],
-            key=lambda t: t.nome,
-        )
+    tags = sorted(
+        [t for t in current_user.tags if t.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER],
+        key=lambda t: t.nome,
+    )
     return {"tasks_tags": tags}
 
 
