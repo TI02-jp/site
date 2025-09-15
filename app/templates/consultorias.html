@@ -30,7 +30,6 @@
                 <table class="table table-striped mb-0 text-nowrap text-start">
                     <thead>
                         <tr>
-                            <th class="text-start">Código</th>
                             <th class="text-start">Consultoria</th>
                             <th class="text-start">Usuário</th>
                             <th class="text-start">Senha</th>
@@ -42,7 +41,6 @@
                     <tbody>
                         {% for c in consultorias %}
                         <tr>
-                            <td class="text-start">{{ c.id }}</td>
                             <td class="text-start">{{ c.nome }}</td>
                             <td class="text-start">{{ c.usuario }}</td>
                             <td class="text-start">{{ c.senha }}</td>
@@ -56,7 +54,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="{{ 5 if current_user.role == 'admin' else 4 }}" class="text-center py-5 text-muted">
+                            <td colspan="{{ 4 if current_user.role == 'admin' else 3 }}" class="text-center py-5 text-muted">
                                 <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
                                 Nenhuma consultoria cadastrada
                             </td>
