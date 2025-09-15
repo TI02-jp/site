@@ -32,20 +32,21 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0">
+                <table class="table table-bordered table-hover mb-0 text-start">
                     <thead class="table-primary">
                         <tr>
-                            <th>Nome</th>
-                            <th style="width: 300px;">Email</th>
-                            <th style="width: 150px;">Usuário</th>
-                            <th style="width: 120px;">Perfil</th>
-                            <th style="width: 200px;">Tags</th>
-                            <th style="width: 100px;" class="text-center">Ações</th>
+                            <th class="text-start">Nome</th>
+                            <th class="text-start" style="width: 300px;">Email</th>
+                            <th class="text-start" style="width: 150px;">Usuário</th>
+                            <th class="text-start" style="width: 120px;">Perfil</th>
+                            <th class="text-start" style="width: 200px;">Tags</th>
+                            <th class="text-start" style="width: 100px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
-                            <td>
+                        <tr>
+                            <td class="text-start">
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-person-circle me-2 text-muted"></i>
                                     <div class="fw-semibold">{{ user.name }}</div>
@@ -57,13 +58,13 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td>
+                            <td class="text-start">
                                 <span class="text-muted" style="white-space: nowrap;">{{ user.email }}</span>
                             </td>
-                            <td>
+                            <td class="text-start">
                                 <span class="font-monospace">{{ user.username }}</span>
                             </td>
-                            <td>
+                            <td class="text-start">
                                 {% if user.role == 'admin' %}
                                     <span class="badge bg-success">Administrador</span>
                                 {% elif user.role == 'user' %}
@@ -72,7 +73,7 @@
                                     <span class="badge bg-secondary">{{ user.role }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-start">
                                 {% if user.tags %}
                                     {% for tag in user.tags %}
                                         <span class="badge bg-secondary">{{ tag.nome }}</span>
@@ -81,7 +82,7 @@
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center">
+                            <td class="text-start">
                                 {% if not user.is_master or current_user.id == user.id %}
                                 <a href="{{ url_for('edit_user', user_id=user.id) }}"
                                    class="btn btn-sm btn-outline-primary"
