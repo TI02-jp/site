@@ -1994,11 +1994,24 @@ def tasks_new():
         form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
         form.tag_id.data = parent_task.tag_id
         form.tag_id.render_kw = {"disabled": True}
+        users = [u for u in parent_task.tag.users if u.ativo]
+        form.assigned_to.choices = [(0, "Sem responsável")] + [
+            (u.id, u.name) for u in users
+        ]
     else:
         tags_query = (
             Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
         )
         form.tag_id.choices = [(t.id, t.nome) for t in tags_query.all()]
+        if form.tag_id.data:
+            tag = Tag.query.get(form.tag_id.data)
+            if tag:
+                users = [u for u in tag.users if u.ativo]
+                form.assigned_to.choices = [(0, "Sem responsável")] + [
+                    (u.id, u.name) for u in users
+                ]
+        else:
+            form.assigned_to.choices = [(0, "Sem responsável")]
     if form.validate_on_submit():
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         task = Task(
@@ -2009,6 +2022,7 @@ def tasks_new():
             due_date=form.due_date.data,
             created_by=current_user.id,
             parent_id=parent_id,
+            assigned_to=(form.assigned_to.data or None),
         )
         db.session.add(task)
         db.session.commit()
@@ -2020,6 +2034,19 @@ def tasks_new():
         else url_for("tasks_overview")
     )
     return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
+
+
+@app.route("/tasks/users/<int:tag_id>")
+@admin_required
+def tasks_users(tag_id):
+    """Return active users for a given tag."""
+    tag = Tag.query.get_or_404(tag_id)
+    users = [
+        {"id": u.id, "name": u.name}
+        for u in tag.users
+        if u.ativo
+    ]
+    return jsonify(users)
 
 
 @app.route("/tasks/sector/<int:tag_id>")

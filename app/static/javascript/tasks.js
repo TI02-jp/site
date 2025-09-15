@@ -25,4 +25,26 @@ document.addEventListener('DOMContentLoaded', () => {
             icon.classList.toggle('bi-chevron-right');
         });
     });
+
+    const tagSelect = document.getElementById('tag_id');
+    const userSelect = document.getElementById('assigned_to');
+    if (tagSelect && userSelect) {
+        const loadUsers = (tagId) => {
+            fetch(`/tasks/users/${tagId}`)
+                .then(res => res.json())
+                .then(users => {
+                    userSelect.innerHTML = '<option value="0">Sem responsável</option>';
+                    users.forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.id;
+                        opt.textContent = u.name;
+                        userSelect.appendChild(opt);
+                    });
+                });
+        };
+        if (tagSelect.value) {
+            loadUsers(tagSelect.value);
+        }
+        tagSelect.addEventListener('change', () => loadUsers(tagSelect.value));
+    }
 });
