@@ -6,8 +6,7 @@
     <title>{% block title %}SISTEMA DE EMPRESAS{% endblock %}</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
     {% block extra_css %}{% endblock %}
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -351,12 +350,12 @@
         <div class="flash-container">
           {% for category, message in messages %}
             <div
-              class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+              class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible"
               role="alert"
             >
-              <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }}"></i>
+              <i class="fa-solid {{ 'fa-triangle-exclamation' if category == 'error' else 'fa-circle-check' }}"></i>
               <span class="flash-message">{{ message }}</span>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+              <button type="button" class="btn-close" aria-label="Fechar"></button>
             </div>
           {% endfor %}
         </div>
@@ -366,7 +365,7 @@
 <div class="wrapper">
     <!-- Toggle Button para Mobile -->
     <button class="sidebar-toggle" id="sidebarToggle">
-        <i class="bi bi-list"></i>
+        <i class="fa-solid fa-bars"></i>
     </button>
 
     <!-- Overlay para Mobile -->
@@ -378,14 +377,14 @@
             <!-- Header da Sidebar -->
             <div class="sidebar-header">
                 <h4>
-                    <i class="bi bi-building-gear"></i>
+                    <i class="fa-solid fa-building"></i>
                     JP Contábil
                 </h4>
                 <a href="{{ url_for('home') }}" class="home-btn" title="Início">
-                    <i class="bi bi-house"></i>
+                    <i class="fa-solid fa-house"></i>
                 </a>
                 <a href="{{ url_for('logout') }}" class="logout-icon" title="Sair">
-                    <i class="bi bi-box-arrow-right"></i>
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </a>
                 <div class="user-info">
                     <div class="user-avatar">
@@ -407,13 +406,13 @@
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                                <i class="bi bi-speedometer2"></i>
+                                <i class="fa-solid fa-gauge"></i>
                                 Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint in ['listar_empresas', 'editar_empresa', 'visualizar_empresa'] %}active{% endif %}" href="{{ url_for('listar_empresas') }}">
-                                <i class="bi bi-buildings"></i>
+                                <i class="fa-solid fa-city"></i>
                                 Empresas
                                 <span class="nav-badge">{{ total_empresas or 0 }}</span>
                             </a>
@@ -428,14 +427,14 @@
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'relatorios' %}active{% endif %}" href="{{ url_for('relatorios') }}">
-                                <i class="bi bi-graph-up"></i>
+                                <i class="fa-solid fa-chart-line"></i>
                                 Relatórios
                             </a>
                         </li>
                         {% set user_section_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint in user_section_endpoints %}active{% endif %}" href="{{ url_for('list_users') }}">
-                                <i class="bi bi-people"></i>
+                                <i class="fa-solid fa-users"></i>
                                 Usuários
                                 <span class="nav-badge">{{ total_usuarios or 0 }}</span>
                             </a>
@@ -443,14 +442,14 @@
                             <ul class="nav flex-column ms-3">
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.endpoint == 'online_users' %}active{% endif %}" href="{{ url_for('online_users') }}">
-                                        <i class="bi bi-person-check"></i>
+                                        <i class="fa-solid fa-user-check"></i>
                                         Usuários Online
                                         <span class="nav-badge">{{ online_users_count or 0 }}</span>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.endpoint in ['tags', 'cadastro_tag', 'editar_tag'] %}active{% endif %}" href="{{ url_for('tags') }}">
-                                        <i class="bi bi-tags"></i>
+                                        <i class="fa-solid fa-tags"></i>
                                         Tags
                                     </a>
                                 </li>
@@ -478,7 +477,7 @@
     <!-- Footer -->
     <footer class="text-center">
         <div class="container">
-            <div class="justify-content-between align-items-center">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span>JP Contábil &copy; {{ now.year }}</span>
                 <span>Desenvolvido por TI JP Contábil</span>
             </div>
@@ -487,13 +486,11 @@
 
 <div id="cookie-banner" class="cookie-banner">
     <p>Utilizamos cookies para analisar o tráfego e melhorar sua experiência. Você pode aceitar ou rejeitar o uso de cookies não essenciais. <a href="{{ url_for('cookies') }}">Saiba mais</a>.</p>
-    <div class="d-flex gap-2">
+    <div style="display:flex; gap:0.5rem;">
         <button id="accept-cookies" class="btn btn-primary btn-sm">Aceitar</button>
         <button id="reject-cookies" class="btn btn-secondary btn-sm">Rejeitar</button>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="{{ url_for('static', filename='javascript/mensagens.js') }}"></script>
@@ -564,11 +561,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Auto-dismiss alerts
     document.querySelectorAll('.alert-dismissible').forEach(alert => {
-        setTimeout(() => {
-            if (bootstrap.Alert) {
-                new bootstrap.Alert(alert).close();
-            }
-        }, 3000);
+        const closeBtn = alert.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => alert.remove());
+        }
+        setTimeout(() => alert.remove(), 3000);
     });
 
     // Fechar sidebar ao redimensionar para desktop

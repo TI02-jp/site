@@ -352,6 +352,20 @@ body.login-page {
     color: #6c757d;
 }
 
+/* Estrutura flexível para grupos de input */
+.login-container .input-group {
+    display: flex;
+    width: 100%;
+}
+
+.login-container .input-group .form-control {
+    flex: 1;
+}
+
+.login-container .input-group-text + .form-control {
+    border-left: 0;
+}
+
 /* Inputs do formulário de login */
 .login-container .form-control {
     border-color: #dee2e6;
@@ -1265,6 +1279,18 @@ iframe {
 /* -----------------------------
 Flash Messages
 ----------------------------- */
+.btn-close {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.btn-close::before {
+    content: "\00d7";
+}
+
 .flash-container {
     position: fixed;
     top: 1rem;
