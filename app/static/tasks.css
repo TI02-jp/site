@@ -1,3 +1,15 @@
+.content-area-mural {
+  flex-grow: 1;
+  overflow-y: visible;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  position: relative;
+}
+
+.content-wrapper-mural {
+  padding: 1rem;
+  max-width: 100%;
+}
+
 .mural-page {
   min-height: calc(100vh - 80px);
   box-sizing: border-box;

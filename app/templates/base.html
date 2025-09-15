@@ -467,9 +467,9 @@
         </nav>
 
         <!-- Área de Conteúdo -->
-        <main class="content-area">
+        <main class="{% block content_area_class %}content-area{% endblock %}">
             <!-- Conteúdo -->
-            <div class="content-wrapper">
+            <div class="{% block content_wrapper_class %}content-wrapper{% endblock %}">
                 {% block content %}{% endblock %}
             </div>
         </main>
