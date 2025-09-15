@@ -2,46 +2,116 @@
 
 {% block title %}Nova Tarefa{% endblock %}
 
-{% block content %}
-<div class="container mt-4" style="max-width: 800px;">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nova Tarefa</h2>
-    </div>
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        {% if parent_task %}
-        {{ form.parent_id }}
-        <div class="mb-3">
-            <label class="form-label">Tarefa Pai</label>
-            <input type="text" class="form-control" value="{{ parent_task.title }}" disabled>
-        </div>
-        {% else %}
-        <div class="mb-3">
-            {{ form.tag_id.label(class="form-label") }}
-            {{ form.tag_id(class="form-select") }}
-        </div>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">
+    <div class="nav-section-title">PRINCIPAL</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                ACESSÓRIAS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right"></i>
+                SIEG
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('consultorias') }}">
+                <i class="bi bi-buildings"></i>
+                CONSULTORIAS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('sala_reunioes') }}">
+                <i class="bi bi-calendar-event"></i>
+                SALA DE REUNIÕES
+            </a>
+        </li>
+        {% if user_has_tag('Gestão') %}
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="return false;">
+                <i class="bi bi-people"></i>
+                DIRETORIA JP
+            </a>
+        </li>
         {% endif %}
-        <div class="mb-3">
-            {{ form.title.label(class="form-label") }}
-            {{ form.title(class="form-control") }}
-            {% for error in form.title.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+        <li class="nav-item">
+            <a class="nav-link {% if request.endpoint.startswith('tasks_') %}active{% endif %}" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="{% if request.endpoint.startswith('tasks_') %}true{% else %}false{% endif %}" aria-controls="tasksMenu">
+                <i class="bi bi-list-task"></i>
+                MURAL
+            </a>
+            <div class="collapse {% if request.endpoint.startswith('tasks_') %}show{% endif %}" id="tasksMenu">
+                <ul class="nav flex-column ms-3">
+                    {% for t in tasks_tags %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tasks_sector' and request.view_args.get('tag_id') == t.id %}active{% endif %}" href="{{ url_for('tasks_sector', tag_id=t.id) }}">{{ t.nome }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tasks_new' %}active{% endif %}" href="{{ url_for('tasks_new') }}">Nova Tarefa</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tasks_overview' %}active{% endif %}" href="{{ url_for('tasks_overview') }}">Visão Geral</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="new-task-container">
+    <div class="new-task-form">
+        <div class="new-task-header">
+            <i class="bi bi-plus-circle"></i>
+            <h2>Nova Tarefa</h2>
         </div>
-        <div class="mb-3">
-            {{ form.description.label(class="form-label") }}
-            {{ form.description(class="form-control") }}
-        </div>
-        <div class="mb-3">
-            {{ form.priority.label(class="form-label") }}
-            {{ form.priority(class="form-select") }}
-        </div>
-        <div class="mb-3">
-            {{ form.due_date.label(class="form-label") }}
-            {{ form.due_date(class="form-control") }}
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-            <a href="{{ cancel_url }}" class="btn btn-outline-secondary">Cancelar</a>
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
-    </form>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            {% if parent_task %}
+            {{ form.parent_id }}
+            <div class="mb-3">
+                <label class="form-label">Tarefa Pai</label>
+                <input type="text" class="form-control" value="{{ parent_task.title }}" disabled>
+            </div>
+            {% else %}
+            <div class="mb-3">
+                {{ form.tag_id.label(class="form-label") }}
+                {{ form.tag_id(class="form-select") }}
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+                {% for error in form.title.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.priority.label(class="form-label") }}
+                {{ form.priority(class="form-select") }}
+            </div>
+            <div class="mb-3">
+                {{ form.due_date.label(class="form-label") }}
+                {{ form.due_date(class="form-control") }}
+            </div>
+            <div class="form-actions">
+                <a href="{{ cancel_url }}" class="btn btn-outline-secondary">Cancelar</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
