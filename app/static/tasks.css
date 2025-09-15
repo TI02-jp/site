@@ -58,6 +58,20 @@
   background: #4b5563;
 }
 
+.btn-view {
+  background: #374151;
+  color: #e5e7eb;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
+.btn-view:hover {
+  background: #4b5563;
+}
+
 .kanban-board {
   display: flex;
   gap: 1rem;
