@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    window.scrollTo(0, 0);
+
     document.querySelectorAll('.change-status').forEach(btn => {
         btn.addEventListener('click', () => {
             const taskId = btn.dataset.id;
