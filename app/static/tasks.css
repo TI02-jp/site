@@ -13,18 +13,18 @@
 
 /* Ensure full-height content without footer overlap */
 .content-wrapper {
-  padding: 0;
   height: calc(100vh - 80px);
   box-sizing: border-box;
 }
 
 .kanban {
-  padding: 1rem;
+  padding: 5px 10px;
   background: linear-gradient(135deg, #1f2937, #111827);
   height: 100%;
   box-sizing: border-box;
   overflow-y: visible;
   color: #e5e7eb;
+  border-radius: 8px;
 }
 
 .kanban-header h2 i {
@@ -32,7 +32,7 @@
 }
 
 .btn-new-task {
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
   padding: 0.4rem 0.75rem;
   border-radius: 4px;
