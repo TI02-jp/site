@@ -14,9 +14,12 @@
 <section class="kanban">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Mural - {{ tag.nome }}</h2>
-    {% if current_user.role == 'admin' %}
-    <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
-    {% endif %}
+    <div>
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
+      {% endif %}
+      <a href="{{ url_for('tasks_history', tag_id=tag.id) }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
+    </div>
   </div>
   {% from "tasks_macros.html" import render_task with context %}
   {% set status_meta = {

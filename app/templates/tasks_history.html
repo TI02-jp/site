@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Tarefas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<section class="kanban">
+  <div class="history-header">
+    <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
+  </div>
+  <ul class="history-list">
+    {% for task in tasks %}
+    <li class="history-item">
+      <span class="title">{{ task.title }}</span>
+      <span class="meta">{{ task.tag.nome }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>
+    </li>
+    {% else %}
+    <li class="empty">Nenhuma tarefa.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

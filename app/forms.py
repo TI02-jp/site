@@ -252,7 +252,9 @@ class TaskForm(FlaskForm):
     """Formulário para criação de tarefas."""
 
     title = StringField("Título", validators=[DataRequired()])
-    description = TextAreaField("Descrição", validators=[Optional()])
+    description = TextAreaField(
+        "Descrição", validators=[Optional()], render_kw={"rows": 4}
+    )
     tag_id = SelectField("Setor", coerce=int, validators=[DataRequired()])
     priority = SelectField(
         "Prioridade",
