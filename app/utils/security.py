@@ -1,9 +1,6 @@
 """Security-related helper utilities."""
 
 import re
-import subprocess
-
-from typing import Sequence
 
 # Regular expressions to strip potentially dangerous content
 _SCRIPT_TAG_RE = re.compile(r'<script.*?>.*?</script>', re.IGNORECASE | re.DOTALL)
@@ -27,23 +24,3 @@ def sanitize_html(value: str | None) -> str:
     # Remove javascript: protocol usages
     cleaned = _JS_PROTOCOL_RE.sub("", cleaned)
     return cleaned
-
-
-def run_command_safe(cmd: Sequence[str]) -> subprocess.CompletedProcess:
-    """Execute an external command securely.
-
-    The command is run without a shell and arguments containing shell
-    metacharacters are rejected to mitigate command injection attempts.
-    """
-    if not isinstance(cmd, Sequence) or not cmd:
-        raise ValueError("cmd must be a non-empty sequence of strings")
-
-    for arg in cmd:
-        if not isinstance(arg, str):
-            raise ValueError("command arguments must be strings")
-        if any(c in arg for c in [';', '&', '|']):
-            raise ValueError("unsafe characters in command argument")
-
-    return subprocess.run(cmd, check=True, capture_output=True, text=True)
-
-
