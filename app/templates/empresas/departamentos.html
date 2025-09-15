@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='particularidades.css') }}">
+{% endblock %}
+
 {% block title %}Departamentos{% endblock %}
 
 {% block content %}
@@ -16,15 +20,15 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm company-nav">
+            <div class="card border-0 shadow-sm part-nav-card">
                 <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                    <div class="d-flex justify-content-center flex-wrap gap-2 part-nav-actions">
+                        <a href="#fiscal" class="btn part-nav-link btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn part-nav-link btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn part-nav-link btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn part-nav-link btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                         {% if can_access_financeiro %}
-                        <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
+                        <a href="#financeiro" class="btn part-nav-link btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
                         {% endif %}
                     </div>
                 </div>
@@ -32,14 +36,14 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="fiscal">
-        <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
+    <div class="card shadow-lg mb-5 part-section" id="fiscal">
+        <div class="card-header part-bg-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
                 {{ fiscal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="fiscal">
                 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
+                <h5 class="part-text-blue border-bottom pb-2 mb-3"><i class="bi bi-download me-2"></i>Configurações de Importação</h5>
                 <div class="row g-4 mb-4 align-items-stretch">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.formas_importacao.label.text }}</label>
@@ -82,7 +86,7 @@
                         </div>
                     </div>
                     <div class="col-md-6 d-flex flex-column">
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2 align-self-start" id="fiscal_add_obs_importacao"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <button type="button" class="btn part-btn-outline-blue btn-sm mt-2 align-self-start" id="fiscal_add_obs_importacao"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_importacao_container" class="form-floating mt-2 flex-grow-1" style="display:none;">
                             {{ fiscal_form.observacao_importacao(class="form-control h-100", id="fiscal_observacao_importacao", placeholder="Observação", style="overflow-y: auto;") }}
                             {{ fiscal_form.observacao_importacao.label }}
@@ -91,7 +95,7 @@
                 </div>
 
 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
+                <h5 class="part-text-blue border-bottom pb-2 mb-3"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento e Contato</h5>
                 <div class="row g-4 mb-4 align-items-stretch">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ fiscal_form.forma_movimento.label.text }}</label>
@@ -137,7 +141,7 @@
                             </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <button type="button" class="btn part-btn-outline-blue btn-sm mt-2" id="fiscal_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_envio_container" class="form-floating mt-2" style="display:none;">
                             {{ fiscal_form.observacao_movimento(class="form-control", id="fiscal_observacao_movimento", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_movimento.label }}
@@ -147,11 +151,11 @@
                     <div class="col-md-6 d-flex flex-column">
                         <label class="form-label fw-semibold">Contatos</label>
                         <div id="contatos-container"></div>
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="add-contato">
+                        <button type="button" class="btn part-btn-outline-blue btn-sm mt-2" id="add-contato">
                             <i class="bi bi-plus-circle"></i> Adicionar Pessoa
                         </button>
                         {{ fiscal_form.contatos_json(id='contatos_json') }}
-                        <button type="button" class="btn btn-outline-dept-blue btn-sm mt-2" id="fiscal_add_obs_contato"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <button type="button" class="btn part-btn-outline-blue btn-sm mt-2" id="fiscal_add_obs_contato"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="fiscal_obs_contato_container" class="form-floating mt-2" style="display:none;">
                             {{ fiscal_form.observacao_contato(class="form-control", id="fiscal_observacao_contato", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ fiscal_form.observacao_contato.label }}
@@ -159,7 +163,7 @@
                     </div>
                 </div>
                 
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <h5 class="part-text-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div id="editor-fiscal" style="height: 250px;"></div>
@@ -169,21 +173,21 @@
                 </div>
                 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal</button>
+                    <button type="submit" class="btn part-btn-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal</button>
                 </div>
             </form>
             {% if fiscal and fiscal.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="contabil">
-        <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
+    <div class="card shadow-lg mb-5 part-section" id="contabil">
+        <div class="card-header part-bg-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
                 {{ contabil_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="contabil">
                 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
+                <h5 class="part-text-orange border-bottom pb-2 mb-3"><i class="bi bi-gear me-2"></i>Envio de Documento</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ contabil_form.metodo_importacao.label.text }}</label>
@@ -242,14 +246,14 @@
                             </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-outline-dept-orange btn-sm mt-2" id="contabil_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <button type="button" class="btn part-btn-outline-orange btn-sm mt-2" id="contabil_add_obs_envio"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_envio_container" class="form-floating mt-2" style="display:none;">
                             {{ contabil_form.observacao_movimento(class="form-control", id="contabil_observacao_movimento", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ contabil_form.observacao_movimento.label }}
                         </div>
                 </div>
                 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
+                <h5 class="part-text-orange border-bottom pb-2 mb-3"><i class="bi bi-file-earmark-text me-2"></i>Controle e Relatórios</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <label class="form-label fw-semibold">{{ contabil_form.controle_relatorios.label.text }}</label>
@@ -273,7 +277,7 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-12">
-                        <button type="button" class="btn btn-outline-dept-orange btn-sm" id="contabil_add_obs_controle_relatorios"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
+                        <button type="button" class="btn part-btn-outline-orange btn-sm" id="contabil_add_obs_controle_relatorios"><i class="bi bi-plus-circle"></i> Adicionar Observação</button>
                         <div id="contabil_obs_controle_relatorios_container" class="form-floating mt-2" style="display:none;">
                             {{ contabil_form.observacao_controle_relatorios(class="form-control", id="contabil_observacao_controle_relatorios", placeholder="Observação", style="height: 100px; overflow-y: auto;") }}
                             {{ contabil_form.observacao_controle_relatorios.label }}
@@ -281,7 +285,7 @@
                     </div>
                 </div>
 
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <h5 class="part-text-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                          <div id="editor-contabil" style="height: 250px;"></div>
@@ -291,15 +295,15 @@
                 </div>
 
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil</button>
+                    <button type="submit" class="btn part-btn-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil</button>
                 </div>
             </form>
             {% if contabil and contabil.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="pessoal">
-        <div class="card-header bg-dept-blue text-white py-3">
+    <div class="card shadow-lg mb-5 part-section" id="pessoal">
+        <div class="card-header part-bg-blue text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-people me-2"></i>Departamento Pessoal
             </h3>
@@ -310,7 +314,7 @@
                 <input type="hidden" name="form_type" value="pessoal">
 
                 <!-- Configurações -->
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3">
+                <h5 class="part-text-blue border-bottom pb-2 mb-3">
                     <i class="bi bi-gear me-2"></i>Configurações
                 </h5>
                 <div class="row g-4 mb-4">
@@ -343,7 +347,7 @@
                 </div>
 
                 <!-- Particularidades -->
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3">
+                <h5 class="part-text-blue border-bottom pb-2 mb-3">
                     <i class="bi bi-pencil-square me-2"></i>Particularidades
                 </h5>
                 <div class="row g-4 mb-4">
@@ -356,7 +360,7 @@
 
                 <!-- Botão de envio -->
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dept-blue px-5">
+                    <button type="submit" class="btn part-btn-blue px-5">
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal
                     </button>
                 </div>
@@ -377,13 +381,13 @@
     </div>
 
 
-    <div class="card shadow-lg mb-5 section-anchor" id="administrativo">
-        <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
+    <div class="card shadow-lg mb-5 part-section" id="administrativo">
+        <div class="card-header part-bg-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
         <div class="card-body p-4">
             <form method="POST">
                 {{ administrativo_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="administrativo">
-                <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <h5 class="part-text-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div id="editor-administrativo" style="height: 250px;"></div>
@@ -392,7 +396,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
+                    <button type="submit" class="btn part-btn-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
                 </div>
             </form>
             {% if administrativo and administrativo.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
@@ -400,13 +404,13 @@
     </div>
 
     {% if can_access_financeiro %}
-    <div class="card shadow-lg mb-5 section-anchor" id="financeiro">
-        <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
+    <div class="card shadow-lg mb-5 part-section" id="financeiro">
+        <div class="card-header part-bg-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
         <div class="card-body p-4">
             <form method="POST">
                 {{ financeiro_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="financeiro">
-                <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
+                <h5 class="part-text-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div id="editor-financeiro" style="height: 250px;"></div>
@@ -415,7 +419,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Financeiro</button>
+                    <button type="submit" class="btn part-btn-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Financeiro</button>
                 </div>
             </form>
             {% if financeiro and financeiro.updated_at %}<div class="mt-3"><div class="alert alert-secondary d-flex align-items-center" role="alert"><i class="bi bi-clock me-2"></i><div><strong>Última atualização:</strong> {{ financeiro.updated_at.strftime('%d/%m/%Y às %H:%M') }}</div></div></div>{% endif %}
@@ -545,7 +549,7 @@ document.addEventListener("DOMContentLoaded", function () {
     {% endif %}
     
     // Sistema de barra de navegação fixa
-    const companyNav = document.querySelector('.company-nav');
+    const companyNav = document.querySelector('.part-nav-card');
     if (companyNav) {
         const navOffset = companyNav.getBoundingClientRect().top + window.scrollY;
         const placeholder = document.createElement('div');
@@ -592,12 +596,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Destaque da seção ativa
-    const navLinks = document.querySelectorAll('.company-nav .btn');
+    const navLinks = document.querySelectorAll('.part-nav-card .part-nav-link');
     const observerOptions = { root: null, rootMargin: '0px 0px -70% 0px', threshold: 0 };
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const activeLink = document.querySelector(`.company-nav a[href="#${entry.target.id}"]`);
+                const activeLink = document.querySelector(`.part-nav-card .part-nav-link[href="#${entry.target.id}"]`);
                 if (activeLink) {
                     navLinks.forEach(link => link.classList.remove('active'));
                     activeLink.classList.add('active');

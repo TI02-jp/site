@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0);
 
-    document.querySelectorAll('.change-status').forEach(btn => {
+    document.querySelectorAll('.mural-change-status').forEach(btn => {
         btn.addEventListener('click', () => {
             const taskId = btn.dataset.id;
             const status = btn.dataset.status;
@@ -16,10 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.querySelectorAll('.toggle-children').forEach(btn => {
+    document.querySelectorAll('.mural-toggle-children').forEach(btn => {
         btn.addEventListener('click', () => {
-            const card = btn.closest('.task-card');
-            card.classList.toggle('collapsed');
+            const card = btn.closest('.mural-card');
+            card.classList.toggle('mural-card-collapsed');
             const icon = btn.querySelector('i');
             icon.classList.toggle('bi-chevron-down');
             icon.classList.toggle('bi-chevron-right');

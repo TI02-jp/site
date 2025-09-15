@@ -1,0 +1,247 @@
+.part-nav-card {
+  background-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 0;
+}
+
+.part-nav-card .part-nav-link {
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  box-shadow: none;
+  transition: background-color 0.2s ease;
+}
+
+.part-nav-link:hover,
+.part-nav-link:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.part-nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.part-nav-card.fixed {
+  position: fixed;
+  top: 0;
+  z-index: 1020;
+  border-radius: 0;
+  width: inherit;
+}
+
+.part-nav-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.part-section {
+  scroll-margin-top: 80px;
+}
+
+.part-info-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.part-info-group > h6,
+.part-info-group .row,
+.part-info-group > .part-editor-content {
+  grid-column: 1 / -1;
+}
+
+.part-info-item {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.part-info-label {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.part-info-value {
+  font-size: 1rem;
+  color: #212529;
+  line-height: 1.4;
+}
+
+.part-info-value--centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.part-password-field {
+  display: flex;
+  align-items: center;
+}
+
+.part-password-hidden {
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+.part-editor-content {
+  text-align: left;
+  white-space: pre-line;
+}
+
+.part-editor-content img {
+  max-width: 100%;
+  height: auto;
+  cursor: pointer;
+}
+
+.part-clickable-copy {
+  cursor: pointer;
+}
+
+.part-text-blue {
+  color: var(--primary) !important;
+}
+
+.part-text-orange {
+  color: var(--accent) !important;
+}
+
+.part-bg-blue {
+  background-color: var(--primary) !important;
+}
+
+.part-bg-orange {
+  background-color: var(--accent) !important;
+}
+
+.part-bg-blue-subtle {
+  background-color: rgba(11, 40, 139, 0.1) !important;
+  color: var(--primary) !important;
+}
+
+.part-bg-orange-subtle {
+  background-color: rgba(232, 116, 41, 0.1) !important;
+  color: var(--accent) !important;
+}
+
+.part-btn-blue {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.part-btn-blue:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #fff;
+}
+
+.part-btn-orange {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.part-btn-orange:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+.part-btn-outline-blue {
+  background-color: transparent;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.part-btn-outline-blue:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.part-btn-outline-orange {
+  background-color: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.part-btn-outline-orange:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.part-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.part-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .part-page-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .part-page-header > div {
+    margin-bottom: 1rem;
+  }
+
+  .part-header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .part-header-actions .btn {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .part-nav-card.fixed {
+    position: static;
+  }
+
+  .part-nav-actions {
+    flex-direction: column;
+  }
+
+  .part-nav-actions .part-nav-link {
+    width: 100%;
+  }
+
+  .part-info-item {
+    margin-bottom: 1rem;
+  }
+
+  .part-info-label {
+    font-size: 0.8rem;
+  }
+
+  .part-info-value {
+    font-size: 0.9rem;
+  }
+}

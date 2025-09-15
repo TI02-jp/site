@@ -1,43 +1,43 @@
 {% macro render_task(task, TaskStatus, show_tag=False) %}
-<li class="task-card{% if task.children %} has-children{% endif %}">
-  <div class="task-header">
+<li class="mural-card{% if task.children %} mural-card--with-children{% endif %}">
+  <div class="mural-card-header">
     {% if task.children %}
-    <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
+    <button class="mural-toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
     {% endif %}
-    <div class="task-info">
-      <span class="task-title">{{ task.title }}</span>
+    <div class="mural-card-info">
+      <span class="mural-card-title">{{ task.title }}</span>
       {% if show_tag %}
-      <span class="task-tag">{{ task.tag.nome }}</span>
+      <span class="mural-card-tag">{{ task.tag.nome }}</span>
       {% endif %}
       {% if task.due_date %}
-      <div class="task-meta">Prazo: {{ task.due_date.strftime('%d/%m/%Y') }}</div>
+      <div class="mural-card-meta">Prazo: {{ task.due_date.strftime('%d/%m/%Y') }}</div>
       {% endif %}
       {% if task.children %}
-      <div class="progress"><div style="width: {{ task.progress }}%;"></div></div>
+      <div class="mural-progress"><div class="mural-progress-bar" style="width: {{ task.progress }}%;"></div></div>
       {% endif %}
       {% if task.status == TaskStatus.IN_PROGRESS and task.assignee %}
-      <div class="task-meta">Em andamento por: {{ task.assignee.name }}</div>
+      <div class="mural-card-meta">Em andamento por: {{ task.assignee.name }}</div>
       {% elif task.status == TaskStatus.DONE and task.finisher %}
-      <div class="task-meta">Finalizado por: {{ task.finisher.name }}</div>
+      <div class="mural-card-meta">Finalizado por: {{ task.finisher.name }}</div>
       {% elif task.assignee %}
-      <div class="task-meta">Responsável: {{ task.assignee.name }}</div>
+      <div class="mural-card-meta">Responsável: {{ task.assignee.name }}</div>
       {% endif %}
     </div>
-    <div class="task-actions">
+    <div class="mural-card-actions">
       {% if task.status == TaskStatus.PENDING %}
-      <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
+      <button class="mural-card-action mural-card-action--start mural-change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
       {% elif task.status == TaskStatus.IN_PROGRESS %}
-      <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
+      <button class="mural-card-action mural-card-action--done mural-change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
       {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
-      <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
+      <button class="mural-card-action mural-card-action--reopen mural-change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
       {% if current_user.role == 'admin' %}
-      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
+      <a class="mural-card-action mural-card-action--subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
       {% endif %}
     </div>
   </div>
   {% if task.children %}
-  <ul class="subtasks">
+  <ul class="mural-subtasks">
     {% for child in task.children %}
       {{ render_task(child, TaskStatus, show_tag=show_tag) }}
     {% endfor %}

@@ -11,51 +11,51 @@
 {% endblock %}
 
 {% block content %}
-<div class="new-task-container">
-  <div class="new-task-form">
-    <div class="new-task-header">
+<div class="mural-form-page">
+  <div class="mural-form">
+    <div class="mural-form-header">
       <i class="bi bi-eye"></i>
       <h2>Visualizar Tarefa</h2>
     </div>
-    <div class="form-row row-title-desc">
-      <div class="field">
+    <div class="mural-form-row mural-form-row--title">
+      <div class="mural-field">
         <label>Título</label>
         <input type="text" value="{{ task.title }}" disabled>
       </div>
-      <div class="field">
+      <div class="mural-field">
         <label>Descrição</label>
         <textarea rows="4" disabled>{{ task.description }}</textarea>
       </div>
     </div>
-    <div class="form-row">
-      <div class="field">
+    <div class="mural-form-row">
+      <div class="mural-field">
         <label>Setor</label>
         <input type="text" value="{{ task.tag.nome }}" disabled>
       </div>
-      <div class="field">
+      <div class="mural-field">
         <label>Usuário que finalizou</label>
         <input type="text" value="{{ task.finisher.name if task.finisher else '' }}" disabled>
       </div>
     </div>
-    <div class="form-row">
-      <div class="field">
+    <div class="mural-form-row">
+      <div class="mural-field">
         <label>Prazo</label>
         <input type="text" value="{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '' }}" disabled>
       </div>
-      <div class="field">
+      <div class="mural-field">
         <label>Data de finalização</label>
         <input type="text" value="{{ task.completed_at.strftime('%d/%m/%Y') if task.completed_at else '' }}" disabled>
       </div>
     </div>
-    <div class="form-row">
-      <div class="field">
+    <div class="mural-form-row">
+      <div class="mural-field">
         <label>Prioridade</label>
         <input type="text" value="{{ priority_labels.get(task.priority.value) }}" disabled>
       </div>
-      <div class="field"></div>
+      <div class="mural-field"></div>
     </div>
-    <div class="form-actions">
-      <a href="{{ url_for('tasks_history', tag_id=task.tag_id) }}" class="button button-outline">Voltar</a>
+    <div class="mural-form-actions">
+      <a href="{{ url_for('tasks_history', tag_id=task.tag_id) }}" class="mural-button mural-button-outline">Voltar</a>
     </div>
   </div>
 </div>

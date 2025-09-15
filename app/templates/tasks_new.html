@@ -11,9 +11,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="new-task-container">
-    <div class="new-task-form">
-        <div class="new-task-header">
+<div class="mural-form-page">
+    <div class="mural-form">
+        <div class="mural-form-header">
             <i class="bi bi-plus-circle"></i>
             <h2>Nova Tarefa</h2>
         </div>
@@ -21,13 +21,13 @@
             {{ form.hidden_tag() }}
             {% if parent_task %}
             {{ form.parent_id }}
-            <div class="field">
+            <div class="mural-field">
                 <label>Tarefa Pai</label>
                 <input type="text" value="{{ parent_task.title }}" disabled>
             </div>
             {% endif %}
-            <div class="form-row">
-                <div class="field">
+            <div class="mural-form-row">
+                <div class="mural-field">
                     {{ form.tag_id.label }}
                     {% if parent_task %}
                         {{ form.tag_id(disabled=True) }}
@@ -35,35 +35,35 @@
                         {{ form.tag_id() }}
                     {% endif %}
                 </div>
-                <div class="field">
+                <div class="mural-field">
                     {{ form.assigned_to.label }}
                     {{ form.assigned_to() }}
                 </div>
             </div>
-            <div class="form-row row-title-desc">
-                <div class="field">
+            <div class="mural-form-row mural-form-row--title">
+                <div class="mural-field">
                     {{ form.title.label }}
                     {{ form.title() }}
-                    {% for error in form.title.errors %}<div class="error">{{ error }}</div>{% endfor %}
+                    {% for error in form.title.errors %}<div class="mural-error">{{ error }}</div>{% endfor %}
                 </div>
-                <div class="field">
+                <div class="mural-field">
                     {{ form.description.label }}
                     {{ form.description() }}
                 </div>
             </div>
-            <div class="form-row">
-                <div class="field">
+            <div class="mural-form-row">
+                <div class="mural-field">
                     {{ form.due_date.label }}
                     {{ form.due_date() }}
                 </div>
-                <div class="field">
+                <div class="mural-field">
                     {{ form.priority.label }}
                     {{ form.priority() }}
                 </div>
             </div>
-            <div class="form-actions">
-                <a href="{{ cancel_url }}" class="button button-outline">Cancelar</a>
-                {{ form.submit(class="button button-primary") }}
+            <div class="mural-form-actions">
+                <a href="{{ cancel_url }}" class="mural-button mural-button-outline">Cancelar</a>
+                {{ form.submit(class="mural-button mural-button-primary") }}
             </div>
         </form>
     </div>

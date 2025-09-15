@@ -11,20 +11,22 @@
 {% endblock %}
 
 {% block content %}
-<section class="kanban">
-  <div class="history-header">
-    <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
-  </div>
-  <ul class="history-list">
-    {% for task in tasks %}
-    <li class="history-item">
-      <span class="title">{{ task.title }}</span>
-      <span class="meta">{{ task.tag.nome }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>
-      <a href="{{ url_for('tasks_view', task_id=task.id) }}" class="btn-view">Visualizar</a>
-    </li>
-    {% else %}
-    <li class="empty">Nenhuma tarefa.</li>
-    {% endfor %}
-  </ul>
-</section>
+<div class="mural-page">
+  <section class="mural-board">
+    <div class="mural-history-header">
+      <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
+    </div>
+    <ul class="mural-history-list">
+      {% for task in tasks %}
+      <li class="mural-history-item">
+        <span class="title">{{ task.title }}</span>
+        <span class="mural-history-meta">{{ task.tag.nome }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>
+        <a href="{{ url_for('tasks_view', task_id=task.id) }}" class="mural-button-view">Visualizar</a>
+      </li>
+      {% else %}
+      <li class="mural-empty">Nenhuma tarefa.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
 {% endblock %}

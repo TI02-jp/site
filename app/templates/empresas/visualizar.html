@@ -2,6 +2,10 @@
 
 {% block title %}{{ empresa.nome_empresa|upper }} - DETALHES COMPLETOS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='particularidades.css') }}">
+{% endblock %}
+
 {% block breadcrumb %}
 <li class="breadcrumb-item text-uppercase"><a class="text-uppercase" href="{{ url_for('listar_empresas') }}">Empresas</a></li>
 <li class="breadcrumb-item active text-uppercase">{{ empresa.nome_empresa }}</li>
@@ -39,15 +43,15 @@
 <div class="container-fluid text-uppercase" style="max-width: 1400px;">
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center part-page-header">
                 <div>
-                    <h1 class="text-dept-blue mb-2">
+                    <h1 class="part-text-blue mb-2">
                         <i class="bi bi-building-gear me-3"></i>{{ empresa.nome_empresa }}
                     </h1>
                     <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
                 </div>
-                <div class="text-end">
-                    <div class="badge bg-dept-blue-subtle px-3 py-2 mb-2">
+                <div class="text-end part-header-actions">
+                    <div class="badge part-bg-blue-subtle px-3 py-2 mb-2">
                         Código: {{ empresa.codigo_empresa or 'N/A' }}
                     </div>
                     <div class="d-block">
@@ -62,16 +66,16 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm company-nav">
+            <div class="card border-0 shadow-sm part-nav-card">
                 <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-empresa" class="btn btn-company-nav btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
-                        <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                    <div class="d-flex justify-content-center flex-wrap gap-2 part-nav-actions">
+                        <a href="#dados-empresa" class="btn part-nav-link btn-sm"><i class="bi bi-building me-1"></i>Dados da Empresa</a>
+                        <a href="#fiscal" class="btn part-nav-link btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                        <a href="#contabil" class="btn part-nav-link btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
+                        <a href="#pessoal" class="btn part-nav-link btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                        <a href="#administrativo" class="btn part-nav-link btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                         {% if can_access_financeiro %}
-                        <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
+                        <a href="#financeiro" class="btn part-nav-link btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
                         {% endif %}
                     </div>
                 </div>
@@ -79,58 +83,58 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="dados-empresa">
-        <div class="card-header bg-dept-blue text-white py-3">
+    <div class="card shadow-lg mb-5 part-section" id="dados-empresa">
+        <div class="card-header part-bg-blue text-white py-3">
             <h3 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Dados da Empresa</h3>
         </div>
         <div class="card-body p-4">
             <div class="row g-4">
                  <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
-                        <div class="info-item">
-                            <label class="info-label">Código da Empresa</label>
-                            <div class="info-value"><span class="badge bg-dept-blue-subtle fs-6">{{ empresa.codigo_empresa or 'Não informado' }}</span></div>
+                    <div class="part-info-group">
+                        <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2"></i>Identificação</h6>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Código da Empresa</label>
+                            <div class="part-info-value"><span class="badge part-bg-blue-subtle fs-6">{{ empresa.codigo_empresa or 'Não informado' }}</span></div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Nome da Empresa</label>
-                            <div class="info-value fw-semibold text-dept-blue">{{ empresa.nome_empresa or 'Não informado' }}</div>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Nome da Empresa</label>
+                            <div class="part-info-value fw-semibold part-text-blue">{{ empresa.nome_empresa or 'Não informado' }}</div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">CNPJ</label>
-                            <div class="info-value font-monospace clickable-copy">
+                        <div class="part-info-item">
+                            <label class="part-info-label">CNPJ</label>
+                            <div class="part-info-value font-monospace part-clickable-copy">
                                 {% if empresa.cnpj %}{% set cnpj = empresa.cnpj|string %}{% if cnpj|length == 14 %}{{ cnpj[:2] }}.{{ cnpj[2:5] }}.{{ cnpj[5:8] }}/{{ cnpj[8:12] }}-{{ cnpj[12:] }}{% else %}{{ empresa.cnpj }}{% endif %}{% else %}<span class="text-muted">Não informado</span>{% endif %}
                             </div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Data de Abertura</label>
-                            <div class="info-value">
-                                {% if empresa.data_abertura %}<span class="badge bg-dept-blue-subtle">{{ empresa.data_abertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}
+                        <div class="part-info-item">
+                            <label class="part-info-label">Data de Abertura</label>
+                            <div class="part-info-value">
+                                {% if empresa.data_abertura %}<span class="badge part-bg-blue-subtle">{{ empresa.data_abertura.strftime('%d/%m/%Y') }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
                  <div class="col-lg-4 col-md-6">
-                    <div class="info-group">
-                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
-                        <div class="info-item">
-                            <label class="info-label">Sócio Administrador</label>
-                            <div class="info-value">{% if empresa.socio_administrador %}<i class="bi bi-person-check me-2 text-dept-blue"></i>{{ empresa.socio_administrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                    <div class="part-info-group">
+                        <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-briefcase me-2"></i>Informações Empresariais</h6>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Sócio Administrador</label>
+                            <div class="part-info-value">{% if empresa.socio_administrador %}<i class="bi bi-person-check me-2 part-text-blue"></i>{{ empresa.socio_administrador }}{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Atividade Principal</label>
-                            <div class="info-value">{% if empresa.atividade_principal %}</i>{{ empresa.atividade_principal }}{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Atividade Principal</label>
+                            <div class="part-info-value">{% if empresa.atividade_principal %}</i>{{ empresa.atividade_principal }}{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Tributação</label>
-                            <div class="info-value">{% if empresa.tributacao %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Tributação</label>
+                            <div class="part-info-value">{% if empresa.tributacao %}<span class="badge part-bg-orange-subtle fs-6"><i class="bi bi-calculator me-1"></i>{{ empresa.tributacao }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Regime de Lançamento</label>
-                            <div class="info-value">
+                        <div class="part-info-item">
+                            <label class="part-info-label">Regime de Lançamento</label>
+                            <div class="part-info-value">
                                 {% if empresa.regime_lancamento_display %}
                                     {% for regime in empresa.regime_lancamento_display %}
-                                        <span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-journal-text me-1"></i>{{ regime }}</span>
+                                        <span class="badge part-bg-orange-subtle fs-6"><i class="bi bi-journal-text me-1"></i>{{ regime }}</span>
                                     {% endfor %}
                                 {% else %}
                                     <span class="text-muted">Não informado</span>
@@ -140,15 +144,15 @@
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-12">
-                    <div class="info-group">
-                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
-                        <div class="info-item">
-                            <label class="info-label">Sistema Utilizado</label>
-                            <div class="info-value">{% if empresa.sistema_utilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 text-dept-blue"></i><span class="badge bg-dept-blue-subtle">{{ empresa.sistema_utilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
+                    <div class="part-info-group">
+                        <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-pc-display me-2"></i>Sistemas e Tecnologia</h6>
+                        <div class="part-info-item">
+                            <label class="part-info-label">Sistema Utilizado</label>
+                            <div class="part-info-value">{% if empresa.sistema_utilizado %}<div class="d-flex align-items-center"><i class="bi bi-laptop me-2 part-text-blue"></i><span class="badge part-bg-blue-subtle">{{ empresa.sistema_utilizado }}</span></div>{% else %}<span class="text-muted">Não informado</span>{% endif %}</div>
                         </div>
-                        <div class="info-item">
-                            <label class="info-label">Sistemas/Consultorias</label>
-                            <div class="info-value">
+                        <div class="part-info-item">
+                            <label class="part-info-label">Sistemas/Consultorias</label>
+                            <div class="part-info-value">
                                 {% set placeholder_sistemas %}<span class="text-muted">Nenhum sistema adicional</span>{% endset %}
                                 {{ render_badge_list(empresa.sistemas_consultorias, 'badge bg-secondary', 'bi-tools', placeholder_sistemas) }}
                             </div>
@@ -158,8 +162,8 @@
             </div>
             <div class="row g-4 mt-2">
                 <div class="col-12">
-                    <div class="info-group">
-                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
+                    <div class="part-info-group">
+                        <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
                         {% if empresa.acessos %}
                             <div class="row g-2 fw-semibold mb-1">
                                 <div class="col-md-3">Portal</div>
@@ -174,7 +178,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         {% if acesso.link %}
-                                            <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control d-block text-dept-blue text-decoration-underline text-truncate" title="{{ acesso.link }}">{{ acesso.link }}</a>
+                                            <a href="{{ acesso.link }}" target="_blank" rel="noopener noreferrer" class="form-control d-block part-text-blue text-decoration-underline text-truncate" title="{{ acesso.link }}">{{ acesso.link }}</a>
                                         {% else %}
                                             <input type="text" class="form-control" value="" readonly>
                                         {% endif %}
@@ -193,7 +197,7 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <div class="info-item"><span class="text-muted">Não informado</span></div>
+                            <div class="part-info-item"><span class="text-muted">Não informado</span></div>
                         {% endif %}
                     </div>
                 </div>
@@ -201,37 +205,37 @@
         </div>
     </div>
 
-    <div id="fiscal" class="section-anchor">
+    <div id="fiscal" class="part-section">
     {% if fiscal %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-dept-blue text-white py-3">
+            <div class="card-header part-bg-blue text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn part-btn-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
-                            <div class="info-item">
-                                <label class="info-label">Envio de Documento</label>
-                                <div class="info-value">{% if fiscal.forma_movimento %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-blue"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio de Documento</label>
+                                <div class="part-info-value">{% if fiscal.forma_movimento %}<span class="badge part-bg-blue-subtle fs-6"><i class="bi bi-arrow-left-right me-1 part-text-blue"></i>{{ fiscal.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">Envio Digital</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio Digital</label>
+                                <div class="part-info-value">
                                     {% set placeholder_env_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {{ render_badge_list(fiscal.envio_digital, 'bg-dept-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
+                                    {{ render_badge_list(fiscal.envio_digital, 'part-bg-blue-subtle', 'bi-cloud-check', placeholder_env_digital) }}
                                 </div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">Envio Físico</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio Físico</label>
+                                <div class="part-info-value">
                                     {% set placeholder_env_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
                                     {% set fisico_list = fiscal.envio_fisico %}
                                     {% if fisico_list is string %}
@@ -247,13 +251,13 @@
                                             {% set fisico_ns.items = fisico_ns.items + [item] %}
                                         {% endif %}
                                     {% endfor %}
-                                    {{ render_badge_list(fisico_ns.items, 'bg-dept-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
+                                    {{ render_badge_list(fisico_ns.items, 'part-bg-blue-subtle', 'bi-inbox', placeholder_env_fisico) }}
                                 </div>
                             </div>
                             {% if fiscal.observacao_movimento %}
-                            <div class="info-item">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Observação</label>
+                                <div class="part-info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_movimento }}</textarea>
                                 </div>
                             </div>
@@ -265,9 +269,9 @@
 
                 <div class="row g-4 mt-2">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
-                            <div class="info-value" style="grid-column: 1 / -1;">
+                        <div class="part-info-group">
+                            <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-download me-2"></i>Formas de Importação</h6>
+                            <div class="part-info-value" style="grid-column: 1 / -1;">
                                 {% set placeholder_importacao %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-2 mb-2"></i><p class="mb-0">Nenhuma forma de importação configurada</p></div>{% endset %}
                                 {% set fi_raw = fiscal.formas_importacao %}
                                 {% set fi_items = [] %}
@@ -301,20 +305,20 @@
                                     {% set trimmed = item.strip() %}
                                     {% set fi_ns.items = fi_ns.items + [fi_map.get(trimmed, trimmed)] %}
                                 {% endfor %}
-                                {{ render_badge_list(fi_ns.items, 'bg-dept-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
+                                {{ render_badge_list(fi_ns.items, 'part-bg-blue-subtle', 'bi-check-circle', placeholder_importacao) }}
                             </div>
                             {% if fiscal.observacao_importacao %}
-                            <div class="info-item mt-2" style="grid-column: 1 / -1;">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
+                            <div class="part-info-item mt-2" style="grid-column: 1 / -1;">
+                                <label class="part-info-label">Observação</label>
+                                <div class="part-info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px;">{{ fiscal.observacao_importacao }}</textarea>
                                 </div>
                             </div>
                             {% endif %}
                         </div>
-                        <div class="info-group mt-4">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
-                            <div class="info-value">
+                        <div class="part-info-group mt-4">
+                            <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contato</h6>
+                            <div class="part-info-value">
                                 {% if fiscal.contatos_list %}
                                     <ul class="list-unstyled mb-0">
                                         {% for contato in fiscal.contatos_list %}
@@ -331,9 +335,9 @@
                                 {% endif %}
                             </div>
                             {% if fiscal.observacao_contato %}
-                            <div class="info-item mt-2">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
+                            <div class="part-info-item mt-2">
+                                <label class="part-info-label">Observação</label>
+                                <div class="part-info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px">{{ fiscal.observacao_contato }}</textarea>
                                 </div>
                             </div>
@@ -344,9 +348,9 @@
                 {% if fiscal.particularidades_texto and fiscal.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                            <div class="border rounded p-4 bg-white editor-content">{{ fiscal.particularidades_texto|sanitize }}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                            <div class="border rounded p-4 bg-white part-editor-content">{{ fiscal.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -355,31 +359,31 @@
         </div>
     {% else %}
         <div class="card shadow-lg mb-5" style="border-color:var(--primary);">
-            <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-header part-bg-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 part-text-blue mb-3"></i><h5 class="text-muted">Departamento Fiscal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn part-btn-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
 
-    <div id="contabil" class="section-anchor">
+    <div id="contabil" class="part-section">
     {% if contabil %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-dept-orange text-white py-3">
+            <div class="card-header part-bg-orange text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn part-btn-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
-                            <div class="info-item">
-                                <label class="info-label">Método de Importação</label>
+                        <div class="part-info-group">
+                            <h6 class="part-text-orange mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                            <div class="part-info-item">
+                                <label class="part-info-label">Método de Importação</label>
                                 {% set placeholder_metodo %}<span class="text-muted">Não informado</span>{% endset %}
                                 {% set mi_map = {'importado': 'Importado', 'digitado': 'Digitado'} %}
                                 {% set mi_items = [] %}
@@ -392,29 +396,29 @@
                                 {% for item in mi_items %}
                                     {% set mi_ns.items = mi_ns.items + [mi_map.get(item, item)] %}
                                 {% endfor %}
-                                <div class="info-value">{{ render_badge_list(mi_ns.items, 'badge bg-dept-orange-subtle text-dept-orange fs-6', 'bi-download', placeholder_metodo) }}</div>
+                                <div class="part-info-value">{{ render_badge_list(mi_ns.items, 'badge part-bg-orange-subtle part-text-orange fs-6', 'bi-download', placeholder_metodo) }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="row g-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
-                            <div class="info-item">
-                                <label class="info-label">Envio de Documento</label>
-                                <div class="info-value">{% if contabil.forma_movimento %}<span class="badge bg-dept-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 text-dept-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-orange mb-3 border-bottom pb-2"><i class="bi bi-cloud-upload me-2"></i>Envio de Documento</h6>
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio de Documento</label>
+                                <div class="part-info-value">{% if contabil.forma_movimento %}<span class="badge part-bg-orange-subtle fs-6"><i class="bi bi-arrow-left-right me-1 part-text-orange"></i>{{ contabil.forma_movimento }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">Envio Digital</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio Digital</label>
+                                <div class="part-info-value">
                                     {% set placeholder_cont_digital %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-cloud-slash fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
-                                    {{ render_badge_list(contabil.envio_digital, 'bg-dept-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
+                                    {{ render_badge_list(contabil.envio_digital, 'part-bg-orange-subtle', 'bi-cloud-check', placeholder_cont_digital) }}
                                 </div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">Envio Físico</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Envio Físico</label>
+                                <div class="part-info-value">
                                     {% set placeholder_cont_fisico %}<div class="text-center text-muted py-3 border rounded bg-light"><i class="bi bi-inbox fs-3 mb-2"></i><p class="mb-0 small">Não configurado</p></div>{% endset %}
                                     {% set cont_fisico = contabil.envio_fisico %}
                                     {% if cont_fisico is string %}
@@ -430,13 +434,13 @@
                                             {% set cont_ns.items = cont_ns.items + [item] %}
                                         {% endif %}
                                     {% endfor %}
-                                    {{ render_badge_list(cont_ns.items, 'bg-dept-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
+                                    {{ render_badge_list(cont_ns.items, 'part-bg-orange-subtle', 'bi-inbox', placeholder_cont_fisico) }}
                                 </div>
                             </div>
                             {% if contabil.observacao_movimento %}
-                            <div class="info-item">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
+                            <div class="part-info-item">
+                                <label class="part-info-label">Observação</label>
+                                <div class="part-info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px">{{ contabil.observacao_movimento }}</textarea>
                                 </div>
                             </div>
@@ -446,9 +450,9 @@
                 </div>
                 <div class="row g-4 mt-2">
                     <div class="col-12">
-                        <div class="info-group">
-                             <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
-                             <div class="info-value" style="grid-column: 1 / -1;">
+                        <div class="part-info-group">
+                             <h6 class="part-text-orange mb-3 border-bottom pb-2"><i class="bi bi-file-earmark-text me-2"></i>Controle de Relatórios</h6>
+                             <div class="part-info-value" style="grid-column: 1 / -1;">
                                 {% set placeholder_relatorios %}<div class="text-center text-muted py-4 border rounded bg-light"><i class="bi bi-file-earmark-x fs-2 mb-2"></i><p class="mb-0">Nenhum controle de relatório configurado</p></div>{% endset %}
                                 {% set cr_raw = contabil.controle_relatorios %}
                                 {% set cr_items = [] %}
@@ -476,12 +480,12 @@
                                     {% set trimmed = item.strip() %}
                                     {% set cr_ns.items = cr_ns.items + [cr_map.get(trimmed, trimmed)] %}
                                 {% endfor %}
-                                {{ render_badge_list(cr_ns.items, 'bg-dept-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
+                                {{ render_badge_list(cr_ns.items, 'part-bg-orange-subtle', 'bi-check-square', placeholder_relatorios) }}
                             </div>
                             {% if contabil.observacao_controle_relatorios %}
-                            <div class="info-item mt-2" style="grid-column: 1 / -1;">
-                                <label class="info-label">Observação</label>
-                                <div class="info-value">
+                            <div class="part-info-item mt-2" style="grid-column: 1 / -1;">
+                                <label class="part-info-label">Observação</label>
+                                <div class="part-info-value">
                                     <textarea class="form-control form-control-sm" readonly style="height:80px">{{ contabil.observacao_controle_relatorios }}</textarea>
                                 </div>
                             </div>
@@ -493,9 +497,9 @@
                 {% if contabil.particularidades_texto and contabil.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                              <div class="border rounded p-4 bg-white editor-content">{{ contabil.particularidades_texto|sanitize }}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                              <div class="border rounded p-4 bg-white part-editor-content">{{ contabil.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -504,64 +508,64 @@
         </div>
     {% else %}
         <div class="card shadow-lg mb-5" style="border-color:var(--accent);">
-            <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-header part-bg-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 part-text-orange mb-3"></i><h5 class="text-muted">Departamento Contábil não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn part-btn-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
 
-    <div id="pessoal" class="section-anchor">
+    <div id="pessoal" class="part-section">
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
-                <div class="card-header bg-dept-blue text-white py-3">
+                <div class="card-header part-bg-blue text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
                         <div class="d-flex align-items-center gap-2">
                             {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                            <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+                            <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn part-btn-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                         </div>
                     </div>
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-4">
                         <div class="col-lg-6 col-md-12">
-                            <div class="info-group">
-                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
-                                <div class="info-item">
-                                    <label class="info-label">Data de Envio</label>
-                                    <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-calendar-event me-1 text-dept-blue"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                            <div class="part-info-group">
+                                <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
+                                <div class="part-info-item">
+                                    <label class="part-info-label">Data de Envio</label>
+                                    <div class="part-info-value">{% if pessoal.data_envio %}<span class="badge part-bg-blue-subtle fs-6"><i class="bi bi-calendar-event me-1 part-text-blue"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-12">
-                            <div class="info-group">
-                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
+                            <div class="part-info-group">
+                                <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
                                 <div class="row">
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Registro de Funcionários</label>
-                                        <div class="info-value mt-2">
+                                    <div class="col-md-4 text-center part-info-item">
+                                        <label class="part-info-label">Registro de Funcionários</label>
+                                        <div class="part-info-value mt-2">
                                             {% if pessoal.registro_funcionarios %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2 text-dept-blue"></i>{{ pessoal.registro_funcionarios }}</span>
+                                                <span class="badge part-bg-blue-subtle fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2 part-text-blue"></i>{{ pessoal.registro_funcionarios }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não tem</span>
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Ponto Eletrônico</label>
-                                        <div class="info-value mt-2">
+                                    <div class="col-md-4 text-center part-info-item">
+                                        <label class="part-info-label">Ponto Eletrônico</label>
+                                        <div class="part-info-value mt-2">
                                             {% if pessoal.ponto_eletronico %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-clock me-2 text-dept-blue"></i>{{ pessoal.ponto_eletronico }}</span>
+                                                <span class="badge part-bg-blue-subtle fs-6 px-3 py-2"><i class="bi bi-clock me-2 part-text-blue"></i>{{ pessoal.ponto_eletronico }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Sistema de Pagamento</label>
-                                        <div class="info-value mt-2">
+                                    <div class="col-md-4 text-center part-info-item">
+                                        <label class="part-info-label">Sistema de Pagamento</label>
+                                        <div class="part-info-value mt-2">
                                             {% if pessoal.pagamento_funcionario %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2 text-dept-blue"></i>{{ pessoal.pagamento_funcionario }}</span>
+                                                <span class="badge part-bg-blue-subtle fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2 part-text-blue"></i>{{ pessoal.pagamento_funcionario }}</span>
                                             {% else %}
                                                 <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
                                             {% endif %}
@@ -575,9 +579,9 @@
                     {% if pessoal.particularidades_texto and pessoal.particularidades_texto.strip() %}
                     <div class="row mt-4">
                         <div class="col-12">
-                            <div class="info-group">
-                                <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                                  <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|sanitize }}</div>
+                            <div class="part-info-group">
+                                <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                                  <div class="border rounded p-4 bg-white part-editor-content">{{ pessoal.particularidades_texto|sanitize }}</div>
                             </div>
                         </div>
                     </div>
@@ -586,21 +590,21 @@
             </div>
         {% else %}
             <div class="card shadow-lg mb-5" style="border-color:var(--primary);">
-                <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
-                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+                <div class="card-header part-bg-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3></div>
+                <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 part-text-blue mb-3"></i><h5 class="text-muted">Departamento Pessoal não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn part-btn-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
             </div>
         {% endif %}
         </div>
 
-    <div id="administrativo" class="section-anchor">
+    <div id="administrativo" class="part-section">
     {% if administrativo %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-dept-orange text-white py-3">
+            <div class="card-header part-bg-orange text-white py-3">
                  <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn part-btn-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
@@ -608,9 +612,9 @@
                 {% if administrativo.particularidades_texto and administrativo.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                              <div class="border rounded p-4 bg-white editor-content">{{ administrativo.particularidades_texto|sanitize }}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-orange mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                              <div class="border rounded p-4 bg-white part-editor-content">{{ administrativo.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -619,22 +623,22 @@
         </div>
     {% else %}
         <div class="card shadow-lg mb-5" style="border-color:var(--accent);">
-            <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-orange mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-dept-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-header part-bg-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 part-text-orange mb-3"></i><h5 class="text-muted">Departamento Administrativo não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn part-btn-orange"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
 
     {% if can_access_financeiro %}
-    <div id="financeiro" class="section-anchor">
+    <div id="financeiro" class="part-section">
     {% if financeiro %}
         <div class="card shadow-lg mb-5">
-            <div class="card-header bg-dept-blue text-white py-3">
+            <div class="card-header part-bg-blue text-white py-3">
                  <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3>
                     <div class="d-flex align-items-center gap-2">
                         {% if financeiro.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ financeiro.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
-                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#financeiro" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
+                        <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#financeiro" class="btn part-btn-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                     </div>
                 </div>
             </div>
@@ -642,9 +646,9 @@
                 {% if financeiro.particularidades_texto and financeiro.particularidades_texto.strip() %}
                 <div class="row mt-4">
                     <div class="col-12">
-                        <div class="info-group">
-                            <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                              <div class="border rounded p-4 bg-white editor-content">{{ financeiro.particularidades_texto|sanitize }}</div>
+                        <div class="part-info-group">
+                            <h6 class="part-text-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
+                              <div class="border rounded p-4 bg-white part-editor-content">{{ financeiro.particularidades_texto|sanitize }}</div>
                         </div>
                     </div>
                 </div>
@@ -653,8 +657,8 @@
         </div>
     {% else %}
         <div class="card shadow-lg mb-5" style="border-color:var(--primary);">
-            <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
-            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 text-dept-blue mb-3"></i><h5 class="text-muted">Departamento Financeiro não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#financeiro" class="btn btn-dept-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
+            <div class="card-header part-bg-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
+            <div class="card-body p-4 text-center"><div class="py-5"><i class="bi bi-exclamation-triangle-fill fs-1 part-text-blue mb-3"></i><h5 class="text-muted">Departamento Financeiro não configurado</h5><p class="text-muted mb-4">Este departamento ainda não foi configurado.</p><a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#financeiro" class="btn part-btn-blue"><i class="bi bi-plus-circle me-2"></i>Configurar</a></div></div>
         </div>
     {% endif %}
     </div>
@@ -687,7 +691,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Fixa a barra de navegação quando alcança o topo
-    const companyNav = document.querySelector('.company-nav');
+    const companyNav = document.querySelector('.part-nav-card');
     if (companyNav) {
         const navOffset = companyNav.getBoundingClientRect().top + window.scrollY;
         const placeholder = document.createElement('div');
@@ -735,8 +739,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Toggle para mostrar/ocultar senhas
     document.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', function() {
-            const passwordField = this.closest('.password-field');
-            const hiddenSpan = passwordField.querySelector('.password-hidden');
+            const passwordField = this.closest('.part-password-field');
+            const hiddenSpan = passwordField.querySelector('.part-password-hidden');
             const password = passwordField.getAttribute('data-password');
             const icon = this.querySelector('i');
             
@@ -753,7 +757,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Funcionalidade de copiar para a área de transferência
-    document.querySelectorAll('.clickable-copy').forEach(element => {
+    document.querySelectorAll('.part-clickable-copy').forEach(element => {
         const textToCopy = element.textContent.trim();
         if (textToCopy && textToCopy !== '-' && textToCopy !== 'Não informado') {
             element.addEventListener('click', function() {
@@ -770,7 +774,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Clique em imagens das particularidades para ampliar
-    document.querySelectorAll('.editor-content img').forEach(img => {
+    document.querySelectorAll('.part-editor-content img').forEach(img => {
         img.classList.add('img-fluid');
         img.addEventListener('click', function() {
             const modalImg = document.getElementById('modalImage');
@@ -781,12 +785,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Highlighting da seção ativa durante scroll
-    const navLinks = document.querySelectorAll('.company-nav .btn');
+    const navLinks = document.querySelectorAll('.part-nav-card .part-nav-link');
     const observerOptions = { root: null, rootMargin: '0px 0px -70% 0px', threshold: 0 };
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const activeLink = document.querySelector(`.company-nav a[href="#${entry.target.id}"]`);
+                const activeLink = document.querySelector(`.part-nav-card .part-nav-link[href="#${entry.target.id}"]`);
                 if (activeLink) {
                     navLinks.forEach(link => link.classList.remove('active'));
                     activeLink.classList.add('active');
@@ -802,17 +806,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Otimização para impressão
     window.addEventListener('beforeprint', () => {
-        document.querySelectorAll('.password-field .password-hidden').forEach(field => {
+        document.querySelectorAll('.part-password-field .part-password-hidden').forEach(field => {
             if (field.textContent === '••••••••') {
-                const password = field.closest('.password-field').getAttribute('data-password');
+                const password = field.closest('.part-password-field').getAttribute('data-password');
                 if (password) field.textContent = password;
             }
         });
     });
 
     window.addEventListener('afterprint', () => {
-        document.querySelectorAll('.password-field .password-hidden').forEach(field => {
-             const password = field.closest('.password-field').getAttribute('data-password');
+        document.querySelectorAll('.part-password-field .part-password-hidden').forEach(field => {
+             const password = field.closest('.part-password-field').getAttribute('data-password');
              if (password) field.textContent = '••••••••';
         });
     });
