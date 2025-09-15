@@ -1,15 +1,36 @@
+.content-area-mural {
+  flex-grow: 1;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.content-wrapper-mural {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
 .mural-page {
-  min-height: calc(100vh - 80px);
+  flex: 1;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .mural-board {
   padding: 1.5rem;
   background: #ffffff;
   box-sizing: border-box;
-  overflow-y: visible;
+  overflow: hidden;
   color: #1f2937;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -18,6 +39,10 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.mural-board--scroll {
+  overflow-y: auto;
 }
 
 .mural-board-header {
@@ -96,18 +121,28 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
+  scrollbar-gutter: stable both-edges;
 }
 
 .mural-column h3 {
   text-align: center;
   font-size: 1rem;
-  margin: 0.25rem 0 1rem;
+  margin: 0 0 1rem;
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
   font-weight: 600;
+  position: sticky;
+  top: 0;
+  padding-top: 0.25rem;
+  padding-bottom: 0.75rem;
+  background: #f9fafb;
+  z-index: 1;
 }
 
 .mural-column-list {
@@ -118,22 +153,18 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
-  scrollbar-gutter: stable both-edges;
 }
 
-.mural-column-list::-webkit-scrollbar {
+.mural-column::-webkit-scrollbar {
   width: 6px;
 }
 
-.mural-column-list::-webkit-scrollbar-thumb {
+.mural-column::-webkit-scrollbar-thumb {
   background-color: rgba(15, 23, 42, 0.3);
   border-radius: 999px;
 }
 
-.mural-column-list::-webkit-scrollbar-track {
+.mural-column::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -255,12 +286,14 @@
 .mural-form-page {
   padding: 1rem 0;
   background: transparent;
-  min-height: calc(100vh - 80px);
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   color: #1f2937;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .mural-form {

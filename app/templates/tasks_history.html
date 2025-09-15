@@ -6,13 +6,16 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
 {% endblock %}
 
+{% block content_area_class %}content-area content-area-mural{% endblock %}
+{% block content_wrapper_class %}content-wrapper content-wrapper-mural{% endblock %}
+
 {% block sidebar_nav %}
 {% include 'sidebar_home.html' %}
 {% endblock %}
 
 {% block content %}
 <div class="mural-page">
-  <section class="mural-board">
+  <section class="mural-board mural-board--scroll">
     <div class="mural-history-header">
       <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
     </div>
