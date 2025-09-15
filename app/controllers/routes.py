@@ -81,7 +81,7 @@ GOOGLE_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
 ]
 
-EXCLUDED_TASK_TAGS = ["Reunião", "Particularidades"]
+EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
 
 
@@ -299,6 +299,11 @@ def inject_task_tags():
 def index():
     """Redirect users to the appropriate first page."""
     if current_user.is_authenticated:
+        if current_user.role == "admin":
+            return redirect(url_for("tasks_overview"))
+        first_tag = current_user.tags[0] if current_user.tags else None
+        if first_tag:
+            return redirect(url_for("tasks_sector", tag_id=first_tag.id))
         return redirect(url_for("home"))
     return redirect(url_for("login"))
 
@@ -848,6 +853,11 @@ def login():
             )
             db.session.commit()
             flash("Login bem-sucedido!", "success")
+            if user.role == "admin":
+                return redirect(url_for("tasks_overview"))
+            first_tag = user.tags[0] if user.tags else None
+            if first_tag:
+                return redirect(url_for("tasks_sector", tag_id=first_tag.id))
             return redirect(url_for("home"))
         else:
             flash("Credenciais inválidas", "danger")
@@ -1962,10 +1972,18 @@ def tasks_overview():
         if status not in tasks_by_status:
             status = TaskStatus.PENDING
         tasks_by_status[status].append(t)
+    done_sorted = sorted(
+        tasks_by_status[TaskStatus.DONE],
+        key=lambda x: x.completed_at or datetime.min,
+        reverse=True,
+    )
+    history_count = max(0, len(done_sorted) - 5)
+    tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
     return render_template(
         "tasks_overview.html",
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
+        history_count=history_count,
     )
 
 
@@ -2041,12 +2059,56 @@ def tasks_sector(tag_id):
         if status not in tasks_by_status:
             status = TaskStatus.PENDING
         tasks_by_status[status].append(t)
+    done_sorted = sorted(
+        tasks_by_status[TaskStatus.DONE],
+        key=lambda x: x.completed_at or datetime.min,
+        reverse=True,
+    )
+    history_count = max(0, len(done_sorted) - 5)
+    tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
     return render_template(
         "tasks_board.html",
         tag=tag,
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
+        history_count=history_count,
     )
+
+
+@app.route("/tasks/history")
+@app.route("/tasks/history/<int:tag_id>")
+@login_required
+def tasks_history(tag_id=None):
+    """Display archived tasks beyond the visible limit."""
+    if tag_id:
+        tag = Tag.query.get_or_404(tag_id)
+        if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+            abort(404)
+        if current_user.role != "admin" and tag not in current_user.tags:
+            abort(403)
+        query = Task.query.filter_by(
+            tag_id=tag_id, parent_id=None, status=TaskStatus.DONE
+        )
+    else:
+        tag = None
+        if current_user.role == "admin":
+            query = Task.query.filter(
+                Task.parent_id.is_(None), Task.status == TaskStatus.DONE
+            )
+        else:
+            tag_ids = [t.id for t in current_user.tags]
+            query = Task.query.filter(
+                Task.parent_id.is_(None),
+                Task.status == TaskStatus.DONE,
+                Task.tag_id.in_(tag_ids),
+            )
+    tasks = (
+        query.order_by(Task.completed_at.desc())
+        .options(joinedload(Task.tag), joinedload(Task.finisher))
+        .offset(5)
+        .all()
+    )
+    return render_template("tasks_history.html", tag=tag, tasks=tasks)
 
 
 @app.route("/tasks/<int:task_id>/status", methods=["POST"])
@@ -2084,13 +2146,17 @@ def update_task_status(task_id):
             if old_status != TaskStatus.DONE or current_user.role != "admin":
                 task.assigned_to = current_user.id
             task.completed_by = None
+            task.completed_at = None
         elif new_status == TaskStatus.DONE:
             task.completed_by = current_user.id
+            task.completed_at = datetime.utcnow()
         elif new_status == TaskStatus.PENDING:
             task.assigned_to = None
             task.completed_by = None
+            task.completed_at = None
         else:
             task.completed_by = None
+            task.completed_at = None
         db.session.add(history)
         db.session.commit()
     return jsonify({"success": True})
