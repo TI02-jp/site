@@ -19,6 +19,7 @@
   height: 100%;
   box-sizing: border-box;
   overflow-y: visible;
+  overflow-x: hidden; /* evita ultrapassar os limites horizontais */
   color: #1f2937;
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -84,7 +85,7 @@
 
 .btn-history:hover,
 .btn-view:hover {
-  background: var(--primary);
+  background: var(--accent);
   color: #fff;
   border-color: var(--primary);
   box-shadow: 0 12px 24px rgba(11, 40, 139, 0.18);
@@ -327,13 +328,12 @@
 
 .new-task-container {
   width: 100%;
-  height: 100%;
+  height: auto; /* evita forçar altura e scroll interno */
   padding: 1.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  overflow-y: auto;
   background: transparent;
   color: #1f2937;
 }
@@ -464,6 +464,13 @@
   color: #64748b;
 }
 
+/* Ações do histórico (voltar) */
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.5rem 0 0.75rem;
+}
+
 @media (max-width: 992px) {
   .kanban-board {
     flex-direction: column;
@@ -491,8 +498,9 @@
     "actions actions";
   gap: 1.5rem 2rem;
   align-items: start;
-  max-width: 700px;
-  margin: 2rem auto;
+  width: 100%;
+  max-width: 1100px; /* deixa a telinha mais larga */
+  margin: 1rem auto; /* centralizado dentro do kanban */
   padding: 2rem 2.5rem;
   background: #fff;
   border-radius: 18px;
@@ -525,7 +533,6 @@
   padding: 0.7rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  background: #fff;
   font-size: 1rem;
   box-shadow: 0 2px 8px rgba(15,23,42,0.04);
   transition: border 0.2s;
@@ -551,4 +558,9 @@
       "actions";
     padding: 1rem;
   }
+}
+
+/* Full-width row inside kanban-form */
+.kanban-form .form-group-full {
+  grid-column: 1 / -1;
 }

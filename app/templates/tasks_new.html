@@ -12,61 +12,59 @@
 
 {% block content %}
 <div class="new-task-container">
-    <div class="new-task-form">
-        <div class="new-task-header">
-            <i class="bi bi-plus-circle"></i>
-            <h2>Nova Tarefa</h2>
+  <section class="kanban" style="gap: 1rem;">
+    <form method="POST" class="kanban-form">
+      {{ form.hidden_tag() }}
+
+      {% if parent_task %}
+        {{ form.parent_id }}
+        <div class="form-group form-group-full">
+          <label>Tarefa Pai</label>
+          <input type="text" value="{{ parent_task.title }}" disabled>
         </div>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            {% if parent_task %}
-            {{ form.parent_id }}
-            <div class="field">
-                <label>Tarefa Pai</label>
-                <input type="text" value="{{ parent_task.title }}" disabled>
-            </div>
-            {% endif %}
-            <div class="form-row">
-                <div class="field">
-                    {{ form.tag_id.label }}
-                    {% if parent_task %}
-                        {{ form.tag_id(disabled=True) }}
-                    {% else %}
-                        {{ form.tag_id() }}
-                    {% endif %}
-                </div>
-                <div class="field">
-                    {{ form.assigned_to.label }}
-                    {{ form.assigned_to() }}
-                </div>
-            </div>
-            <div class="form-row row-title-desc">
-                <div class="field">
-                    {{ form.title.label }}
-                    {{ form.title() }}
-                    {% for error in form.title.errors %}<div class="error">{{ error }}</div>{% endfor %}
-                </div>
-                <div class="field">
-                    {{ form.description.label }}
-                    {{ form.description() }}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="field">
-                    {{ form.due_date.label }}
-                    {{ form.due_date() }}
-                </div>
-                <div class="field">
-                    {{ form.priority.label }}
-                    {{ form.priority() }}
-                </div>
-            </div>
-            <div class="form-actions">
-                <a href="{{ cancel_url }}" class="button button-outline">Cancelar</a>
-                {{ form.submit(class="button button-primary") }}
-            </div>
-        </form>
-    </div>
+      {% endif %}
+
+      <div class="form-group form-group-setor">
+        {{ form.tag_id.label }}
+        {% if parent_task %}
+          {{ form.tag_id(disabled=True) }}
+        {% else %}
+          {{ form.tag_id() }}
+        {% endif %}
+      </div>
+
+      <div class="form-group form-group-usuario">
+        {{ form.assigned_to.label }}
+        {{ form.assigned_to() }}
+      </div>
+
+      <div class="form-group form-group-titulo">
+        {{ form.title.label }}
+        {{ form.title() }}
+        {% for error in form.title.errors %}<div class="error">{{ error }}</div>{% endfor %}
+      </div>
+
+      <div class="form-group form-group-descricao">
+        {{ form.description.label }}
+        {{ form.description() }}
+      </div>
+
+      <div class="form-group form-group-prazo">
+        {{ form.due_date.label }}
+        {{ form.due_date() }}
+      </div>
+
+      <div class="form-group form-group-prioridade">
+        {{ form.priority.label }}
+        {{ form.priority() }}
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ cancel_url }}" class="btn-history">Cancelar</a>
+        {{ form.submit(class="btn-new-task") }}
+      </div>
+    </form>
+  </section>
 </div>
 {% endblock %}
 
