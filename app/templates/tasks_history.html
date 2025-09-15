@@ -20,6 +20,7 @@
     <li class="history-item">
       <span class="title">{{ task.title }}</span>
       <span class="meta">{{ task.tag.nome }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>
+      <a href="{{ url_for('tasks_view', task_id=task.id) }}" class="btn-view">Visualizar</a>
     </li>
     {% else %}
     <li class="empty">Nenhuma tarefa.</li>

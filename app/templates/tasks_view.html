@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Visualizar Tarefa{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="new-task-container">
+  <div class="new-task-form">
+    <div class="new-task-header">
+      <i class="bi bi-eye"></i>
+      <h2>Visualizar Tarefa</h2>
+    </div>
+    <div class="form-row row-title-desc">
+      <div class="field">
+        <label>Título</label>
+        <input type="text" value="{{ task.title }}" disabled>
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea rows="4" disabled>{{ task.description }}</textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Setor</label>
+        <input type="text" value="{{ task.tag.nome }}" disabled>
+      </div>
+      <div class="field">
+        <label>Usuário que finalizou</label>
+        <input type="text" value="{{ task.finisher.name if task.finisher else '' }}" disabled>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Prazo</label>
+        <input type="text" value="{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '' }}" disabled>
+      </div>
+      <div class="field">
+        <label>Data de finalização</label>
+        <input type="text" value="{{ task.completed_at.strftime('%d/%m/%Y') if task.completed_at else '' }}" disabled>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Prioridade</label>
+        <input type="text" value="{{ priority_labels.get(task.priority.value) }}" disabled>
+      </div>
+      <div class="field"></div>
+    </div>
+    <div class="form-actions">
+      <a href="{{ url_for('tasks_history', tag_id=task.tag_id) }}" class="button button-outline">Voltar</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
+{% endblock %}
