@@ -155,9 +155,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(function(alert) {
         setTimeout(function() {
-            if (alert && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+            if (alert) {
+                alert.remove();
             }
         }, 5000);
     });
@@ -173,10 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Tooltip para botões de ação
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    // Native tooltips via title attribute
 
     function formatCNPJ(cnpj) {
         cnpj = cnpj.replace(/\D/g, '');

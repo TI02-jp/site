@@ -672,10 +672,11 @@
 </div>
 
 <!-- Modal para exibição ampliada de imagens -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+<div class="modal" id="imageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-body p-0">
+                <button type="button" class="btn-close" data-close></button>
                 <img src="" id="modalImage" class="img-fluid w-100" alt="Imagem ampliada">
             </div>
         </div>
@@ -775,8 +776,7 @@ document.addEventListener("DOMContentLoaded", function () {
         img.addEventListener('click', function() {
             const modalImg = document.getElementById('modalImage');
             modalImg.src = this.src;
-            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-            modal.show();
+            showModal('imageModal');
         });
     });
 
@@ -820,10 +820,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Função de exportar para PDF (usa a funcionalidade de impressão do navegador)
     window.exportToPDF = function() { window.print(); };
 
-    // Inicialização de Tooltips do Bootstrap, se disponível
-    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-        document.querySelectorAll('[title]').forEach(element => new bootstrap.Tooltip(element));
-    }
+    // Tooltips handled by native title attribute
 });
 </script>
 {% endblock %}

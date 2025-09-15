@@ -253,18 +253,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // Tooltip para botões desabilitados
     const disabledBtns = document.querySelectorAll('.btn.disabled');
     disabledBtns.forEach(function(btn) {
-        btn.setAttribute('data-bs-toggle', 'tooltip');
-        btn.setAttribute('data-bs-placement', 'top');
         btn.setAttribute('title', 'Esta funcionalidade está em desenvolvimento');
     });
     
-    // Inicializa tooltips
-    if (typeof bootstrap !== 'undefined') {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
+    // Tooltips handled by native title attribute
 });
 </script>
 {% endblock %}

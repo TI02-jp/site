@@ -290,8 +290,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Auto-dismiss existing alerts
     const autoDismiss = (alertEl) => {
         setTimeout(() => {
-            if (alertEl && bootstrap.Alert) {
-                bootstrap.Alert.getOrCreateInstance(alertEl).close();
+            if (alertEl) {
+                alertEl.remove();
             }
         }, 5000);
     };
@@ -305,7 +305,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
         alertDiv.setAttribute('role', 'alert');
-        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>`;
+        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-close aria-label="Fechar"></button>`;
         container.appendChild(alertDiv);
         autoDismiss(alertDiv);
     }

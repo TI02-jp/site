@@ -55,9 +55,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>Calendário de Agendamentos</h2>
                 <div>
-                    <button id="openMeetingModal" class="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#meetingModal">Agendar Reunião</button>
+                    <button id="openMeetingModal" class="btn btn-primary" data-modal="meetingModal">Agendar Reunião</button>
                 </div>
             </div>
             <div class="mb-3">
@@ -73,7 +71,7 @@
                             <h5 class="modal-title">Agendar Reunião</h5>
                             <button type="button"
                                     class="btn-close"
-                                    data-bs-dismiss="modal"
+                                    data-close
                                     aria-label="Close"></button>
                         </div>
                         <form method="post">
@@ -122,7 +120,7 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
                                 {{ form.submit(class="btn btn-primary") }}
                             </div>
                         </form>
@@ -142,7 +140,7 @@
                             </div>
                             <button type="button"
                                     class="btn-close"
-                                    data-bs-dismiss="modal"
+                                    data-close
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
@@ -162,7 +160,7 @@
                             <form id="deleteMeetingForm" method="post" class="d-none">
                                 {{ form.csrf_token(id='csrf_token_delete') }}
                             </form>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" class="btn btn-secondary" data-close>Fechar</button>
                             <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
                             <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
                         </div>
@@ -175,7 +173,7 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Sala do Google Meet</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-close aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
                             <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
@@ -219,10 +217,10 @@
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
         alertDiv.setAttribute('role', 'alert');
-        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>`;
+        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-close aria-label="Fechar"></button>`;
         container.appendChild(alertDiv);
         setTimeout(() => {
-            bootstrap.Alert.getOrCreateInstance(alertDiv).close();
+            alertDiv.remove();
         }, 3000);
     }
 
@@ -236,8 +234,7 @@
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
-        var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
-        meetingModal.show();
+        showModal('meetingModal');
     }
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -255,11 +252,7 @@
             if(color === '#ffc107'){cls='tooltip-warning';}
             else if(color === '#198754'){cls='tooltip-success';}
             else if(color === '#dc3545'){cls='tooltip-danger';}
-            info.el.setAttribute('data-bs-toggle', 'tooltip');
-            info.el.setAttribute('data-bs-html', 'true');
-            info.el.setAttribute('data-bs-custom-class', cls);
             info.el.setAttribute('title', time + ' ' + info.event.title);
-            new bootstrap.Tooltip(info.el);
         },
         eventClick: function(info) {
             info.jsEvent.preventDefault();
@@ -322,8 +315,7 @@
             } else {
                 deleteBtn.classList.add('d-none');
             }
-            var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
-            modal.show();
+            showModal('eventDetailsModal');
         }
     });
     calendar.render();
@@ -364,17 +356,8 @@
                         }
                         var el = existing.el;
                         if (el) {
-                            var tip = bootstrap.Tooltip.getInstance(el);
-                            if (tip) { tip.dispose(); }
                             var time = existing.allDay ? '' : existing.startStr.substring(11,16);
-                            var color = existing.backgroundColor || existing.borderColor;
-                            var cls = '';
-                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
-                            else if (color === '#198754') { cls = 'tooltip-success'; }
-                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
-                            el.setAttribute('data-bs-custom-class', cls);
                             el.setAttribute('title', time + ' ' + existing.title);
-                            new bootstrap.Tooltip(el);
                         }
                     } else {
                         calendar.addEvent(evData);
@@ -391,8 +374,7 @@
     setInterval(refreshStatuses, 5000);
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
-        var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
-        detailModal.hide();
+        hideModal('eventDetailsModal');
         var form = document.querySelector('#meetingModal form');
         document.getElementById('meeting_id').value = currentEvent.id || '';
         form.subject.value = currentEvent.title;
@@ -411,8 +393,7 @@
         });
         document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
-        var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
-        meetingModal.show();
+        showModal('meetingModal');
     });
 
     document.getElementById('deleteEventBtn').addEventListener('click', function() {
@@ -429,21 +410,19 @@
     {% if meet_popup_link %}
         <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var popup = new bootstrap.Modal(document.getElementById('meetLinkModal'));
         document.getElementById('copyMeetLinkPopup').addEventListener('click', function() {
             navigator.clipboard.writeText(document.getElementById('meetLinkInput').value).then(function(){
                 showFlashMessage('Link copiado!', 'success');
             });
         });
-        popup.show();
+        showModal('meetLinkModal');
     });
         </script>
     {% endif %}
     {% if show_modal %}
         <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var modal = new bootstrap.Modal(document.getElementById('meetingModal'));
-    modal.show();
+    showModal('meetingModal');
 });
         </script>
     {% endif %}

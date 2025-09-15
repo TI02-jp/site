@@ -362,10 +362,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(function(alert) {
         setTimeout(function() {
-            if (alert && typeof bootstrap !== 'undefined' && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            } else {
+            if (alert) {
                 alert.remove();
             }
         }, 5000);

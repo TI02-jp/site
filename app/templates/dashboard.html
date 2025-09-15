@@ -201,11 +201,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Auto-dismiss alerts
     document.querySelectorAll('.alert-dismissible').forEach(alert => {
-        setTimeout(() => {
-            if (bootstrap?.Alert) {
-                new bootstrap.Alert(alert).close();
-            }
-        }, 5000);
+        setTimeout(() => alert.remove(), 5000);
     });
 
     // Button loading icon

@@ -114,71 +114,6 @@
     </div>
 </div>
 
-<!-- Modal de Novo Usuário -->
-<div class="modal fade" id="novoUsuarioModal" tabindex="-1" aria-labelledby="novoUsuarioModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form method="POST" action="{{ url_for('list_users') }}">
-      {{ form.csrf_token }}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="novoUsuarioModalLabel">Cadastrar Novo Usuário</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", id="modal_password") }}
-          </div>
-          <div class="mb-3">
-            {{ form.confirm_password.label(class="form-label") }}
-            {{ form.confirm_password(class="form-control", id="modal_confirm_password") }}
-          </div>
-          <div class="mb-3">
-            {{ form.role.label(class="form-label") }}
-            {{ form.role(class="form-select") }}
-          </div>
-          <div class="mb-3">
-            <div class="d-flex align-items-center">
-              {{ form.tags.label(class="form-label mb-0") }}
-              <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
-                <i class="bi bi-plus-lg"></i>
-              </a>
-            </div>
-            {% if form.tags.choices %}
-            <div class="mt-2">
-              {% for tag in form.tags %}
-                <div class="form-check form-check-inline">
-                  {{ tag(class="form-check-input") }}
-                  {{ tag.label(class="form-check-label") }}
-                </div>
-              {% endfor %}
-            </div>
-            {% else %}
-              <p class="text-muted">Nenhuma tag disponível</p>
-            {% endif %}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Cadastrar</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -186,9 +121,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(function(alert) {
         setTimeout(function() {
-            if (alert && bootstrap.Alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+            if (alert) {
+                alert.remove();
             }
         }, 5000);
     });
@@ -204,11 +138,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Tooltip para botões de ação
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
 });
 
 function confirmarExclusao(userId) {
