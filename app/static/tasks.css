@@ -23,7 +23,7 @@
   background: linear-gradient(135deg, #1f2937, #111827);
   height: 100%;
   box-sizing: border-box;
-  overflow-y: auto;
+  overflow-y: visible;
   color: #e5e7eb;
 }
 
