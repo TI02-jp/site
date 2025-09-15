@@ -6,10 +6,18 @@
 }
 
 
+
+/* Ensure full-height content without footer overlap */
+.content-wrapper {
+  padding: 1rem;
+  height: calc(100vh - 80px);
+  box-sizing: border-box;
+}
+
 .kanban {
   padding: 1rem;
   background: linear-gradient(135deg, #1f2937, #111827);
-  min-height: 100vh;
+  min-height: 100%;
   color: #e5e7eb;
 }
 
@@ -122,9 +130,9 @@
 
 /* New Task Form */
 .new-task-container {
-  padding: 2rem;
+  padding: 1rem;
   background: linear-gradient(135deg, #1f2937, #111827);
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -148,21 +156,27 @@
   margin-bottom: 1rem;
 }
 
-.new-task-form .form-label {
+.new-task-form label {
   color: #e5e7eb;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
-.new-task-form .form-control,
-.new-task-form .form-select {
+.new-task-form input,
+.new-task-form textarea,
+.new-task-form select {
   background: #1f2937;
   border: 1px solid rgba(255,255,255,0.1);
   color: #e5e7eb;
+  padding: 0.5rem;
+  border-radius: 4px;
 }
 
-.new-task-form .form-control:focus,
-.new-task-form .form-select:focus {
+.new-task-form input:focus,
+.new-task-form textarea:focus,
+.new-task-form select:focus {
   border-color: var(--accent);
-  box-shadow: none;
+  outline: none;
 }
 
 .form-actions {
@@ -171,23 +185,42 @@
   gap: 0.5rem;
 }
 
-.new-task-form .btn-primary {
-  background: var(--accent);
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
   border: none;
 }
 
-.new-task-form .btn-primary:hover {
+.button-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.button-primary:hover {
   background: var(--accent-hover);
 }
 
-.new-task-form .btn-outline-secondary {
-  border-color: var(--accent);
+.button-outline {
+  border: 1px solid var(--accent);
   color: var(--accent);
+  background: transparent;
 }
 
-.new-task-form .btn-outline-secondary:hover {
+.button-outline:hover {
   background: var(--accent);
   color: #fff;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.error {
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
 }
 
 
