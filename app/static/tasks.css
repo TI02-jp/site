@@ -159,7 +159,7 @@
   justify-content: center;
   align-items: flex-start;
   color: #e5e7eb;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .new-task-form {
@@ -169,7 +169,7 @@
   border-radius: 10px;
   padding: 1.5rem;
   width: 100%;
-  max-width: 600px;
+  max-width: 1000px;
 }
 
 .new-task-header {
