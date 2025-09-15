@@ -13,7 +13,7 @@
 
 /* Ensure full-height content without footer overlap */
 .content-wrapper {
-  padding: 1rem;
+  padding: 0;
   height: calc(100vh - 80px);
   box-sizing: border-box;
 }
