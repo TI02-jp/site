@@ -25,28 +25,41 @@
                 <label>Tarefa Pai</label>
                 <input type="text" value="{{ parent_task.title }}" disabled>
             </div>
-            {% else %}
-            <div class="field">
-                {{ form.tag_id.label }}
-                {{ form.tag_id() }}
-            </div>
             {% endif %}
-            <div class="field">
-                {{ form.title.label }}
-                {{ form.title() }}
-                {% for error in form.title.errors %}<div class="error">{{ error }}</div>{% endfor %}
+            <div class="form-row">
+                <div class="field">
+                    {{ form.tag_id.label }}
+                    {% if parent_task %}
+                        {{ form.tag_id(disabled=True) }}
+                    {% else %}
+                        {{ form.tag_id() }}
+                    {% endif %}
+                </div>
+                <div class="field">
+                    {{ form.assigned_to.label }}
+                    {{ form.assigned_to() }}
+                </div>
             </div>
-            <div class="field">
-                {{ form.description.label }}
-                {{ form.description() }}
+            <div class="form-row row-title-desc">
+                <div class="field">
+                    {{ form.title.label }}
+                    {{ form.title() }}
+                    {% for error in form.title.errors %}<div class="error">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="field">
+                    {{ form.description.label }}
+                    {{ form.description() }}
+                </div>
             </div>
-            <div class="field">
-                {{ form.priority.label }}
-                {{ form.priority() }}
-            </div>
-            <div class="field">
-                {{ form.due_date.label }}
-                {{ form.due_date() }}
+            <div class="form-row">
+                <div class="field">
+                    {{ form.due_date.label }}
+                    {{ form.due_date() }}
+                </div>
+                <div class="field">
+                    {{ form.priority.label }}
+                    {{ form.priority() }}
+                </div>
             </div>
             <div class="form-actions">
                 <a href="{{ cancel_url }}" class="button button-outline">Cancelar</a>
@@ -55,4 +68,8 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
 {% endblock %}

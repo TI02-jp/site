@@ -244,6 +244,16 @@
   margin-bottom: 1rem;
 }
 
+.new-task-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.new-task-form .row-title-desc {
+  grid-template-columns: 1fr 2fr;
+}
+
 .error {
   color: var(--danger-color);
   font-size: 0.85rem;

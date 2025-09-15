@@ -256,6 +256,9 @@ class TaskForm(FlaskForm):
         "Descrição", validators=[Optional()], render_kw={"rows": 4}
     )
     tag_id = SelectField("Setor", coerce=int, validators=[DataRequired()])
+    assigned_to = SelectField(
+        "Usuário", coerce=int, validators=[Optional()], default=0, choices=[]
+    )
     priority = SelectField(
         "Prioridade",
         choices=[("low", "Baixa"), ("medium", "Média"), ("high", "Alta")],
