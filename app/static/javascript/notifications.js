@@ -59,14 +59,17 @@
     let isFetching = false;
 
     function setBadge(count) {
-      if (!countBadge) {
-        return;
+      const hasUnread = Boolean(count && count > 0);
+      if (countBadge) {
+        if (hasUnread) {
+          countBadge.textContent = count;
+          countBadge.hidden = false;
+        } else {
+          countBadge.hidden = true;
+        }
       }
-      if (count && count > 0) {
-        countBadge.textContent = count;
-        countBadge.hidden = false;
-      } else {
-        countBadge.hidden = true;
+      if (button) {
+        button.classList.toggle('has-unread', hasUnread);
       }
     }
 
@@ -154,6 +157,7 @@
       }
       dropdown.classList.add('show');
       button.setAttribute('aria-expanded', 'true');
+      button.classList.add('active');
       isOpen = true;
     }
 
@@ -163,6 +167,7 @@
       }
       dropdown.classList.remove('show');
       button.setAttribute('aria-expanded', 'false');
+      button.classList.remove('active');
       isOpen = false;
     }
 
