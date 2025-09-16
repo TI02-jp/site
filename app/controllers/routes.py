@@ -1958,9 +1958,12 @@ def tasks_overview():
         query = query.filter(Task.created_by == current_user.id)
     tasks = (
         query.options(
-            joinedload(Task.children),
+            joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.assignee),
+            joinedload(Task.children).joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.tag),
         )
         .order_by(Task.due_date)
         .all()
@@ -2083,9 +2086,12 @@ def tasks_sector(tag_id):
         query = query.filter(Task.assigned_to == current_user.id)
     tasks = (
         query.options(
-            joinedload(Task.children),
+            joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.assignee),
+            joinedload(Task.children).joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.tag),
         )
         .order_by(Task.due_date)
         .all()
