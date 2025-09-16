@@ -42,16 +42,6 @@ DB_NAME=cadastro_empresas
 SQLALCHEMY_DATABASE_URI=mysql+mysqlconnector://seu_usuario:sua_senha@localhost:3306/cadastro_empresas
 SECRET_KEY=sua_chave_secreta
 
-# Configurações opcionais para envio de e-mails de notificação
-MAIL_SERVER=smtp.seuprovedor.com
-MAIL_PORT=587
-MAIL_USERNAME=usuario@seuprovedor.com
-MAIL_PASSWORD=sua_senha_de_email
-MAIL_USE_TLS=1
-# Defina MAIL_USE_SSL=1 caso seu provedor exija SSL ao invés de TLS
-MAIL_DEFAULT_SENDER=notificacoes@seuprovedor.com
-# Informe a URL pública do portal para geração dos links enviados por e-mail
-PORTAL_BASE_URL=https://portal.exemplo.com
 ```
 
 A primeira execução da aplicação irá criar automaticamente as tabelas necessárias.
