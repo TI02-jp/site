@@ -41,6 +41,17 @@ app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
 app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
 app.config['GOOGLE_MEETING_ROOM_EMAIL'] = os.getenv('GOOGLE_MEETING_ROOM_EMAIL')
+
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', '587'))
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', '1') == '1'
+app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', '0') == '1'
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['MAIL_REPLY_TO'] = os.getenv('MAIL_REPLY_TO')
+app.config['MAIL_SUPPRESS_SEND'] = os.getenv('MAIL_SUPPRESS_SEND', '0') == '1'
+app.config['PORTAL_BASE_URL'] = os.getenv('PORTAL_BASE_URL')
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
