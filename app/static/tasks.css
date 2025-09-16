@@ -424,6 +424,16 @@
   color: #1f2937;
 }
 
+.new-task-container > .kanban {
+  height: auto;
+  padding-top: 1rem;
+  padding-bottom: 1.25rem;
+}
+
+.new-task-container > .kanban .kanban-form {
+  margin: 0.25rem auto 0.5rem;
+}
+
 /* Visual moderno para a caixinha do formulário de nova tarefa */
 .new-task-form {
   display: flex;
