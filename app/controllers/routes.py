@@ -31,6 +31,7 @@ from app.models.tables import (
     TaskStatus,
     TaskPriority,
     TaskStatusHistory,
+    TaskNotification,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -262,6 +263,19 @@ def inject_task_tags():
     return {"tasks_tags": tags}
 
 
+@app.context_processor
+def inject_notification_counts():
+    """Expose the number of unread task notifications to templates."""
+
+    if not current_user.is_authenticated:
+        return {"unread_notifications_count": 0}
+    unread = TaskNotification.query.filter(
+        TaskNotification.user_id == current_user.id,
+        TaskNotification.read_at.is_(None),
+    ).count()
+    return {"unread_notifications_count": unread}
+
+
 @app.route("/")
 def index():
     """Redirect users to the appropriate first page."""
@@ -288,6 +302,88 @@ def ping():
     """Endpoint for client pings to keep the session active."""
     session.modified = True
     return ("", 204)
+
+
+@app.route("/notifications", methods=["GET"])
+@login_required
+def list_notifications():
+    """Return the most recent task notifications for the user."""
+
+    notifications = (
+        TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
+        .options(joinedload(TaskNotification.task).joinedload(Task.tag))
+        .order_by(TaskNotification.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    unread_total = TaskNotification.query.filter(
+        TaskNotification.user_id == current_user.id,
+        TaskNotification.read_at.is_(None),
+    ).count()
+    items = []
+    for notification in notifications:
+        task = notification.task
+        task_url = None
+        tag_name = None
+        task_title = None
+        if task:
+            task_title = task.title
+            tag_name = task.tag.nome if task.tag else None
+            task_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
+        message = notification.message
+        if not message:
+            if task_title and tag_name:
+                message = f"Tarefa \"{task_title}\" atribuída no setor {tag_name}."
+            elif task_title:
+                message = f"Tarefa \"{task_title}\" atribuída a você."
+            else:
+                message = "Nova tarefa atribuída a você."
+        created_at = notification.created_at.isoformat()
+        if notification.created_at.tzinfo is None:
+            created_at += "Z"
+        items.append(
+            {
+                "id": notification.id,
+                "message": message,
+                "created_at": created_at,
+                "is_read": notification.is_read,
+                "url": task_url,
+            }
+        )
+    return jsonify({"notifications": items, "unread": unread_total})
+
+
+@app.route("/notifications/<int:notification_id>/read", methods=["POST"])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark a single notification as read."""
+
+    notification = TaskNotification.query.filter(
+        TaskNotification.id == notification_id,
+        TaskNotification.user_id == current_user.id,
+    ).first_or_404()
+    if not notification.read_at:
+        notification.read_at = datetime.utcnow()
+        db.session.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/notifications/read-all", methods=["POST"])
+@login_required
+def mark_all_notifications_read():
+    """Mark all unread notifications for the current user as read."""
+
+    updated = (
+        TaskNotification.query.filter(
+            TaskNotification.user_id == current_user.id,
+            TaskNotification.read_at.is_(None),
+        ).update(
+            {TaskNotification.read_at: datetime.utcnow()},
+            synchronize_session=False,
+        )
+    )
+    db.session.commit()
+    return jsonify({"success": True, "updated": updated or 0})
 
 
 @app.route("/consultorias")
@@ -1868,6 +1964,7 @@ def tasks_new():
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
     form = TaskForm()
+    tag = parent_task.tag if parent_task else None
     if parent_task:
         form.parent_id.data = parent_task.id
         form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
@@ -1893,6 +1990,9 @@ def tasks_new():
             form.assigned_to.choices = [(0, "Sem responsável")]
     if form.validate_on_submit():
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
+        if not parent_task and (tag is None or tag.id != tag_id):
+            tag = Tag.query.get(tag_id)
+        assignee_id = form.assigned_to.data or None
         task = Task(
             title=form.title.data,
             description=form.description.data,
@@ -1901,9 +2001,23 @@ def tasks_new():
             due_date=form.due_date.data,
             created_by=current_user.id,
             parent_id=parent_id,
-            assigned_to=(form.assigned_to.data or None),
+            assigned_to=assignee_id,
         )
         db.session.add(task)
+        db.session.flush()
+        if task.assigned_to and task.assigned_to != current_user.id:
+            if tag:
+                message = (
+                    f"Tarefa \"{task.title}\" atribuída no setor {tag.nome}."
+                )
+            else:
+                message = f"Tarefa \"{task.title}\" atribuída a você."
+            notification = TaskNotification(
+                user_id=task.assigned_to,
+                task_id=task.id,
+                message=message,
+            )
+            db.session.add(notification)
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
         return redirect(url_for("tasks_sector", tag_id=tag_id))
