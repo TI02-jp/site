@@ -12,52 +12,56 @@
 
 {% block content %}
 <div class="new-task-container">
-  <div class="new-task-form">
-    <div class="new-task-header">
-      <i class="bi bi-eye"></i>
-      <h2>Visualizar Tarefa</h2>
-    </div>
-    <div class="form-row row-title-desc">
-      <div class="field">
-        <label>Título</label>
-        <input type="text" value="{{ task.title }}" disabled>
+  <section class="kanban" style="gap: 1rem;">
+    <div class="kanban-form">
+      {% if task.parent %}
+      <div class="form-group form-group-full">
+        <label>Tarefa Pai</label>
+        <input type="text" value="{{ task.parent.title }}" disabled>
       </div>
-      <div class="field">
-        <label>Descrição</label>
-        <textarea rows="4" disabled>{{ task.description }}</textarea>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
+      {% endif %}
+
+      <div class="form-group form-group-setor">
         <label>Setor</label>
         <input type="text" value="{{ task.tag.nome }}" disabled>
       </div>
-      <div class="field">
-        <label>Usuário que finalizou</label>
-        <input type="text" value="{{ task.finisher.name if task.finisher else '' }}" disabled>
+
+      <div class="form-group form-group-usuario">
+        <label>Usuário</label>
+        <input type="text" value="{{ task.assignee.name if task.assignee else 'Sem responsável' }}" disabled>
       </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
+
+      <div class="form-group form-group-titulo">
+        <label>Título</label>
+        <input type="text" value="{{ task.title }}" disabled>
+      </div>
+
+      <div class="form-group form-group-descricao">
+        <label>Descrição</label>
+        <textarea rows="4" disabled>{{ task.description or '' }}</textarea>
+      </div>
+
+      <div class="form-group form-group-prazo">
         <label>Prazo</label>
-        <input type="text" value="{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '' }}" disabled>
+        <input type="date" value="{{ task.due_date.isoformat() if task.due_date else '' }}" disabled>
       </div>
-      <div class="field">
-        <label>Data de finalização</label>
-        <input type="text" value="{{ task.completed_at.strftime('%d/%m/%Y') if task.completed_at else '' }}" disabled>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
+
+      <div class="form-group form-group-prioridade">
         <label>Prioridade</label>
-        <input type="text" value="{{ priority_labels.get(task.priority.value) }}" disabled>
+        <select disabled>
+          {% for value in priority_order %}
+          <option value="{{ value }}" {% if task.priority.value == value %}selected{% endif %}>
+            {{ priority_labels[value] }}
+          </option>
+          {% endfor %}
+        </select>
       </div>
-      <div class="field"></div>
+
+      <div class="form-actions">
+        <a href="{{ cancel_url }}" class="btn-history">Voltar</a>
+      </div>
     </div>
-    <div class="form-actions">
-      <a href="{{ url_for('tasks_history', tag_id=task.tag_id) }}" class="button button-outline">Voltar</a>
-    </div>
-  </div>
+  </section>
 </div>
 {% endblock %}
 
