@@ -14,11 +14,17 @@
 <section class="kanban">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Visão Geral de Tarefas</h2>
-    <div>
+    <div class="kanban-actions">
+      <form method="get" action="{{ url_for('tasks_overview') }}" class="assigned-filter" id="assigned-by-me-form">
+        <label for="assigned-by-me-checkbox">
+          <input type="checkbox" id="assigned-by-me-checkbox" name="assigned_by_me" value="1" {% if assigned_by_me %}checked{% endif %}>
+          Atribuídas por mim
+        </label>
+      </form>
       {% if current_user.role == 'admin' %}
       <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
       {% endif %}
-      <a href="{{ url_for('tasks_history') }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
+      <a href="{{ url_for('tasks_history', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
     </div>
   </div>
   {% from "tasks_macros.html" import render_task with context %}

@@ -1948,10 +1948,16 @@ def edit_user(user_id):
 @admin_required
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
-    tasks = (
+    assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
+    assigned_by_me = assigned_param in {"1", "true", "on", "yes"}
+    query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-        .options(
+    )
+    if assigned_by_me:
+        query = query.filter(Task.created_by == current_user.id)
+    tasks = (
+        query.options(
             joinedload(Task.children),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
@@ -1982,6 +1988,7 @@ def tasks_overview():
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
         history_count=history_count,
+        assigned_by_me=assigned_by_me,
     )
 
 
@@ -2118,6 +2125,8 @@ def tasks_history(tag_id=None):
     """Display archived tasks beyond the visible limit."""
     assigned_param = (request.args.get("assigned_to_me", "") or "").lower()
     assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
+    assigned_by_param = (request.args.get("assigned_by_me", "") or "").lower()
+    assigned_by_me = assigned_by_param in {"1", "true", "on", "yes"}
     if tag_id:
         tag = Tag.query.get_or_404(tag_id)
         if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
@@ -2144,6 +2153,8 @@ def tasks_history(tag_id=None):
             )
     if assigned_to_me:
         query = query.filter(Task.assigned_to == current_user.id)
+    if assigned_by_me:
+        query = query.filter(Task.created_by == current_user.id)
     tasks = (
         query.order_by(Task.completed_at.desc())
         .options(joinedload(Task.tag), joinedload(Task.finisher))
@@ -2155,6 +2166,7 @@ def tasks_history(tag_id=None):
         tag=tag,
         tasks=tasks,
         assigned_to_me=assigned_to_me,
+        assigned_by_me=assigned_by_me,
     )
 
 

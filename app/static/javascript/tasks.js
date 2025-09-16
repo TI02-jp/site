@@ -57,4 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const assignedByMeCheckbox = document.getElementById('assigned-by-me-checkbox');
+    if (assignedByMeCheckbox) {
+        assignedByMeCheckbox.addEventListener('change', () => {
+            const form = assignedByMeCheckbox.closest('form');
+            if (form) {
+                form.submit();
+            }
+        });
+    }
 });
