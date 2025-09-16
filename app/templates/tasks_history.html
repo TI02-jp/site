@@ -16,7 +16,7 @@
     <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
     <div>
       {% if tag %}
-      <a href="{{ url_for('tasks_sector', tag_id=tag.id) }}" class="btn-history">Voltar</a>
+      <a href="{{ url_for('tasks_sector', tag_id=tag.id, assigned_to_me=1 if assigned_to_me else None) }}" class="btn-history">Voltar</a>
       {% else %}
       <a href="{{ url_for('tasks_overview') }}" class="btn-history">Voltar</a>
       {% endif %}
