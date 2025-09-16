@@ -1,12 +1,14 @@
 """Database models used by the application."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
 
+from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
 from sqlalchemy.types import TypeDecorator, String
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
 from app.services.google_calendar import get_calendar_timezone
@@ -16,8 +18,22 @@ from app.services.google_calendar import get_calendar_timezone
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 # Timezone used for calendar-related timestamps
 CALENDAR_TZ = get_calendar_timezone()
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
+
+
+def _normalize_utc(dt: datetime) -> datetime:
+    """Return ``dt`` converted to an aware UTC timestamp."""
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _to_sao_paulo(dt: datetime | None) -> datetime | None:
+    """Return ``dt`` converted to the São Paulo timezone."""
+
+    if dt is None:
+        return None
+    return _normalize_utc(dt).astimezone(SAO_PAULO_TZ)
 
 # Association table linking users to tag records
 user_tags = db.Table(
@@ -327,31 +343,33 @@ class Task(db.Model):
         history = getattr(self, "status_history", None)
         if not history:
             return None
-        return max(
+        latest = max(
             (
-                entry.changed_at
+                _normalize_utc(entry.changed_at)
                 for entry in history
                 if entry.to_status == TaskStatus.IN_PROGRESS and entry.changed_at
             ),
             default=None,
         )
+        return _to_sao_paulo(latest)
 
     @property
     def finished_at(self):
         """Return the recorded completion timestamp for the task."""
         if self.completed_at:
-            return self.completed_at
+            return _to_sao_paulo(self.completed_at)
         history = getattr(self, "status_history", None)
         if not history:
             return None
-        return max(
+        latest = max(
             (
-                entry.changed_at
+                _normalize_utc(entry.changed_at)
                 for entry in history
                 if entry.to_status == TaskStatus.DONE and entry.changed_at
             ),
             default=None,
         )
+        return _to_sao_paulo(latest)
 
 
 class TaskStatusHistory(db.Model):
