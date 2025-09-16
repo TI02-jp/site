@@ -1937,9 +1937,13 @@ def tasks_sector(tag_id):
         abort(404)
     if current_user.role != "admin" and tag not in current_user.tags:
         abort(403)
+    assigned_param = (request.args.get("assigned_to_me", "") or "").lower()
+    assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
+    query = Task.query.filter(Task.tag_id == tag_id, Task.parent_id.is_(None))
+    if assigned_to_me:
+        query = query.filter(Task.assigned_to == current_user.id)
     tasks = (
-        Task.query.filter_by(tag_id=tag_id, parent_id=None)
-        .options(
+        query.options(
             joinedload(Task.children),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
@@ -1971,6 +1975,7 @@ def tasks_sector(tag_id):
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
         history_count=history_count,
+        assigned_to_me=assigned_to_me,
     )
 
 
@@ -1979,14 +1984,18 @@ def tasks_sector(tag_id):
 @login_required
 def tasks_history(tag_id=None):
     """Display archived tasks beyond the visible limit."""
+    assigned_param = (request.args.get("assigned_to_me", "") or "").lower()
+    assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
     if tag_id:
         tag = Tag.query.get_or_404(tag_id)
         if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
             abort(404)
         if current_user.role != "admin" and tag not in current_user.tags:
             abort(403)
-        query = Task.query.filter_by(
-            tag_id=tag_id, parent_id=None, status=TaskStatus.DONE
+        query = Task.query.filter(
+            Task.tag_id == tag_id,
+            Task.parent_id.is_(None),
+            Task.status == TaskStatus.DONE,
         )
     else:
         tag = None
@@ -2001,13 +2010,20 @@ def tasks_history(tag_id=None):
                 Task.status == TaskStatus.DONE,
                 Task.tag_id.in_(tag_ids),
             )
+    if assigned_to_me:
+        query = query.filter(Task.assigned_to == current_user.id)
     tasks = (
         query.order_by(Task.completed_at.desc())
         .options(joinedload(Task.tag), joinedload(Task.finisher))
         .offset(5)
         .all()
     )
-    return render_template("tasks_history.html", tag=tag, tasks=tasks)
+    return render_template(
+        "tasks_history.html",
+        tag=tag,
+        tasks=tasks,
+        assigned_to_me=assigned_to_me,
+    )
 
 
 @app.route("/tasks/<int:task_id>")

@@ -47,4 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         tagSelect.addEventListener('change', () => loadUsers(tagSelect.value));
     }
+
+    const assignedToMeCheckbox = document.getElementById('assigned-to-me-checkbox');
+    if (assignedToMeCheckbox) {
+        assignedToMeCheckbox.addEventListener('change', () => {
+            const form = assignedToMeCheckbox.closest('form');
+            if (form) {
+                form.submit();
+            }
+        });
+    }
 });
