@@ -2033,21 +2033,9 @@ def tasks_new():
             parent_id=parent_id,
             assigned_to=assignee_id,
         )
+        if task.assigned_to and task.assigned_to == current_user.id:
+            task._skip_assignment_notification = True
         db.session.add(task)
-        db.session.flush()
-        if task.assigned_to and task.assigned_to != current_user.id:
-            if tag:
-                message = (
-                    f"Tarefa \"{task.title}\" atribuída no setor {tag.nome}."
-                )
-            else:
-                message = f"Tarefa \"{task.title}\" atribuída a você."
-            notification = TaskNotification(
-                user_id=task.assigned_to,
-                task_id=task.id,
-                message=message,
-            )
-            db.session.add(notification)
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
         return redirect(url_for("tasks_sector", tag_id=tag_id))
@@ -2221,6 +2209,8 @@ def update_task_status(task_id):
         task.status = new_status
         if new_status == TaskStatus.IN_PROGRESS:
             if old_status != TaskStatus.DONE or current_user.role != "admin":
+                if task.assigned_to != current_user.id:
+                    task._skip_assignment_notification = True
                 task.assigned_to = current_user.id
             task.completed_by = None
             task.completed_at = None

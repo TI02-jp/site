@@ -1,12 +1,15 @@
 """Database models used by the application."""
 
 import json
-from sqlalchemy.types import TypeDecorator, String
-from app import db
 from datetime import datetime
-from zoneinfo import ZoneInfo
-from app.services.google_calendar import get_calendar_timezone
 from enum import Enum
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import event, inspect, select
+from sqlalchemy.types import TypeDecorator, String
+
+from app import db
+from app.services.google_calendar import get_calendar_timezone
 
 # Timezone for timestamp fields
 # Default application timezone
@@ -367,4 +370,71 @@ class TaskNotification(db.Model):
 
     def __repr__(self):
         return f"<TaskNotification task={self.task_id} user={self.user_id}>"
+
+
+def _build_assignment_message(connection, task: Task) -> str:
+    """Return a human-friendly notification message for a task assignment."""
+
+    title = (task.title or "Nova tarefa").strip() or "Nova tarefa"
+    tag_name = None
+    if task.tag_id:
+        tag_name = connection.execute(
+            select(Tag.nome).where(Tag.id == task.tag_id)
+        ).scalar_one_or_none()
+    if tag_name:
+        return f'Tarefa "{title}" atribuída no setor {tag_name}.'
+    return f'Tarefa "{title}" atribuída a você.'
+
+
+def _create_task_assignment_notification(connection, task: Task, assignee_id: int) -> None:
+    """Persist a ``TaskNotification`` for the given assignment event."""
+
+    if not assignee_id:
+        if hasattr(task, "_skip_assignment_notification"):
+            delattr(task, "_skip_assignment_notification")
+        return
+
+    if getattr(task, "_skip_assignment_notification", False):
+        delattr(task, "_skip_assignment_notification")
+        return
+
+    message = _build_assignment_message(connection, task)
+    connection.execute(
+        TaskNotification.__table__.insert().values(
+            user_id=assignee_id,
+            task_id=task.id,
+            message=(message[:255] if message else None),
+            created_at=datetime.utcnow(),
+        )
+    )
+    if hasattr(task, "_skip_assignment_notification"):
+        delattr(task, "_skip_assignment_notification")
+
+
+@event.listens_for(Task, "after_insert")
+def _task_assignment_after_insert(mapper, connection, target):
+    """Emit a notification when a new task is created with an assignee."""
+
+    if target.assigned_to:
+        _create_task_assignment_notification(connection, target, target.assigned_to)
+
+
+@event.listens_for(Task, "after_update")
+def _task_assignment_after_update(mapper, connection, target):
+    """Emit notifications whenever a task is reassigned to a user."""
+
+    state = inspect(target)
+    history = state.attrs.assigned_to.history
+    if not history.has_changes():
+        if hasattr(target, "_skip_assignment_notification"):
+            delattr(target, "_skip_assignment_notification")
+        return
+
+    new_assignee = next((value for value in history.added if value is not None), None)
+    if not new_assignee:
+        if hasattr(target, "_skip_assignment_notification"):
+            delattr(target, "_skip_assignment_notification")
+        return
+
+    _create_task_assignment_notification(connection, target, new_assignee)
 
