@@ -2175,7 +2175,12 @@ def tasks_history(tag_id=None):
 def tasks_view(task_id):
     """Display details of a completed task."""
     task = (
-        Task.query.options(joinedload(Task.tag), joinedload(Task.finisher))
+        Task.query.options(
+            joinedload(Task.tag),
+            joinedload(Task.assignee),
+            joinedload(Task.finisher),
+            joinedload(Task.parent),
+        )
         .get_or_404(task_id)
     )
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
@@ -2183,8 +2188,14 @@ def tasks_view(task_id):
     if current_user.role != "admin" and task.tag not in current_user.tags:
         abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
+    priority_order = ["low", "medium", "high"]
+    cancel_url = url_for("tasks_history", tag_id=task.tag_id)
     return render_template(
-        "tasks_view.html", task=task, priority_labels=priority_labels
+        "tasks_view.html",
+        task=task,
+        priority_labels=priority_labels,
+        priority_order=priority_order,
+        cancel_url=cancel_url,
     )
 
 
