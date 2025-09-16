@@ -130,35 +130,122 @@
         background: transparent;
         border: none;
         color: inherit;
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 50%;
-        display: flex;
+        width: 2.85rem;
+        height: 2.85rem;
+        padding: 0;
+        border-radius: 1.25rem;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
         cursor: pointer;
         position: relative;
-        transition: background 0.2s ease;
       }
 
-      .notification-button:hover,
       .notification-button:focus {
-        background: rgba(255, 255, 255, 0.2);
         outline: none;
+      }
+
+      .notification-icon {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 1.25rem;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        background: linear-gradient(135deg, rgba(11, 40, 139, 0.95), rgba(232, 116, 41, 0.9));
+        box-shadow: 0 12px 24px rgba(11, 40, 139, 0.2);
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+      }
+
+      .notification-icon::before {
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border-radius: inherit;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+        opacity: 0.55;
+        transition: opacity 0.3s ease;
+      }
+
+      .notification-icon::after {
+        content: "";
+        position: absolute;
+        width: 65%;
+        height: 65%;
+        top: 12%;
+        left: 18%;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        filter: blur(16px);
+        opacity: 0.35;
+        transform: rotate(-25deg) translate3d(0, 0, 0);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .notification-button .notification-icon i {
+        position: relative;
+        z-index: 1;
+        font-size: 1.15rem;
+        text-shadow: 0 4px 8px rgba(11, 40, 139, 0.35);
+      }
+
+      .notification-button:hover .notification-icon,
+      .notification-button:focus-visible .notification-icon,
+      .notification-button.active .notification-icon {
+        transform: translateY(-1px) scale(1.05);
+        box-shadow: 0 16px 28px rgba(11, 40, 139, 0.25);
+      }
+
+      .notification-button:hover .notification-icon::before,
+      .notification-button:focus-visible .notification-icon::before,
+      .notification-button.active .notification-icon::before {
+        opacity: 0.9;
+      }
+
+      .notification-button:hover .notification-icon::after,
+      .notification-button:focus-visible .notification-icon::after,
+      .notification-button.active .notification-icon::after {
+        opacity: 0.65;
+        transform: rotate(-15deg) translate3d(-2px, -2px, 0);
+      }
+
+      .notification-button:focus-visible .notification-icon {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7), 0 16px 28px rgba(11, 40, 139, 0.25);
+      }
+
+      .notification-button.has-unread .notification-icon {
+        animation: notification-glow 2.4s ease-in-out infinite;
+      }
+
+      @keyframes notification-glow {
+        0%,
+        100% {
+          box-shadow: 0 12px 24px rgba(11, 40, 139, 0.2), 0 0 0 0 rgba(232, 116, 41, 0.45);
+        }
+        50% {
+          box-shadow: 0 12px 24px rgba(11, 40, 139, 0.2), 0 0 0 12px rgba(232, 116, 41, 0);
+        }
       }
 
       .notification-badge {
         position: absolute;
-        top: 0.15rem;
-        right: 0.2rem;
+        top: 0;
+        right: 0;
+        transform: translate(35%, -35%);
         background: var(--accent);
         color: #fff;
         border-radius: 999px;
-        padding: 0.1rem 0.45rem;
+        padding: 0.15rem 0.45rem;
+        min-width: 1.1rem;
+        height: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 0.65rem;
         font-weight: 600;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 4px 10px rgba(232, 116, 41, 0.4);
       }
 
       .notification-dropdown {
@@ -522,13 +609,15 @@
                 </h4>
                 <div class="notification-wrapper" id="notificationWrapper">
                     <button
-                        class="notification-button"
+                        class="notification-button{% if unread_notifications_count %} has-unread{% endif %}"
                         id="notificationButton"
                         type="button"
                         aria-label="Notificações"
                         aria-expanded="false"
                     >
-                        <i class="bi bi-bell"></i>
+                        <span class="notification-icon" aria-hidden="true">
+                            <i class="bi bi-bell-fill"></i>
+                        </span>
                         <span
                             class="notification-badge"
                             id="notificationCount"
