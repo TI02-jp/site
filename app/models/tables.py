@@ -392,87 +392,6 @@ def _build_assignment_message(title: str, tag_name: str | None) -> str:
     return f'Tarefa "{title}" atribuída a você.'
 
 
-def _dispatch_assignment_email(
-    connection, task: Task, assignee_id: int, title: str, tag_name: str | None, message: str
-) -> None:
-    """Send an email to the assignee informing about the new task."""
-
-    assignee_row = connection.execute(
-        select(User.name, User.email).where(User.id == assignee_id)
-    ).first()
-    if not assignee_row:
-        return
-
-    assignee_name = assignee_row.name or None
-    assignee_email = assignee_row.email or None
-    if not assignee_email:
-        return
-
-    try:
-        from flask import current_app, has_request_context, url_for
-    except Exception:
-        return
-
-    try:
-        app = current_app._get_current_object()
-    except RuntimeError:
-        return
-
-    try:
-        from app.services.mail import send_email
-    except Exception:
-        app.logger.exception("Falha ao carregar o serviço de e-mail para notificações de tarefas.")
-        return
-
-    subject = f"Nova tarefa atribuída: {title}"
-    greeting = assignee_name or assignee_email
-    lines: list[str] = []
-    if greeting:
-        lines.append(f"Olá {greeting},")
-        lines.append("")
-
-    lines.append(message)
-
-    details: list[str] = [f"Título: {title}"]
-    if tag_name:
-        details.append(f"Setor: {tag_name}")
-    if task.due_date:
-        details.append(f"Prazo: {task.due_date.strftime('%d/%m/%Y')}")
-    if details:
-        lines.append("")
-        lines.extend(details)
-
-    description = (task.description or "").strip()
-    if description:
-        lines.extend(["", "Descrição:", description])
-
-    task_link = None
-    try:
-        if has_request_context():
-            task_link = (
-                url_for("tasks_sector", tag_id=task.tag_id, _external=True)
-                + f"#task-{task.id}"
-            )
-        else:
-            base_url = app.config.get("PORTAL_BASE_URL")
-            if base_url:
-                base_url = base_url.rstrip("/")
-                task_link = f"{base_url}/tasks/sector/{task.tag_id}#task-{task.id}"
-    except Exception:  # pragma: no cover - fallback path
-        app.logger.warning("Não foi possível gerar o link da tarefa para o email de notificação.", exc_info=True)
-
-    if task_link:
-        lines.extend(["", "Acesse a tarefa:", task_link])
-
-    lines.extend(["", "Você também pode acompanhar suas notificações no portal."])
-
-    body = "\n".join(lines)
-    if not send_email(subject, body, [assignee_email]):
-        app.logger.warning(
-            "Envio de e-mail de notificação falhou para o usuário %s.", assignee_email
-        )
-
-
 def _create_task_assignment_notification(connection, task: Task, assignee_id: int) -> None:
     """Persist a ``TaskNotification`` for the given assignment event."""
 
@@ -495,7 +414,6 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
             created_at=datetime.utcnow(),
         )
     )
-    _dispatch_assignment_email(connection, task, assignee_id, title, tag_name, message)
     if hasattr(task, "_skip_assignment_notification"):
         delattr(task, "_skip_assignment_notification")
 
