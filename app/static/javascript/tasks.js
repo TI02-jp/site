@@ -26,6 +26,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const detailButtons = document.querySelectorAll('.view-task');
+    if (detailButtons.length) {
+        const closeAllDetails = (currentCard) => {
+            document.querySelectorAll('.task-card.show-details').forEach(openCard => {
+                if (openCard !== currentCard) {
+                    openCard.classList.remove('show-details');
+                    const openButton = openCard.querySelector('.view-task[aria-expanded="true"]');
+                    if (openButton) {
+                        openButton.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+        };
+
+        detailButtons.forEach(btn => {
+            btn.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = btn.closest('.task-card');
+                if (!card) {
+                    return;
+                }
+                const isOpen = card.classList.contains('show-details');
+                closeAllDetails(card);
+                if (isOpen) {
+                    card.classList.remove('show-details');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    card.classList.add('show-details');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
+
+        document.addEventListener('keyup', event => {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.task-card.show-details').forEach(card => {
+                    card.classList.remove('show-details');
+                    const button = card.querySelector('.view-task');
+                    if (button) {
+                        button.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+
+        document.addEventListener('click', event => {
+            if (!event.target.closest('.task-card')) {
+                document.querySelectorAll('.task-card.show-details').forEach(card => {
+                    card.classList.remove('show-details');
+                    const button = card.querySelector('.view-task');
+                    if (button) {
+                        button.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+    }
+
     const tagSelect = document.getElementById('tag_id');
     const userSelect = document.getElementById('assigned_to');
     if (tagSelect && userSelect) {

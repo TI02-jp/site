@@ -1,11 +1,11 @@
-{% macro render_task(task, TaskStatus, show_tag=False) %}
+{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None) %}
 <li id="task-{{ task.id }}" class="task-card{% if task.children %} has-children{% endif %}">
   <div class="task-header">
     {% if task.children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
     {% endif %}
     <div class="task-info">
-      <span class="task-title">{{ task.title }}</span>
+      <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
       {% if show_tag %}
       <span class="task-tag">{{ task.tag.nome }}</span>
       {% endif %}
@@ -24,6 +24,7 @@
       {% endif %}
     </div>
     <div class="task-actions">
+      <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
       {% if task.status == TaskStatus.PENDING %}
       <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
       {% elif task.status == TaskStatus.IN_PROGRESS %}
@@ -36,10 +37,41 @@
       {% endif %}
     </div>
   </div>
+  {% set labels = priority_labels if priority_labels is not none else {'low': 'Baixa', 'medium': 'Média', 'high': 'Alta'} %}
+  <div class="task-detail" id="task-detail-{{ task.id }}" role="region" aria-labelledby="task-title-{{ task.id }}">
+    <div class="task-detail-grid">
+      {% if task.parent %}
+      <div class="detail-field">
+        <span class="detail-label">Tarefa Pai</span>
+        <span class="detail-value">{{ task.parent.title }}</span>
+      </div>
+      {% endif %}
+      <div class="detail-field">
+        <span class="detail-label">Setor</span>
+        <span class="detail-value">{{ task.tag.nome }}</span>
+      </div>
+      <div class="detail-field">
+        <span class="detail-label">Responsável</span>
+        <span class="detail-value">{{ task.assignee.name if task.assignee else 'Sem responsável' }}</span>
+      </div>
+      <div class="detail-field">
+        <span class="detail-label">Prazo</span>
+        <span class="detail-value">{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else 'Sem prazo' }}</span>
+      </div>
+      <div class="detail-field">
+        <span class="detail-label">Prioridade</span>
+        <span class="detail-value">{{ labels.get(task.priority.value if task.priority else '', 'Sem prioridade') }}</span>
+      </div>
+      <div class="detail-field full">
+        <span class="detail-label">Descrição</span>
+        <span class="detail-value multiline">{{ task.description or 'Sem descrição' }}</span>
+      </div>
+    </div>
+  </div>
   {% if task.children %}
   <ul class="subtasks">
     {% for child in task.children %}
-      {{ render_task(child, TaskStatus, show_tag=show_tag) }}
+      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels) }}
     {% endfor %}
   </ul>
   {% endif %}

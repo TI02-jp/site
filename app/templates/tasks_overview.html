@@ -33,13 +33,18 @@
     'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
     'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
   } %}
+  {% set priority_labels = {
+    'low': 'Baixa',
+    'medium': 'Média',
+    'high': 'Alta'
+  } %}
   <div class="kanban-board">
     {% for status in TaskStatus %}
     <div class="kanban-column">
       <h3><i class="bi {{ status_meta[status.value].icon }}"></i>{{ status_meta[status.value].label }}</h3>
       <ul class="kanban-list" data-status="{{ status.value }}">
         {% for task in tasks_by_status[status] %}
-          {{ render_task(task, TaskStatus, show_tag=True) }}
+          {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels) }}
         {% else %}
           <li class="empty">Nenhuma tarefa.</li>
         {% endfor %}
