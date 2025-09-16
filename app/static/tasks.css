@@ -581,6 +581,7 @@
     "setor usuario"
     "titulo descricao"
     "prazo prioridade"
+    "inicio conclusao"
     "actions actions";
   gap: 1.5rem 2rem;
   align-items: start;
@@ -599,6 +600,8 @@
 .kanban-form .form-group-descricao { grid-area: descricao; }
 .kanban-form .form-group-prazo { grid-area: prazo; }
 .kanban-form .form-group-prioridade { grid-area: prioridade; }
+.kanban-form .form-group-inicio { grid-area: inicio; }
+.kanban-form .form-group-conclusao { grid-area: conclusao; }
 .kanban-form .form-actions { grid-area: actions; display: flex; gap: 1rem; justify-content: flex-end; }
 
 .kanban-form .form-group {
@@ -641,6 +644,8 @@
       "descricao"
       "prazo"
       "prioridade"
+      "inicio"
+      "conclusao"
       "actions";
     padding: 1rem;
   }

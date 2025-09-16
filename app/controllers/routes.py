@@ -1961,9 +1961,11 @@ def tasks_overview():
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.status_history),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.status_history),
         )
         .order_by(Task.due_date)
         .all()
@@ -2089,9 +2091,11 @@ def tasks_sector(tag_id):
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.status_history),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.status_history),
         )
         .order_by(Task.due_date)
         .all()
@@ -2186,6 +2190,7 @@ def tasks_view(task_id):
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.parent),
+            joinedload(Task.status_history),
         )
         .get_or_404(task_id)
     )

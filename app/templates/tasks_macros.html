@@ -62,6 +62,16 @@
         <span class="detail-label">Prioridade</span>
         <span class="detail-value">{{ labels.get(task.priority.value if task.priority else '', 'Sem prioridade') }}</span>
       </div>
+      {% if current_user.role == 'admin' %}
+      <div class="detail-field">
+        <span class="detail-label">Iniciada em</span>
+        <span class="detail-value">{% if task.started_at %}{{ task.started_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="detail-field">
+        <span class="detail-label">Concluída em</span>
+        <span class="detail-value">{% if task.finished_at %}{{ task.finished_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
+      </div>
+      {% endif %}
       <div class="detail-field full">
         <span class="detail-label">Descrição</span>
         <span class="detail-value multiline">{{ task.description or 'Sem descrição' }}</span>
