@@ -1,47 +1,8 @@
 {% extends "base.html" %}
 {% block title %}SALA DE REUNIÕES{% endblock %}
-{% block sidebar_nav %}
-    <div class="nav-section">
-        <div class="nav-section-title">PRINCIPAL</div>
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for("dashboard") }}">
-                    <i class="bi bi-list-task"></i>
-                    PARTICULARIDADES
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link"
-                   href="https://app.acessorias.com/sysmain.php"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                    ACESSÓRIAS
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link"
-                   href="https://auth.sieg.com/login"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                    SIEG
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for("consultorias") }}">
-                    <i class="bi bi-buildings"></i>
-                    CONSULTORIAS
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for("sala_reunioes") }}">
-                    <i class="bi bi-calendar-event"></i>
-                    SALA DE REUNIÕES
-                </a>
-            </li>
-        </ul>
-    </div>
+
+{% block extra_css %}
+    {{ super() }}
     <style>
     .content-breadcrumb { display: none; }
     .content-wrapper { padding: 0; }
@@ -49,6 +10,10 @@
     .participant-list { max-height: 150px; overflow-y: auto; }
     #calendar { height: 70vh; }
     </style>
+{% endblock %}
+
+{% block sidebar_nav %}
+    {% include 'sidebar_home.html' %}
 {% endblock %}
 {% block content %}
     <div class="container">
