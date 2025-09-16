@@ -339,3 +339,32 @@ class TaskStatusHistory(db.Model):
     def __repr__(self):
         return f"<TaskStatusHistory task={self.task_id} {self.from_status}->{self.to_status}>"
 
+
+class TaskNotification(db.Model):
+    """Notification emitted when a task is assigned to a user."""
+
+    __tablename__ = "task_notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    task_id = db.Column(
+        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    message = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    read_at = db.Column(db.DateTime)
+
+    user = db.relationship("User")
+    task = db.relationship("Task")
+
+    @property
+    def is_read(self) -> bool:
+        """Return ``True`` when the notification has been acknowledged."""
+
+        return self.read_at is not None
+
+    def __repr__(self):
+        return f"<TaskNotification task={self.task_id} user={self.user_id}>"
+
