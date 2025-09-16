@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Notificações{% endblock %}
+
+{% block extra_css %}
+<style>
+  .notifications-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .notifications-header {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .notification-card {
+    border: none;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .notification-card .list-group-item {
+    padding: 1.25rem;
+  }
+
+  .notification-row-unread {
+    background: #fff7f0;
+  }
+
+  .notification-row-unread .fw-semibold {
+    color: var(--primary);
+  }
+
+  .notification-empty-state {
+    padding: 3rem 1.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="notifications-header mb-4">
+    <div>
+      <h1 class="h3 mb-1">Notificações</h1>
+      <p class="text-muted mb-0">Acompanhe as tarefas e avisos atribuídos para você.</p>
+    </div>
+    <button
+      class="btn btn-outline-primary align-self-start align-self-md-center"
+      id="markAllNotifications"
+      type="button"
+      {% if unread_total == 0 %}disabled{% endif %}
+    >
+      Marcar todas como lidas
+    </button>
+  </div>
+
+  {% if notifications %}
+  <div class="card shadow-sm notification-card">
+    <ul class="list-group list-group-flush" id="notificationsList">
+      {% for notification in notifications %}
+      <li
+        class="list-group-item d-flex flex-column flex-lg-row gap-3 align-items-lg-center notification-row{% if not notification.is_read %} notification-row-unread{% endif %}"
+        data-id="{{ notification.id }}"
+      >
+        <div class="flex-grow-1">
+          <div class="fw-semibold">{{ notification.message }}</div>
+          <div class="text-muted small">{{ notification.created_at_display }}</div>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
+          {% if notification.url %}
+          <a class="btn btn-sm btn-outline-secondary" href="{{ notification.url }}">
+            Abrir tarefa
+          </a>
+          {% endif %}
+          {% if not notification.is_read %}
+          <button class="btn btn-sm btn-primary mark-notification-read" data-id="{{ notification.id }}">
+            Marcar como lida
+          </button>
+          {% else %}
+          <span class="badge bg-light text-muted">Lida</span>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <div class="card shadow-sm notification-card">
+    <div class="notification-empty-state text-center">
+      <i class="bi bi-bell-slash display-5 text-muted mb-3"></i>
+      <h2 class="h5 mb-2">Você está em dia!</h2>
+      <p class="text-muted mb-0">Nenhuma notificação pendente no momento.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const list = document.getElementById('notificationsList');
+    const markAllBtn = document.getElementById('markAllNotifications');
+    const csrfToken = window.csrfToken || '';
+
+    function updateNavBadge(unread) {
+      const badge = document.querySelector('[data-notifications-badge]');
+      if (!badge) {
+        return;
+      }
+      if (unread > 0) {
+        badge.textContent = unread;
+        badge.classList.remove('d-none');
+      } else {
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+      }
+    }
+
+    function markNotificationRead(id, row) {
+      return fetch(`/notifications/${id}/read`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Erro ao marcar notificação como lida');
+          }
+          return response.json();
+        })
+        .then(() => {
+          if (row) {
+            row.classList.remove('notification-row-unread');
+            const badge = row.querySelector('.badge');
+            const button = row.querySelector('.mark-notification-read');
+            if (button) {
+              button.remove();
+            }
+            if (badge) {
+              badge.textContent = 'Lida';
+            } else {
+              const status = document.createElement('span');
+              status.className = 'badge bg-light text-muted';
+              status.textContent = 'Lida';
+              const actions = row.querySelector('div.d-flex');
+              if (actions) {
+                actions.appendChild(status);
+              }
+            }
+          }
+        });
+    }
+
+    function handleUnreadState() {
+      if (!list) {
+        return;
+      }
+      const unreadRows = list.querySelectorAll('.notification-row-unread');
+      const unreadCount = unreadRows.length;
+      if (markAllBtn) {
+        markAllBtn.disabled = unreadCount === 0;
+      }
+      updateNavBadge(unreadCount);
+    }
+
+    if (list) {
+      list.addEventListener('click', (event) => {
+        const button = event.target.closest('.mark-notification-read');
+        if (!button) {
+          return;
+        }
+        const id = button.dataset.id;
+        const row = button.closest('.list-group-item');
+        if (!id || !row) {
+          return;
+        }
+        button.disabled = true;
+        markNotificationRead(id, row)
+          .catch(() => {
+            button.disabled = false;
+          })
+          .finally(() => {
+            handleUnreadState();
+          });
+      });
+    }
+
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (markAllBtn.disabled) {
+          return;
+        }
+        markAllBtn.disabled = true;
+        fetch('/notifications/read-all', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+          },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Erro ao marcar todas como lidas');
+            }
+            return response.json();
+          })
+          .then(() => {
+            if (list) {
+              list.querySelectorAll('.notification-row-unread').forEach((row) => {
+                row.classList.remove('notification-row-unread');
+                const button = row.querySelector('.mark-notification-read');
+                if (button) {
+                  button.remove();
+                }
+                const badge = row.querySelector('.badge');
+                if (badge) {
+                  badge.textContent = 'Lida';
+                } else {
+                  const status = document.createElement('span');
+                  status.className = 'badge bg-light text-muted';
+                  status.textContent = 'Lida';
+                  const actions = row.querySelector('div.d-flex');
+                  if (actions) {
+                    actions.appendChild(status);
+                  }
+                }
+              });
+            }
+          })
+          .catch(() => {
+            markAllBtn.disabled = false;
+          })
+          .finally(() => {
+            handleUnreadState();
+          });
+      });
+    }
+
+    handleUnreadState();
+  });
+</script>
+{% endblock %}

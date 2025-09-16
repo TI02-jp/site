@@ -73,7 +73,7 @@ from app.services.meeting_room import (
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -304,22 +304,22 @@ def ping():
     return ("", 204)
 
 
-@app.route("/notifications", methods=["GET"])
-@login_required
-def list_notifications():
-    """Return the most recent task notifications for the user."""
+def _get_user_notification_items(limit: int | None = 20):
+    """Return serialized notifications and unread totals for the current user."""
 
-    notifications = (
+    notifications_query = (
         TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
         .options(joinedload(TaskNotification.task).joinedload(Task.tag))
         .order_by(TaskNotification.created_at.desc())
-        .limit(20)
-        .all()
     )
+    if limit is not None:
+        notifications_query = notifications_query.limit(limit)
+    notifications = notifications_query.all()
     unread_total = TaskNotification.query.filter(
         TaskNotification.user_id == current_user.id,
         TaskNotification.read_at.is_(None),
     ).count()
+
     items = []
     for notification in notifications:
         task = notification.task
@@ -338,19 +338,49 @@ def list_notifications():
                 message = f"Tarefa \"{task_title}\" atribuída a você."
             else:
                 message = "Nova tarefa atribuída a você."
-        created_at = notification.created_at.isoformat()
-        if notification.created_at.tzinfo is None:
-            created_at += "Z"
+
+        created_at = notification.created_at
+        if created_at.tzinfo is None:
+            created_at_iso = created_at.isoformat() + "Z"
+            display_dt = created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+        else:
+            created_at_iso = created_at.isoformat()
+            display_dt = created_at.astimezone(SAO_PAULO_TZ)
+
         items.append(
             {
                 "id": notification.id,
                 "message": message,
-                "created_at": created_at,
+                "created_at": created_at_iso,
+                "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
                 "is_read": notification.is_read,
                 "url": task_url,
             }
         )
+
+    return items, unread_total
+
+
+@app.route("/notifications", methods=["GET"])
+@login_required
+def list_notifications():
+    """Return the most recent task notifications for the user."""
+
+    items, unread_total = _get_user_notification_items(limit=20)
     return jsonify({"notifications": items, "unread": unread_total})
+
+
+@app.route("/notificacoes")
+@login_required
+def notifications_center():
+    """Render the notification center page."""
+
+    items, unread_total = _get_user_notification_items(limit=50)
+    return render_template(
+        "notifications.html",
+        notifications=items,
+        unread_total=unread_total,
+    )
 
 
 @app.route("/notifications/<int:notification_id>/read", methods=["POST"])

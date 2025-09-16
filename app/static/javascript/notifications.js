@@ -50,7 +50,11 @@
     const listEl = document.getElementById('notificationList');
     const emptyEl = document.getElementById('notificationEmpty');
     const markAllBtn = document.getElementById('notificationMarkAll');
-    if (!wrapper || !button || !dropdown || !listEl || !emptyEl) {
+    const navBadge = document.querySelector('[data-notifications-badge]');
+    const supportsDropdown =
+      wrapper && button && dropdown && listEl && emptyEl;
+
+    if (!supportsDropdown && !navBadge) {
       return;
     }
 
@@ -71,9 +75,20 @@
       if (button) {
         button.classList.toggle('has-unread', hasUnread);
       }
+      if (navBadge) {
+        navBadge.textContent = String(count || 0);
+        if (hasUnread) {
+          navBadge.classList.remove('d-none');
+        } else {
+          navBadge.classList.add('d-none');
+        }
+      }
     }
 
     function renderNotifications(items) {
+      if (!listEl || !emptyEl) {
+        return;
+      }
       listEl.innerHTML = '';
       if (!Array.isArray(items) || items.length === 0) {
         emptyEl.style.display = 'block';
@@ -152,6 +167,9 @@
     }
 
     function openDropdown() {
+      if (!supportsDropdown) {
+        return;
+      }
       if (isOpen) {
         return;
       }
@@ -162,6 +180,9 @@
     }
 
     function closeDropdown() {
+      if (!supportsDropdown) {
+        return;
+      }
       if (!isOpen) {
         return;
       }
@@ -171,62 +192,64 @@
       isOpen = false;
     }
 
-    button.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (isOpen) {
-        closeDropdown();
-      } else {
-        openDropdown();
-        fetchNotifications();
-      }
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!wrapper.contains(event.target)) {
-        closeDropdown();
-      }
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closeDropdown();
-      }
-    });
-
-    listEl.addEventListener('click', (event) => {
-      const link = event.target.closest('a[data-id]');
-      if (!link) {
-        return;
-      }
-      event.preventDefault();
-      const notificationId = link.dataset.id;
-      const targetUrl = link.dataset.url;
-      if (!notificationId) {
-        return;
-      }
-      markNotificationRead(notificationId)
-        .catch(() => {})
-        .finally(() => {
-          closeDropdown();
-          fetchNotifications();
-          if (targetUrl) {
-            window.location.href = targetUrl;
-          }
-        });
-    });
-
-    if (markAllBtn) {
-      markAllBtn.addEventListener('click', (event) => {
+    if (supportsDropdown) {
+      button.addEventListener('click', (event) => {
         event.preventDefault();
-        if (markAllBtn.disabled) {
+        if (isOpen) {
+          closeDropdown();
+        } else {
+          openDropdown();
+          fetchNotifications();
+        }
+      });
+
+      document.addEventListener('click', (event) => {
+        if (wrapper && !wrapper.contains(event.target)) {
+          closeDropdown();
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeDropdown();
+        }
+      });
+
+      listEl.addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-id]');
+        if (!link) {
           return;
         }
-        markAllNotificationsRead()
+        event.preventDefault();
+        const notificationId = link.dataset.id;
+        const targetUrl = link.dataset.url;
+        if (!notificationId) {
+          return;
+        }
+        markNotificationRead(notificationId)
           .catch(() => {})
           .finally(() => {
+            closeDropdown();
             fetchNotifications();
+            if (targetUrl) {
+              window.location.href = targetUrl;
+            }
           });
       });
+
+      if (markAllBtn) {
+        markAllBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          if (markAllBtn.disabled) {
+            return;
+          }
+          markAllNotificationsRead()
+            .catch(() => {})
+            .finally(() => {
+              fetchNotifications();
+            });
+        });
+      }
     }
 
     fetchNotifications();
