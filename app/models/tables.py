@@ -321,6 +321,39 @@ class Task(db.Model):
         return f"<Task {self.title}>"
 
 
+    @property
+    def started_at(self):
+        """Return the most recent timestamp when the task entered "in progress"."""
+        history = getattr(self, "status_history", None)
+        if not history:
+            return None
+        return max(
+            (
+                entry.changed_at
+                for entry in history
+                if entry.to_status == TaskStatus.IN_PROGRESS and entry.changed_at
+            ),
+            default=None,
+        )
+
+    @property
+    def finished_at(self):
+        """Return the recorded completion timestamp for the task."""
+        if self.completed_at:
+            return self.completed_at
+        history = getattr(self, "status_history", None)
+        if not history:
+            return None
+        return max(
+            (
+                entry.changed_at
+                for entry in history
+                if entry.to_status == TaskStatus.DONE and entry.changed_at
+            ),
+            default=None,
+        )
+
+
 class TaskStatusHistory(db.Model):
     """Tracks changes to task statuses over time."""
     __tablename__ = "task_status_history"

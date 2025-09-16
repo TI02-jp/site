@@ -57,6 +57,18 @@
         </select>
       </div>
 
+      {% if current_user.role == 'admin' %}
+      <div class="form-group form-group-inicio">
+        <label>Iniciada em</label>
+        <input type="text" value="{{ task.started_at.strftime('%d/%m/%Y às %H:%M') if task.started_at else 'Não iniciada' }}" disabled>
+      </div>
+
+      <div class="form-group form-group-conclusao">
+        <label>Concluída em</label>
+        <input type="text" value="{{ task.finished_at.strftime('%d/%m/%Y às %H:%M') if task.finished_at else 'Não concluída' }}" disabled>
+      </div>
+      {% endif %}
+
       <div class="form-actions">
         <a href="{{ cancel_url }}" class="btn-history">Voltar</a>
       </div>
