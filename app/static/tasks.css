@@ -149,10 +149,10 @@
 
 .kanban-column h3 {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   gap: 0.4rem;
-  text-align: center;
+  text-align: left;
   font-size: 0.95rem;
   margin: 0;
   padding-bottom: 0.6rem;
@@ -388,18 +388,22 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   column-gap: 0.45rem;
   row-gap: 0.35rem;
+  align-items: start;
+  justify-items: start;
 }
 
 .task-detail .detail-field {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .task-detail .detail-field:not(.full) {
   display: grid;
   grid-template-columns: auto 1fr;
-  align-items: center;
+  align-items: start;
   column-gap: 0.4rem;
 }
 
@@ -416,12 +420,14 @@
   text-transform: uppercase;
   letter-spacing: 0.045em;
   color: #0f172a;
+  text-align: left;
 }
 
 .task-detail .detail-value {
   font-size: 0.75rem;
   color: #1f2937;
   line-height: 1.25;
+  text-align: left;
 }
 
 .task-detail .detail-value.multiline {
