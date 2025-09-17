@@ -11,7 +11,7 @@
       {% endif %}
       {% if task.due_date %}
       <div class="task-meta">
-        <span class="meta-label">Prazo</span>
+        <span class="meta-label">Prazo:</span>
         <span class="meta-value">{{ task.due_date.strftime('%d/%m/%Y') }}</span>
       </div>
       {% endif %}
@@ -20,17 +20,17 @@
       {% endif %}
       {% if task.status == TaskStatus.IN_PROGRESS and task.assignee %}
       <div class="task-meta">
-        <span class="meta-label">Em andamento por</span>
+        <span class="meta-label">Em andamento por:</span>
         <span class="meta-value">{{ task.assignee.name }}</span>
       </div>
       {% elif task.status == TaskStatus.DONE and task.finisher %}
       <div class="task-meta">
-        <span class="meta-label">Finalizado por</span>
+        <span class="meta-label">Finalizado por:</span>
         <span class="meta-value">{{ task.finisher.name }}</span>
       </div>
       {% elif task.assignee %}
       <div class="task-meta">
-        <span class="meta-label">Responsável</span>
+        <span class="meta-label">Responsável:</span>
         <span class="meta-value">{{ task.assignee.name }}</span>
       </div>
       {% endif %}
@@ -54,38 +54,38 @@
     <div class="task-detail-grid">
       {% if task.parent %}
       <div class="detail-field">
-        <span class="detail-label">Tarefa Pai</span>
+        <span class="detail-label">Tarefa Pai:</span>
         <span class="detail-value">{{ task.parent.title }}</span>
       </div>
       {% endif %}
       <div class="detail-field">
-        <span class="detail-label">Setor</span>
+        <span class="detail-label">Setor:</span>
         <span class="detail-value">{{ task.tag.nome }}</span>
       </div>
       <div class="detail-field">
-        <span class="detail-label">Responsável</span>
+        <span class="detail-label">Responsável:</span>
         <span class="detail-value">{{ task.assignee.name if task.assignee else 'Sem responsável' }}</span>
       </div>
       <div class="detail-field">
-        <span class="detail-label">Prazo</span>
+        <span class="detail-label">Prazo:</span>
         <span class="detail-value">{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else 'Sem prazo' }}</span>
       </div>
       <div class="detail-field">
-        <span class="detail-label">Prioridade</span>
+        <span class="detail-label">Prioridade:</span>
         <span class="detail-value">{{ labels.get(task.priority.value if task.priority else '', 'Sem prioridade') }}</span>
       </div>
       {% if current_user.role == 'admin' %}
       <div class="detail-field">
-        <span class="detail-label">Iniciada em</span>
+        <span class="detail-label">Iniciada em:</span>
         <span class="detail-value">{% if task.started_at %}{{ task.started_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
       </div>
       <div class="detail-field">
-        <span class="detail-label">Concluída em</span>
+        <span class="detail-label">Concluída em:</span>
         <span class="detail-value">{% if task.finished_at %}{{ task.finished_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
       </div>
       {% endif %}
       <div class="detail-field full">
-        <span class="detail-label">Descrição</span>
+        <span class="detail-label">Descrição:</span>
         <span class="detail-value multiline">{{ task.description or 'Sem descrição' }}</span>
       </div>
     </div>
