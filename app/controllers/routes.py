@@ -74,6 +74,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -84,6 +85,36 @@ GOOGLE_OAUTH_SCOPES = [
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
+
+
+ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
+    "fiscal": {
+        "title": "Fiscal",
+        "description": "Sistemas utilizados pela equipe fiscal para gestão de obrigações e documentos.",
+        "icon": "bi bi-clipboard-data",
+        "links": [
+            {
+                "label": "Acessórias",
+                "url": "https://app.acessorias.com/sysmain.php",
+                "description": "Acesse o sistema Acessórias para conferir obrigações fiscais.",
+                "icon": "bi bi-box-arrow-up-right",
+            }
+        ],
+    },
+    "contabil": {
+        "title": "Contábil",
+        "description": "Ferramentas que apoiam a rotina contábil e o envio de documentos.",
+        "icon": "bi bi-journal-check",
+        "links": [
+            {
+                "label": "SIEG",
+                "url": "https://auth.sieg.com/login",
+                "description": "Portal SIEG para captura de notas e integrações contábeis.",
+                "icon": "bi bi-box-arrow-up-right",
+            }
+        ],
+    },
+}
 
 
 def build_google_flow(state: str | None = None) -> Flow:
@@ -294,6 +325,30 @@ def index():
 def home():
     """Render the authenticated home page."""
     return render_template("home.html")
+
+
+@app.route("/acessos")
+@login_required
+def acessos():
+    """Display the hub with the available access categories."""
+
+    return render_template("acessos.html", categorias=ACESSOS_CATEGORIES)
+
+
+@app.route("/acessos/<categoria_slug>")
+@login_required
+def acessos_categoria(categoria_slug: str):
+    """Show the shortcuts for a specific access category."""
+
+    categoria = ACESSOS_CATEGORIES.get(categoria_slug.lower())
+    if not categoria:
+        abort(404)
+    return render_template(
+        "acessos_categoria.html",
+        categoria=categoria,
+        categoria_slug=categoria_slug.lower(),
+        categorias=ACESSOS_CATEGORIES,
+    )
 
 
 @app.route("/ping")

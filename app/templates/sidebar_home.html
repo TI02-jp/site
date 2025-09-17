@@ -8,26 +8,10 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="collapse" href="#acessosMenu" role="button" aria-expanded="false" aria-controls="acessosMenu">
+            <a class="nav-link{% if request.endpoint in ('acessos', 'acessos_categoria') %} active{% endif %}" href="{{ url_for('acessos') }}">
                 <i class="bi bi-shield-lock"></i>
                 ACESSOS
             </a>
-            <div class="collapse" id="acessosMenu">
-                <ul class="nav flex-column ms-3">
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            ACESSÓRIAS
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            SIEG
-                        </a>
-                    </li>
-                </ul>
-            </div>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('consultorias') }}">
