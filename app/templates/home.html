@@ -7,8 +7,151 @@
 {% endblock %}
 
 {% block content %}
-<header class="py-5 text-white text-center" style="background-color: var(--primary);">
-    <h1 class="display-4 mb-0"><i class="bi bi-building me-3"></i>SISTEMAS JP CONTÁBIL</h1>
-</header>
+<section class="home-hero text-white py-5">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="home-hero__eyebrow">Portal Corporativo JP</span>
+                <h1 class="home-hero__title display-5 fw-bold">
+                    Seu ponto de partida para cuidar das empresas, pessoas e resultados.
+                </h1>
+                <p class="home-hero__subtitle lead mb-4">
+                    Reúna informações estratégicas, acompanhe consultorias e encontre tudo o que precisa para impulsionar o trabalho diário da equipe JP Contábil.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a class="btn btn-portal" href="{{ url_for('dashboard') }}">
+                        <i class="bi bi-kanban me-2"></i>
+                        Particularidades
+                    </a>
+                    <a class="btn btn-portal btn-portal--secondary" href="{{ url_for('consultorias') }}">
+                        <i class="bi bi-briefcase me-2"></i>
+                        Consultorias
+                    </a>
+                    <a class="btn btn-portal btn-portal--outline" href="{{ url_for('notifications_center') }}">
+                        <i class="bi bi-bell me-2"></i>
+                        Notificações
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="portal-illustration">
+                    <div class="portal-illustration__halo"></div>
+                    <div class="portal-illustration__card">
+                        <span class="portal-illustration__badge"><i class="bi bi-stars me-2"></i>Visão Integrada</span>
+                        <h2 class="h4 mb-3">Portal em ação</h2>
+                        <ul class="list-unstyled mb-0">
+                            <li class="portal-illustration__item"><i class="bi bi-check-circle"></i> Projetos alinhados com a diretoria</li>
+                            <li class="portal-illustration__item"><i class="bi bi-check-circle"></i> Reuniões e comunicados em um só lugar</li>
+                            <li class="portal-illustration__item"><i class="bi bi-check-circle"></i> Equipes conectadas aos objetivos</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="home-sections py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="home-card">
+                    <div class="home-card__icon bg-primary-subtle text-primary">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3 class="h5">Cultura viva</h3>
+                    <p class="text-muted">O portal traduz a identidade JP Contábil, reforçando o cuidado com pessoas e a proximidade com nossos clientes.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="home-card">
+                    <div class="home-card__icon bg-warning-subtle text-warning">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h3 class="h5">Gestão inteligente</h3>
+                    <p class="text-muted">Atalhos diretos para particularidades, consultorias e reuniões dão ritmo às entregas e apoiam decisões.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="home-card">
+                    <div class="home-card__icon bg-info-subtle text-info">
+                        <i class="bi bi-lightbulb"></i>
+                    </div>
+                    <h3 class="h5">Inspiração diária</h3>
+                    <p class="text-muted">Novidades, lembretes e mural mantêm a equipe informada e pronta para novos desafios.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="home-journey py-5">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <h2 class="h3 mb-4">Um portal que acompanha a jornada da sua área</h2>
+                <div class="home-journey__step">
+                    <div class="home-journey__icon">
+                        <i class="bi bi-compass"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1">Direcione prioridades</h3>
+                        <p class="text-muted mb-0">Visualize particularidades e organize as próximas ações da sua equipe com clareza.</p>
+                    </div>
+                </div>
+                <div class="home-journey__step">
+                    <div class="home-journey__icon">
+                        <i class="bi bi-chat-text"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1">Compartilhe aprendizados</h3>
+                        <p class="text-muted mb-0">Use o mural e as notificações para manter todos alinhados às atualizações do dia.</p>
+                    </div>
+                </div>
+                <div class="home-journey__step mb-0">
+                    <div class="home-journey__icon">
+                        <i class="bi bi-rocket-takeoff"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1">Conquiste resultados</h3>
+                        <p class="text-muted mb-0">Transforme dados e reuniões em ações práticas que fortalecem o relacionamento com cada cliente.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="home-journey__card">
+                    <h3 class="h5 text-primary mb-3">Próximos passos rápidos</h3>
+                    <div class="home-journey__links">
+                        <a class="home-journey__link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
+                            <span class="home-journey__link-icon"><i class="bi bi-box-arrow-up-right"></i></span>
+                            Acessar Obrigações Acessórias
+                        </a>
+                        <a class="home-journey__link" href="{{ url_for('sala_reunioes') }}">
+                            <span class="home-journey__link-icon"><i class="bi bi-calendar-event"></i></span>
+                            Reservar sala de reuniões
+                        </a>
+                        {% set primeiro_setor = tasks_tags|first %}
+                        {% if current_user.role == 'admin' %}
+                        <a class="home-journey__link" href="{{ url_for('tasks_overview') }}">
+                            <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
+                            Mural e atividades do time
+                        </a>
+                        {% elif primeiro_setor %}
+                        <a class="home-journey__link" href="{{ url_for('tasks_sector', tag_id=primeiro_setor.id) }}">
+                            <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
+                            Mural e atividades do time
+                        </a>
+                        {% else %}
+                        <a class="home-journey__link" href="{{ url_for('tasks_history') }}">
+                            <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
+                            Mural e atividades do time
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}
 
