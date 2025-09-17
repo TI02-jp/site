@@ -92,29 +92,31 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
         "title": "Fiscal",
         "description": "Sistemas utilizados pela equipe fiscal para gestão de obrigações e documentos.",
         "icon": "bi bi-clipboard-data",
-        "links": [
-            {
-                "label": "Acessórias",
-                "url": "https://app.acessorias.com/sysmain.php",
-                "description": "Acesse o sistema Acessórias para conferir obrigações fiscais.",
-                "icon": "bi bi-box-arrow-up-right",
-            }
-        ],
+        "links": [],
     },
     "contabil": {
         "title": "Contábil",
         "description": "Ferramentas que apoiam a rotina contábil e o envio de documentos.",
         "icon": "bi bi-journal-check",
-        "links": [
-            {
-                "label": "SIEG",
-                "url": "https://auth.sieg.com/login",
-                "description": "Portal SIEG para captura de notas e integrações contábeis.",
-                "icon": "bi bi-box-arrow-up-right",
-            }
-        ],
+        "links": [],
     },
 }
+
+
+ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
+    {
+        "label": "Acessórias",
+        "url": "https://app.acessorias.com/sysmain.php",
+        "description": "Acesse o sistema Acessórias para conferir obrigações fiscais.",
+        "icon": "bi bi-box-arrow-up-right",
+    },
+    {
+        "label": "SIEG",
+        "url": "https://auth.sieg.com/login",
+        "description": "Portal SIEG para captura de notas e integrações contábeis.",
+        "icon": "bi bi-box-arrow-up-right",
+    },
+]
 
 
 def build_google_flow(state: str | None = None) -> Flow:
@@ -330,9 +332,13 @@ def home():
 @app.route("/acessos")
 @login_required
 def acessos():
-    """Display the hub with the available access categories."""
+    """Display the hub with the available access categories and direct shortcuts."""
 
-    return render_template("acessos.html", categorias=ACESSOS_CATEGORIES)
+    return render_template(
+        "acessos.html",
+        categorias=ACESSOS_CATEGORIES,
+        links=ACESSOS_DIRECT_LINKS,
+    )
 
 
 @app.route("/acessos/<categoria_slug>")
