@@ -8,15 +8,9 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="https://app.acessorias.com/sysmain.php" target="_blank" rel="noopener">
-                <i class="bi bi-box-arrow-up-right"></i>
-                ACESSÓRIAS
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="https://auth.sieg.com/login" target="_blank" rel="noopener">
-                <i class="bi bi-box-arrow-up-right"></i>
-                SIEG
+            <a class="nav-link{% if request.endpoint in ('acessos', 'acessos_categoria') %} active{% endif %}" href="{{ url_for('acessos') }}">
+                <i class="bi bi-shield-lock"></i>
+                ACESSOS
             </a>
         </li>
         <li class="nav-item">
