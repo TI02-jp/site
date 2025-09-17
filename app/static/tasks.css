@@ -201,12 +201,12 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.75rem;
+  padding: 0.6rem 0.65rem;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   color: #1f2937;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -231,13 +231,14 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .task-title {
   font-weight: 600;
   margin: 0;
   color: #0f172a;
+  font-size: 0.95rem;
 }
 
 .task-tag {
@@ -250,7 +251,7 @@
 }
 
 .task-meta {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #64748b;
 }
 
@@ -269,14 +270,14 @@
 
 .task-actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .task-actions .action {
   border: none;
   color: #fff;
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 1.65rem;
+  height: 1.65rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -367,8 +368,8 @@
 
 .task-detail {
   display: none;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.65rem;
   background: rgba(148, 163, 184, 0.12);
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -381,22 +382,32 @@
 
 .task-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem;
 }
 
 .task-detail .detail-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
+}
+
+.task-detail .detail-field:not(.full) {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.5rem;
 }
 
 .task-detail .detail-field.full {
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .task-detail .detail-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -404,8 +415,8 @@
 }
 
 .task-detail .detail-value {
-  font-size: 0.9rem;
-  color: #475569;
+  font-size: 0.8rem;
+  color: #1f2937;
 }
 
 .task-detail .detail-value.multiline {
