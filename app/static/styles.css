@@ -422,6 +422,11 @@ body.login-page {
 /* -----------------------------
 Home vibrante
 ----------------------------- */
+.sidebar.sidebar--home {
+    border-right: none;
+    box-shadow: none;
+}
+
 .home-hero {
     position: relative;
     background: radial-gradient(circle at top left, rgba(232, 116, 41, 0.35), transparent 55%),
