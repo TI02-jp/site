@@ -433,6 +433,7 @@ Home vibrante
                 radial-gradient(circle at bottom right, rgba(11, 40, 139, 0.4), transparent 45%),
                 linear-gradient(135deg, #0b288b, #123eb0);
     overflow: hidden;
+    border-radius: 6px !important;
 }
 
 .home-hero::after {
@@ -933,6 +934,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 .container-fluid {
     padding-left: 1rem;
     padding-right: 1rem;
+    padding-top: 0.40rem;
 }
 
 /* Badges de status */
