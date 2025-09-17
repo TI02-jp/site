@@ -187,6 +187,44 @@
         text-align: center;
       }
 
+      .sidebar .sidebar-access-tabs {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        background: var(--sidebar-bg);
+        border-bottom: none;
+      }
+
+      .sidebar .sidebar-access-tabs .nav-item + .nav-item .nav-link {
+        border-left: 1px solid var(--border-color);
+      }
+
+      .sidebar .sidebar-access-tabs .nav-link {
+        border: none;
+        border-radius: 0;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        padding: 0.85rem 0.5rem;
+        text-align: center;
+        background: transparent;
+      }
+
+      .sidebar .sidebar-access-tabs .nav-link:hover {
+        background: var(--sidebar-hover);
+        color: var(--accent);
+      }
+
+      .sidebar .sidebar-access-tabs .nav-link.active {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: none;
+      }
+
       /* Badge para contadores */
       .nav-badge {
         background: var(--accent);
