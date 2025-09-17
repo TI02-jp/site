@@ -10,17 +10,29 @@
       <span class="task-tag">{{ task.tag.nome }}</span>
       {% endif %}
       {% if task.due_date %}
-      <div class="task-meta">Prazo: {{ task.due_date.strftime('%d/%m/%Y') }}</div>
+      <div class="task-meta">
+        <span class="meta-label">Prazo</span>
+        <span class="meta-value">{{ task.due_date.strftime('%d/%m/%Y') }}</span>
+      </div>
       {% endif %}
       {% if task.children %}
       <div class="progress"><div style="width: {{ task.progress }}%;"></div></div>
       {% endif %}
       {% if task.status == TaskStatus.IN_PROGRESS and task.assignee %}
-      <div class="task-meta">Em andamento por: {{ task.assignee.name }}</div>
+      <div class="task-meta">
+        <span class="meta-label">Em andamento por</span>
+        <span class="meta-value">{{ task.assignee.name }}</span>
+      </div>
       {% elif task.status == TaskStatus.DONE and task.finisher %}
-      <div class="task-meta">Finalizado por: {{ task.finisher.name }}</div>
+      <div class="task-meta">
+        <span class="meta-label">Finalizado por</span>
+        <span class="meta-value">{{ task.finisher.name }}</span>
+      </div>
       {% elif task.assignee %}
-      <div class="task-meta">Responsável: {{ task.assignee.name }}</div>
+      <div class="task-meta">
+        <span class="meta-label">Responsável</span>
+        <span class="meta-value">{{ task.assignee.name }}</span>
+      </div>
       {% endif %}
     </div>
     <div class="task-actions">
