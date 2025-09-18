@@ -32,6 +32,7 @@ from app.models.tables import (
     TaskPriority,
     TaskStatusHistory,
     TaskNotification,
+    AccessLink,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -50,6 +51,7 @@ from app.forms import (
     TagForm,
     MeetingForm,
     TaskForm,
+    AccessLinkForm,
 )
 import os, json, re, secrets
 import requests
@@ -92,13 +94,11 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
         "title": "Fiscal",
         "description": "Sistemas utilizados pela equipe fiscal para gestão de obrigações e documentos.",
         "icon": "bi bi-clipboard-data",
-        "links": [],
     },
     "contabil": {
         "title": "Contábil",
         "description": "Ferramentas que apoiam a rotina contábil e o envio de documentos.",
         "icon": "bi bi-journal-check",
-        "links": [],
     },
 }
 
@@ -334,10 +334,15 @@ def home():
 def acessos():
     """Display the hub with the available access categories and direct shortcuts."""
 
+    categoria_counts = {
+        slug: AccessLink.query.filter_by(category=slug).count()
+        for slug in ACESSOS_CATEGORIES
+    }
     return render_template(
         "acessos.html",
         categorias=ACESSOS_CATEGORIES,
         links=ACESSOS_DIRECT_LINKS,
+        categoria_counts=categoria_counts,
     )
 
 
@@ -349,11 +354,36 @@ def acessos_categoria(categoria_slug: str):
     categoria = ACESSOS_CATEGORIES.get(categoria_slug.lower())
     if not categoria:
         abort(404)
+
+    form = AccessLinkForm()
+    if request.method == "POST" and current_user.role != "admin":
+        abort(403)
+
+    if form.validate_on_submit():
+        novo_link = AccessLink(
+            category=categoria_slug.lower(),
+            label=form.label.data.strip(),
+            url=form.url.data.strip(),
+            description=(form.description.data or "").strip() or None,
+            created_by=current_user,
+        )
+        db.session.add(novo_link)
+        db.session.commit()
+        flash("Novo atalho criado com sucesso!", "success")
+        return redirect(url_for("acessos_categoria", categoria_slug=categoria_slug.lower()))
+
+    links = (
+        AccessLink.query.filter_by(category=categoria_slug.lower())
+        .order_by(AccessLink.created_at.desc())
+        .all()
+    )
     return render_template(
         "acessos_categoria.html",
         categoria=categoria,
         categoria_slug=categoria_slug.lower(),
         categorias=ACESSOS_CATEGORIES,
+        links=links,
+        form=form,
     )
 
 
