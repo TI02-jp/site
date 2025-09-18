@@ -346,7 +346,7 @@ def acessos():
     )
 
 
-@app.route("/acessos/<categoria_slug>", methods=["GET", "POST"])
+@app.route("/acessos/<categoria_slug>")
 @login_required
 def acessos_categoria(categoria_slug: str):
     """Show the shortcuts for a specific access category."""
@@ -355,10 +355,33 @@ def acessos_categoria(categoria_slug: str):
     if not categoria:
         abort(404)
 
-    form = AccessLinkForm()
-    if request.method == "POST" and current_user.role != "admin":
+    links = (
+        AccessLink.query.filter_by(category=categoria_slug.lower())
+        .order_by(AccessLink.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "acessos_categoria.html",
+        categoria=categoria,
+        categoria_slug=categoria_slug.lower(),
+        categorias=ACESSOS_CATEGORIES,
+        links=links,
+    )
+
+
+@app.route("/acessos/<categoria_slug>/novo", methods=["GET", "POST"])
+@login_required
+def acessos_categoria_novo(categoria_slug: str):
+    """Display and process the form to create a new shortcut within a category."""
+
+    if current_user.role != "admin":
         abort(403)
 
+    categoria = ACESSOS_CATEGORIES.get(categoria_slug.lower())
+    if not categoria:
+        abort(404)
+
+    form = AccessLinkForm()
     if form.validate_on_submit():
         novo_link = AccessLink(
             category=categoria_slug.lower(),
@@ -372,17 +395,10 @@ def acessos_categoria(categoria_slug: str):
         flash("Novo atalho criado com sucesso!", "success")
         return redirect(url_for("acessos_categoria", categoria_slug=categoria_slug.lower()))
 
-    links = (
-        AccessLink.query.filter_by(category=categoria_slug.lower())
-        .order_by(AccessLink.created_at.desc())
-        .all()
-    )
     return render_template(
-        "acessos_categoria.html",
+        "acessos_categoria_novo.html",
         categoria=categoria,
         categoria_slug=categoria_slug.lower(),
-        categorias=ACESSOS_CATEGORIES,
-        links=links,
         form=form,
     )
 
