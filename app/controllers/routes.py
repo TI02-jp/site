@@ -346,7 +346,7 @@ def acessos():
     )
 
 
-@app.route("/acessos/<categoria_slug>")
+@app.route("/acessos/<categoria_slug>", methods=["GET", "POST"])
 @login_required
 def acessos_categoria(categoria_slug: str):
     """Show the shortcuts for a specific access category."""
