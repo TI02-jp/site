@@ -16,8 +16,7 @@
                     <li class="breadcrumb-item active" aria-current="page">Acessos</li>
                 </ol>
             </nav>
-            <h1 class="h3 mb-1">Central de Acessos</h1>
-            <p class="text-muted mb-0">Escolha uma área para visualizar os atalhos ou utilize os acessos diretos abaixo.</p>
+            <h1 class="h3 mb-0">Central de Acessos</h1>
         </div>
     </div>
 
@@ -55,9 +54,8 @@
                             <i class="{{ categoria.icon }}"></i>
                         </div>
                         <div>
-                            <h2 class="h5 mb-1">{{ categoria.title }}</h2>
-                            <p class="text-muted mb-0">{{ categoria.description }}</p>
-                            <span class="badge bg-primary-subtle text-primary fw-semibold mt-2">
+                            <h2 class="h5 mb-2">{{ categoria.title }}</h2>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold">
                                 {{ categoria_counts.get(slug, 0) }} atalho{{ categoria_counts.get(slug, 0) != 1 and 's' or '' }}
                             </span>
                         </div>
