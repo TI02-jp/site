@@ -38,17 +38,22 @@
         {% for link in links %}
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center justify-content-between gap-2 p-2">
-                    <span class="fw-semibold small text-truncate">{{ link.label }}</span>
-                    <a
-                        class="btn btn-outline-primary btn-sm px-2 py-1 d-inline-flex align-items-center gap-1"
-                        href="{{ link.url }}"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        <i class="bi bi-box-arrow-up-right"></i>
-                        Abrir
-                    </a>
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <span class="fw-semibold small text-truncate">{{ link.label }}</span>
+                        <a
+                            class="btn btn-outline-primary btn-sm px-2 py-1 d-inline-flex align-items-center gap-1"
+                            href="{{ link.url }}"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            <i class="bi bi-box-arrow-up-right"></i>
+                            Abrir
+                        </a>
+                    </div>
+                    {% if link.description %}
+                    <p class="text-muted small mb-0 mt-2">{{ link.description }}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
