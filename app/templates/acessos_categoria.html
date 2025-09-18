@@ -17,8 +17,7 @@
                     <li class="breadcrumb-item active" aria-current="page">{{ categoria.title }}</li>
                 </ol>
             </nav>
-            <h1 class="h3 mb-1">{{ categoria.title }}</h1>
-            <p class="text-muted mb-0">{{ categoria.description }}</p>
+            <h1 class="h3 mb-0">{{ categoria.title }}</h1>
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2">
             <a class="btn btn-outline-secondary" href="{{ url_for('acessos') }}">
@@ -35,29 +34,21 @@
     </div>
 
     {% if links %}
-    <div class="row g-3 g-md-4">
+    <div class="row g-2 g-md-3">
         {% for link in links %}
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column p-3 text-start">
-                    <h2 class="h6 fw-semibold mb-1">{{ link.label }}</h2>
-                    {% if link.description %}
-                    <p class="text-muted small mb-2">{{ link.description }}</p>
-                    {% else %}
-                    <p class="text-muted small mb-2">Botão linkável criado por administradores para acesso rápido.</p>
-                    {% endif %}
-                    <div class="mt-auto d-flex flex-column align-items-start gap-1">
-                        <a
-                            class="btn btn-outline-primary btn-sm px-2 py-1 d-inline-flex align-items-center gap-1"
-                            href="{{ link.url }}"
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            Abrir acesso
-                        </a>
-                        <span class="text-muted small">Criado em {{ link.created_at.strftime('%d/%m/%Y') }}</span>
-                    </div>
+                <div class="card-body d-flex align-items-center justify-content-between gap-2 p-2">
+                    <span class="fw-semibold small text-truncate">{{ link.label }}</span>
+                    <a
+                        class="btn btn-outline-primary btn-sm px-2 py-1 d-inline-flex align-items-center gap-1"
+                        href="{{ link.url }}"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        Abrir
+                    </a>
                 </div>
             </div>
         </div>
