@@ -20,81 +20,43 @@
             <h1 class="h3 mb-1">{{ categoria.title }}</h1>
             <p class="text-muted mb-0">{{ categoria.description }}</p>
         </div>
-        <a class="btn btn-outline-secondary" href="{{ url_for('acessos') }}">
-            <i class="bi bi-arrow-left me-2"></i>
-            Voltar para categorias
-        </a>
-    </div>
-
-    {% if current_user.is_authenticated and current_user.role == 'admin' %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                <div>
-                    <h2 class="h5 mb-1">Criar novo atalho</h2>
-                    <p class="text-muted mb-0 small">Defina um nome e o endereço do site para gerar um botão de acesso rápido.</p>
-                </div>
-            </div>
-            <form method="post" novalidate>
-                {{ form.hidden_tag() }}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ form.label.id }}">{{ form.label.label }}</label>
-                        {{ form.label(class='form-control' + (' is-invalid' if form.label.errors else '')) }}
-                        {% if form.label.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.label.errors[0] }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ form.url.id }}">{{ form.url.label }}</label>
-                        {{ form.url(class='form-control' + (' is-invalid' if form.url.errors else ''), inputmode='url') }}
-                        {% if form.url.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.url.errors[0] }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="{{ form.description.id }}">{{ form.description.label }}</label>
-                        {{ form.description(class='form-control' + (' is-invalid' if form.description.errors else '')) }}
-                        {% if form.description.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.description.errors[0] }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="mt-3 d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Criar atalho
-                    </button>
-                </div>
-            </form>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <a class="btn btn-outline-secondary" href="{{ url_for('acessos') }}">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar para categorias
+            </a>
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <a class="btn btn-primary" href="{{ url_for('acessos_categoria_novo', categoria_slug=categoria_slug) }}">
+                <i class="bi bi-plus-circle me-2"></i>
+                Novo atalho
+            </a>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
     {% if links %}
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
         {% for link in links %}
-        <div class="col-md-6">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body d-flex flex-column">
-                    <h2 class="h5 mb-2 text-primary">{{ link.label }}</h2>
+                    <h2 class="h6 fw-semibold mb-1">{{ link.label }}</h2>
                     {% if link.description %}
-                    <p class="text-muted mb-3">{{ link.description }}</p>
+                    <p class="text-muted small mb-3">{{ link.description }}</p>
                     {% else %}
-                    <p class="text-muted mb-3">Botão linkável criado por administradores para acesso rápido.</p>
+                    <p class="text-muted small mb-3">Botão linkável criado por administradores para acesso rápido.</p>
                     {% endif %}
-                    <div class="mt-auto d-flex justify-content-between align-items-center">
-                        <a class="btn btn-outline-primary" href="{{ link.url }}" target="_blank" rel="noopener">
-                            <i class="bi bi-box-arrow-up-right me-2"></i>
+                    <div class="mt-auto d-flex flex-column align-items-start gap-2">
+                        <a
+                            class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
+                            href="{{ link.url }}"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            <i class="bi bi-box-arrow-up-right"></i>
                             Abrir acesso
                         </a>
-                        <span class="text-muted small">{{ link.created_at.strftime('%d/%m/%Y') }}</span>
+                        <span class="text-muted small">Criado em {{ link.created_at.strftime('%d/%m/%Y') }}</span>
                     </div>
                 </div>
             </div>
@@ -105,7 +67,7 @@
     <div class="alert alert-warning" role="alert">
         Nenhum atalho configurado para esta categoria ainda.
         {% if current_user.is_authenticated and current_user.role == 'admin' %}
-        Utilize o formulário acima para adicionar o primeiro botão.
+        Utilize o botão "Novo atalho" acima para adicionar o primeiro botão.
         {% endif %}
     </div>
     {% endif %}
