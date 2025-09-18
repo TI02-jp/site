@@ -57,6 +57,9 @@
                         <div>
                             <h2 class="h5 mb-1">{{ categoria.title }}</h2>
                             <p class="text-muted mb-0">{{ categoria.description }}</p>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold mt-2">
+                                {{ categoria_counts.get(slug, 0) }} atalho{{ categoria_counts.get(slug, 0) != 1 and 's' or '' }}
+                            </span>
                         </div>
                     </div>
                     <div class="mt-auto">

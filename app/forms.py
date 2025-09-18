@@ -16,7 +16,15 @@ from wtforms import (
     HiddenField,
     widgets
 )
-from wtforms.validators import DataRequired, Email, Optional, Length, EqualTo, ValidationError
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    Optional,
+    Length,
+    EqualTo,
+    ValidationError,
+    URL,
+)
 import re
 
 REGIME_LANCAMENTO_CHOICES = [
@@ -161,6 +169,27 @@ class DepartamentoFiscalForm(DepartamentoForm):
     observacao_contato = TextAreaField('Observação', validators=[Optional()])
     contatos_json = HiddenField('Contatos', validators=[Optional()])
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+
+
+class AccessLinkForm(FlaskForm):
+    """Formulário para criar novos atalhos na central de acessos."""
+
+    label = StringField(
+        "Nome do botão",
+        validators=[DataRequired(), Length(max=100)],
+        render_kw={"placeholder": "Ex.: Portal Prefeitura"},
+    )
+    url = StringField(
+        "Endereço do site",
+        validators=[DataRequired(), URL(require_tld=False), Length(max=255)],
+        render_kw={"placeholder": "https://exemplo.com"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"rows": 2},
+    )
+    submit = SubmitField("Criar atalho")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
