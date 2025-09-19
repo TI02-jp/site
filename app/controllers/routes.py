@@ -339,23 +339,36 @@ def cursos():
     """Display the curated catalog of internal courses."""
 
     form = CourseForm()
+    sector_choices = [
+        (sector.id, sector.nome)
+        for sector in Setor.query.order_by(Setor.nome.asc()).all()
+    ]
+    participant_choices = [
+        (user.id, user.name)
+        for user in User.query.filter_by(ativo=True).order_by(User.name.asc()).all()
+    ]
+    form.sectors.choices = sector_choices
+    form.participants.choices = participant_choices
 
-    def _normalize_multivalue(raw: str) -> str:
-        """Return comma-separated names cleaned from arbitrary separators."""
-
-        parts = [segment.strip() for segment in (raw or "").replace(";", ",").split(",")]
-        unique_parts: list[str] = []
-        for item in parts:
-            if item and item not in unique_parts:
-                unique_parts.append(item)
-        return ", ".join(unique_parts)
+    sector_lookup = {value: label for value, label in sector_choices}
+    participant_lookup = {value: label for value, label in participant_choices}
 
     if form.validate_on_submit():
+        selected_sector_names = [
+            sector_lookup[sector_id]
+            for sector_id in form.sectors.data
+            if sector_id in sector_lookup
+        ]
+        selected_participant_names = [
+            participant_lookup[user_id]
+            for user_id in form.participants.data
+            if user_id in participant_lookup
+        ]
         course = Course(
             name=form.name.data.strip(),
             instructor=form.instructor.data.strip(),
-            sectors=_normalize_multivalue(form.sectors.data),
-            participants=_normalize_multivalue(form.participants.data),
+            sectors=", ".join(selected_sector_names),
+            participants=", ".join(selected_participant_names),
             workload=form.workload.data.strip(),
             start_date=form.start_date.data,
             schedule=form.schedule.data.strip(),
