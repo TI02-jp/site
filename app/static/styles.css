@@ -342,15 +342,20 @@ Página de Cursos
     row-gap: 1rem;
 }
 
+
+.courses-modal .modal-title {
+    font-size: 1.15rem;
+}
+
 .courses-modal .form-label,
 .courses-modal .form-check-label {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .courses-modal .form-control,
 .courses-modal .form-select,
 .courses-modal .form-check-input {
-    font-size: 0.95rem;
+    font-size: 0.82rem;
 }
 
 .courses-modal .form-control,
@@ -411,7 +416,7 @@ Página de Cursos
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
 }
 
 .courses-checkbox-item .form-check-input {
