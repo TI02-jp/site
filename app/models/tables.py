@@ -1,13 +1,13 @@
 """Database models used by the application."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
 
 from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
-from sqlalchemy.types import TypeDecorator, String
+from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
@@ -63,6 +63,45 @@ class JsonString(TypeDecorator):
             except json.JSONDecodeError:
                 return None
         return None
+
+
+def _coerce_time(value: time | str | timedelta | None) -> time | None:
+    """Return ``datetime.time`` objects parsed from legacy values."""
+
+    if value is None:
+        return None
+    if isinstance(value, time):
+        return value.replace(second=0, microsecond=0)
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                parsed = datetime.strptime(raw, fmt).time()
+                return parsed.replace(second=0, microsecond=0)
+            except ValueError:
+                continue
+        return None
+    if isinstance(value, timedelta):
+        total_seconds = int(value.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return time(hour=hours % 24, minute=minutes, second=seconds)
+    return None
+
+
+class TolerantTime(TypeDecorator):
+    """TIME column that tolerates legacy string payloads on read/write."""
+
+    impl = Time
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # type: ignore[override]
+        return _coerce_time(value)
+
+    def process_result_value(self, value, dialect):  # type: ignore[override]
+        return _coerce_time(value)
 
 class User(db.Model, UserMixin):
     """Application user account."""
@@ -126,10 +165,10 @@ class Course(db.Model):
     instructor = db.Column(db.String(150), nullable=False)
     sectors = db.Column(db.Text, nullable=False)
     participants = db.Column(db.Text, nullable=False)
-    workload = db.Column(db.Time, nullable=False)
+    workload = db.Column(TolerantTime(), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
-    schedule_start = db.Column(db.Time, nullable=False)
-    schedule_end = db.Column(db.Time, nullable=False)
+    schedule_start = db.Column(TolerantTime(), nullable=False)
+    schedule_end = db.Column(TolerantTime(), nullable=False)
     completion_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="planejado")
 
