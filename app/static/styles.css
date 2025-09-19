@@ -251,6 +251,27 @@ Página de Cursos
     flex-direction: column;
     gap: 0.35rem;
     border-left: 4px solid rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    user-select: none;
+}
+
+.courses-summary__item:hover,
+.courses-summary__item:focus-visible {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(20, 33, 61, 0.15);
+}
+
+.courses-summary__item.is-active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(20, 33, 61, 0.18);
+}
+
+.courses-summary__item:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 2px;
 }
 
 .courses-summary__item--planned {
@@ -275,6 +296,10 @@ Página de Cursos
 
 .courses-table-section {
     margin-top: 2.5rem;
+}
+
+.courses-table-row.is-hidden {
+    display: none !important;
 }
 
 .courses-modal .modal-dialog {
