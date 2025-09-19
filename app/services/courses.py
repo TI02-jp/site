@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import Enum
 
+import sqlalchemy as sa
+
+from app import db
+
 
 class CourseStatus(str, Enum):
     """Enumeration of supported course statuses."""
@@ -110,22 +114,37 @@ def get_courses_overview() -> list[CourseRecord]:
 
     from app.models.tables import Course
 
+    stmt = (
+        sa.select(
+            Course.name,
+            Course.instructor,
+            Course.sectors,
+            Course.participants,
+            sa.cast(Course.workload, sa.String).label("workload"),
+            Course.start_date,
+            sa.cast(Course.schedule, sa.String).label("schedule"),
+            Course.completion_date,
+            Course.status,
+        )
+        .order_by(Course.start_date.desc())
+    )
+
     records: list[CourseRecord] = []
-    for course in Course.query.order_by(Course.start_date.desc()).all():
+    for row in db.session.execute(stmt).mappings():
         try:
-            status = CourseStatus(course.status)
+            status = CourseStatus(row["status"])
         except ValueError:
             status = CourseStatus.PLANNED
         records.append(
             CourseRecord(
-                name=course.name,
-                instructor=course.instructor,
-                sectors=_split_values(course.sectors),
-                participants=_split_values(course.participants),
-                workload=_parse_time(course.workload),
-                start_date=course.start_date,
-                schedule=_parse_time(course.schedule),
-                completion_date=course.completion_date,
+                name=row["name"],
+                instructor=row["instructor"],
+                sectors=_split_values(row["sectors"]),
+                participants=_split_values(row["participants"]),
+                workload=_parse_time(row["workload"]),
+                start_date=row["start_date"],
+                schedule=_parse_time(row["schedule"]),
+                completion_date=row["completion_date"],
                 completion_note=None,
                 status=status,
             )
