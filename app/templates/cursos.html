@@ -19,15 +19,15 @@
                     </p>
                 </div>
                 <div class="courses-summary">
-                    <div class="courses-summary__item">
+                    <div class="courses-summary__item" data-status-filter="{{ CourseStatus.COMPLETED.value }}">
                         <span class="courses-summary__label">Concluídos</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.COMPLETED, 0) }}</strong>
                     </div>
-                    <div class="courses-summary__item courses-summary__item--planned">
+                    <div class="courses-summary__item courses-summary__item--planned" data-status-filter="{{ CourseStatus.PLANNED.value }}">
                         <span class="courses-summary__label">Planejados</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.PLANNED, 0) }}</strong>
                     </div>
-                    <div class="courses-summary__item courses-summary__item--delayed">
+                    <div class="courses-summary__item courses-summary__item--delayed" data-status-filter="{{ CourseStatus.DELAYED.value }}">
                         <span class="courses-summary__label">Atrasados</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.DELAYED, 0) }}</strong>
                     </div>
@@ -83,7 +83,7 @@
                                         "completion_date": course.completion_date_value,
                                         "status": course.status.value,
                                     } %}
-                                    <tr class="courses-table-row" data-course='{{ course_payload | tojson }}' tabindex="0" role="button" aria-label="Editar curso {{ course.name }}">
+                                    <tr class="courses-table-row" data-course='{{ course_payload | tojson }}' data-status="{{ course.status.value }}" tabindex="0" role="button" aria-label="Editar curso {{ course.name }}">
                                         <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
                                         <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
                                         <td data-label="Setores Participantes">
@@ -114,9 +114,12 @@
                                         </td>
                                     </tr>
                                     {% endfor %}
+                                    <tr class="courses-table-empty" data-empty-state-row style="display: none;">
+                                        <td colspan="10" class="text-center py-4 text-muted">Nenhum curso encontrado para o filtro selecionado.</td>
+                                    </tr>
                                 {% else %}
                                     <tr>
-                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
+                                        <td colspan="10" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -271,6 +274,90 @@
         var submitBtn = formEl.querySelector('[type="submit"]');
         var courseIdInput = formEl.querySelector('input[name="course_id"]');
         var newCourseButton = document.querySelector('[data-action="open-course-create"]');
+        var summaryContainer = document.querySelector('.courses-summary');
+        var summaryItems = document.querySelectorAll('.courses-summary__item[data-status-filter]');
+        var tableBody = document.querySelector('.courses-table tbody');
+        var tableRows = tableBody ? Array.prototype.slice.call(tableBody.querySelectorAll('.courses-table-row')) : [];
+        var emptyStateRow = tableBody ? tableBody.querySelector('[data-empty-state-row]') : null;
+        var activeStatusFilter = null;
+
+        function updateSummaryActiveState() {
+            summaryItems.forEach(function (item) {
+                var isActive = Boolean(activeStatusFilter && item.dataset.statusFilter === activeStatusFilter);
+                item.classList.toggle('is-active', isActive);
+                item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        function filterRowsByStatus() {
+            if (!tableRows.length) {
+                return;
+            }
+            var visibleCount = 0;
+            tableRows.forEach(function (row) {
+                var matches = !activeStatusFilter || row.dataset.status === activeStatusFilter;
+                if (matches) {
+                    row.classList.remove('is-hidden');
+                    visibleCount += 1;
+                } else {
+                    row.classList.add('is-hidden');
+                }
+            });
+            if (emptyStateRow) {
+                emptyStateRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
+        function applyStatusFilter(nextStatus) {
+            activeStatusFilter = nextStatus;
+            updateSummaryActiveState();
+            filterRowsByStatus();
+            if (activeStatusFilter) {
+                document.addEventListener('click', handleDocumentClick);
+            } else {
+                document.removeEventListener('click', handleDocumentClick);
+            }
+        }
+
+        function handleSummaryItemClick(event) {
+            var status = event.currentTarget.dataset.statusFilter || null;
+            if (!status) {
+                return;
+            }
+            if (status === activeStatusFilter) {
+                return;
+            }
+            applyStatusFilter(status);
+        }
+
+        function handleDocumentClick(event) {
+            if (!activeStatusFilter || !summaryContainer) {
+                return;
+            }
+            if (summaryContainer.contains(event.target)) {
+                return;
+            }
+            applyStatusFilter(null);
+        }
+
+        summaryItems.forEach(function (item) {
+            item.addEventListener('click', function (event) {
+                event.preventDefault();
+                handleSummaryItemClick(event);
+            });
+            item.setAttribute('role', 'button');
+            item.setAttribute('tabindex', '0');
+            item.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleSummaryItemClick({ currentTarget: item });
+                }
+            });
+        });
+
+        if (summaryItems.length) {
+            updateSummaryActiveState();
+        }
 
         function setSubmitLabel(label) {
             if (!submitBtn) {
