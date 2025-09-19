@@ -381,6 +381,15 @@ Página de Cursos
     background: #fff;
 }
 
+.courses-table-actions__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+}
+
 .courses-checkbox-list {
     display: flex;
     flex-direction: column;
@@ -417,23 +426,14 @@ Página de Cursos
     color: #0b288b;
 }
 
-.courses-table-actions__button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-    border-radius: 999px;
-    padding: 0.5rem 1rem;
-}
-
 .courses-table thead th {
     background: #0b288b;
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 0;
-    padding: 0.6rem 0.75rem;
+    padding: 0.5rem 0.65rem;
 }
 
 .courses-table tbody tr:nth-child(even) {
@@ -455,9 +455,9 @@ Página de Cursos
 }
 
 .courses-table tbody td {
-    padding: 0.75rem;
+    padding: 0.65rem;
     vertical-align: middle;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .courses-chip-group {
@@ -469,9 +469,9 @@ Página de Cursos
 .courses-chip {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.55rem;
+    padding: 0.22rem 0.5rem;
     border-radius: 999px;
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     font-weight: 600;
     letter-spacing: 0.3px;
 }
@@ -490,10 +490,10 @@ Página de Cursos
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.3rem 0.7rem;
+    padding: 0.28rem 0.62rem;
     border-radius: 999px;
     font-weight: 600;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     text-transform: capitalize;
 }
 
