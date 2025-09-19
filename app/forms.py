@@ -197,6 +197,7 @@ class AccessLinkForm(FlaskForm):
 class CourseForm(FlaskForm):
     """Formulário para cadastrar cursos internos."""
 
+    course_id = HiddenField()
     name = StringField(
         "Nome do Curso",
         validators=[DataRequired(), Length(max=150)],

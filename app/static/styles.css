@@ -355,6 +355,20 @@ Página de Cursos
     background-color: #f8f9ff;
 }
 
+.courses-table-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.courses-table-row:hover {
+    background-color: #edf1ff;
+}
+
+.courses-table-row:focus-visible {
+    outline: 2px solid #0b288b;
+    outline-offset: -2px;
+}
+
 .courses-table tbody td {
     padding-top: 1.25rem;
     padding-bottom: 1.25rem;

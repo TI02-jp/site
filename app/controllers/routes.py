@@ -353,7 +353,16 @@ def cursos():
     sector_lookup = {value: label for value, label in sector_choices}
     participant_lookup = {value: label for value, label in participant_choices}
 
+    course_id_raw = (form.course_id.data or "").strip()
+
     if form.validate_on_submit():
+        course_id: int | None = None
+        if course_id_raw:
+            try:
+                course_id = int(course_id_raw)
+            except ValueError:
+                course_id = None
+
         selected_sector_names = [
             sector_lookup[sector_id]
             for sector_id in form.sectors.data
@@ -364,26 +373,45 @@ def cursos():
             for user_id in form.participants.data
             if user_id in participant_lookup
         ]
-        course = Course(
-            name=form.name.data.strip(),
-            instructor=form.instructor.data.strip(),
-            sectors=", ".join(selected_sector_names),
-            participants=", ".join(selected_participant_names),
-            workload=form.workload.data,
-            start_date=form.start_date.data,
-            schedule_start=form.schedule_start.data,
-            schedule_end=form.schedule_end.data,
-            completion_date=form.completion_date.data,
-            status=form.status.data,
-        )
-        db.session.add(course)
-        db.session.commit()
-        flash("Curso cadastrado com sucesso!", "success")
+        if course_id is not None:
+            course = Course.query.get(course_id)
+            if not course:
+                flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+                return redirect(url_for("cursos"))
+
+            course.name = form.name.data.strip()
+            course.instructor = form.instructor.data.strip()
+            course.sectors = ", ".join(selected_sector_names)
+            course.participants = ", ".join(selected_participant_names)
+            course.workload = form.workload.data
+            course.start_date = form.start_date.data
+            course.schedule_start = form.schedule_start.data
+            course.schedule_end = form.schedule_end.data
+            course.completion_date = form.completion_date.data
+            course.status = form.status.data
+            db.session.commit()
+            flash("Curso atualizado com sucesso!", "success")
+        else:
+            course = Course(
+                name=form.name.data.strip(),
+                instructor=form.instructor.data.strip(),
+                sectors=", ".join(selected_sector_names),
+                participants=", ".join(selected_participant_names),
+                workload=form.workload.data,
+                start_date=form.start_date.data,
+                schedule_start=form.schedule_start.data,
+                schedule_end=form.schedule_end.data,
+                completion_date=form.completion_date.data,
+                status=form.status.data,
+            )
+            db.session.add(course)
+            db.session.commit()
+            flash("Curso cadastrado com sucesso!", "success")
         return redirect(url_for("cursos"))
 
     elif request.method == "POST":
         flash(
-            "Não foi possível cadastrar o curso. Verifique os campos destacados e tente novamente.",
+            "Não foi possível salvar o curso. Verifique os campos destacados e tente novamente.",
             "danger",
         )
 
@@ -401,6 +429,7 @@ def cursos():
         status_classes=status_classes,
         CourseStatus=CourseStatus,
         form=form,
+        editing_course_id=course_id_raw,
     )
 
 

@@ -23,6 +23,7 @@ class CourseStatus(str, Enum):
 class CourseRecord:
     """Structured information describing a single course."""
 
+    id: int
     name: str
     instructor: str
     sectors: tuple[str, ...]
@@ -87,6 +88,36 @@ class CourseRecord:
 
         return list(self.participants)
 
+    @property
+    def workload_value(self) -> str:
+        """Return the raw workload value formatted for form inputs."""
+
+        return self.workload.strftime("%H:%M") if self.workload else ""
+
+    @property
+    def schedule_start_value(self) -> str:
+        """Return the raw schedule start formatted for form inputs."""
+
+        return self.schedule_start.strftime("%H:%M") if self.schedule_start else ""
+
+    @property
+    def schedule_end_value(self) -> str:
+        """Return the raw schedule end formatted for form inputs."""
+
+        return self.schedule_end.strftime("%H:%M") if self.schedule_end else ""
+
+    @property
+    def start_date_value(self) -> str:
+        """Return the ISO start date suitable for date inputs."""
+
+        return self.start_date.isoformat()
+
+    @property
+    def completion_date_value(self) -> str:
+        """Return the ISO completion date suitable for date inputs."""
+
+        return self.completion_date.isoformat() if self.completion_date else ""
+
 
 def _split_values(raw: str) -> tuple[str, ...]:
     """Normalize comma-separated strings into a tuple of values."""
@@ -144,6 +175,7 @@ def get_courses_overview() -> list[CourseRecord]:
 
     stmt = (
         sa.select(
+            Course.id,
             Course.name,
             Course.instructor,
             Course.sectors,
@@ -166,6 +198,7 @@ def get_courses_overview() -> list[CourseRecord]:
             status = CourseStatus.PLANNED
         records.append(
             CourseRecord(
+                id=row["id"],
                 name=row["name"],
                 instructor=row["instructor"],
                 sectors=_split_values(row["sectors"]),
