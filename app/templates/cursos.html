@@ -61,7 +61,8 @@
                                     <th scope="col">Participantes</th>
                                     <th scope="col">Carga Horária</th>
                                     <th scope="col">Data de Início</th>
-                                    <th scope="col">Horário (Início - Fim)</th>
+                                    <th scope="col">Horário Início</th>
+                                    <th scope="col">Horário Fim</th>
                                     <th scope="col">Data de Conclusão</th>
                                     <th scope="col">Status</th>
                                 </tr>
@@ -101,7 +102,8 @@
                                         </td>
                                         <td class="text-nowrap" data-label="Carga Horária">{{ course.workload_label }}</td>
                                         <td data-label="Data de Início">{{ course.start_date_label }}</td>
-                                        <td data-label="Horário (Início - Fim)">{{ course.schedule_label }}</td>
+                                        <td data-label="Horário Início">{{ course.schedule_start_label }}</td>
+                                        <td data-label="Horário Fim">{{ course.schedule_end_label }}</td>
                                         <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
                                         <td data-label="Status">
                                             {% set status_class = status_classes.get(course.status) %}
