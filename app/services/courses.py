@@ -27,8 +27,8 @@ class CourseRecord:
     start_date: date
     schedule: str
     completion_date: date | None
-    completion_note: str | None = None
     status: CourseStatus
+    completion_note: str | None = None
 
     @property
     def start_date_label(self) -> str:
