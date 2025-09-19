@@ -230,8 +230,14 @@ class CourseForm(FlaskForm):
         format="%Y-%m-%d",
         validators=[DataRequired()],
     )
-    schedule = TimeField(
-        "Horário",
+    schedule_start = TimeField(
+        "Horário de Início",
+        format="%H:%M",
+        validators=[DataRequired()],
+        render_kw={"step": 300},
+    )
+    schedule_end = TimeField(
+        "Horário de Fim",
         format="%H:%M",
         validators=[DataRequired()],
         render_kw={"step": 300},

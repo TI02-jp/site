@@ -29,7 +29,8 @@ class CourseRecord:
     participants: tuple[str, ...]
     workload: time | None
     start_date: date
-    schedule: time | None
+    schedule_start: time | None
+    schedule_end: time | None
     completion_date: date | None
     status: CourseStatus
     completion_note: str | None = None
@@ -57,10 +58,22 @@ class CourseRecord:
         return _format_time_label(self.workload)
 
     @property
-    def schedule_label(self) -> str:
-        """Return the formatted schedule time or a fallback placeholder."""
+    def schedule_start_label(self) -> str:
+        """Return the formatted start time or a fallback placeholder."""
 
-        return _format_time_label(self.schedule)
+        return _format_time_label(self.schedule_start)
+
+    @property
+    def schedule_end_label(self) -> str:
+        """Return the formatted end time or a fallback placeholder."""
+
+        return _format_time_label(self.schedule_end)
+
+    @property
+    def schedule_label(self) -> str:
+        """Return a combined label with both start and end times."""
+
+        return _format_time_range(self.schedule_start, self.schedule_end)
 
     @property
     def sectors_list(self) -> list[str]:
@@ -109,6 +122,21 @@ def _format_time_label(raw: time | None) -> str:
     return raw.strftime("%H:%M")
 
 
+def _format_time_range(start: time | None, end: time | None) -> str:
+    """Return a human-readable label representing the schedule window."""
+
+    start_label = _format_time_label(start)
+    end_label = _format_time_label(end)
+
+    if start_label == "-" and end_label == "-":
+        return "-"
+    if end_label == "-":
+        return start_label
+    if start_label == "-":
+        return end_label
+    return f"{start_label} - {end_label}"
+
+
 def get_courses_overview() -> list[CourseRecord]:
     """Return all registered courses ordered by the most recent start date."""
 
@@ -122,7 +150,8 @@ def get_courses_overview() -> list[CourseRecord]:
             Course.participants,
             sa.cast(Course.workload, sa.String).label("workload"),
             Course.start_date,
-            sa.cast(Course.schedule, sa.String).label("schedule"),
+            sa.cast(Course.schedule_start, sa.String).label("schedule_start"),
+            sa.cast(Course.schedule_end, sa.String).label("schedule_end"),
             Course.completion_date,
             Course.status,
         )
@@ -143,7 +172,8 @@ def get_courses_overview() -> list[CourseRecord]:
                 participants=_split_values(row["participants"]),
                 workload=_parse_time(row["workload"]),
                 start_date=row["start_date"],
-                schedule=_parse_time(row["schedule"]),
+                schedule_start=_parse_time(row["schedule_start"]),
+                schedule_end=_parse_time(row["schedule_end"]),
                 completion_date=row["completion_date"],
                 completion_note=None,
                 status=status,

@@ -371,7 +371,8 @@ def cursos():
             participants=", ".join(selected_participant_names),
             workload=form.workload.data,
             start_date=form.start_date.data,
-            schedule=form.schedule.data,
+            schedule_start=form.schedule_start.data,
+            schedule_end=form.schedule_end.data,
             completion_date=form.completion_date.data,
             status=form.status.data,
         )
