@@ -34,6 +34,16 @@ def _normalize_to_time_string(value: object) -> str:
 
 def upgrade() -> None:
     bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"]: column for column in inspector.get_columns("courses")}
+
+    workload_type = columns.get("workload", {}).get("type")
+    schedule_type = columns.get("schedule", {}).get("type")
+
+    if isinstance(workload_type, sa.Time) and isinstance(schedule_type, sa.Time):
+        # Nothing to do if the columns are already of type TIME.
+        return
+
     courses_table = sa.table(
         "courses",
         sa.column("id", sa.Integer),
@@ -41,7 +51,13 @@ def upgrade() -> None:
         sa.column("schedule", sa.String(length=100)),
     )
 
-    rows = bind.execute(sa.select(courses_table.c.id, courses_table.c.workload, courses_table.c.schedule)).all()
+    rows = bind.execute(
+        sa.select(
+            courses_table.c.id,
+            courses_table.c.workload,
+            courses_table.c.schedule,
+        )
+    ).all()
     for row in rows:
         bind.execute(
             courses_table.update()
@@ -68,6 +84,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"]: column for column in inspector.get_columns("courses")}
+
+    workload_type = columns.get("workload", {}).get("type")
+    schedule_type = columns.get("schedule", {}).get("type")
+
+    if not (isinstance(workload_type, sa.Time) and isinstance(schedule_type, sa.Time)):
+        # Columns are already string-like, so no downgrade is required.
+        return
+
     with op.batch_alter_table("courses", schema=None) as batch_op:
         batch_op.alter_column(
             "workload",
