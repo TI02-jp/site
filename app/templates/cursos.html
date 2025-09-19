@@ -45,7 +45,7 @@
             <div class="card shadow-sm border-0">
                 <div class="courses-table-actions d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3 border-bottom">
                     <h2 class="courses-table-actions__title mb-0">Cursos cadastrados</h2>
-                    <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal">
+                    <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal" data-action="open-course-create">
                         <i class="bi bi-plus-circle me-2"></i>
                         Cadastrar curso
                     </button>
@@ -69,7 +69,20 @@
                             <tbody>
                                 {% if courses %}
                                     {% for course in courses %}
-                                    <tr>
+                                    {% set course_payload = {
+                                        "id": course.id,
+                                        "name": course.name,
+                                        "instructor": course.instructor,
+                                        "sectors": course.sectors_list,
+                                        "participants": course.participants_list,
+                                        "workload": course.workload_value,
+                                        "start_date": course.start_date_value,
+                                        "schedule_start": course.schedule_start_value,
+                                        "schedule_end": course.schedule_end_value,
+                                        "completion_date": course.completion_date_value,
+                                        "status": course.status.value,
+                                    } %}
+                                    <tr class="courses-table-row" data-course='{{ course_payload | tojson }}' tabindex="0" role="button" aria-label="Editar curso {{ course.name }}">
                                         <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
                                         <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
                                         <td data-label="Setores Participantes">
@@ -116,7 +129,7 @@
 <div class="modal fade courses-modal" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="post" novalidate>
+            <form method="post" novalidate data-editing-course-id="{{ editing_course_id or '' }}" data-open-modal-on-load="{{ 'true' if form.errors else 'false' }}">
                 {{ form.hidden_tag() }}
                 <div class="modal-header">
                     <h5 class="modal-title" id="courseModalLabel">Cadastrar novo curso</h5>
@@ -239,15 +252,171 @@
     </div>
 </div>
 
-{% if form.errors %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var courseModalEl = document.getElementById('courseModal');
-        if (courseModalEl) {
-            var modal = new bootstrap.Modal(courseModalEl);
-            modal.show();
+        if (!courseModalEl || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var courseModal = bootstrap.Modal.getOrCreateInstance(courseModalEl);
+        var formEl = courseModalEl.querySelector('form');
+        if (!formEl) {
+            return;
+        }
+
+        var modalTitle = courseModalEl.querySelector('.modal-title');
+        var submitBtn = formEl.querySelector('[type="submit"]');
+        var courseIdInput = formEl.querySelector('input[name="course_id"]');
+        var newCourseButton = document.querySelector('[data-action="open-course-create"]');
+
+        function setSubmitLabel(label) {
+            if (!submitBtn) {
+                return;
+            }
+            if (submitBtn.tagName === 'INPUT') {
+                submitBtn.value = label;
+            } else {
+                submitBtn.textContent = label;
+            }
+        }
+
+        function clearValidationState() {
+            formEl.classList.remove('was-validated');
+            formEl.querySelectorAll('.is-invalid').forEach(function (element) {
+                element.classList.remove('is-invalid');
+            });
+        }
+
+        function hideInvalidFeedback() {
+            formEl.querySelectorAll('.invalid-feedback').forEach(function (element) {
+                element.style.display = 'none';
+            });
+        }
+
+        function clearCheckboxGroup(name) {
+            formEl.querySelectorAll('input[name="' + name + '"]').forEach(function (input) {
+                input.checked = false;
+            });
+        }
+
+        function resetFormInputs() {
+            formEl.reset();
+            clearCheckboxGroup('sectors');
+            clearCheckboxGroup('participants');
+        }
+
+        function populateCheckboxGroup(name, values) {
+            var normalized = (values || []).map(function (value) {
+                return value.toString().trim().toLowerCase();
+            });
+            formEl.querySelectorAll('input[name="' + name + '"]').forEach(function (input) {
+                var label = formEl.querySelector('label[for="' + input.id + '"]');
+                var labelText = label ? label.textContent.trim().toLowerCase() : '';
+                input.checked = normalized.indexOf(labelText) !== -1;
+            });
+        }
+
+        function populateFormFields(data) {
+            if (!data) {
+                return;
+            }
+            var fieldNames = [
+                'name',
+                'instructor',
+                'workload',
+                'start_date',
+                'schedule_start',
+                'schedule_end',
+                'completion_date',
+                'status'
+            ];
+            fieldNames.forEach(function (fieldName) {
+                var field = formEl.elements.namedItem(fieldName);
+                if (field) {
+                    field.value = data[fieldName] || '';
+                }
+            });
+            populateCheckboxGroup('sectors', data.sectors);
+            populateCheckboxGroup('participants', data.participants);
+        }
+
+        function enterCreateMode() {
+            resetFormInputs();
+            clearValidationState();
+            hideInvalidFeedback();
+            if (modalTitle) {
+                modalTitle.textContent = 'Cadastrar novo curso';
+            }
+            setSubmitLabel('Salvar curso');
+            formEl.dataset.editingCourseId = '';
+            if (courseIdInput) {
+                courseIdInput.value = '';
+            }
+        }
+
+        function enterEditMode(data) {
+            resetFormInputs();
+            clearValidationState();
+            hideInvalidFeedback();
+            if (modalTitle) {
+                modalTitle.textContent = 'Editar curso';
+            }
+            setSubmitLabel('Atualizar curso');
+            var idValue = data && data.id != null ? String(data.id) : '';
+            formEl.dataset.editingCourseId = idValue;
+            if (courseIdInput) {
+                courseIdInput.value = idValue;
+            }
+            populateFormFields(data);
+        }
+
+        function openEditModalFromRow(row) {
+            var payload = row.dataset.course;
+            if (!payload) {
+                return;
+            }
+            try {
+                var data = JSON.parse(payload);
+                enterEditMode(data);
+                courseModal.show();
+            } catch (error) {
+                console.error('Erro ao carregar o curso para edição.', error);
+            }
+        }
+
+        if (newCourseButton) {
+            newCourseButton.addEventListener('click', function () {
+                enterCreateMode();
+            });
+        }
+
+        document.querySelectorAll('[data-course]').forEach(function (row) {
+            row.addEventListener('click', function () {
+                openEditModalFromRow(row);
+            });
+            row.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openEditModalFromRow(row);
+                }
+            });
+        });
+
+        if (formEl.dataset.openModalOnLoad === 'true') {
+            if (formEl.dataset.editingCourseId) {
+                if (modalTitle) {
+                    modalTitle.textContent = 'Editar curso';
+                }
+                setSubmitLabel('Atualizar curso');
+            } else {
+                if (modalTitle) {
+                    modalTitle.textContent = 'Cadastrar novo curso';
+                }
+                setSubmitLabel('Salvar curso');
+            }
+            courseModal.show();
         }
     });
 </script>
-{% endif %}
 {% endblock %}
