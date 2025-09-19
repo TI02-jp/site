@@ -116,6 +116,26 @@ class AccessLink(db.Model):
         return f"<AccessLink {self.category}:{self.label}>"
 
 
+class Course(db.Model):
+    """Internal training course available in the knowledge hub."""
+
+    __tablename__ = "courses"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(150), nullable=False)
+    instructor = db.Column(db.String(150), nullable=False)
+    sectors = db.Column(db.Text, nullable=False)
+    participants = db.Column(db.Text, nullable=False)
+    workload = db.Column(db.String(50), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    schedule = db.Column(db.String(100), nullable=False)
+    completion_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default="planejado")
+
+    def __repr__(self):
+        return f"<Course {self.name} ({self.status})>"
+
+
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"
