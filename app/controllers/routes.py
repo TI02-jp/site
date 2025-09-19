@@ -61,6 +61,7 @@ import requests
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String
+import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
@@ -374,21 +375,30 @@ def cursos():
             if user_id in participant_lookup
         ]
         if course_id is not None:
-            course = Course.query.get(course_id)
-            if not course:
+            existing_course_id = db.session.execute(
+                sa.select(Course.id).where(Course.id == course_id)
+            ).scalar_one_or_none()
+
+            if existing_course_id is None:
                 flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
                 return redirect(url_for("cursos"))
 
-            course.name = form.name.data.strip()
-            course.instructor = form.instructor.data.strip()
-            course.sectors = ", ".join(selected_sector_names)
-            course.participants = ", ".join(selected_participant_names)
-            course.workload = form.workload.data
-            course.start_date = form.start_date.data
-            course.schedule_start = form.schedule_start.data
-            course.schedule_end = form.schedule_end.data
-            course.completion_date = form.completion_date.data
-            course.status = form.status.data
+            db.session.execute(
+                sa.update(Course)
+                .where(Course.id == course_id)
+                .values(
+                    name=form.name.data.strip(),
+                    instructor=form.instructor.data.strip(),
+                    sectors=", ".join(selected_sector_names),
+                    participants=", ".join(selected_participant_names),
+                    workload=form.workload.data,
+                    start_date=form.start_date.data,
+                    schedule_start=form.schedule_start.data,
+                    schedule_end=form.schedule_end.data,
+                    completion_date=form.completion_date.data,
+                    status=form.status.data,
+                )
+            )
             db.session.commit()
             flash("Curso atualizado com sucesso!", "success")
         else:
