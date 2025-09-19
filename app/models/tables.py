@@ -126,9 +126,9 @@ class Course(db.Model):
     instructor = db.Column(db.String(150), nullable=False)
     sectors = db.Column(db.Text, nullable=False)
     participants = db.Column(db.Text, nullable=False)
-    workload = db.Column(db.String(50), nullable=False)
+    workload = db.Column(db.Time, nullable=False)
     start_date = db.Column(db.Date, nullable=False)
-    schedule = db.Column(db.String(100), nullable=False)
+    schedule = db.Column(db.Time, nullable=False)
     completion_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="planejado")
 

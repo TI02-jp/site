@@ -219,20 +219,22 @@ class CourseForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
-    workload = DateField(
+    workload = TimeField(
         "Carga Horária",
-        format="%Y-%m-%d",
+        format="%H:%M",
         validators=[DataRequired()],
+        render_kw={"step": 300},
     )
     start_date = DateField(
         "Data de Início",
         format="%Y-%m-%d",
         validators=[DataRequired()],
     )
-    schedule = DateField(
+    schedule = TimeField(
         "Horário",
-        format="%Y-%m-%d",
+        format="%H:%M",
         validators=[DataRequired()],
+        render_kw={"step": 300},
     )
     completion_date = DateField(
         "Data de Conclusão",
