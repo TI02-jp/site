@@ -303,7 +303,7 @@ Página de Cursos
 }
 
 .courses-modal .modal-dialog {
-    max-width: min(1100px, calc(100vw - 3rem));
+    max-width: min(1240px, calc(100vw - 2rem));
 }
 
 .courses-modal .modal-content {
@@ -311,11 +311,41 @@ Página de Cursos
 }
 
 .courses-modal .modal-body {
-    padding: 1.5rem;
+    padding: 1.75rem 2rem;
 }
 
 .courses-modal .modal-body .row {
-    row-gap: 1.25rem;
+    row-gap: 1rem;
+}
+
+.courses-modal .form-label,
+.courses-modal .form-check-label {
+    font-size: 0.9rem;
+}
+
+.courses-modal .form-control,
+.courses-modal .form-select,
+.courses-modal .form-check-input {
+    font-size: 0.95rem;
+}
+
+.courses-modal .form-control,
+.courses-modal .form-select {
+    padding: 0.55rem 0.85rem;
+}
+
+.courses-modal .courses-checkbox-list {
+    max-height: 260px;
+}
+
+@media (max-width: 992px) {
+    .courses-modal .modal-body {
+        padding: 1.5rem;
+    }
+
+    .courses-modal .modal-dialog {
+        max-width: calc(100vw - 1.5rem);
+    }
 }
 
 .courses-table-actions {
