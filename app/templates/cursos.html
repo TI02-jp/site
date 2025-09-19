@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}CURSOS{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="courses-page py-4">
+    <div class="container">
+        <section class="courses-hero">
+            <div class="courses-hero__content">
+                <div>
+                    <span class="courses-hero__eyebrow">Controle de Cursos</span>
+                    <h1 class="courses-hero__title">JP Contábil</h1>
+                    <p class="courses-hero__subtitle">
+                        Acompanhe a jornada de aprendizado da equipe com os principais cursos planejados e concluídos.
+                    </p>
+                </div>
+                <div class="courses-summary">
+                    <div class="courses-summary__item">
+                        <span class="courses-summary__label">Concluídos</span>
+                        <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.COMPLETED, 0) }}</strong>
+                    </div>
+                    <div class="courses-summary__item courses-summary__item--planned">
+                        <span class="courses-summary__label">Planejados</span>
+                        <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.PLANNED, 0) }}</strong>
+                    </div>
+                    <div class="courses-summary__item courses-summary__item--delayed">
+                        <span class="courses-summary__label">Atrasados</span>
+                        <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.DELAYED, 0) }}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="courses-hero__graphic">
+                <div class="courses-hero__badge">
+                    <i class="bi bi-mortarboard"></i>
+                </div>
+                <p class="mb-0">Atualizado mensalmente pela Diretoria JP.</p>
+            </div>
+        </section>
+
+        <section class="courses-table-section">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table courses-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Curso Realizado</th>
+                                    <th scope="col">Nome do Instrutor</th>
+                                    <th scope="col">Setores Participantes</th>
+                                    <th scope="col">Participantes</th>
+                                    <th scope="col">Carga Horária</th>
+                                    <th scope="col">Data de Início</th>
+                                    <th scope="col">Horário</th>
+                                    <th scope="col">Data de Conclusão</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in courses %}
+                                <tr>
+                                    <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
+                                    <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
+                                    <td data-label="Setores Participantes">
+                                        <div class="courses-chip-group">
+                                            {% for sector in course.sectors_list %}
+                                            <span class="courses-chip courses-chip--sector">{{ sector }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td data-label="Participantes">
+                                        <div class="courses-chip-group">
+                                            {% for participant in course.participants_list %}
+                                            <span class="courses-chip courses-chip--participant">{{ participant }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-nowrap" data-label="Carga Horária">{{ course.workload }}</td>
+                                    <td data-label="Data de Início">{{ course.start_date_label }}</td>
+                                    <td data-label="Horário">{{ course.schedule }}</td>
+                                    <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
+                                    <td data-label="Status">
+                                        {% set status_class = status_classes.get(course.status) %}
+                                        <span class="status-pill {{ status_class }}">
+                                            <span class="status-indicator"></span>
+                                            {{ course.status.value|capitalize }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
