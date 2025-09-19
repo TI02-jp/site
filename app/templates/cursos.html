@@ -113,8 +113,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal fade courses-modal" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <form method="post" novalidate>
                 {{ form.hidden_tag() }}
@@ -124,7 +124,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-4">
                             <label class="form-label text-start" for="{{ form.name.id }}">{{ form.name.label }}</label>
                             {{ form.name(class="form-control" + (' is-invalid' if form.name.errors else '')) }}
                             {% if form.name.errors %}
@@ -133,7 +133,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-4">
                             <label class="form-label text-start" for="{{ form.instructor.id }}">{{ form.instructor.label }}</label>
                             {{ form.instructor(class="form-control" + (' is-invalid' if form.instructor.errors else '')) }}
                             {% if form.instructor.errors %}
@@ -142,7 +142,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-6">
                             <label class="form-label text-start">{{ form.sectors.label.text }}</label>
                             <div class="courses-checkbox-list {{ 'is-invalid' if form.sectors.errors else '' }}">
                                 {% for option in form.sectors %}
@@ -158,7 +158,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-6">
                             <label class="form-label text-start">{{ form.participants.label.text }}</label>
                             <div class="courses-checkbox-list {{ 'is-invalid' if form.participants.errors else '' }}">
                                 {% for option in form.participants %}
@@ -174,7 +174,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xl-3">
                             <label class="form-label text-start" for="{{ form.workload.id }}">{{ form.workload.label }}</label>
                             {{ form.workload(class="form-control" + (' is-invalid' if form.workload.errors else ''), type="time") }}
                             {% if form.workload.errors %}
@@ -183,7 +183,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xl-3">
                             <label class="form-label text-start" for="{{ form.start_date.id }}">{{ form.start_date.label }}</label>
                             {{ form.start_date(class="form-control" + (' is-invalid' if form.start_date.errors else ''), type="date") }}
                             {% if form.start_date.errors %}
@@ -192,7 +192,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xl-3">
                             <label class="form-label text-start" for="{{ form.schedule_start.id }}">{{ form.schedule_start.label }}</label>
                             {{ form.schedule_start(class="form-control" + (' is-invalid' if form.schedule_start.errors else ''), type="time") }}
                             {% if form.schedule_start.errors %}
@@ -201,7 +201,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xl-3">
                             <label class="form-label text-start" for="{{ form.schedule_end.id }}">{{ form.schedule_end.label }}</label>
                             {{ form.schedule_end(class="form-control" + (' is-invalid' if form.schedule_end.errors else ''), type="time") }}
                             {% if form.schedule_end.errors %}
@@ -210,7 +210,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-4">
                             <label class="form-label text-start" for="{{ form.completion_date.id }}">{{ form.completion_date.label }}</label>
                             {{ form.completion_date(class="form-control" + (' is-invalid' if form.completion_date.errors else ''), type="date") }}
                             {% if form.completion_date.errors %}
@@ -219,7 +219,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 col-xl-4">
                             <label class="form-label text-start" for="{{ form.status.id }}">{{ form.status.label }}</label>
                             {{ form.status(class="form-select" + (' is-invalid' if form.status.errors else '')) }}
                             {% if form.status.errors %}
