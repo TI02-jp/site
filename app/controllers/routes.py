@@ -12,6 +12,7 @@ from flask import (
     session,
 )
 from functools import wraps
+from collections import Counter
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf
 from app.utils.security import sanitize_html
@@ -63,6 +64,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
+from app.services.courses import CourseStatus, get_courses_overview
 from app.services.google_calendar import get_calendar_timezone
 from app.services.meeting_room import (
     populate_participants_choices,
@@ -327,6 +329,27 @@ def index():
 def home():
     """Render the authenticated home page."""
     return render_template("home.html")
+
+
+@app.route("/cursos")
+@login_required
+def cursos():
+    """Display the curated catalog of internal courses."""
+
+    courses = get_courses_overview()
+    status_counts = Counter(course.status for course in courses)
+    status_classes = {
+        CourseStatus.COMPLETED: "status-pill--completed",
+        CourseStatus.PLANNED: "status-pill--planned",
+        CourseStatus.DELAYED: "status-pill--delayed",
+    }
+    return render_template(
+        "cursos.html",
+        courses=courses,
+        status_counts=status_counts,
+        status_classes=status_classes,
+        CourseStatus=CourseStatus,
+    )
 
 
 @app.route("/acessos")
