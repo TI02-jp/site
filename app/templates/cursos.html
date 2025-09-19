@@ -86,9 +86,9 @@
                                                 {% endfor %}
                                             </div>
                                         </td>
-                                        <td class="text-nowrap" data-label="Carga Horária">{{ course.workload }}</td>
+                                        <td class="text-nowrap" data-label="Carga Horária">{{ course.workload_label }}</td>
                                         <td data-label="Data de Início">{{ course.start_date_label }}</td>
-                                        <td data-label="Horário">{{ course.schedule }}</td>
+                                        <td data-label="Horário">{{ course.schedule_label }}</td>
                                         <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
                                         <td data-label="Status">
                                             {% set status_class = status_classes.get(course.status) %}
@@ -176,7 +176,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-start" for="{{ form.workload.id }}">{{ form.workload.label }}</label>
-                            {{ form.workload(class="form-control" + (' is-invalid' if form.workload.errors else '')) }}
+                            {{ form.workload(class="form-control" + (' is-invalid' if form.workload.errors else ''), type="date") }}
                             {% if form.workload.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.workload.errors[0] }}
@@ -194,7 +194,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-start" for="{{ form.schedule.id }}">{{ form.schedule.label }}</label>
-                            {{ form.schedule(class="form-control" + (' is-invalid' if form.schedule.errors else '')) }}
+                            {{ form.schedule(class="form-control" + (' is-invalid' if form.schedule.errors else ''), type="date") }}
                             {% if form.schedule.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.schedule.errors[0] }}

@@ -364,14 +364,25 @@ def cursos():
             for user_id in form.participants.data
             if user_id in participant_lookup
         ]
+        workload_value = (
+            form.workload.data.strftime("%Y-%m-%d")
+            if form.workload.data
+            else ""
+        )
+        schedule_value = (
+            form.schedule.data.strftime("%Y-%m-%d")
+            if form.schedule.data
+            else ""
+        )
+
         course = Course(
             name=form.name.data.strip(),
             instructor=form.instructor.data.strip(),
             sectors=", ".join(selected_sector_names),
             participants=", ".join(selected_participant_names),
-            workload=form.workload.data.strip(),
+            workload=workload_value,
             start_date=form.start_date.data,
-            schedule=form.schedule.data.strip(),
+            schedule=schedule_value,
             completion_date=form.completion_date.data,
             status=form.status.data,
         )
