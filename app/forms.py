@@ -209,11 +209,15 @@ class CourseForm(FlaskForm):
         "Setores Participantes",
         coerce=int,
         validators=[Length(min=1, message="Selecione ao menos um setor.")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
     )
     participants = SelectMultipleField(
         "Participantes (Usuários)",
         coerce=int,
         validators=[Length(min=1, message="Selecione ao menos um participante.")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
     )
     workload = StringField(
         "Carga Horária",

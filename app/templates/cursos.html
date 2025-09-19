@@ -143,8 +143,15 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-start" for="{{ form.sectors.id }}">{{ form.sectors.label }}</label>
-                            {{ form.sectors(class="form-select" + (' is-invalid' if form.sectors.errors else '')) }}
+                            <label class="form-label text-start">{{ form.sectors.label.text }}</label>
+                            <div class="courses-checkbox-list {{ 'is-invalid' if form.sectors.errors else '' }}">
+                                {% for option in form.sectors %}
+                                <div class="form-check courses-checkbox-item">
+                                    {{ option(class="form-check-input", id=option.id) }}
+                                    <label class="form-check-label" for="{{ option.id }}">{{ option.label.text }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
                             {% if form.sectors.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.sectors.errors[0] }}
@@ -152,8 +159,15 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-start" for="{{ form.participants.id }}">{{ form.participants.label }}</label>
-                            {{ form.participants(class="form-select" + (' is-invalid' if form.participants.errors else '')) }}
+                            <label class="form-label text-start">{{ form.participants.label.text }}</label>
+                            <div class="courses-checkbox-list {{ 'is-invalid' if form.participants.errors else '' }}">
+                                {% for option in form.participants %}
+                                <div class="form-check courses-checkbox-item">
+                                    {{ option(class="form-check-input", id=option.id) }}
+                                    <label class="form-check-label" for="{{ option.id }}">{{ option.label.text }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
                             {% if form.participants.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.participants.errors[0] }}
