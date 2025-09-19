@@ -34,6 +34,7 @@ from app.models.tables import (
     TaskStatusHistory,
     TaskNotification,
     AccessLink,
+    Course,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -53,6 +54,7 @@ from app.forms import (
     MeetingForm,
     TaskForm,
     AccessLinkForm,
+    CourseForm,
 )
 import os, json, re, secrets
 import requests
@@ -331,10 +333,45 @@ def home():
     return render_template("home.html")
 
 
-@app.route("/cursos")
+@app.route("/cursos", methods=["GET", "POST"])
 @login_required
 def cursos():
     """Display the curated catalog of internal courses."""
+
+    form = CourseForm()
+
+    def _normalize_multivalue(raw: str) -> str:
+        """Return comma-separated names cleaned from arbitrary separators."""
+
+        parts = [segment.strip() for segment in (raw or "").replace(";", ",").split(",")]
+        unique_parts: list[str] = []
+        for item in parts:
+            if item and item not in unique_parts:
+                unique_parts.append(item)
+        return ", ".join(unique_parts)
+
+    if form.validate_on_submit():
+        course = Course(
+            name=form.name.data.strip(),
+            instructor=form.instructor.data.strip(),
+            sectors=_normalize_multivalue(form.sectors.data),
+            participants=_normalize_multivalue(form.participants.data),
+            workload=form.workload.data.strip(),
+            start_date=form.start_date.data,
+            schedule=form.schedule.data.strip(),
+            completion_date=form.completion_date.data,
+            status=form.status.data,
+        )
+        db.session.add(course)
+        db.session.commit()
+        flash("Curso cadastrado com sucesso!", "success")
+        return redirect(url_for("cursos"))
+
+    elif request.method == "POST":
+        flash(
+            "Não foi possível cadastrar o curso. Verifique os campos destacados e tente novamente.",
+            "danger",
+        )
 
     courses = get_courses_overview()
     status_counts = Counter(course.status for course in courses)
@@ -349,6 +386,7 @@ def cursos():
         status_counts=status_counts,
         status_classes=status_classes,
         CourseStatus=CourseStatus,
+        form=form,
     )
 
 

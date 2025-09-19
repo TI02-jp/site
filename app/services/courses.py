@@ -27,7 +27,7 @@ class CourseRecord:
     start_date: date
     schedule: str
     completion_date: date | None
-    completion_note: str | None
+    completion_note: str | None = None
     status: CourseStatus
 
     @property
@@ -59,10 +59,41 @@ class CourseRecord:
         return list(self.participants)
 
 
-def get_courses_overview() -> list[CourseRecord]:
-    """Return an empty collection of courses for rendering the table layout."""
+def _split_values(raw: str) -> tuple[str, ...]:
+    """Normalize comma-separated strings into a tuple of values."""
 
-    return []
+    if not raw:
+        return tuple()
+    parts = [segment.strip() for segment in raw.replace(";", ",").split(",")]
+    return tuple(part for part in parts if part)
+
+
+def get_courses_overview() -> list[CourseRecord]:
+    """Return all registered courses ordered by the most recent start date."""
+
+    from app.models.tables import Course
+
+    records: list[CourseRecord] = []
+    for course in Course.query.order_by(Course.start_date.desc()).all():
+        try:
+            status = CourseStatus(course.status)
+        except ValueError:
+            status = CourseStatus.PLANNED
+        records.append(
+            CourseRecord(
+                name=course.name,
+                instructor=course.instructor,
+                sectors=_split_values(course.sectors),
+                participants=_split_values(course.participants),
+                workload=course.workload,
+                start_date=course.start_date,
+                schedule=course.schedule,
+                completion_date=course.completion_date,
+                completion_note=None,
+                status=status,
+            )
+        )
+    return records
 
 
 __all__ = [

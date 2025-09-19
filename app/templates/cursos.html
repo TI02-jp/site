@@ -43,6 +43,13 @@
 
         <section class="courses-table-section">
             <div class="card shadow-sm border-0">
+                <div class="courses-table-actions d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3 border-bottom">
+                    <h2 class="courses-table-actions__title mb-0">Cursos cadastrados</h2>
+                    <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Cadastrar curso
+                    </button>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table courses-table align-middle mb-0">
@@ -60,37 +67,43 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for course in courses %}
-                                <tr>
-                                    <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
-                                    <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
-                                    <td data-label="Setores Participantes">
-                                        <div class="courses-chip-group">
-                                            {% for sector in course.sectors_list %}
-                                            <span class="courses-chip courses-chip--sector">{{ sector }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                    <td data-label="Participantes">
-                                        <div class="courses-chip-group">
-                                            {% for participant in course.participants_list %}
-                                            <span class="courses-chip courses-chip--participant">{{ participant }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                    <td class="text-nowrap" data-label="Carga Horária">{{ course.workload }}</td>
-                                    <td data-label="Data de Início">{{ course.start_date_label }}</td>
-                                    <td data-label="Horário">{{ course.schedule }}</td>
-                                    <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
-                                    <td data-label="Status">
-                                        {% set status_class = status_classes.get(course.status) %}
-                                        <span class="status-pill {{ status_class }}">
-                                            <span class="status-indicator"></span>
-                                            {{ course.status.value|capitalize }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                                {% if courses %}
+                                    {% for course in courses %}
+                                    <tr>
+                                        <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
+                                        <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
+                                        <td data-label="Setores Participantes">
+                                            <div class="courses-chip-group">
+                                                {% for sector in course.sectors_list %}
+                                                <span class="courses-chip courses-chip--sector">{{ sector }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td data-label="Participantes">
+                                            <div class="courses-chip-group">
+                                                {% for participant in course.participants_list %}
+                                                <span class="courses-chip courses-chip--participant">{{ participant }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td class="text-nowrap" data-label="Carga Horária">{{ course.workload }}</td>
+                                        <td data-label="Data de Início">{{ course.start_date_label }}</td>
+                                        <td data-label="Horário">{{ course.schedule }}</td>
+                                        <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
+                                        <td data-label="Status">
+                                            {% set status_class = status_classes.get(course.status) %}
+                                            <span class="status-pill {{ status_class }}">
+                                                <span class="status-indicator"></span>
+                                                {{ course.status.value|capitalize }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
+                                    </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
@@ -99,4 +112,121 @@
         </section>
     </div>
 </div>
+
+<div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="courseModalLabel">Cadastrar novo curso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.name.id }}">{{ form.name.label }}</label>
+                            {{ form.name(class="form-control" + (' is-invalid' if form.name.errors else '')) }}
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.name.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.instructor.id }}">{{ form.instructor.label }}</label>
+                            {{ form.instructor(class="form-control" + (' is-invalid' if form.instructor.errors else '')) }}
+                            {% if form.instructor.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.instructor.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.sectors.id }}">{{ form.sectors.label }}</label>
+                            {{ form.sectors(class="form-control" + (' is-invalid' if form.sectors.errors else '')) }}
+                            <small class="text-muted">Separe múltiplos setores com vírgulas.</small>
+                            {% if form.sectors.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.sectors.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.participants.id }}">{{ form.participants.label }}</label>
+                            {{ form.participants(class="form-control" + (' is-invalid' if form.participants.errors else '')) }}
+                            <small class="text-muted">Separe os participantes com vírgulas.</small>
+                            {% if form.participants.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.participants.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.workload.id }}">{{ form.workload.label }}</label>
+                            {{ form.workload(class="form-control" + (' is-invalid' if form.workload.errors else '')) }}
+                            {% if form.workload.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.workload.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.start_date.id }}">{{ form.start_date.label }}</label>
+                            {{ form.start_date(class="form-control" + (' is-invalid' if form.start_date.errors else ''), type="date") }}
+                            {% if form.start_date.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.start_date.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.schedule.id }}">{{ form.schedule.label }}</label>
+                            {{ form.schedule(class="form-control" + (' is-invalid' if form.schedule.errors else '')) }}
+                            {% if form.schedule.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.schedule.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.completion_date.id }}">{{ form.completion_date.label }}</label>
+                            {{ form.completion_date(class="form-control" + (' is-invalid' if form.completion_date.errors else ''), type="date") }}
+                            {% if form.completion_date.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.completion_date.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.status.id }}">{{ form.status.label }}</label>
+                            {{ form.status(class="form-select" + (' is-invalid' if form.status.errors else '')) }}
+                            {% if form.status.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.status.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if form.errors %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var courseModalEl = document.getElementById('courseModal');
+        if (courseModalEl) {
+            var modal = new bootstrap.Modal(courseModalEl);
+            modal.show();
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

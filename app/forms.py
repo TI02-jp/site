@@ -27,6 +27,8 @@ from wtforms.validators import (
 )
 import re
 
+from app.services.courses import CourseStatus
+
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
     ('Competência', 'Competência')
@@ -190,6 +192,65 @@ class AccessLinkForm(FlaskForm):
         render_kw={"rows": 2},
     )
     submit = SubmitField("Criar atalho")
+
+
+class CourseForm(FlaskForm):
+    """Formulário para cadastrar cursos internos."""
+
+    name = StringField(
+        "Nome do Curso",
+        validators=[DataRequired(), Length(max=150)],
+        render_kw={"placeholder": "Ex.: Liderança Colaborativa"},
+    )
+    instructor = StringField(
+        "Nome do Instrutor",
+        validators=[DataRequired(), Length(max=150)],
+        render_kw={"placeholder": "Ex.: Maria Souza"},
+    )
+    sectors = TextAreaField(
+        "Setores Participantes",
+        validators=[DataRequired(), Length(max=500)],
+        render_kw={
+            "rows": 2,
+            "placeholder": "Separe os setores com vírgulas. Ex.: Fiscal, Contábil",
+        },
+    )
+    participants = TextAreaField(
+        "Participantes (Usuários)",
+        validators=[DataRequired(), Length(max=800)],
+        render_kw={
+            "rows": 3,
+            "placeholder": "Separe os nomes com vírgulas. Ex.: Ana Lima, João Silva",
+        },
+    )
+    workload = StringField(
+        "Carga Horária",
+        validators=[DataRequired(), Length(max=50)],
+        render_kw={"placeholder": "Ex.: 8h"},
+    )
+    start_date = DateField(
+        "Data de Início",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        render_kw={"placeholder": ""},
+    )
+    schedule = StringField(
+        "Horário",
+        validators=[DataRequired(), Length(max=100)],
+        render_kw={"placeholder": "Ex.: 09h às 12h"},
+    )
+    completion_date = DateField(
+        "Data de Conclusão",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+        render_kw={"placeholder": ""},
+    )
+    status = SelectField(
+        "Status",
+        choices=[(status.value, status.value.capitalize()) for status in CourseStatus],
+        validators=[DataRequired()],
+    )
+    submit = SubmitField("Salvar curso")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
