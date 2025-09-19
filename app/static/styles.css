@@ -310,8 +310,32 @@ Página de Cursos
     border-radius: 1rem;
 }
 
+.courses-modal__header {
+    padding: 1.25rem 2rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.courses-modal__header .btn-close {
+    order: -1;
+    margin: 0;
+}
+
+.courses-modal__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.courses-modal__actions .btn {
+    min-width: 130px;
+}
+
 .courses-modal .modal-body {
-    padding: 1.75rem 2rem;
+    padding: 1.5rem 2rem 1.75rem;
 }
 
 .courses-modal .modal-body .row {
@@ -339,12 +363,17 @@ Página de Cursos
 }
 
 @media (max-width: 992px) {
-    .courses-modal .modal-body {
-        padding: 1.5rem;
-    }
-
     .courses-modal .modal-dialog {
         max-width: calc(100vw - 1rem);
+    }
+
+    .courses-modal__header {
+        padding: 1.1rem 1.5rem 0.9rem;
+        gap: 1rem;
+    }
+
+    .courses-modal .modal-body {
+        padding: 1.25rem 1.5rem 1.5rem;
     }
 }
 
