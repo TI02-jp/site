@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from enum import Enum
 
 
@@ -23,9 +23,9 @@ class CourseRecord:
     instructor: str
     sectors: tuple[str, ...]
     participants: tuple[str, ...]
-    workload: str
+    workload: time | None
     start_date: date
-    schedule: str
+    schedule: time | None
     completion_date: date | None
     status: CourseStatus
     completion_note: str | None = None
@@ -48,15 +48,15 @@ class CourseRecord:
 
     @property
     def workload_label(self) -> str:
-        """Return the formatted workload date or fallback text."""
+        """Return the formatted workload time or a fallback placeholder."""
 
-        return _format_date_label(self.workload)
+        return _format_time_label(self.workload)
 
     @property
     def schedule_label(self) -> str:
-        """Return the formatted schedule date or fallback text."""
+        """Return the formatted schedule time or a fallback placeholder."""
 
-        return _format_date_label(self.schedule)
+        return _format_time_label(self.schedule)
 
     @property
     def sectors_list(self) -> list[str]:
@@ -80,16 +80,29 @@ def _split_values(raw: str) -> tuple[str, ...]:
     return tuple(part for part in parts if part)
 
 
-def _format_date_label(raw: str | None) -> str:
-    """Attempt to format ISO date strings for display in the UI."""
+def _parse_time(raw: str | time | None) -> time | None:
+    """Parse persisted values into ``datetime.time`` objects when possible."""
+
+    if raw is None:
+        return None
+    if isinstance(raw, time):
+        return raw.replace(second=0, microsecond=0)
+    if isinstance(raw, str):
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                parsed = datetime.strptime(raw, fmt).time()
+                return parsed.replace(second=0, microsecond=0)
+            except ValueError:
+                continue
+    return None
+
+
+def _format_time_label(raw: time | None) -> str:
+    """Return the formatted time value for display in the UI."""
 
     if not raw:
         return "-"
-    try:
-        parsed = datetime.strptime(raw, "%Y-%m-%d").date()
-        return parsed.strftime("%d/%m/%Y")
-    except ValueError:
-        return raw
+    return raw.strftime("%H:%M")
 
 
 def get_courses_overview() -> list[CourseRecord]:
@@ -109,9 +122,9 @@ def get_courses_overview() -> list[CourseRecord]:
                 instructor=course.instructor,
                 sectors=_split_values(course.sectors),
                 participants=_split_values(course.participants),
-                workload=course.workload,
+                workload=_parse_time(course.workload),
                 start_date=course.start_date,
-                schedule=course.schedule,
+                schedule=_parse_time(course.schedule),
                 completion_date=course.completion_date,
                 completion_note=None,
                 status=status,
