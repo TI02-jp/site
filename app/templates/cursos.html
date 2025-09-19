@@ -61,7 +61,7 @@
                                     <th scope="col">Participantes</th>
                                     <th scope="col">Carga Horária</th>
                                     <th scope="col">Data de Início</th>
-                                    <th scope="col">Horário</th>
+                                    <th scope="col">Horário (Início - Fim)</th>
                                     <th scope="col">Data de Conclusão</th>
                                     <th scope="col">Status</th>
                                 </tr>
@@ -88,7 +88,7 @@
                                         </td>
                                         <td class="text-nowrap" data-label="Carga Horária">{{ course.workload_label }}</td>
                                         <td data-label="Data de Início">{{ course.start_date_label }}</td>
-                                        <td data-label="Horário">{{ course.schedule_label }}</td>
+                                        <td data-label="Horário (Início - Fim)">{{ course.schedule_label }}</td>
                                         <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
                                         <td data-label="Status">
                                             {% set status_class = status_classes.get(course.status) %}
@@ -193,11 +193,20 @@
                             {% endif %}
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label text-start" for="{{ form.schedule.id }}">{{ form.schedule.label }}</label>
-                            {{ form.schedule(class="form-control" + (' is-invalid' if form.schedule.errors else ''), type="time") }}
-                            {% if form.schedule.errors %}
+                            <label class="form-label text-start" for="{{ form.schedule_start.id }}">{{ form.schedule_start.label }}</label>
+                            {{ form.schedule_start(class="form-control" + (' is-invalid' if form.schedule_start.errors else ''), type="time") }}
+                            {% if form.schedule_start.errors %}
                             <div class="invalid-feedback d-block">
-                                {{ form.schedule.errors[0] }}
+                                {{ form.schedule_start.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-start" for="{{ form.schedule_end.id }}">{{ form.schedule_end.label }}</label>
+                            {{ form.schedule_end(class="form-control" + (' is-invalid' if form.schedule_end.errors else ''), type="time") }}
+                            {% if form.schedule_end.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.schedule_end.errors[0] }}
                             </div>
                             {% endif %}
                         </div>
