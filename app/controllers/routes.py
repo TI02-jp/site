@@ -37,7 +37,6 @@ from app.models.tables import (
     Course,
     VideoFolder,
     VideoModule,
-    VideoTag,
     VideoAsset,
 )
 from app.forms import (
@@ -63,7 +62,7 @@ from app.forms import (
     VideoModuleForm,
     VideoAssetForm,
 )
-import os, json, re, secrets, unicodedata
+import os, json, re, secrets, unicodedata, mimetypes
 import requests
 from werkzeug.utils import secure_filename
 from uuid import uuid4
@@ -191,13 +190,21 @@ def inject_stats():
     return {}
 
 
-# Allowed image file extensions for uploads
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+# Allowed file extensions for uploads
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_VIDEO_EXTENSIONS = {"mp4", "m4v", "mov", "mkv", "avi", "wmv", "webm"}
 
 
-def allowed_file(filename):
-    """Check if a filename has an allowed extension."""
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed_image_file(filename: str) -> bool:
+    """Return ``True`` when ``filename`` has an allowed image extension."""
+
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def allowed_video_file(filename: str) -> bool:
+    """Return ``True`` when ``filename`` has an allowed video extension."""
+
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
 
 def slugify(value: str) -> str:
@@ -211,18 +218,23 @@ def slugify(value: str) -> str:
     return cleaned or uuid4().hex[:8]
 
 
-def _save_cover_image(file_storage, subdir: str) -> str | None:
-    """Persist an uploaded cover image under ``static/uploads/videos``."""
+def _save_uploaded_video(file_storage) -> dict[str, str | int] | None:
+    """Persist an uploaded video inside ``static/uploads/videos/assets``."""
 
     if not file_storage or file_storage.filename == "":
         return None
-    if not allowed_file(file_storage.filename):
+
+    if not allowed_video_file(file_storage.filename):
         return None
 
     filename = secure_filename(file_storage.filename)
     unique_name = f"{uuid4().hex}_{filename}"
     upload_folder = os.path.join(
-        current_app.root_path, "static", "uploads", "videos", subdir
+        current_app.root_path,
+        "static",
+        "uploads",
+        "videos",
+        "assets",
     )
     os.makedirs(upload_folder, exist_ok=True)
     destination = os.path.join(upload_folder, unique_name)
@@ -230,10 +242,21 @@ def _save_cover_image(file_storage, subdir: str) -> str | None:
     try:
         file_storage.save(destination)
     except OSError as exc:
-        current_app.logger.exception("Erro ao salvar capa de vídeo: %s", exc)
+        current_app.logger.exception("Erro ao salvar vídeo enviado: %s", exc)
         return None
 
-    return f"uploads/videos/{subdir}/{unique_name}"
+    mime_type, _ = mimetypes.guess_type(destination)
+    try:
+        file_size = os.path.getsize(destination)
+    except OSError:
+        file_size = 0
+
+    return {
+        "relative_path": f"uploads/videos/assets/{unique_name}",
+        "original_name": filename,
+        "mime_type": mime_type or "application/octet-stream",
+        "file_size": file_size,
+    }
 
 
 def _delete_static_file(static_path: str | None) -> None:
@@ -304,7 +327,7 @@ def upload_image():
     if file.filename == "":
         return jsonify({"error": "Nome de arquivo vazio"}), 400
 
-    if file and allowed_file(file.filename):
+    if file and allowed_image_file(file.filename):
         filename = secure_filename(file.filename)
         unique_name = f"{uuid4().hex}_{filename}"
         upload_folder = os.path.join(current_app.root_path, "static", "uploads")
@@ -516,15 +539,28 @@ def videos():
     if selected_folder_id:
         module_query = module_query.filter(VideoModule.folder_id == selected_folder_id)
 
-    if selected_tag_slug:
+    tags = Tag.query.order_by(Tag.nome.asc()).all()
+    tag_options = [
+        {
+            "id": tag.id,
+            "name": tag.nome,
+            "slug": slugify(tag.nome),
+            "model": tag,
+        }
+        for tag in tags
+    ]
+
+    selected_tag = next((tag for tag in tag_options if tag["slug"] == selected_tag_slug), None)
+
+    if selected_tag:
         module_query = module_query.join(VideoModule.tags).filter(
-            VideoTag.slug == selected_tag_slug
+            Tag.id == selected_tag["id"]
         )
+    elif selected_tag_slug:
+        module_query = module_query.filter(sa.false())
 
     modules = module_query.order_by(VideoModule.title.asc()).all()
     folders = VideoFolder.query.order_by(VideoFolder.name.asc()).all()
-    tags = VideoTag.query.order_by(VideoTag.name.asc()).all()
-    selected_tag = next((tag for tag in tags if tag.slug == selected_tag_slug), None)
     selected_folder = next(
         (folder for folder in folders if folder.id == selected_folder_id), None
     )
@@ -533,7 +569,7 @@ def videos():
         "videos.html",
         modules=modules,
         folders=folders,
-        tags=tags,
+        tags=tag_options,
         selected_folder_id=selected_folder_id,
         selected_tag_slug=selected_tag_slug,
         selected_tag=selected_tag,
@@ -553,8 +589,8 @@ def _populate_video_forms(
     ]
 
     tag_choices = [
-        (tag.id, tag.name)
-        for tag in VideoTag.query.order_by(VideoTag.name.asc()).all()
+        (tag.id, tag.nome)
+        for tag in Tag.query.order_by(Tag.nome.asc()).all()
     ]
 
     module_choices = [
@@ -614,8 +650,6 @@ def videos_manage():
             video_form.module_id.data = editing_video.module_id
         video_form.title.data = editing_video.title
         video_form.description.data = editing_video.description
-        video_form.video_url.data = editing_video.video_url
-        video_form.storage_path.data = editing_video.storage_path
         video_form.duration_minutes.data = editing_video.duration_minutes
 
     folders = (
@@ -677,16 +711,6 @@ def save_video_folder():
         folder.name = form.name.data.strip()
         folder.description = (form.description.data or "").strip() or None
 
-        cover_file = form.cover_image.data
-        if cover_file and cover_file.filename:
-            cover_path = _save_cover_image(cover_file, "folders")
-            if cover_path is None:
-                db.session.rollback()
-                flash("Não foi possível salvar a capa enviada. Tente novamente.", "danger")
-                return redirect(url_for("videos_manage"))
-            _delete_static_file(folder.cover_image)
-            folder.cover_image = cover_path
-
         db.session.commit()
         flash("Pasta salva com sucesso!", "success")
         return redirect(url_for("videos_manage"))
@@ -702,8 +726,8 @@ def delete_video_folder(folder_id: int):
 
     folder = VideoFolder.query.get_or_404(folder_id)
     for module in list(folder.modules):
-        _delete_static_file(module.cover_image)
-    _delete_static_file(folder.cover_image)
+        for video in list(module.videos):
+            _delete_static_file(video.file_path)
     db.session.delete(folder)
     db.session.commit()
     flash("Pasta removida com sucesso.", "success")
@@ -743,32 +767,11 @@ def save_video_module():
         module.description = (form.description.data or "").strip() or None
         module.folder_id = form.folder_id.data
 
-        cover_file = form.cover_image.data
-        if cover_file and cover_file.filename:
-            cover_path = _save_cover_image(cover_file, "modules")
-            if cover_path is None:
-                db.session.rollback()
-                flash("Não foi possível salvar a capa enviada. Tente novamente.", "danger")
-                return redirect(url_for("videos_manage"))
-            _delete_static_file(module.cover_image)
-            module.cover_image = cover_path
-
-        selected_tags: list[VideoTag] = []
+        selected_tags: list[Tag] = []
         if form.tags.data:
             selected_tags = (
-                VideoTag.query.filter(VideoTag.id.in_(form.tags.data)).all()
+                Tag.query.filter(Tag.id.in_(form.tags.data)).all()
             )
-
-        new_tags_raw = form.new_tags.data or ""
-        if new_tags_raw:
-            for tag_name in {tag.strip() for tag in new_tags_raw.split(",") if tag.strip()}:
-                slug = slugify(tag_name)
-                existing = VideoTag.query.filter_by(slug=slug).first()
-                if existing is None:
-                    existing = VideoTag(name=tag_name, slug=slug)
-                    db.session.add(existing)
-                if existing not in selected_tags:
-                    selected_tags.append(existing)
 
         module.tags = selected_tags
         db.session.commit()
@@ -785,7 +788,8 @@ def delete_video_module(module_id: int):
     """Delete a video module."""
 
     module = VideoModule.query.get_or_404(module_id)
-    _delete_static_file(module.cover_image)
+    for video in list(module.videos):
+        _delete_static_file(video.file_path)
     db.session.delete(module)
     db.session.commit()
     flash("Módulo removido com sucesso.", "success")
@@ -817,16 +821,39 @@ def save_video_asset():
                 if video is None:
                     flash("O vídeo selecionado não foi encontrado.", "danger")
                     return redirect(url_for("videos_manage"))
+        is_new = False
         if video is None:
             video = VideoAsset()
-            db.session.add(video)
+            is_new = True
 
         video.title = form.title.data.strip()
         video.description = (form.description.data or "").strip() or None
         video.module_id = form.module_id.data
-        video.video_url = (form.video_url.data or "").strip() or None
-        video.storage_path = (form.storage_path.data or "").strip() or None
         video.duration_minutes = form.duration_minutes.data
+
+        file_storage = form.video_file.data
+        filename = getattr(file_storage, "filename", "") if file_storage else ""
+        if filename:
+            saved_video = _save_uploaded_video(file_storage)
+            if saved_video is None:
+                db.session.rollback()
+                flash(
+                    "Não foi possível salvar o vídeo enviado. Verifique o formato e tente novamente.",
+                    "danger",
+                )
+                return redirect(url_for("videos_manage"))
+            _delete_static_file(video.file_path)
+            video.file_path = saved_video["relative_path"]
+            video.original_filename = saved_video["original_name"]
+            video.mime_type = saved_video["mime_type"]
+            video.file_size = saved_video["file_size"]
+        elif not video.file_path:
+            db.session.rollback()
+            flash("Envie um arquivo de vídeo para salvar o conteúdo.", "danger")
+            return redirect(url_for("videos_manage"))
+
+        if is_new:
+            db.session.add(video)
 
         db.session.commit()
         flash("Vídeo salvo com sucesso!", "success")
@@ -842,6 +869,7 @@ def delete_video_asset(video_id: int):
     """Remove a stored video entry."""
 
     video = VideoAsset.query.get_or_404(video_id)
+    _delete_static_file(video.file_path)
     db.session.delete(video)
     db.session.commit()
     flash("Vídeo removido com sucesso.", "success")

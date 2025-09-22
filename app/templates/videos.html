@@ -64,7 +64,7 @@
             <div><strong>Pasta:</strong> {{ selected_folder.name }}</div>
             {% endif %}
             {% if selected_tag %}
-            <div><strong>Tag:</strong> {{ selected_tag.name }}</div>
+            <div><strong>Tag:</strong> {{ selected_tag['name'] }}</div>
             {% endif %}
         </div>
     </div>
@@ -75,16 +75,12 @@
         {% for module in modules %}
         <div class="col-xl-4 col-md-6">
             <div class="video-card h-100 shadow-sm">
-                {% if module.cover_image %}
-                <div class="video-card__cover" style="background-image: url('{{ url_for('static', filename=module.cover_image) }}');"></div>
-                {% else %}
-                <div class="video-card__cover video-card__cover--placeholder">
-                    <i class="bi bi-collection-play"></i>
-                </div>
-                {% endif %}
                 <div class="video-card__body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
+                    <div class="video-card__header d-flex align-items-start gap-3 mb-3">
+                        <div class="video-card__icon">
+                            <i class="bi bi-collection-play"></i>
+                        </div>
+                        <div class="flex-grow-1">
                             <h2 class="video-card__title h5 mb-1">{{ module.title }}</h2>
                             {% if module.folder %}
                             <span class="badge text-bg-light border">
@@ -99,7 +95,7 @@
                     {% if module.tags %}
                     <div class="mb-3">
                         {% for tag in module.tags %}
-                        <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.name }}</span>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.nome }}</span>
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -107,23 +103,37 @@
                     <ul class="video-card__list list-unstyled mb-0">
                         {% for video in module.videos %}
                         <li class="video-card__item">
-                            <div>
+                            <div class="flex-grow-1">
                                 <strong>{{ video.title }}</strong>
                                 {% if video.description %}
-                                <div class="text-muted small">{{ video.description }}</div>
+                                <div class="text-muted small mb-2">{{ video.description }}</div>
+                                {% endif %}
+                                {% if video.file_path %}
+                                <div class="video-card__player">
+                                    <video controls preload="metadata">
+                                        <source src="{{ url_for('static', filename=video.file_path) }}" type="{{ video.mime_type or 'video/mp4' }}">
+                                        Seu navegador não suporta a reprodução de vídeo.
+                                    </video>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    {{ video.original_filename or 'Vídeo disponível' }}
+                                    {% if video.file_size %}
+                                    · {{ (video.file_size / (1024 * 1024))|round(2) }} MB
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div class="text-muted small">Nenhum arquivo foi enviado para este vídeo.</div>
                                 {% endif %}
                             </div>
-                            <div class="text-end">
+                            <div class="text-end ms-3">
                                 {% if video.duration_minutes %}
                                 <span class="badge bg-dark-subtle text-dark">{{ video.duration_minutes }} min</span>
                                 {% endif %}
-                                {% if video.video_url %}
-                                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ video.video_url }}" target="_blank" rel="noopener">
-                                    <i class="bi bi-play-circle me-1"></i>
-                                    Assistir
+                                {% if video.file_path %}
+                                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('static', filename=video.file_path) }}" download>
+                                    <i class="bi bi-download me-1"></i>
+                                    Baixar
                                 </a>
-                                {% elif video.storage_path %}
-                                <div class="text-muted small mt-2">{{ video.storage_path }}</div>
                                 {% endif %}
                             </div>
                         </li>

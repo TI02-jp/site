@@ -38,6 +38,15 @@ REGIME_LANCAMENTO_CHOICES = [
 ]
 
 IMAGE_FILE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp"]
+VIDEO_FILE_EXTENSIONS = [
+    "mp4",
+    "m4v",
+    "mov",
+    "mkv",
+    "avi",
+    "wmv",
+    "webm",
+]
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
@@ -274,10 +283,6 @@ class VideoFolderForm(FlaskForm):
         validators=[Optional(), Length(max=500)],
         render_kw={"rows": 3},
     )
-    cover_image = FileField(
-        "Capa da pasta",
-        validators=[FileAllowed(IMAGE_FILE_EXTENSIONS, "Formatos permitidos: png, jpg, jpeg, gif e webp.")],
-    )
     submit = SubmitField("Salvar pasta")
 
 
@@ -299,21 +304,12 @@ class VideoModuleForm(FlaskForm):
         validators=[Optional(), Length(max=800)],
         render_kw={"rows": 4},
     )
-    cover_image = FileField(
-        "Capa do módulo",
-        validators=[FileAllowed(IMAGE_FILE_EXTENSIONS, "Formatos permitidos: png, jpg, jpeg, gif e webp.")],
-    )
     tags = SelectMultipleField(
         "Tags",
         coerce=int,
         validators=[Optional()],
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
-    )
-    new_tags = StringField(
-        "Novas tags (separadas por vírgula)",
-        validators=[Optional(), Length(max=200)],
-        render_kw={"placeholder": "Ex.: Onboarding, Financeiro"},
     )
     submit = SubmitField("Salvar módulo")
 
@@ -336,15 +332,15 @@ class VideoAssetForm(FlaskForm):
         validators=[Optional(), Length(max=1000)],
         render_kw={"rows": 4},
     )
-    video_url = StringField(
-        "URL do vídeo",
-        validators=[Optional(), URL(require_tld=False), Length(max=255)],
-        render_kw={"placeholder": "https://..."},
-    )
-    storage_path = StringField(
-        "Caminho ou local de armazenamento",
-        validators=[Optional(), Length(max=255)],
-        render_kw={"placeholder": "Ex.: s3://bucket/video.mp4"},
+    video_file = FileField(
+        "Arquivo do vídeo",
+        validators=[
+            Optional(),
+            FileAllowed(
+                VIDEO_FILE_EXTENSIONS,
+                "Formatos permitidos: " + ", ".join(ext.upper() for ext in VIDEO_FILE_EXTENSIONS),
+            ),
+        ],
     )
     duration_minutes = IntegerField(
         "Duração (minutos)",

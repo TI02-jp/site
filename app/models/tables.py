@@ -176,8 +176,8 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
-video_module_tags = db.Table(
-    "video_module_tags",
+video_module_portal_tags = db.Table(
+    "video_module_portal_tags",
     db.Column(
         "module_id",
         db.Integer,
@@ -187,7 +187,7 @@ video_module_tags = db.Table(
     db.Column(
         "tag_id",
         db.Integer,
-        db.ForeignKey("video_tags.id", ondelete="CASCADE"),
+        db.ForeignKey("tags.id", ondelete="CASCADE"),
         primary_key=True,
     ),
 )
@@ -201,7 +201,6 @@ class VideoFolder(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
-    cover_image = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -221,26 +220,6 @@ class VideoFolder(db.Model):
         return f"<VideoFolder {self.name}>"
 
 
-class VideoTag(db.Model):
-    """Categorisation label applied to video modules for filtering."""
-
-    __tablename__ = "video_tags"
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
-    slug = db.Column(db.String(100), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-    modules = db.relationship(
-        "VideoModule",
-        secondary=video_module_tags,
-        back_populates="tags",
-    )
-
-    def __repr__(self) -> str:
-        return f"<VideoTag {self.name}>"
-
-
 class VideoModule(db.Model):
     """Module grouping long-form training videos."""
 
@@ -253,7 +232,6 @@ class VideoModule(db.Model):
     )
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
-    cover_image = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -264,10 +242,10 @@ class VideoModule(db.Model):
 
     folder = db.relationship("VideoFolder", back_populates="modules")
     tags = db.relationship(
-        "VideoTag",
-        secondary=video_module_tags,
-        back_populates="modules",
-        order_by="VideoTag.name",
+        "Tag",
+        secondary=video_module_portal_tags,
+        backref=db.backref("video_modules", lazy="dynamic"),
+        order_by="Tag.nome",
     )
     videos = db.relationship(
         "VideoAsset",
@@ -293,8 +271,10 @@ class VideoAsset(db.Model):
     )
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
-    video_url = db.Column(db.String(255))
-    storage_path = db.Column(db.String(255))
+    file_path = db.Column(db.String(255))
+    original_filename = db.Column(db.String(255))
+    mime_type = db.Column(db.String(120))
+    file_size = db.Column(db.BigInteger)
     duration_minutes = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(

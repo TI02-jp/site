@@ -24,7 +24,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h2 class="h5 mb-3">{{ 'Editar pasta' if editing_folder else 'Nova pasta' }}</h2>
-                    <form method="post" action="{{ url_for('save_video_folder') }}" enctype="multipart/form-data">
+                    <form method="post" action="{{ url_for('save_video_folder') }}">
                         {{ folder_form.hidden_tag() }}
                         <div class="mb-3">
                             {{ folder_form.name.label(class="form-label") }}
@@ -33,11 +33,6 @@
                         <div class="mb-3">
                             {{ folder_form.description.label(class="form-label") }}
                             {{ folder_form.description(class="form-control", placeholder="Descrição breve") }}
-                        </div>
-                        <div class="mb-3">
-                            {{ folder_form.cover_image.label(class="form-label") }}
-                            {{ folder_form.cover_image(class="form-control") }}
-                            <div class="form-text">Imagens PNG, JPG, JPEG, GIF ou WEBP de até 2&nbsp;MB.</div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-save me-2"></i>
@@ -52,7 +47,7 @@
                 <div class="card-body">
                     <h2 class="h5 mb-3">{{ 'Editar módulo' if editing_module else 'Novo módulo' }}</h2>
                     {% if module_form.folder_id.choices %}
-                    <form method="post" action="{{ url_for('save_video_module') }}" enctype="multipart/form-data">
+                    <form method="post" action="{{ url_for('save_video_module') }}">
                         {{ module_form.hidden_tag() }}
                         <div class="mb-3">
                             {{ module_form.title.label(class="form-label") }}
@@ -66,11 +61,6 @@
                             {{ module_form.description.label(class="form-label") }}
                             {{ module_form.description(class="form-control", placeholder="Descreva os objetivos do módulo") }}
                         </div>
-                        <div class="mb-3">
-                            {{ module_form.cover_image.label(class="form-label") }}
-                            {{ module_form.cover_image(class="form-control") }}
-                            <div class="form-text">Imagens PNG, JPG, JPEG, GIF ou WEBP de até 2&nbsp;MB.</div>
-                        </div>
                         {% if module_form.tags.choices %}
                         <div class="mb-3">
                             <label class="form-label">{{ module_form.tags.label.text }}</label>
@@ -82,13 +72,9 @@
                                 </div>
                                 {% endfor %}
                             </div>
+                            <div class="form-text">As tags listadas são as mesmas utilizadas no portal.</div>
                         </div>
                         {% endif %}
-                        <div class="mb-3">
-                            {{ module_form.new_tags.label(class="form-label") }}
-                            {{ module_form.new_tags(class="form-control") }}
-                            <div class="form-text">Separe múltiplas tags com vírgula.</div>
-                        </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-save me-2"></i>
                             {{ 'Atualizar módulo' if editing_module else 'Criar módulo' }}
@@ -108,7 +94,7 @@
                 <div class="card-body">
                     <h2 class="h5 mb-3">{{ 'Editar vídeo' if editing_video else 'Novo vídeo' }}</h2>
                     {% if video_form.module_id.choices %}
-                    <form method="post" action="{{ url_for('save_video_asset') }}">
+                    <form method="post" action="{{ url_for('save_video_asset') }}" enctype="multipart/form-data">
                         {{ video_form.hidden_tag() }}
                         <div class="mb-3">
                             {{ video_form.module_id.label(class="form-label") }}
@@ -123,15 +109,23 @@
                             {{ video_form.description(class="form-control", placeholder="Resumo do conteúdo") }}
                         </div>
                         <div class="mb-3">
-                            {{ video_form.video_url.label(class="form-label") }}
-                            {{ video_form.video_url(class="form-control") }}
-                            <div class="form-text">Informe a URL do player (YouTube, Vimeo, etc.).</div>
+                            {{ video_form.video_file.label(class="form-label") }}
+                            {{ video_form.video_file(class="form-control") }}
+                            <div class="form-text">Formatos aceitos: MP4, M4V, MOV, MKV, AVI, WMV e WEBM. Envie um novo arquivo para substituir o atual.</div>
                         </div>
+                        {% if editing_video and editing_video.file_path %}
                         <div class="mb-3">
-                            {{ video_form.storage_path.label(class="form-label") }}
-                            {{ video_form.storage_path(class="form-control") }}
-                            <div class="form-text">Use este campo para apontar localizações internas ou caminhos de arquivo.</div>
+                            <label class="form-label">Arquivo atual</label>
+                            <div class="small">
+                                <a href="{{ url_for('static', filename=editing_video.file_path) }}" target="_blank" rel="noopener">
+                                    {{ editing_video.original_filename or 'Vídeo enviado' }}
+                                </a>
+                                {% if editing_video.file_size %}
+                                <span class="text-muted">({{ (editing_video.file_size / (1024 * 1024))|round(2) }} MB)</span>
+                                {% endif %}
+                            </div>
                         </div>
+                        {% endif %}
                         <div class="mb-3">
                             {{ video_form.duration_minutes.label(class="form-label") }}
                             {{ video_form.duration_minutes(class="form-control", placeholder="Ex.: 45") }}
@@ -196,7 +190,7 @@
                                             {% if module.tags %}
                                             <div class="mb-2">
                                                 {% for tag in module.tags %}
-                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.name }}</span>
+                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.nome }}</span>
                                                 {% endfor %}
                                             </div>
                                             {% endif %}
@@ -212,10 +206,21 @@
                                                         {% if video.description %}
                                                         <div class="text-muted">{{ video.description }}</div>
                                                         {% endif %}
-                                                        {% if video.video_url %}
-                                                        <div class="text-muted">URL: <a href="{{ video.video_url }}" target="_blank" rel="noopener">{{ video.video_url }}</a></div>
-                                                        {% elif video.storage_path %}
-                                                        <div class="text-muted">Armazenado em: {{ video.storage_path }}</div>
+                                                        {% if video.file_path %}
+                                                        <div class="mt-2">
+                                                            <video controls preload="metadata" class="video-admin-preview">
+                                                                <source src="{{ url_for('static', filename=video.file_path) }}" type="{{ video.mime_type or 'video/mp4' }}">
+                                                                Seu navegador não suporta a reprodução de vídeo.
+                                                            </video>
+                                                            <div class="text-muted small mt-1">
+                                                                {{ video.original_filename or 'Vídeo enviado' }}
+                                                                {% if video.file_size %}
+                                                                · {{ (video.file_size / (1024 * 1024))|round(2) }} MB
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% else %}
+                                                        <div class="text-muted small mt-2">Nenhum arquivo de vídeo enviado.</div>
                                                         {% endif %}
                                                     </div>
                                                     <div class="text-end">
