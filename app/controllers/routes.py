@@ -358,6 +358,12 @@ def reforma_tributaria():
     total_videos = len(videos)
     progress_percent = round((watched_count / total_videos) * 100) if total_videos else 0
 
+    folder_embed_url = None
+    if folder_id:
+        folder_embed_url = (
+            f"https://drive.google.com/embeddedfolderview?id={folder_id}#grid"
+        )
+
     return render_template(
         "reforma_tributaria.html",
         videos=videos,
@@ -366,6 +372,7 @@ def reforma_tributaria():
         watched_count=watched_count,
         total_videos=total_videos,
         progress_percent=progress_percent,
+        folder_embed_url=folder_embed_url,
     )
 
 
