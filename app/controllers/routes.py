@@ -35,9 +35,9 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
-    ReformaModule,
-    ReformaVideo,
-    ReformaTributariaProgress,
+    MediaFolder,
+    MediaVideo,
+    MediaVideoProgress,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -59,6 +59,7 @@ from app.forms import (
     AccessLinkForm,
     CourseForm,
 )
+import mimetypes
 import os, json, re, secrets
 import requests
 from werkzeug.utils import secure_filename
@@ -210,18 +211,18 @@ VIDEO_ALLOWED_EXTENSIONS = {
 STREAM_CHUNK_SIZE = 1024 * 1024
 
 
-def get_reforma_video_storage() -> Path:
-    """Return the directory where Reforma Tributária videos are stored."""
+def get_media_video_storage() -> Path:
+    """Return the directory where portal media videos are stored."""
 
-    storage = Path(current_app.config["REFORMA_VIDEO_STORAGE"])
+    storage = Path(current_app.config["MEDIA_VIDEO_STORAGE"])
     storage.mkdir(parents=True, exist_ok=True)
     return storage
 
 
-def build_video_path(filename: str) -> Path:
-    """Return the absolute path for a stored Reforma Tributária video."""
+def build_media_video_path(filename: str) -> Path:
+    """Return the absolute path for a stored media video."""
 
-    return get_reforma_video_storage() / filename
+    return get_media_video_storage() / filename
 
 
 def stream_file_range(path: Path, content_type: str | None = None):
@@ -255,9 +256,19 @@ def stream_file_range(path: Path, content_type: str | None = None):
         else:
             range_header = None
 
+    if range_header and byte1 >= file_size:
+        response = current_app.response_class(status=416)
+        response.headers.add("Content-Range", f"bytes */{file_size}")
+        return response
+
     byte1 = max(0, min(byte1, file_size - 1))
     byte2 = max(byte1, min(byte2, file_size - 1))
     length = byte2 - byte1 + 1
+
+    final_content_type = content_type
+    if not final_content_type or final_content_type == "application/octet-stream":
+        guessed_type, _ = mimetypes.guess_type(path.name)
+        final_content_type = guessed_type or "application/octet-stream"
 
     def generate():
         with path.open("rb") as f:
@@ -273,7 +284,7 @@ def stream_file_range(path: Path, content_type: str | None = None):
     response = current_app.response_class(
         generate(),
         status=status_code,
-        mimetype=content_type or "application/octet-stream",
+        mimetype=final_content_type,
         direct_passthrough=True,
     )
     response.headers.add("Accept-Ranges", "bytes")
@@ -298,7 +309,7 @@ def format_file_size(num_bytes: int | None) -> str:
     return f"{size:.1f} TB"
 
 
-def serialize_reforma_video(video: ReformaVideo) -> dict[str, object]:
+def serialize_media_video(video: MediaVideo) -> dict[str, object]:
     """Return a JSON-serializable representation of ``video``."""
 
     return {
@@ -306,8 +317,8 @@ def serialize_reforma_video(video: ReformaVideo) -> dict[str, object]:
         "title": video.title,
         "description": video.description or "",
         "stream_url": url_for("reforma_tributaria_stream", video_id=video.id),
-        "module_id": video.module_id,
-        "module_name": video.module.name if video.module else "Sem módulo",
+        "module_id": video.folder_id,
+        "module_name": video.folder.name if video.folder else "Sem módulo",
         "content_type": video.content_type or "video/mp4",
         "file_size": video.file_size or 0,
         "formatted_size": format_file_size(video.file_size),
@@ -467,13 +478,13 @@ def reforma_tributaria():
     can_manage = current_user.is_master or current_user.role == "admin"
 
     modules = (
-        ReformaModule.query.options(joinedload(ReformaModule.videos))
-        .order_by(ReformaModule.name.asc())
+        MediaFolder.query.options(joinedload(MediaFolder.videos))
+        .order_by(MediaFolder.name.asc())
         .all()
     )
     ungrouped_videos = (
-        ReformaVideo.query.filter(ReformaVideo.module_id.is_(None))
-        .order_by(ReformaVideo.created_at.desc())
+        MediaVideo.query.filter(MediaVideo.folder_id.is_(None))
+        .order_by(MediaVideo.created_at.desc())
         .all()
     )
 
@@ -486,7 +497,7 @@ def reforma_tributaria():
             key=lambda video: video.created_at or datetime.min,
             reverse=True,
         )
-        serialized = [serialize_reforma_video(video) for video in module_videos]
+        serialized = [serialize_media_video(video) for video in module_videos]
         video_groups.append(
             {
                 "id": module.id,
@@ -500,7 +511,7 @@ def reforma_tributaria():
         videos.extend(serialized)
 
     if ungrouped_videos:
-        serialized_root = [serialize_reforma_video(video) for video in ungrouped_videos]
+        serialized_root = [serialize_media_video(video) for video in ungrouped_videos]
         video_groups.append(
             {
                 "id": "__root__",
@@ -533,8 +544,8 @@ def reforma_tributaria():
     watched_ids: set[int] = set()
     if video_ids:
         progress_records = (
-            ReformaTributariaProgress.query.filter_by(user_id=current_user.id)
-            .filter(ReformaTributariaProgress.video_id.in_(video_ids))
+            MediaVideoProgress.query.filter_by(user_id=current_user.id)
+            .filter(MediaVideoProgress.video_id.in_(video_ids))
             .all()
         )
         watched_ids = {record.video_id for record in progress_records}
@@ -563,7 +574,7 @@ def reforma_tributaria():
     )
 
 
-def _require_reforma_admin() -> None:
+def _require_media_admin() -> None:
     if not (current_user.is_master or current_user.role == "admin"):
         abort(403)
 
@@ -572,9 +583,9 @@ def _require_reforma_admin() -> None:
 @login_required
 @csrf.exempt
 def reforma_tributaria_module_create():
-    """Create a new Reforma Tributária module."""
+    """Create a new media folder for organizing videos."""
 
-    _require_reforma_admin()
+    _require_media_admin()
     payload = request.get_json(silent=True) or {}
     name = (payload.get("name") or "").strip()
     description = (payload.get("description") or "").strip() or None
@@ -584,13 +595,13 @@ def reforma_tributaria_module_create():
 
     duplicate = (
         db.session.execute(
-            sa.select(ReformaModule.id).where(sa.func.lower(ReformaModule.name) == name.lower())
+            sa.select(MediaFolder.id).where(sa.func.lower(MediaFolder.name) == name.lower())
         ).scalar_one_or_none()
     )
     if duplicate is not None:
         return jsonify({"error": "Já existe um módulo com esse nome."}), 409
 
-    module = ReformaModule(name=name, description=description)
+    module = MediaFolder(name=name, description=description)
     db.session.add(module)
     db.session.commit()
 
@@ -613,10 +624,10 @@ def reforma_tributaria_module_create():
 @login_required
 @csrf.exempt
 def reforma_tributaria_module_manage(module_id: int):
-    """Rename or delete a Reforma Tributária module."""
+    """Rename or delete a media folder."""
 
-    _require_reforma_admin()
-    module = ReformaModule.query.get_or_404(module_id)
+    _require_media_admin()
+    module = MediaFolder.query.get_or_404(module_id)
 
     if request.method == "DELETE":
         if module.videos:
@@ -642,9 +653,9 @@ def reforma_tributaria_module_manage(module_id: int):
             return jsonify({"error": "O nome do módulo não pode ficar vazio."}), 400
         duplicate = (
             db.session.execute(
-                sa.select(ReformaModule.id)
-                .where(sa.func.lower(ReformaModule.name) == name.lower())
-                .where(ReformaModule.id != module.id)
+                sa.select(MediaFolder.id)
+                .where(sa.func.lower(MediaFolder.name) == name.lower())
+                .where(MediaFolder.id != module.id)
             ).scalar_one_or_none()
         )
         if duplicate is not None:
@@ -672,9 +683,9 @@ def reforma_tributaria_module_manage(module_id: int):
 @app.route("/reforma-tributaria/videos", methods=["POST"])
 @login_required
 def reforma_tributaria_video_create():
-    """Upload a new Reforma Tributária video to local storage."""
+    """Upload a new media video to local storage."""
 
-    _require_reforma_admin()
+    _require_media_admin()
 
     file = request.files.get("video")
     title = (request.form.get("title") or "").strip()
@@ -689,20 +700,20 @@ def reforma_tributaria_video_create():
     if extension not in VIDEO_ALLOWED_EXTENSIONS:
         return jsonify({"error": "Formato de vídeo não suportado."}), 400
 
-    module: ReformaModule | None = None
+    module: MediaFolder | None = None
     if module_id_raw:
         try:
             module_id = int(module_id_raw)
         except ValueError:
             return jsonify({"error": "Módulo informado é inválido."}), 400
-        module = ReformaModule.query.get(module_id)
+        module = MediaFolder.query.get(module_id)
         if not module:
             return jsonify({"error": "Módulo não encontrado."}), 404
 
     if not title:
         title = Path(original_filename).stem or "Novo vídeo"
 
-    storage = get_reforma_video_storage()
+    storage = get_media_video_storage()
     unique_name = f"{uuid4().hex}{extension}"
     target_path = storage / unique_name
 
@@ -726,14 +737,17 @@ def reforma_tributaria_video_create():
                 current_app.logger.warning(
                     "Falha ao remover vídeo parcialmente salvo: %s", target_path
                 )
-        current_app.logger.exception("Erro ao salvar vídeo da Reforma Tributária")
+        current_app.logger.exception("Erro ao salvar vídeo de mídia")
         return jsonify({"error": "Não foi possível salvar o vídeo."}), 500
 
     file_size = target_path.stat().st_size
     mimetype = file.mimetype or "video/mp4"
+    guessed_type, _ = mimetypes.guess_type(original_filename)
+    if not mimetype or mimetype == "application/octet-stream":
+        mimetype = guessed_type or "video/mp4"
 
-    video = ReformaVideo(
-        module=module,
+    video = MediaVideo(
+        folder=module,
         filename=unique_name,
         original_filename=original_filename,
         title=title,
@@ -748,7 +762,7 @@ def reforma_tributaria_video_create():
         jsonify(
             {
                 "message": "Vídeo cadastrado com sucesso.",
-                "video": serialize_reforma_video(video),
+                "video": serialize_media_video(video),
             }
         ),
         201,
@@ -759,13 +773,13 @@ def reforma_tributaria_video_create():
 @login_required
 @csrf.exempt
 def reforma_tributaria_video_manage(video_id: int):
-    """Update or delete a Reforma Tributária video."""
+    """Update or delete a media video."""
 
-    _require_reforma_admin()
-    video = ReformaVideo.query.get_or_404(video_id)
+    _require_media_admin()
+    video = MediaVideo.query.get_or_404(video_id)
 
     if request.method == "DELETE":
-        file_path = build_video_path(video.filename)
+        file_path = build_media_video_path(video.filename)
         try:
             if file_path.exists():
                 file_path.unlink()
@@ -795,32 +809,32 @@ def reforma_tributaria_video_manage(video_id: int):
 
     if module_id_raw is not None:
         if module_id_raw in ("", "__root__", None):
-            video.module = None
+            video.folder = None
         else:
             try:
                 module_id = int(module_id_raw)
             except (TypeError, ValueError):
                 return jsonify({"error": "Módulo informado é inválido."}), 400
-            module = ReformaModule.query.get(module_id)
+            module = MediaFolder.query.get(module_id)
             if not module:
                 return jsonify({"error": "Módulo não encontrado."}), 404
-            video.module = module
+            video.folder = module
 
     video.updated_at = datetime.utcnow()
     db.session.commit()
 
     return jsonify(
-        {"message": "Vídeo atualizado com sucesso.", "video": serialize_reforma_video(video)}
+        {"message": "Vídeo atualizado com sucesso.", "video": serialize_media_video(video)}
     )
 
 
 @app.route("/reforma-tributaria/videos/<int:video_id>/stream")
 @login_required
 def reforma_tributaria_stream(video_id: int):
-    """Stream a Reforma Tributária video with HTTP range support."""
+    """Stream a media video with HTTP range support."""
 
-    video = ReformaVideo.query.get_or_404(video_id)
-    file_path = build_video_path(video.filename)
+    video = MediaVideo.query.get_or_404(video_id)
+    file_path = build_media_video_path(video.filename)
     return stream_file_range(file_path, video.content_type)
 
 
@@ -828,11 +842,11 @@ def reforma_tributaria_stream(video_id: int):
 @login_required
 @csrf.exempt
 def reforma_tributaria_watch(video_id: int):
-    """Mark or unmark a Reforma Tributária video as watched for the current user."""
+    """Mark or unmark a media video as watched for the current user."""
 
-    video = ReformaVideo.query.get_or_404(video_id)
+    video = MediaVideo.query.get_or_404(video_id)
 
-    record = ReformaTributariaProgress.query.filter_by(
+    record = MediaVideoProgress.query.filter_by(
         user_id=current_user.id, video_id=video.id
     ).first()
 
@@ -850,7 +864,7 @@ def reforma_tributaria_watch(video_id: int):
         record.video_title = video_title or record.video_title
         record.watched_at = datetime.utcnow()
     else:
-        record = ReformaTributariaProgress(
+        record = MediaVideoProgress(
             user_id=current_user.id,
             video_id=video.id,
             video_title=video_title,

@@ -176,10 +176,10 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
-class ReformaModule(db.Model):
-    """Logical folder that groups Reforma Tributária videos."""
+class MediaFolder(db.Model):
+    """Logical folder that groups media videos available in the portal."""
 
-    __tablename__ = "reforma_modules"
+    __tablename__ = "media_folders"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), unique=True, nullable=False)
@@ -190,24 +190,24 @@ class ReformaModule(db.Model):
     )
 
     videos = db.relationship(
-        "ReformaVideo",
-        back_populates="module",
+        "MediaVideo",
+        back_populates="folder",
         lazy=True,
     )
 
     def __repr__(self):
-        return f"<ReformaModule {self.name} ({self.id})>"
+        return f"<MediaFolder {self.name} ({self.id})>"
 
 
-class ReformaVideo(db.Model):
-    """Stores Reforma Tributária videos uploaded to the platform."""
+class MediaVideo(db.Model):
+    """Stores media videos uploaded to the platform."""
 
-    __tablename__ = "reforma_videos"
+    __tablename__ = "media_videos"
 
     id = db.Column(db.Integer, primary_key=True)
-    module_id = db.Column(
+    folder_id = db.Column(
         db.Integer,
-        db.ForeignKey("reforma_modules.id", ondelete="SET NULL"),
+        db.ForeignKey("media_folders.id", ondelete="SET NULL"),
         nullable=True,
     )
     filename = db.Column(db.String(255), nullable=False, unique=True)
@@ -221,22 +221,22 @@ class ReformaVideo(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
-    module = db.relationship("ReformaModule", back_populates="videos")
+    folder = db.relationship("MediaFolder", back_populates="videos")
 
     def __repr__(self):
-        return f"<ReformaVideo {self.title} ({self.id})>"
+        return f"<MediaVideo {self.title} ({self.id})>"
 
 
-class ReformaTributariaProgress(db.Model):
-    """Stores the watch status of Reforma Tributária videos per user."""
+class MediaVideoProgress(db.Model):
+    """Stores the watch status of media videos per user."""
 
-    __tablename__ = "reforma_tributaria_progress"
+    __tablename__ = "media_video_progress"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     video_id = db.Column(
         db.Integer,
-        db.ForeignKey("reforma_videos.id", ondelete="CASCADE"),
+        db.ForeignKey("media_videos.id", ondelete="CASCADE"),
         nullable=False,
     )
     video_title = db.Column(db.String(255))
@@ -245,14 +245,14 @@ class ReformaTributariaProgress(db.Model):
     user = db.relationship(
         "User",
         backref=db.backref(
-            "reforma_tributaria_progress",
+            "media_video_progress",
             lazy=True,
             cascade="all, delete-orphan",
         ),
     )
 
     video = db.relationship(
-        "ReformaVideo",
+        "MediaVideo",
         backref=db.backref(
             "progress_entries",
             lazy=True,
@@ -261,11 +261,11 @@ class ReformaTributariaProgress(db.Model):
     )
 
     __table_args__ = (
-        db.UniqueConstraint("user_id", "video_id", name="uq_reforma_tributaria_progress"),
+        db.UniqueConstraint("user_id", "video_id", name="uq_media_video_progress"),
     )
 
     def __repr__(self):
-        return f"<ReformaTributariaProgress user={self.user_id} video={self.video_id}>"
+        return f"<MediaVideoProgress user={self.user_id} video={self.video_id}>"
 
 
 class Session(db.Model):

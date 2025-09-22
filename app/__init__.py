@@ -43,11 +43,15 @@ app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_FI
 app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_INFO')
 app.config['GOOGLE_SERVICE_ACCOUNT_SUBJECT'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_SUBJECT')
 app.config['GOOGLE_MEETING_ROOM_EMAIL'] = os.getenv('GOOGLE_MEETING_ROOM_EMAIL')
-app.config['REFORMA_VIDEO_STORAGE'] = os.getenv(
-    'REFORMA_VIDEO_STORAGE',
-    os.path.join(app.instance_path, 'reforma_videos'),
+media_storage_path = (
+    os.getenv('MEDIA_VIDEO_STORAGE')
+    or os.getenv('REFORMA_VIDEO_STORAGE')
+    or os.path.join(app.instance_path, 'media_videos')
 )
-os.makedirs(app.config['REFORMA_VIDEO_STORAGE'], exist_ok=True)
+app.config['MEDIA_VIDEO_STORAGE'] = media_storage_path
+# Backwards compatibility with legacy configuration keys
+app.config['REFORMA_VIDEO_STORAGE'] = media_storage_path
+os.makedirs(app.config['MEDIA_VIDEO_STORAGE'], exist_ok=True)
 
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
