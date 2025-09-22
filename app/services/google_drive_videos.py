@@ -1,18 +1,19 @@
-"""Utilities to fetch Reforma Tributária videos from Google Drive."""
+"""Utilities to manage Reforma Tributária videos stored on Google Drive."""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Iterable
+from typing import IO, Iterable
 
 from flask import current_app
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseUpload
 
 
-SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,3 +239,53 @@ def fetch_drive_videos(folder_id: str) -> tuple[DriveVideoCollection, str | None
         )
 
     return DriveVideoCollection(root_videos, tuple(modules)), None
+
+
+def upload_drive_video(
+    file_stream: IO[bytes],
+    filename: str,
+    mimetype: str,
+    folder_id: str,
+) -> tuple[DriveVideo | None, str | None]:
+    """Upload a new video file to Google Drive and return its metadata."""
+
+    if not folder_id:
+        return None, "A pasta de destino não está configurada."
+
+    drive_service = _build_drive_service()
+    if not drive_service:
+        return None, "Integração com o Google Drive não está configurada."
+
+    media = MediaIoBaseUpload(
+        file_stream,
+        mimetype=mimetype,
+        resumable=True,
+        chunksize=8 * 1024 * 1024,
+    )
+
+    metadata = {"name": filename, "parents": [folder_id]}
+
+    try:
+        created = (
+            drive_service.files()
+            .create(
+                body=metadata,
+                media_body=media,
+                fields="id,name,mimeType,thumbnailLink,videoMediaMetadata(durationMillis)",
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+    except HttpError as exc:
+        current_app.logger.error("Erro ao enviar vídeo para o Google Drive: %s", exc)
+        return None, "Não foi possível enviar o vídeo para o Google Drive."
+
+    video = DriveVideo(
+        id=created.get("id", ""),
+        name=created.get("name", filename),
+        mime_type=created.get("mimeType", mimetype),
+        thumbnail_link=created.get("thumbnailLink"),
+        duration_millis=((created.get("videoMediaMetadata") or {}).get("durationMillis")),
+    )
+
+    return video, None

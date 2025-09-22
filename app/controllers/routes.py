@@ -78,12 +78,13 @@ from app.services.meeting_room import (
     combine_events,
     delete_meeting,
 )
-from app.services.google_drive_videos import fetch_drive_videos
+from app.services.google_drive_videos import fetch_drive_videos, upload_drive_video
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from pathlib import Path
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -343,6 +344,18 @@ def reforma_tributaria():
 
     folder_id = current_app.config.get("REFORMA_TRIBUTARIA_FOLDER_ID")
     collection, drive_error = fetch_drive_videos(folder_id)
+    can_upload = current_user.is_master or current_user.role == "admin"
+
+    module_metadata: dict[str, dict[str, object]] = {
+        "__root__": {
+            "name": "Outros vídeos",
+            "icon": "bi-collection-play",
+            "is_root": True,
+        }
+    }
+    upload_modules: list[dict[str, str]] = []
+    if folder_id:
+        upload_modules.append({"id": "__root__", "name": "Outros vídeos"})
 
     def serialize_video(video, module_id, module_name):
         return {
@@ -358,6 +371,13 @@ def reforma_tributaria():
     video_groups: list[dict[str, object]] = []
 
     for module in collection.modules:
+        module_metadata[module.id] = {
+            "name": module.name,
+            "icon": "bi-folder-fill",
+            "is_root": False,
+        }
+        if folder_id:
+            upload_modules.append({"id": module.id, "name": module.name})
         group_videos = [
             serialize_video(video, module.id, module.name) for video in module.videos
         ]
@@ -365,20 +385,21 @@ def reforma_tributaria():
             {
                 "id": module.id,
                 "name": module.name,
-                "icon": "bi-folder-fill",
+                "icon": module_metadata[module.id]["icon"],
                 "videos": group_videos,
                 "is_root": False,
             }
         )
 
     if collection.videos:
+        root_name = module_metadata["__root__"]["name"]
         video_groups.append(
             {
                 "id": "__root__",
-                "name": "Outros vídeos",
-                "icon": "bi-collection-play",
+                "name": root_name,
+                "icon": module_metadata["__root__"]["icon"],
                 "videos": [
-                    serialize_video(video, "__root__", "Outros vídeos")
+                    serialize_video(video, "__root__", root_name)
                     for video in collection.videos
                 ],
                 "is_root": True,
@@ -441,7 +462,72 @@ def reforma_tributaria():
         total_videos=total_videos,
         progress_percent=progress_percent,
         folder_embed_url=folder_embed_url,
+        can_upload=can_upload,
+        upload_modules=upload_modules,
+        module_metadata=module_metadata,
     )
+
+
+@app.route("/reforma-tributaria/upload", methods=["POST"])
+@login_required
+def reforma_tributaria_upload():
+    """Upload a new Reforma Tributária video directly from the portal."""
+
+    if not (current_user.is_master or current_user.role == "admin"):
+        abort(403)
+
+    folder_id = current_app.config.get("REFORMA_TRIBUTARIA_FOLDER_ID")
+    if not folder_id:
+        return jsonify({"error": "A pasta de vídeos não está configurada."}), 400
+
+    file = request.files.get("video")
+    if not file or not file.filename:
+        return jsonify({"error": "Selecione um arquivo de vídeo para enviar."}), 400
+
+    filename = secure_filename(file.filename)
+    if not filename:
+        return jsonify({"error": "O nome do arquivo enviado é inválido."}), 400
+
+    mimetype_raw = file.mimetype or "application/octet-stream"
+    mimetype = mimetype_raw.lower()
+    extension = Path(filename).suffix.lower()
+    allowed_extensions = {".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm"}
+    if not mimetype.startswith("video/") and extension not in allowed_extensions:
+        return jsonify({"error": "Envie um arquivo de vídeo válido."}), 400
+
+    module_id_raw = (request.form.get("module_id") or "__root__").strip()
+    if module_id_raw and module_id_raw != "__root__" and not re.fullmatch(
+        r"[A-Za-z0-9_-]{10,}", module_id_raw
+    ):
+        return jsonify({"error": "O módulo selecionado é inválido."}), 400
+
+    module_name = (request.form.get("module_name") or "").strip()
+
+    target_folder = folder_id if module_id_raw == "__root__" or not module_id_raw else module_id_raw
+    module_id = "__root__" if module_id_raw == "__root__" or not module_id_raw else module_id_raw
+
+    try:
+        file.stream.seek(0)
+    except Exception:  # pragma: no cover - fallback for exotic streams
+        pass
+
+    video, error = upload_drive_video(file.stream, filename, mimetype_raw, target_folder)
+    if error or not video or not video.id:
+        return jsonify({"error": error or "Não foi possível enviar o vídeo no momento."}), 502
+
+    module_label = module_name or ("Outros vídeos" if module_id == "__root__" else "Módulo")
+
+    payload = {
+        "id": video.id,
+        "name": video.name,
+        "preview_url": video.preview_url,
+        "thumbnail_link": video.thumbnail_link,
+        "formatted_duration": video.formatted_duration,
+        "module_id": module_id,
+        "module_name": module_label,
+    }
+
+    return jsonify({"message": "Vídeo enviado com sucesso.", "video": payload}), 201
 
 
 @app.route("/reforma-tributaria/videos/<string:video_id>/watch", methods=["POST", "DELETE"])
