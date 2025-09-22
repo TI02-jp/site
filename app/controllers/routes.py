@@ -231,19 +231,29 @@ def stream_file_range(path: Path, content_type: str | None = None):
         abort(404)
 
     file_size = path.stat().st_size
-    range_header = request.headers.get("Range", "")
+    range_header = request.headers.get("Range")
     byte1 = 0
     byte2 = file_size - 1
+    status_code = 200
 
-    if range_header.startswith("bytes="):
-        ranges = range_header.replace("bytes=", "", 1).split("-", 1)
-        try:
-            if ranges[0]:
-                byte1 = int(ranges[0])
-            if len(ranges) > 1 and ranges[1]:
-                byte2 = int(ranges[1])
-        except ValueError:
-            abort(416)
+    if range_header:
+        units, _, range_values = range_header.partition("=")
+        if units.strip().lower() == "bytes" and range_values:
+            first_range = range_values.split(",", 1)[0].strip()
+            start_str, sep, end_str = first_range.partition("-")
+            if sep:
+                try:
+                    if start_str:
+                        byte1 = int(start_str)
+                    if end_str:
+                        byte2 = int(end_str)
+                except ValueError:
+                    response = current_app.response_class(status=416)
+                    response.headers.add("Content-Range", f"bytes */{file_size}")
+                    return response
+                status_code = 206
+        else:
+            range_header = None
 
     byte1 = max(0, min(byte1, file_size - 1))
     byte2 = max(byte1, min(byte2, file_size - 1))
@@ -262,16 +272,14 @@ def stream_file_range(path: Path, content_type: str | None = None):
 
     response = current_app.response_class(
         generate(),
-        status=206 if range_header else 200,
+        status=status_code,
         mimetype=content_type or "application/octet-stream",
         direct_passthrough=True,
     )
     response.headers.add("Accept-Ranges", "bytes")
-    response.headers.add(
-        "Content-Range",
-        f"bytes {byte1}-{byte2}/{file_size}",
-    )
     response.headers.add("Content-Length", str(length))
+    if status_code == 206:
+        response.headers.add("Content-Range", f"bytes {byte1}-{byte2}/{file_size}")
     return response
 
 
