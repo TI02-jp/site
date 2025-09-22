@@ -71,3 +71,23 @@
         </li>
     </ul>
 </div>
+
+<div class="nav-section">
+    <div class="nav-section-title">VÍDEOS</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'videos' %} active{% endif %}" href="{{ url_for('videos') }}">
+                <i class="bi bi-collection-play"></i>
+                BIBLIOTECA
+            </a>
+        </li>
+        {% if current_user.role == 'admin' %}
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'videos_manage' %} active{% endif %}" href="{{ url_for('videos_manage') }}">
+                <i class="bi bi-sliders"></i>
+                GERENCIAR
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</div>

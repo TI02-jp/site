@@ -14,6 +14,7 @@ from wtforms import (
     PasswordField,
     BooleanField,
     HiddenField,
+    IntegerField,
     widgets
 )
 from wtforms.validators import (
@@ -24,7 +25,9 @@ from wtforms.validators import (
     EqualTo,
     ValidationError,
     URL,
+    NumberRange,
 )
+from flask_wtf.file import FileField, FileAllowed
 import re
 
 from app.services.courses import CourseStatus
@@ -33,6 +36,8 @@ REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
     ('Competência', 'Competência')
 ]
+
+IMAGE_FILE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp"]
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
@@ -254,6 +259,99 @@ class CourseForm(FlaskForm):
         validators=[DataRequired()],
     )
     submit = SubmitField("Salvar curso")
+
+
+class VideoFolderForm(FlaskForm):
+    """Formulário para cadastrar ou editar pastas de vídeos."""
+
+    folder_id = HiddenField()
+    name = StringField(
+        "Nome da pasta",
+        validators=[DataRequired(), Length(max=120)],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=500)],
+        render_kw={"rows": 3},
+    )
+    cover_image = FileField(
+        "Capa da pasta",
+        validators=[FileAllowed(IMAGE_FILE_EXTENSIONS, "Formatos permitidos: png, jpg, jpeg, gif e webp.")],
+    )
+    submit = SubmitField("Salvar pasta")
+
+
+class VideoModuleForm(FlaskForm):
+    """Formulário para cadastrar ou editar módulos de vídeo."""
+
+    module_id = HiddenField()
+    title = StringField(
+        "Título do módulo",
+        validators=[DataRequired(), Length(max=150)],
+    )
+    folder_id = SelectField(
+        "Pasta",
+        coerce=int,
+        validators=[DataRequired()],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=800)],
+        render_kw={"rows": 4},
+    )
+    cover_image = FileField(
+        "Capa do módulo",
+        validators=[FileAllowed(IMAGE_FILE_EXTENSIONS, "Formatos permitidos: png, jpg, jpeg, gif e webp.")],
+    )
+    tags = SelectMultipleField(
+        "Tags",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    new_tags = StringField(
+        "Novas tags (separadas por vírgula)",
+        validators=[Optional(), Length(max=200)],
+        render_kw={"placeholder": "Ex.: Onboarding, Financeiro"},
+    )
+    submit = SubmitField("Salvar módulo")
+
+
+class VideoAssetForm(FlaskForm):
+    """Formulário para cadastrar ou editar vídeos longos."""
+
+    video_id = HiddenField()
+    module_id = SelectField(
+        "Módulo",
+        coerce=int,
+        validators=[DataRequired()],
+    )
+    title = StringField(
+        "Título do vídeo",
+        validators=[DataRequired(), Length(max=150)],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=1000)],
+        render_kw={"rows": 4},
+    )
+    video_url = StringField(
+        "URL do vídeo",
+        validators=[Optional(), URL(require_tld=False), Length(max=255)],
+        render_kw={"placeholder": "https://..."},
+    )
+    storage_path = StringField(
+        "Caminho ou local de armazenamento",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"placeholder": "Ex.: s3://bucket/video.mp4"},
+    )
+    duration_minutes = IntegerField(
+        "Duração (minutos)",
+        validators=[Optional(), NumberRange(min=0, message="Informe uma duração igual ou maior que zero.")],
+        render_kw={"min": 0},
+    )
+    submit = SubmitField("Salvar vídeo")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""

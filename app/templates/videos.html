@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Vídeos{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Biblioteca de Vídeos</h1>
+            <p class="text-muted mb-0">Explore módulos com vídeos longos organizados por pastas e tags.</p>
+        </div>
+        {% if current_user.role == 'admin' %}
+        <a class="btn btn-outline-primary" href="{{ url_for('videos_manage') }}">
+            <i class="bi bi-sliders me-2"></i>
+            Gerenciar biblioteca
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="filter-folder" class="form-label mb-1">Pasta</label>
+                    <select class="form-select" id="filter-folder" name="folder">
+                        <option value="">Todas as pastas</option>
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}" {% if folder.id == selected_folder_id %}selected{% endif %}>{{ folder.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filter-tag" class="form-label mb-1">Tag</label>
+                    <select class="form-select" id="filter-tag" name="tag">
+                        <option value="">Todas as tags</option>
+                        {% for tag in tags %}
+                        <option value="{{ tag.slug }}" {% if tag.slug == selected_tag_slug %}selected{% endif %}>{{ tag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bi bi-filter me-2"></i>
+                        Aplicar filtros
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('videos') }}">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Limpar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if selected_folder or selected_tag %}
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-4">
+        <i class="bi bi-info-circle fs-4"></i>
+        <div class="small">
+            {% if selected_folder %}
+            <div><strong>Pasta:</strong> {{ selected_folder.name }}</div>
+            {% endif %}
+            {% if selected_tag %}
+            <div><strong>Tag:</strong> {{ selected_tag.name }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if modules %}
+    <div class="row g-4">
+        {% for module in modules %}
+        <div class="col-xl-4 col-md-6">
+            <div class="video-card h-100 shadow-sm">
+                {% if module.cover_image %}
+                <div class="video-card__cover" style="background-image: url('{{ url_for('static', filename=module.cover_image) }}');"></div>
+                {% else %}
+                <div class="video-card__cover video-card__cover--placeholder">
+                    <i class="bi bi-collection-play"></i>
+                </div>
+                {% endif %}
+                <div class="video-card__body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h2 class="video-card__title h5 mb-1">{{ module.title }}</h2>
+                            {% if module.folder %}
+                            <span class="badge text-bg-light border">
+                                <i class="bi bi-folder2-open me-1"></i>{{ module.folder.name }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if module.description %}
+                    <p class="text-muted small mb-3">{{ module.description }}</p>
+                    {% endif %}
+                    {% if module.tags %}
+                    <div class="mb-3">
+                        {% for tag in module.tags %}
+                        <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if module.videos %}
+                    <ul class="video-card__list list-unstyled mb-0">
+                        {% for video in module.videos %}
+                        <li class="video-card__item">
+                            <div>
+                                <strong>{{ video.title }}</strong>
+                                {% if video.description %}
+                                <div class="text-muted small">{{ video.description }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                {% if video.duration_minutes %}
+                                <span class="badge bg-dark-subtle text-dark">{{ video.duration_minutes }} min</span>
+                                {% endif %}
+                                {% if video.video_url %}
+                                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ video.video_url }}" target="_blank" rel="noopener">
+                                    <i class="bi bi-play-circle me-1"></i>
+                                    Assistir
+                                </a>
+                                {% elif video.storage_path %}
+                                <div class="text-muted small mt-2">{{ video.storage_path }}</div>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted small mb-0">Nenhum vídeo cadastrado neste módulo.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-camera-reels fs-1 text-muted mb-3"></i>
+            <h2 class="h5 mb-2">Nenhum módulo encontrado</h2>
+            <p class="text-muted mb-0">Ajuste os filtros ou fale com um administrador para adicionar novos conteúdos.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

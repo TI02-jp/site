@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Vídeos{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Gerenciar biblioteca de vídeos</h1>
+            <p class="text-muted mb-0">Crie pastas, organize módulos e cadastre vídeos longos com facilidade.</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('videos') }}">
+            <i class="bi bi-collection-play me-2"></i>
+            Ver biblioteca
+        </a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">{{ 'Editar pasta' if editing_folder else 'Nova pasta' }}</h2>
+                    <form method="post" action="{{ url_for('save_video_folder') }}" enctype="multipart/form-data">
+                        {{ folder_form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ folder_form.name.label(class="form-label") }}
+                            {{ folder_form.name(class="form-control", placeholder="Nome da pasta") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ folder_form.description.label(class="form-label") }}
+                            {{ folder_form.description(class="form-control", placeholder="Descrição breve") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ folder_form.cover_image.label(class="form-label") }}
+                            {{ folder_form.cover_image(class="form-control") }}
+                            <div class="form-text">Imagens PNG, JPG, JPEG, GIF ou WEBP de até 2&nbsp;MB.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-2"></i>
+                            {{ 'Atualizar pasta' if editing_folder else 'Criar pasta' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">{{ 'Editar módulo' if editing_module else 'Novo módulo' }}</h2>
+                    {% if module_form.folder_id.choices %}
+                    <form method="post" action="{{ url_for('save_video_module') }}" enctype="multipart/form-data">
+                        {{ module_form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ module_form.title.label(class="form-label") }}
+                            {{ module_form.title(class="form-control", placeholder="Título do módulo") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ module_form.folder_id.label(class="form-label") }}
+                            {{ module_form.folder_id(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ module_form.description.label(class="form-label") }}
+                            {{ module_form.description(class="form-control", placeholder="Descreva os objetivos do módulo") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ module_form.cover_image.label(class="form-label") }}
+                            {{ module_form.cover_image(class="form-control") }}
+                            <div class="form-text">Imagens PNG, JPG, JPEG, GIF ou WEBP de até 2&nbsp;MB.</div>
+                        </div>
+                        {% if module_form.tags.choices %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ module_form.tags.label.text }}</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for tag_field in module_form.tags %}
+                                <div class="form-check">
+                                    {{ tag_field(class="form-check-input", id=tag_field.id) }}
+                                    <label class="form-check-label" for="{{ tag_field.id }}">{{ tag_field.label.text }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            {{ module_form.new_tags.label(class="form-label") }}
+                            {{ module_form.new_tags(class="form-control") }}
+                            <div class="form-text">Separe múltiplas tags com vírgula.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-2"></i>
+                            {{ 'Atualizar módulo' if editing_module else 'Criar módulo' }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-folder2-open me-2"></i>
+                        Cadastre uma pasta antes de criar módulos.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">{{ 'Editar vídeo' if editing_video else 'Novo vídeo' }}</h2>
+                    {% if video_form.module_id.choices %}
+                    <form method="post" action="{{ url_for('save_video_asset') }}">
+                        {{ video_form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ video_form.module_id.label(class="form-label") }}
+                            {{ video_form.module_id(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ video_form.title.label(class="form-label") }}
+                            {{ video_form.title(class="form-control", placeholder="Título do vídeo") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ video_form.description.label(class="form-label") }}
+                            {{ video_form.description(class="form-control", placeholder="Resumo do conteúdo") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ video_form.video_url.label(class="form-label") }}
+                            {{ video_form.video_url(class="form-control") }}
+                            <div class="form-text">Informe a URL do player (YouTube, Vimeo, etc.).</div>
+                        </div>
+                        <div class="mb-3">
+                            {{ video_form.storage_path.label(class="form-label") }}
+                            {{ video_form.storage_path(class="form-control") }}
+                            <div class="form-text">Use este campo para apontar localizações internas ou caminhos de arquivo.</div>
+                        </div>
+                        <div class="mb-3">
+                            {{ video_form.duration_minutes.label(class="form-label") }}
+                            {{ video_form.duration_minutes(class="form-control", placeholder="Ex.: 45") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-2"></i>
+                            {{ 'Atualizar vídeo' if editing_video else 'Adicionar vídeo' }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-collection-play me-2"></i>
+                        Crie um módulo antes de cadastrar vídeos.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h2 class="h5 mb-1">Conteúdo cadastrado</h2>
+                    <p class="text-muted mb-0">Visualize as pastas, módulos e vídeos atualmente disponíveis.</p>
+                </div>
+                <span class="badge text-bg-light border"><strong>{{ folders|length }}</strong> pastas</span>
+            </div>
+            {% if folders %}
+            <div class="accordion" id="videoLibraryAccordion">
+                {% for folder in folders %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="folder-heading-{{ folder.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#folder-collapse-{{ folder.id }}" aria-expanded="false" aria-controls="folder-collapse-{{ folder.id }}">
+                            <span class="me-2">{{ folder.name }}</span>
+                            <span class="badge text-bg-primary-subtle text-primary">{{ folder.modules|length }} módulo{% if folder.modules|length != 1 %}s{% endif %}</span>
+                        </button>
+                    </h2>
+                    <div id="folder-collapse-{{ folder.id }}" class="accordion-collapse collapse" data-bs-parent="#videoLibraryAccordion">
+                        <div class="accordion-body">
+                            <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('videos_manage', folder_id=folder.id) }}">
+                                    <i class="bi bi-pencil me-1"></i>
+                                    Editar pasta
+                                </a>
+                                <form method="post" action="{{ url_for('delete_video_folder', folder_id=folder.id) }}" onsubmit="return confirm('Deseja realmente excluir esta pasta e todos os módulos associados?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash me-1"></i>
+                                        Excluir
+                                    </button>
+                                </form>
+                            </div>
+                            {% if folder.modules %}
+                            <div class="list-group">
+                                {% for module in folder.modules %}
+                                <div class="list-group-item">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <h3 class="h6 mb-1">{{ module.title }}</h3>
+                                            {% if module.tags %}
+                                            <div class="mb-2">
+                                                {% for tag in module.tags %}
+                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle me-1">{{ tag.name }}</span>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            {% if module.description %}
+                                            <p class="text-muted small mb-2">{{ module.description }}</p>
+                                            {% endif %}
+                                            {% if module.videos %}
+                                            <ul class="list-unstyled small mb-0">
+                                                {% for video in module.videos %}
+                                                <li class="d-flex justify-content-between align-items-start gap-3 py-1">
+                                                    <div>
+                                                        <strong>{{ video.title }}</strong>
+                                                        {% if video.description %}
+                                                        <div class="text-muted">{{ video.description }}</div>
+                                                        {% endif %}
+                                                        {% if video.video_url %}
+                                                        <div class="text-muted">URL: <a href="{{ video.video_url }}" target="_blank" rel="noopener">{{ video.video_url }}</a></div>
+                                                        {% elif video.storage_path %}
+                                                        <div class="text-muted">Armazenado em: {{ video.storage_path }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="text-end">
+                                                        {% if video.duration_minutes %}
+                                                        <span class="badge text-bg-light border">{{ video.duration_minutes }} min</span>
+                                                        {% endif %}
+                                                        <div class="mt-2 d-flex gap-2 justify-content-end">
+                                                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('videos_manage', video_id=video.id) }}">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <form method="post" action="{{ url_for('delete_video_asset', video_id=video.id) }}" onsubmit="return confirm('Deseja excluir este vídeo?');">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <p class="text-muted small mb-0">Nenhum vídeo cadastrado.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="d-flex flex-column flex-sm-row gap-2">
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('videos_manage', module_id=module.id) }}">
+                                                <i class="bi bi-pencil me-1"></i>
+                                                Editar módulo
+                                            </a>
+                                            <form method="post" action="{{ url_for('delete_video_module', module_id=module.id) }}" onsubmit="return confirm('Deseja excluir este módulo?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1"></i>
+                                                    Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted mb-0">Nenhum módulo cadastrado nesta pasta.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-folder2-open fs-1 text-muted mb-3"></i>
+                <h3 class="h6">Nenhuma pasta cadastrada até o momento.</h3>
+                <p class="text-muted mb-0">Utilize o formulário acima para criar a primeira pasta e iniciar a biblioteca.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -35,6 +35,10 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    VideoFolder,
+    VideoModule,
+    VideoTag,
+    VideoAsset,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -55,8 +59,11 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    VideoFolderForm,
+    VideoModuleForm,
+    VideoAssetForm,
 )
-import os, json, re, secrets
+import os, json, re, secrets, unicodedata
 import requests
 from werkzeug.utils import secure_filename
 from uuid import uuid4
@@ -191,6 +198,55 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 def allowed_file(filename):
     """Check if a filename has an allowed extension."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def slugify(value: str) -> str:
+    """Return a URL-friendly representation of ``value``."""
+
+    if not value:
+        return uuid4().hex[:8]
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+    return cleaned or uuid4().hex[:8]
+
+
+def _save_cover_image(file_storage, subdir: str) -> str | None:
+    """Persist an uploaded cover image under ``static/uploads/videos``."""
+
+    if not file_storage or file_storage.filename == "":
+        return None
+    if not allowed_file(file_storage.filename):
+        return None
+
+    filename = secure_filename(file_storage.filename)
+    unique_name = f"{uuid4().hex}_{filename}"
+    upload_folder = os.path.join(
+        current_app.root_path, "static", "uploads", "videos", subdir
+    )
+    os.makedirs(upload_folder, exist_ok=True)
+    destination = os.path.join(upload_folder, unique_name)
+
+    try:
+        file_storage.save(destination)
+    except OSError as exc:
+        current_app.logger.exception("Erro ao salvar capa de vídeo: %s", exc)
+        return None
+
+    return f"uploads/videos/{subdir}/{unique_name}"
+
+
+def _delete_static_file(static_path: str | None) -> None:
+    """Remove a stored static file if it exists."""
+
+    if not static_path:
+        return
+    absolute_path = os.path.join(current_app.root_path, "static", static_path)
+    try:
+        if os.path.exists(absolute_path):
+            os.remove(absolute_path)
+    except OSError:
+        current_app.logger.warning("Não foi possível remover o arquivo %s", static_path)
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -441,6 +497,355 @@ def cursos():
         form=form,
         editing_course_id=course_id_raw,
     )
+
+
+@app.route("/videos")
+@login_required
+def videos():
+    """Render the video library with optional folder and tag filters."""
+
+    selected_folder_id = request.args.get("folder", type=int)
+    selected_tag_slug = request.args.get("tag", type=str)
+
+    module_query = VideoModule.query.options(
+        joinedload(VideoModule.folder),
+        joinedload(VideoModule.tags),
+        joinedload(VideoModule.videos),
+    )
+
+    if selected_folder_id:
+        module_query = module_query.filter(VideoModule.folder_id == selected_folder_id)
+
+    if selected_tag_slug:
+        module_query = module_query.join(VideoModule.tags).filter(
+            VideoTag.slug == selected_tag_slug
+        )
+
+    modules = module_query.order_by(VideoModule.title.asc()).all()
+    folders = VideoFolder.query.order_by(VideoFolder.name.asc()).all()
+    tags = VideoTag.query.order_by(VideoTag.name.asc()).all()
+    selected_tag = next((tag for tag in tags if tag.slug == selected_tag_slug), None)
+    selected_folder = next(
+        (folder for folder in folders if folder.id == selected_folder_id), None
+    )
+
+    return render_template(
+        "videos.html",
+        modules=modules,
+        folders=folders,
+        tags=tags,
+        selected_folder_id=selected_folder_id,
+        selected_tag_slug=selected_tag_slug,
+        selected_tag=selected_tag,
+        selected_folder=selected_folder,
+    )
+
+
+def _populate_video_forms(
+    module_form: VideoModuleForm | None = None,
+    video_form: VideoAssetForm | None = None,
+) -> tuple[list[tuple[int, str]], list[tuple[int, str]], list[tuple[int, str]]]:
+    """Populate dynamic choices for video-related forms."""
+
+    folder_choices = [
+        (folder.id, folder.name)
+        for folder in VideoFolder.query.order_by(VideoFolder.name.asc()).all()
+    ]
+
+    tag_choices = [
+        (tag.id, tag.name)
+        for tag in VideoTag.query.order_by(VideoTag.name.asc()).all()
+    ]
+
+    module_choices = [
+        (module.id, module.title)
+        for module in VideoModule.query.order_by(VideoModule.title.asc()).all()
+    ]
+
+    if module_form is not None:
+        module_form.folder_id.choices = folder_choices
+        module_form.tags.choices = tag_choices
+
+    if video_form is not None:
+        video_form.module_id.choices = module_choices
+
+    return folder_choices, tag_choices, module_choices
+
+
+@app.route("/videos/gerenciar")
+@admin_required
+def videos_manage():
+    """Display the management dashboard for the video library."""
+
+    folder_form = VideoFolderForm()
+    module_form = VideoModuleForm()
+    video_form = VideoAssetForm()
+
+    folder_choices, tag_choices, module_choices = _populate_video_forms(
+        module_form=module_form, video_form=video_form
+    )
+
+    editing_folder = None
+    editing_module = None
+    editing_video = None
+
+    folder_id = request.args.get("folder_id", type=int)
+    if folder_id:
+        editing_folder = VideoFolder.query.get_or_404(folder_id)
+        folder_form.folder_id.data = str(editing_folder.id)
+        folder_form.name.data = editing_folder.name
+        folder_form.description.data = editing_folder.description
+
+    module_id = request.args.get("module_id", type=int)
+    if module_id:
+        editing_module = VideoModule.query.get_or_404(module_id)
+        module_form.module_id.data = str(editing_module.id)
+        if editing_module.folder_id:
+            module_form.folder_id.data = editing_module.folder_id
+        module_form.title.data = editing_module.title
+        module_form.description.data = editing_module.description
+        module_form.tags.data = [tag.id for tag in editing_module.tags]
+
+    video_id = request.args.get("video_id", type=int)
+    if video_id:
+        editing_video = VideoAsset.query.get_or_404(video_id)
+        video_form.video_id.data = str(editing_video.id)
+        if editing_video.module_id:
+            video_form.module_id.data = editing_video.module_id
+        video_form.title.data = editing_video.title
+        video_form.description.data = editing_video.description
+        video_form.video_url.data = editing_video.video_url
+        video_form.storage_path.data = editing_video.storage_path
+        video_form.duration_minutes.data = editing_video.duration_minutes
+
+    folders = (
+        VideoFolder.query.options(
+            joinedload(VideoFolder.modules)
+            .joinedload(VideoModule.videos),
+            joinedload(VideoFolder.modules).joinedload(VideoModule.tags),
+        )
+        .order_by(VideoFolder.name.asc())
+        .all()
+    )
+
+    return render_template(
+        "videos_manage.html",
+        folder_form=folder_form,
+        module_form=module_form,
+        video_form=video_form,
+        editing_folder=editing_folder,
+        editing_module=editing_module,
+        editing_video=editing_video,
+        folders=folders,
+        tag_choices=tag_choices,
+    )
+
+
+def _report_form_errors(form):
+    """Flash form validation messages in a consistent format."""
+
+    for field_name, errors in form.errors.items():
+        field = getattr(form, field_name)
+        label = field.label.text if hasattr(field, "label") else field_name
+        for error in errors:
+            flash(f"{label}: {error}", "danger")
+
+
+@app.route("/videos/pastas/salvar", methods=["POST"])
+@admin_required
+def save_video_folder():
+    """Create or update a video folder."""
+
+    form = VideoFolderForm()
+    if form.validate_on_submit():
+        folder_id_raw = (form.folder_id.data or "").strip()
+        folder: VideoFolder | None = None
+        if folder_id_raw:
+            try:
+                folder_id = int(folder_id_raw)
+            except ValueError:
+                folder_id = None
+            if folder_id:
+                folder = VideoFolder.query.get(folder_id)
+                if folder is None:
+                    flash("A pasta selecionada não foi encontrada.", "danger")
+                    return redirect(url_for("videos_manage"))
+        if folder is None:
+            folder = VideoFolder()
+            db.session.add(folder)
+
+        folder.name = form.name.data.strip()
+        folder.description = (form.description.data or "").strip() or None
+
+        cover_file = form.cover_image.data
+        if cover_file and cover_file.filename:
+            cover_path = _save_cover_image(cover_file, "folders")
+            if cover_path is None:
+                db.session.rollback()
+                flash("Não foi possível salvar a capa enviada. Tente novamente.", "danger")
+                return redirect(url_for("videos_manage"))
+            _delete_static_file(folder.cover_image)
+            folder.cover_image = cover_path
+
+        db.session.commit()
+        flash("Pasta salva com sucesso!", "success")
+        return redirect(url_for("videos_manage"))
+
+    _report_form_errors(form)
+    return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/pastas/<int:folder_id>/excluir", methods=["POST"])
+@admin_required
+def delete_video_folder(folder_id: int):
+    """Remove a video folder and its child modules."""
+
+    folder = VideoFolder.query.get_or_404(folder_id)
+    for module in list(folder.modules):
+        _delete_static_file(module.cover_image)
+    _delete_static_file(folder.cover_image)
+    db.session.delete(folder)
+    db.session.commit()
+    flash("Pasta removida com sucesso.", "success")
+    return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/modulos/salvar", methods=["POST"])
+@admin_required
+def save_video_module():
+    """Create or update a video module."""
+
+    form = VideoModuleForm()
+    folder_choices, tag_choices, _ = _populate_video_forms(module_form=form)
+
+    if not folder_choices:
+        flash("Cadastre uma pasta antes de criar módulos.", "warning")
+        return redirect(url_for("videos_manage"))
+
+    if form.validate_on_submit():
+        module_id_raw = (form.module_id.data or "").strip()
+        module: VideoModule | None = None
+        if module_id_raw:
+            try:
+                module_id = int(module_id_raw)
+            except ValueError:
+                module_id = None
+            if module_id:
+                module = VideoModule.query.get(module_id)
+                if module is None:
+                    flash("O módulo selecionado não foi encontrado.", "danger")
+                    return redirect(url_for("videos_manage"))
+        if module is None:
+            module = VideoModule()
+            db.session.add(module)
+
+        module.title = form.title.data.strip()
+        module.description = (form.description.data or "").strip() or None
+        module.folder_id = form.folder_id.data
+
+        cover_file = form.cover_image.data
+        if cover_file and cover_file.filename:
+            cover_path = _save_cover_image(cover_file, "modules")
+            if cover_path is None:
+                db.session.rollback()
+                flash("Não foi possível salvar a capa enviada. Tente novamente.", "danger")
+                return redirect(url_for("videos_manage"))
+            _delete_static_file(module.cover_image)
+            module.cover_image = cover_path
+
+        selected_tags: list[VideoTag] = []
+        if form.tags.data:
+            selected_tags = (
+                VideoTag.query.filter(VideoTag.id.in_(form.tags.data)).all()
+            )
+
+        new_tags_raw = form.new_tags.data or ""
+        if new_tags_raw:
+            for tag_name in {tag.strip() for tag in new_tags_raw.split(",") if tag.strip()}:
+                slug = slugify(tag_name)
+                existing = VideoTag.query.filter_by(slug=slug).first()
+                if existing is None:
+                    existing = VideoTag(name=tag_name, slug=slug)
+                    db.session.add(existing)
+                if existing not in selected_tags:
+                    selected_tags.append(existing)
+
+        module.tags = selected_tags
+        db.session.commit()
+        flash("Módulo salvo com sucesso!", "success")
+        return redirect(url_for("videos_manage"))
+
+    _report_form_errors(form)
+    return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/modulos/<int:module_id>/excluir", methods=["POST"])
+@admin_required
+def delete_video_module(module_id: int):
+    """Delete a video module."""
+
+    module = VideoModule.query.get_or_404(module_id)
+    _delete_static_file(module.cover_image)
+    db.session.delete(module)
+    db.session.commit()
+    flash("Módulo removido com sucesso.", "success")
+    return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/conteudos/salvar", methods=["POST"])
+@admin_required
+def save_video_asset():
+    """Create or update a long-form video entry."""
+
+    form = VideoAssetForm()
+    _, _, module_choices = _populate_video_forms(video_form=form)
+
+    if not module_choices:
+        flash("Cadastre um módulo antes de adicionar vídeos.", "warning")
+        return redirect(url_for("videos_manage"))
+
+    if form.validate_on_submit():
+        video_id_raw = (form.video_id.data or "").strip()
+        video: VideoAsset | None = None
+        if video_id_raw:
+            try:
+                video_id = int(video_id_raw)
+            except ValueError:
+                video_id = None
+            if video_id:
+                video = VideoAsset.query.get(video_id)
+                if video is None:
+                    flash("O vídeo selecionado não foi encontrado.", "danger")
+                    return redirect(url_for("videos_manage"))
+        if video is None:
+            video = VideoAsset()
+            db.session.add(video)
+
+        video.title = form.title.data.strip()
+        video.description = (form.description.data or "").strip() or None
+        video.module_id = form.module_id.data
+        video.video_url = (form.video_url.data or "").strip() or None
+        video.storage_path = (form.storage_path.data or "").strip() or None
+        video.duration_minutes = form.duration_minutes.data
+
+        db.session.commit()
+        flash("Vídeo salvo com sucesso!", "success")
+        return redirect(url_for("videos_manage"))
+
+    _report_form_errors(form)
+    return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/conteudos/<int:video_id>/excluir", methods=["POST"])
+@admin_required
+def delete_video_asset(video_id: int):
+    """Remove a stored video entry."""
+
+    video = VideoAsset.query.get_or_404(video_id)
+    db.session.delete(video)
+    db.session.commit()
+    flash("Vídeo removido com sucesso.", "success")
+    return redirect(url_for("videos_manage"))
 
 
 @app.route("/acessos")
