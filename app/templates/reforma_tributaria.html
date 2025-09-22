@@ -40,6 +40,32 @@
     .rt-video-thumb .ratio {
         background: #f1f3f5;
     }
+
+    .rt-module-item {
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .rt-module-item.active {
+        background-color: rgba(11, 40, 139, 0.08);
+        box-shadow: inset 2px 0 0 var(--primary);
+    }
+
+    .rt-module-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        background-color: rgba(11, 40, 139, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .rt-video-thumb {
+            width: 90px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -74,8 +100,8 @@
                         </div>
                     </div>
 
-                    {% set selected_video = videos[0] %}
-                    {% set initial_watched = selected_video.id in watched_ids %}
+                    {% set initial_video = selected_video or videos[0] %}
+                    {% set initial_watched = initial_video.id in watched_ids %}
 
                     <div class="row g-4 align-items-start">
                         <div class="col-lg-8">
@@ -84,18 +110,18 @@
                                     <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark-subtle rt-video-player mb-3">
                                         <iframe
                                             id="rtVideoFrame"
-                                            src="{{ selected_video.preview_url }}"
+                                            src="{{ initial_video.preview_url }}"
                                             allow="autoplay; fullscreen"
                                             allowfullscreen
                                             loading="lazy"
-                                            title="{{ selected_video.name }}"
+                                            title="{{ initial_video.name }}"
                                         ></iframe>
                                     </div>
                                     <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start">
                                         <div>
-                                            <h2 class="h5 mb-1" id="rtVideoTitle">{{ selected_video.name }}</h2>
-                                            {% if selected_video.formatted_duration %}
-                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtVideoDuration">{{ selected_video.formatted_duration }}</span>
+                                            <h2 class="h5 mb-1" id="rtVideoTitle">{{ initial_video.name }}</h2>
+                                            {% if initial_video.formatted_duration %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtVideoDuration">{{ initial_video.formatted_duration }}</span>
                                             {% else %}
                                                 <span class="badge bg-secondary-subtle text-secondary-emphasis d-none" id="rtVideoDuration"></span>
                                             {% endif %}
@@ -104,7 +130,7 @@
                                             type="button"
                                             class="btn {% if initial_watched %}btn-outline-secondary{% else %}btn-success{% endif %}"
                                             id="rtWatchToggle"
-                                            data-video-id="{{ selected_video.id }}"
+                                            data-video-id="{{ initial_video.id }}"
                                             aria-pressed="{{ 'true' if initial_watched else 'false' }}"
                                         >
                                             <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="rtWatchSpinner"></span>
@@ -116,18 +142,56 @@
                             </div>
                         </div>
                         <div class="col-lg-4">
-                            <div class="card shadow-sm border-0 h-100">
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header">
+                                    <h2 class="h6 mb-0">Módulos</h2>
+                                </div>
                                 <div class="card-body p-0">
-                                    <div class="list-group list-group-flush">
+                                    <div class="list-group list-group-flush" id="rtModuleList">
+                                        {% for module in video_groups %}
+                                            <button
+                                                type="button"
+                                                class="list-group-item list-group-item-action d-flex gap-3 align-items-center rt-module-item{% if module.id == selected_group_id %} active{% endif %}"
+                                                data-module-id="{{ module.id }}"
+                                                data-module-name="{{ module.name }}"
+                                            >
+                                                <span class="rt-module-icon text-primary flex-shrink-0">
+                                                    <i class="bi {{ module.icon }}"></i>
+                                                </span>
+                                                <div class="flex-grow-1 text-start">
+                                                    <span class="fw-semibold d-block">{{ module.name }}</span>
+                                                    <small class="text-muted">{{ module.videos|length }} vídeo{% if module.videos|length != 1 %}s{% endif %}</small>
+                                                </div>
+                                                <span class="badge {% if module.videos|length %}bg-primary-subtle text-primary{% else %}bg-light text-muted border{% endif %}">{{ module.videos|length }}</span>
+                                            </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h2 class="h6 mb-0">Vídeos</h2>
+                                        <small class="text-muted" id="rtActiveModuleLabel">{{ selected_module_name }}</small>
+                                    </div>
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtModuleVideoCount"></span>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="p-3 text-muted small d-none" id="rtEmptyModuleMessage">
+                                        Nenhum vídeo disponível neste módulo no momento.
+                                    </div>
+                                    <div class="list-group list-group-flush" id="rtVideoList">
                                         {% for video in videos %}
                                             {% set watched = video.id in watched_ids %}
                                             <button
                                                 type="button"
-                                                class="list-group-item list-group-item-action rt-video-item d-flex gap-3 align-items-center{% if loop.first %} active{% endif %}{% if watched %} is-watched{% endif %}"
+                                                class="list-group-item list-group-item-action rt-video-item d-flex gap-3 align-items-center{% if video.id == initial_video.id %} active{% endif %}{% if watched %} is-watched{% endif %}{% if selected_group_id and video.module_id != selected_group_id %} d-none{% endif %}"
                                                 data-video-id="{{ video.id }}"
                                                 data-video-title="{{ video.name }}"
                                                 data-preview-url="{{ video.preview_url }}"
                                                 data-video-duration="{{ video.formatted_duration or '' }}"
+                                                data-module-id="{{ video.module_id }}"
+                                                data-module-name="{{ video.module_name }}"
                                             >
                                                 <div class="rt-video-thumb flex-shrink-0">
                                                     <div class="ratio ratio-16x9 rounded overflow-hidden border">
@@ -206,6 +270,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const videoItems = Array.from(document.querySelectorAll('.rt-video-item'));
+        const moduleButtons = Array.from(document.querySelectorAll('.rt-module-item'));
         const iframe = document.getElementById('rtVideoFrame');
         const titleEl = document.getElementById('rtVideoTitle');
         const durationBadge = document.getElementById('rtVideoDuration');
@@ -213,11 +278,15 @@
         const toggleIcon = document.getElementById('rtWatchIcon');
         const toggleLabel = document.getElementById('rtWatchLabel');
         const toggleSpinner = document.getElementById('rtWatchSpinner');
+        const moduleLabelEl = document.getElementById('rtActiveModuleLabel');
+        const moduleCountEl = document.getElementById('rtModuleVideoCount');
+        const emptyModuleMessage = document.getElementById('rtEmptyModuleMessage');
         const watchedSet = new Set({{ watched_ids|tojson }});
         const totalVideos = {{ total_videos }};
         const watchedCountEl = document.getElementById('rtWatchedCount');
         const progressPercentEl = document.getElementById('rtProgressPercent');
         const progressBarEl = document.getElementById('rtProgressBar');
+        let activeModuleId = '{{ selected_group_id or '' }}';
 
         const updateProgress = () => {
             const watchedCount = watchedSet.size;
@@ -226,6 +295,14 @@
             progressPercentEl.textContent = `${percent}%`;
             progressBarEl.style.width = `${percent}%`;
             progressBarEl.setAttribute('aria-valuenow', String(percent));
+        };
+
+        const updateModuleCount = (visibleCount) => {
+            if (!moduleCountEl) {
+                return;
+            }
+            const label = visibleCount === 1 ? '1 vídeo' : `${visibleCount} vídeos`;
+            moduleCountEl.textContent = label;
         };
 
         const updateButtonState = (videoId) => {
@@ -248,6 +325,7 @@
             const previewUrl = item.dataset.previewUrl;
             const title = item.dataset.videoTitle;
             const duration = item.dataset.videoDuration;
+            const moduleName = item.dataset.moduleName;
 
             iframe.src = previewUrl;
             iframe.title = title;
@@ -262,10 +340,61 @@
 
             activateItem(item);
             updateButtonState(videoId);
+            toggleButton.disabled = false;
+            toggleButton.removeAttribute('aria-disabled');
+            toggleSpinner.classList.add('d-none');
+
+            if (moduleLabelEl && moduleName) {
+                moduleLabelEl.textContent = moduleName;
+            }
         };
 
         videoItems.forEach((item) => {
             item.addEventListener('click', () => selectVideo(item));
+        });
+
+        const filterVideos = (moduleId, moduleName) => {
+            activeModuleId = moduleId;
+            moduleButtons.forEach((button) => {
+                button.classList.toggle('active', button.dataset.moduleId === moduleId);
+            });
+
+            if (moduleLabelEl && moduleName) {
+                moduleLabelEl.textContent = moduleName;
+            }
+
+            const visibleItems = [];
+            videoItems.forEach((item) => {
+                const matches = !moduleId || item.dataset.moduleId === moduleId;
+                item.classList.toggle('d-none', !matches);
+                if (matches) {
+                    visibleItems.push(item);
+                }
+            });
+
+            updateModuleCount(visibleItems.length);
+
+            if (!visibleItems.length) {
+                emptyModuleMessage.classList.remove('d-none');
+                toggleButton.disabled = true;
+                toggleButton.setAttribute('aria-disabled', 'true');
+                return;
+            }
+
+            emptyModuleMessage.classList.add('d-none');
+            toggleButton.disabled = false;
+            toggleButton.removeAttribute('aria-disabled');
+
+            const activeItem = visibleItems.find((item) => item.classList.contains('active'));
+            if (!activeItem) {
+                selectVideo(visibleItems[0]);
+            }
+        };
+
+        moduleButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                filterVideos(button.dataset.moduleId, button.dataset.moduleName);
+            });
         });
 
         toggleButton.addEventListener('click', async () => {
@@ -311,6 +440,10 @@
             }
         });
 
+        updateModuleCount(
+            videoItems.filter((item) => !item.classList.contains('d-none')).length
+        );
+        filterVideos(activeModuleId, moduleLabelEl ? moduleLabelEl.textContent : '');
         updateProgress();
     });
 </script>

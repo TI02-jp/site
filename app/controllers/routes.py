@@ -342,8 +342,72 @@ def reforma_tributaria():
     """Display the Reforma Tributária video hub with progress tracking."""
 
     folder_id = current_app.config.get("REFORMA_TRIBUTARIA_FOLDER_ID")
-    videos, drive_error = fetch_drive_videos(folder_id)
-    current_video_ids = {video.id for video in videos}
+    collection, drive_error = fetch_drive_videos(folder_id)
+
+    def serialize_video(video, module_id, module_name):
+        return {
+            "id": video.id,
+            "name": video.name,
+            "preview_url": video.preview_url,
+            "thumbnail_link": video.thumbnail_link,
+            "formatted_duration": video.formatted_duration,
+            "module_id": module_id,
+            "module_name": module_name,
+        }
+
+    video_groups: list[dict[str, object]] = []
+
+    for module in collection.modules:
+        group_videos = [
+            serialize_video(video, module.id, module.name) for video in module.videos
+        ]
+        video_groups.append(
+            {
+                "id": module.id,
+                "name": module.name,
+                "icon": "bi-folder-fill",
+                "videos": group_videos,
+                "is_root": False,
+            }
+        )
+
+    if collection.videos:
+        video_groups.append(
+            {
+                "id": "__root__",
+                "name": "Outros vídeos",
+                "icon": "bi-collection-play",
+                "videos": [
+                    serialize_video(video, "__root__", "Outros vídeos")
+                    for video in collection.videos
+                ],
+                "is_root": True,
+            }
+        )
+
+    videos = [
+        video
+        for group in video_groups
+        for video in group.get("videos", [])
+        if isinstance(group.get("videos"), list)
+    ]
+
+    selected_group_id = None
+    selected_module_name = None
+    selected_video = None
+    for group in video_groups:
+        group_videos = group.get("videos", [])
+        if group_videos:
+            selected_group_id = group["id"]
+            selected_module_name = group["name"]
+            selected_video = group_videos[0]
+            break
+
+    if selected_group_id is None and video_groups:
+        selected_group_id = video_groups[0]["id"]
+        selected_module_name = video_groups[0]["name"]
+
+    current_video_ids = {video["id"] for video in videos}
 
     progress_records = []
     if current_video_ids:
@@ -367,6 +431,10 @@ def reforma_tributaria():
     return render_template(
         "reforma_tributaria.html",
         videos=videos,
+        video_groups=video_groups,
+        selected_video=selected_video,
+        selected_group_id=selected_group_id,
+        selected_module_name=selected_module_name,
         drive_error=drive_error,
         watched_ids=sorted(watched_ids),
         watched_count=watched_count,

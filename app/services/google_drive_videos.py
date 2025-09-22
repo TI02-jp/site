@@ -101,51 +101,140 @@ def _build_drive_service():
     return build("drive", "v3", credentials=credentials, cache_discovery=False)
 
 
-def fetch_drive_videos(folder_id: str) -> tuple[list[DriveVideo], str | None]:
-    """Return the list of videos for ``folder_id`` and an optional error message."""
+@dataclass(frozen=True, slots=True)
+class DriveModule:
+    """Representation of a module (folder) that groups Reforma Tributária videos."""
 
-    if not folder_id:
-        return [], "A pasta de vídeos não está configurada."
+    id: str
+    name: str
+    videos: tuple[DriveVideo, ...]
 
-    drive_service = _build_drive_service()
-    if not drive_service:
-        return [], "Integração com o Google Drive não está configurada."
 
-    query = (
-        f"'{folder_id}' in parents and trashed = false and "
-        "mimeType contains 'video/'"
-    )
+@dataclass(frozen=True, slots=True)
+class DriveVideoCollection:
+    """Container for Reforma Tributária videos grouped by module."""
 
-    try:
+    videos: tuple[DriveVideo, ...]
+    modules: tuple[DriveModule, ...]
+
+
+def _list_drive_files(drive_service, query: str, fields: str) -> list[dict]:
+    """Return all Drive files that satisfy ``query`` with pagination handling."""
+
+    files: list[dict] = []
+    page_token: str | None = None
+
+    while True:
         response = (
             drive_service.files()
             .list(
                 q=query,
                 orderBy="name",
-                fields="files(id,name,mimeType,thumbnailLink,videoMediaMetadata(durationMillis))",
+                fields=f"nextPageToken, files({fields})",
                 includeItemsFromAllDrives=True,
                 supportsAllDrives=True,
                 pageSize=1000,
+                pageToken=page_token,
             )
             .execute()
         )
-    except HttpError as exc:
-        current_app.logger.error("Erro ao consultar vídeos no Google Drive: %s", exc)
-        return [], "Não foi possível carregar os vídeos do Google Drive no momento."
 
-    files: Iterable[dict] = response.get("files", [])
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    return files
+
+
+def _build_drive_videos(file_data: Iterable[dict]) -> list[DriveVideo]:
+    """Convert Drive API responses into ``DriveVideo`` instances."""
+
     videos = [
         DriveVideo(
-            id=file_data["id"],
-            name=file_data.get("name", "Vídeo sem título"),
-            mime_type=file_data.get("mimeType", ""),
-            thumbnail_link=file_data.get("thumbnailLink"),
-            duration_millis=(
-                (file_data.get("videoMediaMetadata") or {}).get("durationMillis")
-            ),
+            id=item["id"],
+            name=item.get("name", "Vídeo sem título"),
+            mime_type=item.get("mimeType", ""),
+            thumbnail_link=item.get("thumbnailLink"),
+            duration_millis=((item.get("videoMediaMetadata") or {}).get("durationMillis")),
         )
-        for file_data in files
+        for item in file_data
     ]
+    videos.sort(key=lambda entry: entry.name.lower())
+    return videos
 
-    videos.sort(key=lambda item: item.name.lower())
-    return videos, None
+
+def fetch_drive_videos(folder_id: str) -> tuple[DriveVideoCollection, str | None]:
+    """Return Reforma Tributária videos grouped by modules and an optional error."""
+
+    if not folder_id:
+        return DriveVideoCollection((), ()), "A pasta de vídeos não está configurada."
+
+    drive_service = _build_drive_service()
+    if not drive_service:
+        return (
+            DriveVideoCollection((), ()),
+            "Integração com o Google Drive não está configurada.",
+        )
+
+    try:
+        video_files = _list_drive_files(
+            drive_service,
+            (
+                f"'{folder_id}' in parents and trashed = false and "
+                "mimeType contains 'video/'"
+            ),
+            "id,name,mimeType,thumbnailLink,videoMediaMetadata(durationMillis)",
+        )
+
+        module_folders = _list_drive_files(
+            drive_service,
+            (
+                f"'{folder_id}' in parents and trashed = false and "
+                "mimeType = 'application/vnd.google-apps.folder'"
+            ),
+            "id,name",
+        )
+    except HttpError as exc:
+        current_app.logger.error("Erro ao consultar vídeos no Google Drive: %s", exc)
+        return (
+            DriveVideoCollection((), ()),
+            "Não foi possível carregar os vídeos do Google Drive no momento.",
+        )
+
+    root_videos = tuple(_build_drive_videos(video_files))
+
+    modules: list[DriveModule] = []
+    for folder in sorted(module_folders, key=lambda entry: entry.get("name", "").lower()):
+        folder_id_value = folder.get("id")
+        if not folder_id_value:
+            continue
+
+        try:
+            module_files = _list_drive_files(
+                drive_service,
+                (
+                    f"'{folder_id_value}' in parents and trashed = false and "
+                    "mimeType contains 'video/'"
+                ),
+                "id,name,mimeType,thumbnailLink,videoMediaMetadata(durationMillis)",
+            )
+        except HttpError as exc:
+            current_app.logger.warning(
+                "Erro ao carregar vídeos da pasta %s (%s): %s",
+                folder.get("name", "Pasta sem nome"),
+                folder_id_value,
+                exc,
+            )
+            continue
+
+        videos = tuple(_build_drive_videos(module_files))
+        modules.append(
+            DriveModule(
+                id=folder_id_value,
+                name=folder.get("name", "Módulo sem nome"),
+                videos=videos,
+            )
+        )
+
+    return DriveVideoCollection(root_videos, tuple(modules)), None
