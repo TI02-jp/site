@@ -222,7 +222,18 @@ def get_media_video_storage() -> Path:
 def build_media_video_path(filename: str) -> Path:
     """Return the absolute path for a stored media video."""
 
-    return get_media_video_storage() / filename
+    primary_dir = get_media_video_storage()
+    primary_path = primary_dir / filename
+    if primary_path.exists():
+        return primary_path
+
+    legacy_dir = current_app.config.get("MEDIA_VIDEO_LEGACY_STORAGE")
+    if legacy_dir:
+        legacy_path = Path(legacy_dir) / filename
+        if legacy_path.exists():
+            return legacy_path
+
+    return primary_path
 
 
 def stream_file_range(path: Path, content_type: str | None = None):

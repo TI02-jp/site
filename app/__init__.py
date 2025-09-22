@@ -43,14 +43,32 @@ app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_FI
 app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_INFO')
 app.config['GOOGLE_SERVICE_ACCOUNT_SUBJECT'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_SUBJECT')
 app.config['GOOGLE_MEETING_ROOM_EMAIL'] = os.getenv('GOOGLE_MEETING_ROOM_EMAIL')
-media_storage_path = (
-    os.getenv('MEDIA_VIDEO_STORAGE')
-    or os.getenv('REFORMA_VIDEO_STORAGE')
-    or os.path.join(app.instance_path, 'media_videos')
-)
+default_media_storage = os.path.join(app.instance_path, 'media_videos')
+legacy_media_storage = os.path.join(app.instance_path, 'reforma_videos')
+
+env_media_storage = os.getenv('MEDIA_VIDEO_STORAGE')
+env_legacy_storage = os.getenv('REFORMA_VIDEO_STORAGE')
+
+if env_media_storage:
+    media_storage_path = env_media_storage
+elif env_legacy_storage:
+    media_storage_path = env_legacy_storage
+else:
+    if os.path.exists(legacy_media_storage) and not os.path.exists(default_media_storage):
+        media_storage_path = legacy_media_storage
+    else:
+        media_storage_path = default_media_storage
+
 app.config['MEDIA_VIDEO_STORAGE'] = media_storage_path
-# Backwards compatibility with legacy configuration keys
+# Preserve the legacy key for compatibility with older code paths
 app.config['REFORMA_VIDEO_STORAGE'] = media_storage_path
+# Surface the legacy directory so streaming helpers can fall back when needed
+app.config['MEDIA_VIDEO_LEGACY_STORAGE'] = (
+    legacy_media_storage
+    if legacy_media_storage != media_storage_path
+    and os.path.exists(legacy_media_storage)
+    else None
+)
 os.makedirs(app.config['MEDIA_VIDEO_STORAGE'], exist_ok=True)
 
 if not app.config['ENFORCE_HTTPS']:
