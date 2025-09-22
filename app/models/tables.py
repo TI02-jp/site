@@ -176,6 +176,57 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
+class ReformaModule(db.Model):
+    """Logical folder that groups Reforma Tributária videos."""
+
+    __tablename__ = "reforma_modules"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    videos = db.relationship(
+        "ReformaVideo",
+        back_populates="module",
+        lazy=True,
+    )
+
+    def __repr__(self):
+        return f"<ReformaModule {self.name} ({self.id})>"
+
+
+class ReformaVideo(db.Model):
+    """Stores Reforma Tributária videos uploaded to the platform."""
+
+    __tablename__ = "reforma_videos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    module_id = db.Column(
+        db.Integer,
+        db.ForeignKey("reforma_modules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    filename = db.Column(db.String(255), nullable=False, unique=True)
+    original_filename = db.Column(db.String(255))
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    content_type = db.Column(db.String(127))
+    file_size = db.Column(db.BigInteger)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    module = db.relationship("ReformaModule", back_populates="videos")
+
+    def __repr__(self):
+        return f"<ReformaVideo {self.title} ({self.id})>"
+
+
 class ReformaTributariaProgress(db.Model):
     """Stores the watch status of Reforma Tributária videos per user."""
 
@@ -183,7 +234,11 @@ class ReformaTributariaProgress(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    video_id = db.Column(db.String(128), nullable=False)
+    video_id = db.Column(
+        db.Integer,
+        db.ForeignKey("reforma_videos.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     video_title = db.Column(db.String(255))
     watched_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -191,6 +246,15 @@ class ReformaTributariaProgress(db.Model):
         "User",
         backref=db.backref(
             "reforma_tributaria_progress",
+            lazy=True,
+            cascade="all, delete-orphan",
+        ),
+    )
+
+    video = db.relationship(
+        "ReformaVideo",
+        backref=db.backref(
+            "progress_entries",
             lazy=True,
             cascade="all, delete-orphan",
         ),

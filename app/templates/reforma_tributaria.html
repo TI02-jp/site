@@ -5,18 +5,16 @@
 {% block extra_css %}
 {{ super() }}
 <style>
-    .rt-video-player iframe {
-        border: 0;
-    }
-
-    .rt-drive-embed iframe {
-        border: 0;
+    .rt-video-player video {
         width: 100%;
         height: 100%;
+        background-color: #000;
+        border-radius: 0.5rem;
     }
 
     .rt-video-item {
         transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
     }
 
     .rt-video-item.active {
@@ -33,15 +31,8 @@
         opacity: 1;
     }
 
-    .rt-video-thumb {
-        width: 110px;
-    }
-
-    .rt-video-thumb .ratio {
-        background: #f1f3f5;
-    }
-
     .rt-module-item {
+        cursor: pointer;
         transition: background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -58,701 +49,1053 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
     }
 
-    @media (max-width: 991.98px) {
-        .rt-video-thumb {
-            width: 90px;
-        }
+    .rt-empty-state {
+        padding: 2rem;
+        text-align: center;
+        color: #6c757d;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="py-4 py-md-5">
-    <div class="container">
+    <div class="container" id="rtPortal"
+         data-initial-module-id="{{ selected_group_id if selected_group_id is not none else '' }}"
+         data-initial-video-id="{{ selected_video.id if selected_video else '' }}"
+         data-can-manage="{{ 'true' if can_manage else 'false' }}">
         <div class="row justify-content-center">
             <div class="col-lg-11 col-xl-10">
                 <div class="d-flex align-items-center mb-4 flex-wrap gap-3">
                     <div class="text-primary display-6"><i class="bi bi-film"></i></div>
                     <div>
                         <h1 class="h3 mb-1">Reforma Tributária</h1>
-                        <p class="text-muted mb-0">Assista aos materiais preparados pela equipe diretamente pelo portal e acompanhe seu progresso.</p>
+                        <p class="text-muted mb-0">Gerencie os módulos e assista aos vídeos diretamente pelo portal.</p>
                     </div>
                 </div>
 
-                {% if can_upload and upload_modules %}
+                {% if can_manage %}
                     <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header">
+                            <h2 class="h6 mb-0">Gerenciar conteúdo</h2>
+                        </div>
                         <div class="card-body">
-                            <form id="rtUploadForm" class="row g-3 align-items-end" enctype="multipart/form-data">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="row g-4">
                                 <div class="col-lg-5">
-                                    <label for="rtUploadFile" class="form-label mb-1">Selecionar vídeo</label>
-                                    <input type="file" class="form-control" id="rtUploadFile" name="video" accept="video/*" required>
+                                    <h3 class="h6 mb-3">Novo módulo</h3>
+                                    <form id="rtModuleForm" class="row g-2">
+                                        <div class="col-12">
+                                            <label for="rtModuleName" class="form-label mb-1">Nome</label>
+                                            <input type="text" class="form-control" id="rtModuleName" name="name" maxlength="150" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="rtModuleDescription" class="form-label mb-1">Descrição (opcional)</label>
+                                            <input type="text" class="form-control" id="rtModuleDescription" name="description" maxlength="255">
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-primary">
+                                                <span class="spinner-border spinner-border-sm me-2 d-none" id="rtModuleSpinner" role="status" aria-hidden="true"></span>
+                                                Criar módulo
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <div class="alert mt-3 d-none" id="rtModuleFeedback" role="alert"></div>
                                 </div>
-                                <div class="col-lg-4">
-                                    <label for="rtUploadModule" class="form-label mb-1">Módulo</label>
-                                    <select class="form-select" id="rtUploadModule" name="module_id">
-                                        {% for module in upload_modules %}
-                                            <option value="{{ module.id }}" data-module-name="{{ module.name }}">{{ module.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                <div class="col-lg-7">
+                                    <h3 class="h6 mb-3">Novo vídeo</h3>
+                                    <form id="rtVideoForm" class="row g-3" enctype="multipart/form-data">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="col-12">
+                                            <label for="rtVideoFile" class="form-label mb-1">Arquivo de vídeo</label>
+                                            <input type="file" class="form-control" id="rtVideoFile" name="video" accept="video/*" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="rtVideoTitleInput" class="form-label mb-1">Título</label>
+                                            <input type="text" class="form-control" id="rtVideoTitleInput" name="title" maxlength="255" placeholder="Nome do vídeo" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="rtVideoModuleSelect" class="form-label mb-1">Módulo</label>
+                                            <select class="form-select" id="rtVideoModuleSelect" name="module_id">
+                                                <option value="">Sem módulo</option>
+                                                {% for option in module_options %}
+                                                    <option value="{{ option.id }}">{{ option.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="rtVideoDescriptionInput" class="form-label mb-1">Descrição</label>
+                                            <textarea class="form-control" id="rtVideoDescriptionInput" name="description" rows="3" maxlength="1000" placeholder="Resumo do conteúdo"></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-success" id="rtVideoSubmit">
+                                                <span class="spinner-border spinner-border-sm me-2 d-none" id="rtVideoSpinner" role="status" aria-hidden="true"></span>
+                                                Enviar vídeo
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <div class="alert mt-3 d-none" id="rtVideoFeedback" role="alert"></div>
+                                    <p class="form-text mt-2">Os vídeos são armazenados diretamente no servidor do portal, suportando arquivos longos.</p>
                                 </div>
-                                <div class="col-lg-3 col-xl-2">
-                                    <button type="submit" class="btn btn-primary w-100" id="rtUploadSubmit">
-                                        <span class="spinner-border spinner-border-sm me-2 d-none" id="rtUploadSpinner" role="status" aria-hidden="true"></span>
-                                        <span id="rtUploadLabel">Enviar vídeo</span>
-                                    </button>
-                                </div>
-                                <input type="hidden" name="module_name" id="rtUploadModuleName">
-                            </form>
-                            <div class="form-text mt-2">Os vídeos enviados serão disponibilizados para toda a equipe diretamente neste portal.</div>
-                            <div class="alert mt-3 d-none" role="alert" id="rtUploadFeedback"></div>
+                            </div>
                         </div>
                     </div>
                 {% endif %}
 
-                {% if videos %}
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                                <div>
-                                    <h2 class="h6 mb-1">Seu progresso</h2>
-                                    <p class="text-muted small mb-0">
-                                        <span id="rtWatchedCount">{{ watched_count }}</span> de <span id="rtTotalCount">{{ total_videos }}</span> vídeos assistidos
-                                    </p>
-                                </div>
-                                <span class="badge bg-primary-subtle text-primary fw-semibold" id="rtProgressPercent">{{ progress_percent }}%</span>
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <div>
+                                <h2 class="h6 mb-1">Seu progresso</h2>
+                                <p class="text-muted small mb-0">
+                                    <span id="rtWatchedCount">{{ watched_count }}</span> de
+                                    <span id="rtTotalCount" data-total="{{ total_videos }}">{{ total_videos }}</span>
+                                    vídeos assistidos
+                                </p>
                             </div>
-                            <div class="progress mt-3" style="height: 6px;">
-                                <div class="progress-bar" id="rtProgressBar" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress_percent }}"></div>
-                            </div>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold" id="rtProgressPercent">{{ progress_percent }}%</span>
+                        </div>
+                        <div class="progress mt-3" style="height: 6px;">
+                            <div class="progress-bar" id="rtProgressBar" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress_percent }}"></div>
                         </div>
                     </div>
+                </div>
 
-                    {% set initial_video = selected_video or videos[0] %}
-                    {% set initial_watched = initial_video.id in watched_ids %}
-
-                    <div class="row g-4 align-items-start">
-                        <div class="col-lg-8">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-body">
-                                    <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark-subtle rt-video-player mb-3">
-                                        <iframe
-                                            id="rtVideoFrame"
-                                            src="{{ initial_video.preview_url }}"
-                                            allow="autoplay; fullscreen"
-                                            allowfullscreen
-                                            loading="lazy"
-                                            title="{{ initial_video.name }}"
-                                        ></iframe>
+                <div class="row g-4 align-items-start">
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                {% if selected_video %}
+                                    <div class="ratio ratio-16x9 rt-video-player mb-3">
+                                        <video id="rtVideoPlayer" controls preload="metadata">
+                                            <source id="rtVideoSource" src="{{ selected_video.stream_url }}" type="{{ selected_video.content_type or 'video/mp4' }}">
+                                            Seu navegador não suporta a reprodução de vídeos.
+                                        </video>
                                     </div>
-                                    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start">
+                                    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start mb-3">
                                         <div>
-                                            <h2 class="h5 mb-1" id="rtVideoTitle">{{ initial_video.name }}</h2>
-                                            {% if initial_video.formatted_duration %}
-                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtVideoDuration">{{ initial_video.formatted_duration }}</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary-subtle text-secondary-emphasis d-none" id="rtVideoDuration"></span>
-                                            {% endif %}
+                                            <h2 class="h5 mb-1" id="rtVideoTitle">{{ selected_video.title }}</h2>
+                                            <div class="text-muted small" id="rtVideoMeta">
+                                                <span id="rtVideoModule">{{ selected_module_name or 'Sem módulo' }}</span>
+                                                {% if selected_video.created_display %}
+                                                    <span class="mx-1">•</span>
+                                                    <span id="rtVideoCreated">{{ selected_video.created_display }}</span>
+                                                {% endif %}
+                                                {% if selected_video.formatted_size %}
+                                                    <span class="mx-1">•</span>
+                                                    <span id="rtVideoSize">{{ selected_video.formatted_size }}</span>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            class="btn {% if initial_watched %}btn-outline-secondary{% else %}btn-success{% endif %}"
-                                            id="rtWatchToggle"
-                                            data-video-id="{{ initial_video.id }}"
-                                            aria-pressed="{{ 'true' if initial_watched else 'false' }}"
-                                        >
+                                        <button type="button"
+                                                class="btn {% if selected_video.id in watched_ids %}btn-outline-secondary{% else %}btn-success{% endif %}"
+                                                id="rtWatchToggle"
+                                                data-video-id="{{ selected_video.id }}"
+                                                aria-pressed="{{ 'true' if selected_video.id in watched_ids else 'false' }}">
                                             <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="rtWatchSpinner"></span>
-                                            <i class="bi {% if initial_watched %}bi-arrow-counterclockwise{% else %}bi-check2-circle{% endif %} me-2" id="rtWatchIcon"></i>
-                                            <span id="rtWatchLabel">{% if initial_watched %}Marcar como não assistido{% else %}Marcar como assistido{% endif %}</span>
+                                            <i class="bi {% if selected_video.id in watched_ids %}bi-arrow-counterclockwise{% else %}bi-check2-circle{% endif %} me-2" id="rtWatchIcon"></i>
+                                            <span id="rtWatchLabel">{% if selected_video.id in watched_ids %}Marcar como não assistido{% else %}Marcar como assistido{% endif %}</span>
                                         </button>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="card shadow-sm border-0 mb-4">
-                                <div class="card-header">
-                                    <h2 class="h6 mb-0">Módulos</h2>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="list-group list-group-flush" id="rtModuleList">
-                                        {% for module in video_groups %}
-                                            <button
-                                                type="button"
-                                                class="list-group-item list-group-item-action d-flex gap-3 align-items-center rt-module-item{% if module.id == selected_group_id %} active{% endif %}"
-                                                data-module-id="{{ module.id }}"
-                                                data-module-name="{{ module.name }}"
-                                                data-video-count="{{ module.videos|length }}"
-                                            >
-                                                <span class="rt-module-icon text-primary flex-shrink-0">
-                                                    <i class="bi {{ module.icon }}"></i>
-                                                </span>
-                                                <div class="flex-grow-1 text-start">
-                                                    <span class="fw-semibold d-block">{{ module.name }}</span>
-                                                    <small class="text-muted">{{ module.videos|length }} vídeo{% if module.videos|length != 1 %}s{% endif %}</small>
-                                                </div>
-                                                <span class="badge {% if module.videos|length %}bg-primary-subtle text-primary{% else %}bg-light text-muted border{% endif %}">{{ module.videos|length }}</span>
-                                            </button>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header d-flex align-items-center justify-content-between">
                                     <div>
-                                        <h2 class="h6 mb-0">Vídeos</h2>
-                                        <small class="text-muted" id="rtActiveModuleLabel">{{ selected_module_name }}</small>
+                                        <p class="mb-0" id="rtVideoDescription">{{ selected_video.description or 'Sem descrição disponível.' }}</p>
                                     </div>
-                                    <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtModuleVideoCount"></span>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="p-3 text-muted small d-none" id="rtEmptyModuleMessage">
-                                        Nenhum vídeo disponível neste módulo no momento.
+                                {% else %}
+                                    <div class="rt-empty-state">
+                                        <i class="bi bi-collection-play display-6 d-block mb-3"></i>
+                                        <p class="mb-1">Nenhum vídeo cadastrado até o momento.</p>
+                                        {% if can_manage %}
+                                            <p class="text-muted small mb-0">Use o formulário acima para enviar os primeiros vídeos.</p>
+                                        {% endif %}
                                     </div>
-                                    <div class="list-group list-group-flush" id="rtVideoList">
-                                        {% for video in videos %}
-                                            {% set watched = video.id in watched_ids %}
-                                            <button
-                                                type="button"
-                                                class="list-group-item list-group-item-action rt-video-item d-flex gap-3 align-items-center{% if video.id == initial_video.id %} active{% endif %}{% if watched %} is-watched{% endif %}{% if selected_group_id and video.module_id != selected_group_id %} d-none{% endif %}"
-                                                data-video-id="{{ video.id }}"
-                                                data-video-title="{{ video.name }}"
-                                                data-preview-url="{{ video.preview_url }}"
-                                                data-video-duration="{{ video.formatted_duration or '' }}"
-                                                data-module-id="{{ video.module_id }}"
-                                                data-module-name="{{ video.module_name }}"
-                                            >
-                                                <div class="rt-video-thumb flex-shrink-0">
-                                                    <div class="ratio ratio-16x9 rounded overflow-hidden border">
-                                                        {% if video.thumbnail_link %}
-                                                            <img src="{{ video.thumbnail_link }}" alt="Miniatura do vídeo {{ video.name }}" class="w-100 h-100 object-fit-cover" loading="lazy">
-                                                        {% else %}
-                                                            <div class="d-flex h-100 w-100 align-items-center justify-content-center bg-light">
-                                                                <i class="bi bi-play-btn text-primary fs-3"></i>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                                <div class="flex-grow-1 text-start">
-                                                    <div class="d-flex align-items-center mb-1">
-                                                        <i class="bi bi-check-circle-fill text-success status-icon me-2"></i>
-                                                        <span class="fw-semibold text-wrap">{{ video.name }}</span>
-                                                    </div>
-                                                    {% if video.formatted_duration %}
-                                                        <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ video.formatted_duration }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <h2 class="h6 mb-0">Módulos</h2>
+                                {% if can_manage %}
+                                    <span class="badge bg-light text-muted">Gerencie clicando nos botões ao lado</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush" id="rtModuleList">
+                                    {% for group in video_groups %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-start rt-module-item{% if group.id == selected_group_id %} active{% endif %}"
+                                             data-module-id="{{ group.id }}"
+                                             data-module-name="{{ group.name }}"
+                                             data-module-description="{{ group.description }}"
+                                             data-module-count="{{ group.videos|length }}"
+                                             data-module-root="{{ 'true' if group.is_root else 'false' }}">
+                                            <div class="d-flex gap-3 align-items-start flex-grow-1">
+                                                <span class="rt-module-icon text-primary flex-shrink-0">
+                                                    <i class="bi {{ group.icon }}"></i>
+                                                </span>
+                                                <div class="text-start">
+                                                    <span class="fw-semibold d-block">{{ group.name }}</span>
+                                                    {% if group.description %}
+                                                        <div class="text-muted small">{{ group.description }}</div>
                                                     {% endif %}
+                                                    <div class="text-muted small" data-module-count-label>
+                                                        {{ group.videos|length }} vídeo{% if group.videos|length != 1 %}s{% endif %}
+                                                    </div>
                                                 </div>
-                                            </button>
-                                        {% endfor %}
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge {% if group.videos|length %}bg-primary-subtle text-primary{% else %}bg-light text-muted border{% endif %}" data-module-count-badge>{{ group.videos|length }}</span>
+                                                {% if can_manage and not group.is_root %}
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-module-action="edit" data-module-id="{{ group.id }}" title="Editar módulo"><i class="bi bi-pencil"></i></button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" data-module-action="delete" data-module-id="{{ group.id }}" title="Excluir módulo"><i class="bi bi-trash"></i></button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header">
+                                <h2 class="h6 mb-0" id="rtVideoListTitle">Vídeos</h2>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush" id="rtVideoList">
+                                    <div class="rt-empty-state py-4">
+                                        <p class="mb-0">Selecione um módulo para listar os vídeos.</p>
                                     </div>
                                 </div>
+                                <noscript>
+                                    <div class="p-3 text-danger small">Ative o JavaScript para navegar entre os módulos e assistir aos vídeos.</div>
+                                </noscript>
                             </div>
                         </div>
                     </div>
-                {% elif folder_embed_url %}
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start gap-3 mb-3">
-                                <div class="text-primary fs-3"><i class="bi bi-cloud-arrow-down"></i></div>
-                                <div>
-                                    <h2 class="h6 mb-1">Carregando vídeos diretamente da pasta do Google Drive</h2>
-                                    <p class="text-muted small mb-0">A listagem personalizada está indisponível no momento, mas você pode acessar e assistir aos vídeos pelo visualizador incorporado abaixo.</p>
-                                </div>
-                            </div>
-                            <div class="ratio ratio-16x9 rt-drive-embed rounded overflow-hidden border">
-                                <iframe
-                                    src="{{ folder_embed_url }}"
-                                    title="Pasta de vídeos Reforma Tributária"
-                                    loading="lazy"
-                                    allowfullscreen
-                                ></iframe>
-                            </div>
-                        </div>
-                    </div>
-                    {% if drive_error %}
-                        <div class="alert alert-info d-flex align-items-start" role="alert">
-                            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
-                            <div>
-                                <h2 class="h6 mb-1">Listagem detalhada indisponível</h2>
-                                <p class="mb-0 small">{{ drive_error }}</p>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body text-center py-5">
-                            <div class="display-6 text-muted mb-3"><i class="bi bi-collection-play"></i></div>
-                            <h2 class="h5 mb-2">Nenhum vídeo disponível no momento</h2>
-                            <p class="text-muted mb-0">Assim que novos conteúdos forem adicionados à pasta da Reforma Tributária, eles aparecerão automaticamente por aqui.</p>
-                        </div>
-                    </div>
-                {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </section>
-{% endblock %}
 
-{% block scripts %}
-{{ super() }}
-{% if videos %}
+<script type="application/json" id="rtVideoGroupsData">{{ video_groups|tojson }}</script>
+<script type="application/json" id="rtVideosData">{{ videos|tojson }}</script>
+<script type="application/json" id="rtWatchedData">{{ watched_ids|tojson }}</script>
+
+<div class="modal fade" id="rtVideoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-6">Editar vídeo</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rtVideoEditForm">
+                    <div class="mb-3">
+                        <label for="rtVideoEditTitle" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="rtVideoEditTitle" name="title" maxlength="255" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rtVideoEditDescription" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="rtVideoEditDescription" name="description" rows="4" maxlength="1000"></textarea>
+                    </div>
+                    <div class="mb-0">
+                        <label for="rtVideoEditModule" class="form-label">Módulo</label>
+                        <select class="form-select" id="rtVideoEditModule" name="module_id">
+                            <option value="">Sem módulo</option>
+                            {% for option in module_options %}
+                                <option value="{{ option.id }}">{{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+                <div class="alert alert-danger mt-3 d-none" id="rtVideoEditFeedback" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="rtVideoEditSubmit">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" id="rtVideoEditSpinner" role="status" aria-hidden="true"></span>
+                    Salvar alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="rtModuleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-6">Editar módulo</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rtModuleEditForm">
+                    <div class="mb-3">
+                        <label for="rtModuleEditName" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="rtModuleEditName" name="name" maxlength="150" required>
+                    </div>
+                    <div class="mb-0">
+                        <label for="rtModuleEditDescription" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="rtModuleEditDescription" name="description" maxlength="255">
+                    </div>
+                </form>
+                <div class="alert alert-danger mt-3 d-none" id="rtModuleEditFeedback" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="rtModuleEditSubmit">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" id="rtModuleEditSpinner" role="status" aria-hidden="true"></span>
+                    Salvar alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const moduleInfo = {{ module_metadata|tojson }};
-        const iframe = document.getElementById('rtVideoFrame');
-        const titleEl = document.getElementById('rtVideoTitle');
-        const durationBadge = document.getElementById('rtVideoDuration');
-        const toggleButton = document.getElementById('rtWatchToggle');
-        const toggleIcon = document.getElementById('rtWatchIcon');
-        const toggleLabel = document.getElementById('rtWatchLabel');
-        const toggleSpinner = document.getElementById('rtWatchSpinner');
-        const moduleLabelEl = document.getElementById('rtActiveModuleLabel');
-        const moduleCountEl = document.getElementById('rtModuleVideoCount');
-        const emptyModuleMessage = document.getElementById('rtEmptyModuleMessage');
-        const moduleListEl = document.getElementById('rtModuleList');
-        const videoListEl = document.getElementById('rtVideoList');
-        const uploadForm = document.getElementById('rtUploadForm');
-        const uploadFeedback = document.getElementById('rtUploadFeedback');
-        const uploadSpinner = document.getElementById('rtUploadSpinner');
-        const uploadLabel = document.getElementById('rtUploadLabel');
-        const uploadSubmit = document.getElementById('rtUploadSubmit');
-        const uploadModuleSelect = document.getElementById('rtUploadModule');
-        const uploadModuleName = document.getElementById('rtUploadModuleName');
-        const uploadFileInput = document.getElementById('rtUploadFile');
-        const watchedSet = new Set({{ watched_ids|tojson }});
-        let totalVideos = {{ total_videos }};
-        const totalVideosEl = document.getElementById('rtTotalCount');
-        const watchedCountEl = document.getElementById('rtWatchedCount');
-        const progressPercentEl = document.getElementById('rtProgressPercent');
-        const progressBarEl = document.getElementById('rtProgressBar');
-        let activeModuleId = '{{ selected_group_id or '' }}';
+(() => {
+    const portal = document.getElementById('rtPortal');
+    if (!portal) {
+        return;
+    }
 
-        let videoItems = [];
-        let moduleButtons = [];
-
-        const updateProgress = () => {
-            const watchedCount = watchedSet.size;
-            watchedCountEl.textContent = watchedCount;
-            if (totalVideosEl) {
-                totalVideosEl.textContent = String(totalVideos);
-            }
-            const percent = totalVideos ? Math.round((watchedCount / totalVideos) * 100) : 0;
-            progressPercentEl.textContent = `${percent}%`;
-            progressBarEl.style.width = `${percent}%`;
-            progressBarEl.setAttribute('aria-valuenow', String(percent));
-        };
-
-        const updateModuleCount = (visibleCount) => {
-            if (!moduleCountEl) {
-                return;
-            }
-            let label = '';
-            if (visibleCount === 0) {
-                label = 'Nenhum vídeo';
-            } else if (visibleCount === 1) {
-                label = '1 vídeo';
-            } else {
-                label = `${visibleCount} vídeos`;
-            }
-            moduleCountEl.textContent = label;
-        };
-
-        const updateButtonState = (videoId) => {
-            const isWatched = watchedSet.has(videoId);
-            toggleButton.dataset.videoId = videoId;
-            toggleButton.classList.toggle('btn-success', !isWatched);
-            toggleButton.classList.toggle('btn-outline-secondary', isWatched);
-            toggleButton.setAttribute('aria-pressed', isWatched ? 'true' : 'false');
-            toggleIcon.className = isWatched ? 'bi bi-arrow-counterclockwise me-2' : 'bi bi-check2-circle me-2';
-            toggleLabel.textContent = isWatched ? 'Marcar como não assistido' : 'Marcar como assistido';
-        };
-
-        const activateItem = (item) => {
-            videoItems.forEach((btn) => btn.classList.remove('active'));
-            item.classList.add('active');
-        };
-
-        const selectVideo = (item) => {
-            const videoId = item.dataset.videoId;
-            const previewUrl = item.dataset.previewUrl;
-            const title = item.dataset.videoTitle;
-            const duration = item.dataset.videoDuration;
-            const moduleName = item.dataset.moduleName;
-
-            iframe.src = previewUrl;
-            iframe.title = title;
-            titleEl.textContent = title;
-
-            if (duration) {
-                durationBadge.textContent = duration;
-                durationBadge.classList.remove('d-none');
-            } else {
-                durationBadge.classList.add('d-none');
-            }
-
-            activateItem(item);
-            updateButtonState(videoId);
-            toggleButton.disabled = false;
-            toggleButton.removeAttribute('aria-disabled');
-            toggleSpinner.classList.add('d-none');
-
-            if (moduleLabelEl && moduleName) {
-                moduleLabelEl.textContent = moduleName;
-            }
-        };
-
-        const registerVideoItem = (item) => {
-            videoItems.push(item);
-            item.addEventListener('click', () => selectVideo(item));
-        };
-
-        const filterVideos = (moduleId, moduleName) => {
-            activeModuleId = moduleId;
-            moduleButtons.forEach((button) => {
-                button.classList.toggle('active', button.dataset.moduleId === moduleId);
-            });
-
-            if (moduleLabelEl && moduleName) {
-                moduleLabelEl.textContent = moduleName;
-            }
-
-            const visibleItems = [];
-            videoItems.forEach((item) => {
-                const matches = !moduleId || item.dataset.moduleId === moduleId;
-                item.classList.toggle('d-none', !matches);
-                if (matches) {
-                    visibleItems.push(item);
-                }
-            });
-
-            updateModuleCount(visibleItems.length);
-
-            if (!visibleItems.length) {
-                emptyModuleMessage.classList.remove('d-none');
-                toggleButton.disabled = true;
-                toggleButton.setAttribute('aria-disabled', 'true');
-                return;
-            }
-
-            emptyModuleMessage.classList.add('d-none');
-            toggleButton.disabled = false;
-            toggleButton.removeAttribute('aria-disabled');
-
-            const activeItem = visibleItems.find((item) => item.classList.contains('active'));
-            if (!activeItem) {
-                selectVideo(visibleItems[0]);
-            }
-        };
-
-        const registerModuleButton = (button) => {
-            moduleButtons.push(button);
-            button.addEventListener('click', () => {
-                filterVideos(button.dataset.moduleId, button.dataset.moduleName);
-            });
-        };
-
-        const updateModuleSummary = (button, count) => {
-            if (!button) {
-                return;
-            }
-            button.dataset.videoCount = String(count);
-            const badge = button.querySelector('.badge');
-            if (badge) {
-                badge.textContent = String(count);
-                badge.classList.toggle('bg-primary-subtle', count > 0);
-                badge.classList.toggle('text-primary', count > 0);
-                badge.classList.toggle('bg-light', count === 0);
-                badge.classList.toggle('text-muted', count === 0);
-                badge.classList.toggle('border', count === 0);
-            }
-            const summary = button.querySelector('.text-muted');
-            if (summary) {
-                if (count === 0) {
-                    summary.textContent = 'Nenhum vídeo';
-                } else if (count === 1) {
-                    summary.textContent = '1 vídeo';
-                } else {
-                    summary.textContent = `${count} vídeos`;
-                }
-            }
-        };
-
-        const ensureModuleButton = (moduleId) => {
-            if (!moduleListEl) {
-                return null;
-            }
-            let button = moduleListEl.querySelector(`.rt-module-item[data-module-id="${moduleId}"]`);
-            if (button) {
-                return button;
-            }
-            const info = moduleInfo[moduleId];
-            if (!info) {
-                return null;
-            }
-
-            button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'list-group-item list-group-item-action d-flex gap-3 align-items-center rt-module-item';
-            button.dataset.moduleId = moduleId;
-            button.dataset.moduleName = info.name;
-            button.dataset.videoCount = '0';
-
-            const iconWrapper = document.createElement('span');
-            iconWrapper.className = 'rt-module-icon text-primary flex-shrink-0';
-            const icon = document.createElement('i');
-            icon.className = `bi ${info.icon}`;
-            iconWrapper.appendChild(icon);
-
-            const infoWrapper = document.createElement('div');
-            infoWrapper.className = 'flex-grow-1 text-start';
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'fw-semibold d-block';
-            nameSpan.textContent = info.name;
-            const summary = document.createElement('small');
-            summary.className = 'text-muted';
-            summary.textContent = 'Nenhum vídeo';
-            infoWrapper.appendChild(nameSpan);
-            infoWrapper.appendChild(summary);
-
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-light text-muted border';
-            badge.textContent = '0';
-
-            button.appendChild(iconWrapper);
-            button.appendChild(infoWrapper);
-            button.appendChild(badge);
-
-            moduleListEl.appendChild(button);
-            registerModuleButton(button);
-            return button;
-        };
-
-        const createVideoItem = (video) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'list-group-item list-group-item-action rt-video-item d-flex gap-3 align-items-center';
-            button.dataset.videoId = video.id;
-            button.dataset.videoTitle = video.name;
-            button.dataset.previewUrl = video.preview_url;
-            button.dataset.videoDuration = video.formatted_duration || '';
-            button.dataset.moduleId = video.module_id;
-            button.dataset.moduleName = video.module_name;
-
-            const thumbWrapper = document.createElement('div');
-            thumbWrapper.className = 'rt-video-thumb flex-shrink-0';
-            const ratio = document.createElement('div');
-            ratio.className = 'ratio ratio-16x9 rounded overflow-hidden border';
-            if (video.thumbnail_link) {
-                const img = document.createElement('img');
-                img.src = video.thumbnail_link;
-                img.alt = `Miniatura do vídeo ${video.name}`;
-                img.className = 'w-100 h-100 object-fit-cover';
-                img.loading = 'lazy';
-                ratio.appendChild(img);
-            } else {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'd-flex h-100 w-100 align-items-center justify-content-center bg-light';
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-play-btn text-primary fs-3';
-                placeholder.appendChild(icon);
-                ratio.appendChild(placeholder);
-            }
-            thumbWrapper.appendChild(ratio);
-
-            const infoWrapper = document.createElement('div');
-            infoWrapper.className = 'flex-grow-1 text-start';
-            const titleRow = document.createElement('div');
-            titleRow.className = 'd-flex align-items-center mb-1';
-            const statusIcon = document.createElement('i');
-            statusIcon.className = 'bi bi-check-circle-fill text-success status-icon me-2';
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'fw-semibold text-wrap';
-            titleSpan.textContent = video.name;
-            titleRow.appendChild(statusIcon);
-            titleRow.appendChild(titleSpan);
-            infoWrapper.appendChild(titleRow);
-            if (video.formatted_duration) {
-                const duration = document.createElement('small');
-                duration.className = 'text-muted';
-                const clockIcon = document.createElement('i');
-                clockIcon.className = 'bi bi-clock me-1';
-                duration.appendChild(clockIcon);
-                duration.appendChild(document.createTextNode(video.formatted_duration));
-                infoWrapper.appendChild(duration);
-            }
-
-            button.appendChild(thumbWrapper);
-            button.appendChild(infoWrapper);
-            return button;
-        };
-
-        const showUploadFeedback = (message, variant) => {
-            if (!uploadFeedback) {
-                return;
-            }
-            uploadFeedback.className = `alert alert-${variant} mt-3`;
-            uploadFeedback.textContent = message;
-            uploadFeedback.classList.remove('d-none');
-        };
-
-        const resetUploadFeedback = () => {
-            if (!uploadFeedback) {
-                return;
-            }
-            uploadFeedback.classList.add('d-none');
-            uploadFeedback.className = 'alert mt-3 d-none';
-            uploadFeedback.textContent = '';
-        };
-
-        const syncModuleName = () => {
-            if (!uploadModuleSelect || !uploadModuleName) {
-                return;
-            }
-            const option = uploadModuleSelect.options[uploadModuleSelect.selectedIndex];
-            uploadModuleName.value = option ? (option.dataset.moduleName || option.textContent.trim()) : '';
-        };
-
-        document.querySelectorAll('.rt-video-item').forEach((item) => registerVideoItem(item));
-        document.querySelectorAll('.rt-module-item').forEach((button) => registerModuleButton(button));
-
-        moduleButtons.forEach((button) => {
-            const count = videoItems.filter((item) => item.dataset.moduleId === button.dataset.moduleId).length;
-            updateModuleSummary(button, count);
-        });
-
-        if (uploadModuleSelect) {
-            syncModuleName();
-            uploadModuleSelect.addEventListener('change', syncModuleName);
+    const canManage = portal.dataset.canManage === 'true';
+    const parseJson = (id) => {
+        const el = document.getElementById(id);
+        if (!el) {
+            return [];
         }
+        try {
+            return JSON.parse(el.textContent || '[]');
+        } catch (err) {
+            console.error('Falha ao analisar dados do portal:', err);
+            return [];
+        }
+    };
 
-        toggleButton.addEventListener('click', async () => {
-            const videoId = toggleButton.dataset.videoId;
-            const isWatched = watchedSet.has(videoId);
-            const payload = {
-                title: titleEl.textContent || ''
-            };
+    const videoGroups = parseJson('rtVideoGroupsData');
+    const videos = parseJson('rtVideosData');
+    const watchedIds = new Set(parseJson('rtWatchedData').map(String));
 
-            toggleButton.disabled = true;
-            toggleSpinner.classList.remove('d-none');
+    const videosById = new Map();
+    videos.forEach((video) => {
+        videosById.set(String(video.id), video);
+    });
 
+    const modulesById = new Map();
+    videoGroups.forEach((group) => {
+        modulesById.set(String(group.id), group);
+    });
+
+    const moduleList = document.getElementById('rtModuleList');
+    const videoList = document.getElementById('rtVideoList');
+    const videoListTitle = document.getElementById('rtVideoListTitle');
+    const watchedCountEl = document.getElementById('rtWatchedCount');
+    const totalCountEl = document.getElementById('rtTotalCount');
+    const progressBar = document.getElementById('rtProgressBar');
+    const progressPercentEl = document.getElementById('rtProgressPercent');
+    const watchButton = document.getElementById('rtWatchToggle');
+    const watchLabel = document.getElementById('rtWatchLabel');
+    const watchIcon = document.getElementById('rtWatchIcon');
+    const watchSpinner = document.getElementById('rtWatchSpinner');
+    const videoPlayer = document.getElementById('rtVideoPlayer');
+    const videoSource = document.getElementById('rtVideoSource');
+    const videoTitleEl = document.getElementById('rtVideoTitle');
+    const videoModuleEl = document.getElementById('rtVideoModule');
+    const videoCreatedEl = document.getElementById('rtVideoCreated');
+    const videoSizeEl = document.getElementById('rtVideoSize');
+    const videoDescriptionEl = document.getElementById('rtVideoDescription');
+
+    let currentModuleId = String(portal.dataset.initialModuleId || '');
+    let currentVideoId = portal.dataset.initialVideoId ? String(portal.dataset.initialVideoId) : null;
+
+    const escapeHtml = (() => {
+        const div = document.createElement('div');
+        return (value) => {
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        };
+    })();
+
+    const updateProgressDisplay = () => {
+        if (!watchedCountEl || !totalCountEl || !progressBar || !progressPercentEl) {
+            return;
+        }
+        const total = Number(totalCountEl.dataset.total || 0);
+        const watched = watchedIds.size;
+        watchedCountEl.textContent = watched;
+        const percent = total > 0 ? Math.round((watched / total) * 100) : 0;
+        progressBar.style.width = `${percent}%`;
+        progressBar.setAttribute('aria-valuenow', String(percent));
+        progressPercentEl.textContent = `${percent}%`;
+    };
+
+    const setVideoWatchedState = (videoId, isWatched) => {
+        const item = videoList ? videoList.querySelector(`[data-video-id="${CSS && CSS.escape ? CSS.escape(videoId) : videoId}"]`) : null;
+        if (item) {
+            item.classList.toggle('is-watched', isWatched);
+        }
+    };
+
+    const syncWatchButton = (videoId) => {
+        if (!watchButton) {
+            return;
+        }
+        const isWatched = watchedIds.has(String(videoId));
+        watchButton.dataset.videoId = videoId;
+        watchButton.setAttribute('aria-pressed', isWatched ? 'true' : 'false');
+        watchButton.classList.toggle('btn-success', !isWatched);
+        watchButton.classList.toggle('btn-outline-secondary', isWatched);
+        if (watchIcon) {
+            watchIcon.className = isWatched ? 'bi bi-arrow-counterclockwise me-2' : 'bi bi-check2-circle me-2';
+        }
+        if (watchLabel) {
+            watchLabel.textContent = isWatched ? 'Marcar como não assistido' : 'Marcar como assistido';
+        }
+    };
+
+    const clearPlayer = () => {
+        if (videoPlayer && videoSource) {
             try {
-                const response = await fetch(`/reforma-tributaria/videos/${videoId}/watch`, {
-                    method: isWatched ? 'DELETE' : 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: isWatched ? undefined : JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erro inesperado ao atualizar o status do vídeo.');
-                }
-
-                if (data.status === 'watched') {
-                    watchedSet.add(videoId);
-                } else {
-                    watchedSet.delete(videoId);
-                }
-
-                document.querySelectorAll(`.rt-video-item[data-video-id="${videoId}"]`).forEach((item) => {
-                    item.classList.toggle('is-watched', watchedSet.has(videoId));
-                });
-
-                updateButtonState(videoId);
-                updateProgress();
-            } catch (error) {
-                console.error(error);
-                alert('Não foi possível atualizar o status do vídeo agora. Tente novamente mais tarde.');
-            } finally {
-                toggleButton.disabled = false;
-                toggleSpinner.classList.add('d-none');
+                videoPlayer.pause();
+            } catch (err) {
+                console.warn('Falha ao pausar o player de vídeo:', err);
             }
-        });
+            videoSource.removeAttribute('src');
+            videoSource.removeAttribute('type');
+            videoPlayer.load();
+        }
+        if (videoTitleEl) {
+            videoTitleEl.textContent = 'Selecione um vídeo';
+        }
+        if (videoModuleEl) {
+            videoModuleEl.textContent = 'Sem módulo';
+        }
+        if (videoCreatedEl) {
+            videoCreatedEl.textContent = '';
+        }
+        if (videoSizeEl) {
+            videoSizeEl.textContent = '';
+        }
+        if (videoDescriptionEl) {
+            videoDescriptionEl.textContent = 'Sem descrição disponível.';
+        }
+        if (watchButton) {
+            watchButton.dataset.videoId = '';
+            watchButton.disabled = true;
+            watchButton.classList.remove('btn-success', 'btn-outline-secondary');
+            watchButton.classList.add('btn-outline-secondary');
+            watchButton.setAttribute('aria-pressed', 'false');
+            if (watchLabel) {
+                watchLabel.textContent = 'Marcar como assistido';
+            }
+            if (watchIcon) {
+                watchIcon.className = 'bi bi-check2-circle me-2';
+            }
+        }
+    };
 
-        if (uploadForm && uploadSubmit) {
-            uploadForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                resetUploadFeedback();
-                if (!uploadFileInput || !uploadFileInput.files || !uploadFileInput.files.length) {
-                    showUploadFeedback('Selecione um vídeo para enviar.', 'warning');
+    const updatePlayer = (videoId) => {
+        const video = videosById.get(String(videoId));
+        if (!video) {
+            clearPlayer();
+            return;
+        }
+        if (videoPlayer && videoSource) {
+            if (videoPlayer.currentSrc) {
+                try {
+                    videoPlayer.pause();
+                } catch (err) {
+                    console.warn('Falha ao pausar vídeo antes da troca:', err);
+                }
+            }
+            videoSource.src = video.stream_url;
+            if (video.content_type) {
+                videoSource.type = video.content_type;
+            } else {
+                videoSource.removeAttribute('type');
+            }
+            videoPlayer.load();
+        }
+        if (videoTitleEl) {
+            videoTitleEl.textContent = video.title || 'Vídeo';
+        }
+        if (videoModuleEl) {
+            videoModuleEl.textContent = video.module_name || 'Sem módulo';
+        }
+        if (videoCreatedEl) {
+            videoCreatedEl.textContent = video.created_display || '';
+        }
+        if (videoSizeEl) {
+            videoSizeEl.textContent = video.formatted_size || '';
+        }
+        if (videoDescriptionEl) {
+            videoDescriptionEl.textContent = video.description || 'Sem descrição disponível.';
+        }
+        if (watchButton) {
+            watchButton.disabled = false;
+            syncWatchButton(String(videoId));
+        }
+    };
+
+    const renderVideoList = (moduleId) => {
+        if (!videoList) {
+            return [];
+        }
+        const moduleKey = String(moduleId);
+        const group = modulesById.get(moduleKey);
+        videoList.innerHTML = '';
+        if (!group || !Array.isArray(group.videos) || group.videos.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'rt-empty-state py-4';
+            empty.innerHTML = '<p class="mb-0">Nenhum vídeo neste módulo.</p>';
+            videoList.appendChild(empty);
+            return [];
+        }
+        const ids = [];
+        group.videos.forEach((video) => {
+            const canonical = videosById.get(String(video.id)) || video;
+            videosById.set(String(video.id), canonical);
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex gap-3 align-items-start rt-video-item';
+            const videoId = String(video.id);
+            item.dataset.videoId = videoId;
+            item.dataset.moduleId = moduleKey;
+            if (videoId === currentVideoId) {
+                item.classList.add('active');
+            }
+            if (watchedIds.has(videoId)) {
+                item.classList.add('is-watched');
+            }
+            const metaParts = [];
+            if (canonical.created_display) {
+                metaParts.push(escapeHtml(canonical.created_display));
+            }
+            if (canonical.formatted_size) {
+                metaParts.push(escapeHtml(canonical.formatted_size));
+            }
+            const metaHtml = metaParts.length ? `<div class="text-muted small">${metaParts.join(' • ')}</div>` : '';
+            const descriptionHtml = canonical.description ? `<div class="text-muted small mt-2">${escapeHtml(canonical.description)}</div>` : '';
+            let actionsHtml = '';
+            if (canManage) {
+                actionsHtml = `
+                    <div class="btn-group btn-group-sm flex-shrink-0 ms-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary" data-video-action="edit" data-video-id="${videoId}" title="Editar vídeo"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-outline-danger" data-video-action="delete" data-video-id="${videoId}" title="Excluir vídeo"><i class="bi bi-trash"></i></button>
+                    </div>`;
+            }
+            item.innerHTML = `
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">${escapeHtml(canonical.title)}</div>
+                            ${metaHtml}
+                        </div>
+                        <i class="bi bi-check-circle-fill text-success status-icon"></i>
+                    </div>
+                    ${descriptionHtml}
+                </div>
+                ${actionsHtml}
+            `;
+            videoList.appendChild(item);
+            ids.push(videoId);
+        });
+        const moduleItem = moduleList ? moduleList.querySelector(`[data-module-id="${CSS && CSS.escape ? CSS.escape(moduleKey) : moduleKey}"]`) : null;
+        if (moduleItem) {
+            const label = moduleItem.querySelector('[data-module-count-label]');
+            const badge = moduleItem.querySelector('[data-module-count-badge]');
+            if (label) {
+                label.textContent = `${ids.length} vídeo${ids.length === 1 ? '' : 's'}`;
+            }
+            if (badge) {
+                badge.textContent = ids.length;
+                badge.classList.toggle('bg-primary-subtle', ids.length > 0);
+                badge.classList.toggle('text-primary', ids.length > 0);
+                badge.classList.toggle('bg-light', ids.length === 0);
+                badge.classList.toggle('text-muted', ids.length === 0);
+                badge.classList.toggle('border', ids.length === 0);
+            }
+            moduleItem.dataset.moduleCount = String(ids.length);
+        }
+        return ids;
+    };
+
+    const activateModuleItem = (moduleId) => {
+        if (!moduleList) {
+            return;
+        }
+        const items = moduleList.querySelectorAll('.rt-module-item');
+        items.forEach((item) => {
+            item.classList.toggle('active', item.dataset.moduleId === moduleId);
+        });
+    };
+
+    const activateVideoItem = (videoId) => {
+        if (!videoList) {
+            return;
+        }
+        const items = videoList.querySelectorAll('.rt-video-item');
+        items.forEach((item) => {
+            const isCurrent = item.dataset.videoId === videoId;
+            item.classList.toggle('active', isCurrent);
+            item.classList.toggle('is-watched', watchedIds.has(item.dataset.videoId));
+        });
+    };
+
+    const selectVideo = (videoId, options = {}) => {
+        const id = String(videoId);
+        if (!videosById.has(id)) {
+            return;
+        }
+        currentVideoId = id;
+        activateVideoItem(id);
+        updatePlayer(id);
+        if (!options.silent) {
+            const item = videoList ? videoList.querySelector(`[data-video-id="${CSS && CSS.escape ? CSS.escape(id) : id}"]`) : null;
+            if (item) {
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    };
+
+    const selectModule = (moduleId) => {
+        const id = String(moduleId);
+        currentModuleId = id;
+        activateModuleItem(id);
+        if (videoListTitle) {
+            const group = modulesById.get(id);
+            videoListTitle.textContent = group ? group.name : 'Vídeos';
+        }
+        const ids = renderVideoList(id);
+        if (ids.length === 0) {
+            currentVideoId = null;
+            clearPlayer();
+            return;
+        }
+        const defaultId = ids.includes(currentVideoId) ? currentVideoId : ids[0];
+        selectVideo(defaultId, { silent: true });
+    };
+
+    if (moduleList) {
+        moduleList.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-module-action]');
+            if (actionButton) {
+                if (!canManage) {
                     return;
                 }
-
-                uploadSubmit.disabled = true;
-                if (uploadSpinner) {
-                    uploadSpinner.classList.remove('d-none');
+                event.stopPropagation();
+                const moduleId = String(actionButton.dataset.moduleId);
+                if (actionButton.dataset.moduleAction === 'edit') {
+                    openModuleModal(moduleId);
+                } else if (actionButton.dataset.moduleAction === 'delete') {
+                    deleteModule(moduleId);
                 }
-                if (uploadLabel) {
-                    uploadLabel.textContent = 'Enviando...';
+                return;
+            }
+            const item = event.target.closest('.rt-module-item');
+            if (item) {
+                selectModule(item.dataset.moduleId);
+            }
+        });
+    }
+
+    if (videoList) {
+        videoList.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-video-action]');
+            if (actionButton) {
+                if (!canManage) {
+                    return;
                 }
-
-                const formData = new FormData(uploadForm);
-
-                try {
-                    const response = await fetch('/reforma-tributaria/upload', {
-                        method: 'POST',
-                        body: formData,
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        throw new Error(data.error || 'Não foi possível enviar o vídeo.');
-                    }
-
-                    const video = data.video;
-                    if (video) {
-                        const newItem = createVideoItem(video);
-                        if (videoListEl) {
-                            videoListEl.prepend(newItem);
-                        }
-                        registerVideoItem(newItem);
-
-                        const moduleButton = ensureModuleButton(video.module_id);
-                        if (moduleButton) {
-                            const nextCount = parseInt(moduleButton.dataset.videoCount || '0', 10) + 1;
-                            updateModuleSummary(moduleButton, nextCount);
-                        }
-
-                        totalVideos += 1;
-                        watchedSet.delete(video.id);
-                        updateProgress();
-
-                        if (!activeModuleId || activeModuleId === video.module_id) {
-                            filterVideos(video.module_id, video.module_name);
-                            selectVideo(newItem);
-                        } else {
-                            filterVideos(activeModuleId, moduleLabelEl ? moduleLabelEl.textContent : '');
-                        }
-
-                        showUploadFeedback(data.message || 'Vídeo enviado com sucesso.', 'success');
-                    }
-
-                    uploadForm.reset();
-                    if (uploadModuleSelect) {
-                        uploadModuleSelect.dispatchEvent(new Event('change'));
-                    }
-                } catch (error) {
-                    console.error(error);
-                    showUploadFeedback(error.message || 'Não foi possível enviar o vídeo.', 'danger');
-                } finally {
-                    uploadSubmit.disabled = false;
-                    if (uploadSpinner) {
-                        uploadSpinner.classList.add('d-none');
-                    }
-                    if (uploadLabel) {
-                        uploadLabel.textContent = 'Enviar vídeo';
-                    }
+                event.stopPropagation();
+                const videoId = String(actionButton.dataset.videoId);
+                if (actionButton.dataset.videoAction === 'edit') {
+                    openVideoModal(videoId);
+                } else if (actionButton.dataset.videoAction === 'delete') {
+                    deleteVideo(videoId);
                 }
-            });
+                return;
+            }
+            const item = event.target.closest('.rt-video-item');
+            if (item) {
+                selectVideo(item.dataset.videoId);
+            }
+        });
+    }
+
+    if (watchButton) {
+        watchButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            if (!currentVideoId || watchButton.disabled) {
+                return;
+            }
+            const video = videosById.get(String(currentVideoId));
+            if (!video) {
+                return;
+            }
+            const isWatched = watchedIds.has(String(currentVideoId));
+            watchButton.disabled = true;
+            if (watchSpinner) {
+                watchSpinner.classList.remove('d-none');
+            }
+            try {
+                const response = await fetch(`/reforma-tributaria/videos/${currentVideoId}/watch`, {
+                    method: isWatched ? 'DELETE' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: isWatched ? null : JSON.stringify({ title: video.title }),
+                });
+                if (!response.ok) {
+                    throw new Error('Falha ao atualizar progresso');
+                }
+                if (isWatched) {
+                    watchedIds.delete(String(currentVideoId));
+                } else {
+                    watchedIds.add(String(currentVideoId));
+                }
+                setVideoWatchedState(String(currentVideoId), !isWatched);
+                syncWatchButton(String(currentVideoId));
+                updateProgressDisplay();
+            } catch (err) {
+                console.error('Não foi possível atualizar o progresso do vídeo:', err);
+                alert('Não foi possível atualizar o progresso. Tente novamente.');
+            } finally {
+                if (watchSpinner) {
+                    watchSpinner.classList.add('d-none');
+                }
+                watchButton.disabled = false;
+            }
+        });
+    }
+
+    const moduleForm = document.getElementById('rtModuleForm');
+    const moduleFeedback = document.getElementById('rtModuleFeedback');
+    const moduleSpinner = document.getElementById('rtModuleSpinner');
+
+    const setFeedback = (element, message, variant = 'success') => {
+        if (!element) {
+            return;
         }
+        element.textContent = message;
+        element.classList.remove('d-none', 'alert-success', 'alert-danger');
+        element.classList.add(`alert-${variant}`);
+    };
 
-        updateModuleCount(
-            videoItems.filter((item) => !item.classList.contains('d-none')).length
-        );
-        filterVideos(activeModuleId, moduleLabelEl ? moduleLabelEl.textContent : '');
-        updateProgress();
-    });
+    const clearFeedback = (element) => {
+        if (!element) {
+            return;
+        }
+        element.textContent = '';
+        element.classList.add('d-none');
+        element.classList.remove('alert-success', 'alert-danger');
+    };
+
+    if (canManage && moduleForm) {
+        moduleForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(moduleForm);
+            const name = (formData.get('name') || '').toString().trim();
+            const description = (formData.get('description') || '').toString().trim();
+            if (!name) {
+                setFeedback(moduleFeedback, 'Informe um nome para o módulo.', 'danger');
+                return;
+            }
+            moduleForm.querySelector('button[type="submit"]').disabled = true;
+            if (moduleSpinner) {
+                moduleSpinner.classList.remove('d-none');
+            }
+            clearFeedback(moduleFeedback);
+            try {
+                const response = await fetch('/reforma-tributaria/modules', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ name, description }),
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'Erro ao criar módulo');
+                }
+                window.location.reload();
+            } catch (err) {
+                console.error('Erro ao criar módulo:', err);
+                setFeedback(moduleFeedback, err.message || 'Não foi possível criar o módulo.', 'danger');
+            } finally {
+                moduleForm.querySelector('button[type="submit"]').disabled = false;
+                if (moduleSpinner) {
+                    moduleSpinner.classList.add('d-none');
+                }
+            }
+        });
+    }
+
+    const videoForm = document.getElementById('rtVideoForm');
+    const videoFeedback = document.getElementById('rtVideoFeedback');
+    const videoSpinner = document.getElementById('rtVideoSpinner');
+    const videoSubmit = document.getElementById('rtVideoSubmit');
+
+    if (canManage && videoForm) {
+        videoForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!videoSubmit) {
+                return;
+            }
+            if (!videoForm.video || !videoForm.video.files || !videoForm.video.files.length) {
+                setFeedback(videoFeedback, 'Selecione um arquivo de vídeo.', 'danger');
+                return;
+            }
+            videoSubmit.disabled = true;
+            if (videoSpinner) {
+                videoSpinner.classList.remove('d-none');
+            }
+            clearFeedback(videoFeedback);
+            const formData = new FormData(videoForm);
+            try {
+                const response = await fetch('/reforma-tributaria/videos', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'Erro ao enviar vídeo');
+                }
+                window.location.reload();
+            } catch (err) {
+                console.error('Erro ao enviar vídeo:', err);
+                setFeedback(videoFeedback, err.message || 'Não foi possível enviar o vídeo.', 'danger');
+            } finally {
+                videoSubmit.disabled = false;
+                if (videoSpinner) {
+                    videoSpinner.classList.add('d-none');
+                }
+            }
+        });
+    }
+
+    const videoModalEl = document.getElementById('rtVideoModal');
+    const videoModal = videoModalEl && window.bootstrap ? new window.bootstrap.Modal(videoModalEl) : null;
+    const videoEditForm = document.getElementById('rtVideoEditForm');
+    const videoEditFeedback = document.getElementById('rtVideoEditFeedback');
+    const videoEditSpinner = document.getElementById('rtVideoEditSpinner');
+    const videoEditSubmit = document.getElementById('rtVideoEditSubmit');
+    let editingVideoId = null;
+
+    const openVideoModal = (videoId) => {
+        if (!canManage || !videoModal || !videoEditForm) {
+            return;
+        }
+        const video = videosById.get(String(videoId));
+        if (!video) {
+            return;
+        }
+        editingVideoId = String(videoId);
+        videoEditForm.title.value = video.title || '';
+        videoEditForm.description.value = video.description || '';
+        videoEditForm.module_id.value = video.module_id != null ? String(video.module_id) : '';
+        clearFeedback(videoEditFeedback);
+        videoModal.show();
+    };
+
+    const saveVideoEdits = async () => {
+        if (!editingVideoId || !videoEditForm) {
+            return;
+        }
+        const formData = new FormData(videoEditForm);
+        const title = (formData.get('title') || '').toString().trim();
+        const description = (formData.get('description') || '').toString();
+        const moduleId = formData.get('module_id');
+        if (!title) {
+            setFeedback(videoEditFeedback, 'Informe um título para o vídeo.', 'danger');
+            return;
+        }
+        if (videoEditSubmit) {
+            videoEditSubmit.disabled = true;
+        }
+        if (videoEditSpinner) {
+            videoEditSpinner.classList.remove('d-none');
+        }
+        clearFeedback(videoEditFeedback);
+        try {
+            const response = await fetch(`/reforma-tributaria/videos/${editingVideoId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    module_id: moduleId ? moduleId.toString() : '',
+                }),
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Erro ao atualizar vídeo');
+            }
+            window.location.reload();
+        } catch (err) {
+            console.error('Erro ao atualizar vídeo:', err);
+            setFeedback(videoEditFeedback, err.message || 'Não foi possível atualizar o vídeo.', 'danger');
+        } finally {
+            if (videoEditSubmit) {
+                videoEditSubmit.disabled = false;
+            }
+            if (videoEditSpinner) {
+                videoEditSpinner.classList.add('d-none');
+            }
+        }
+    };
+
+    if (videoEditSubmit) {
+        videoEditSubmit.addEventListener('click', (event) => {
+            event.preventDefault();
+            saveVideoEdits();
+        });
+    }
+
+    const deleteVideo = async (videoId) => {
+        if (!canManage) {
+            return;
+        }
+        if (!confirm('Tem certeza de que deseja excluir este vídeo?')) {
+            return;
+        }
+        try {
+            const response = await fetch(`/reforma-tributaria/videos/${videoId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Erro ao excluir vídeo');
+            }
+            window.location.reload();
+        } catch (err) {
+            console.error('Erro ao excluir vídeo:', err);
+            alert(err.message || 'Não foi possível excluir o vídeo.');
+        }
+    };
+
+    const moduleModalEl = document.getElementById('rtModuleModal');
+    const moduleModal = moduleModalEl && window.bootstrap ? new window.bootstrap.Modal(moduleModalEl) : null;
+    const moduleEditForm = document.getElementById('rtModuleEditForm');
+    const moduleEditFeedback = document.getElementById('rtModuleEditFeedback');
+    const moduleEditSpinner = document.getElementById('rtModuleEditSpinner');
+    const moduleEditSubmit = document.getElementById('rtModuleEditSubmit');
+    let editingModuleId = null;
+
+    const openModuleModal = (moduleId) => {
+        if (!canManage || !moduleModal || !moduleEditForm) {
+            return;
+        }
+        const module = modulesById.get(String(moduleId));
+        if (!module || module.is_root) {
+            return;
+        }
+        editingModuleId = String(moduleId);
+        moduleEditForm.name.value = module.name || '';
+        moduleEditForm.description.value = module.description || '';
+        clearFeedback(moduleEditFeedback);
+        moduleModal.show();
+    };
+
+    const saveModuleEdits = async () => {
+        if (!editingModuleId || !moduleEditForm) {
+            return;
+        }
+        const formData = new FormData(moduleEditForm);
+        const name = (formData.get('name') || '').toString().trim();
+        const description = (formData.get('description') || '').toString();
+        if (!name) {
+            setFeedback(moduleEditFeedback, 'Informe um nome para o módulo.', 'danger');
+            return;
+        }
+        if (moduleEditSubmit) {
+            moduleEditSubmit.disabled = true;
+        }
+        if (moduleEditSpinner) {
+            moduleEditSpinner.classList.remove('d-none');
+        }
+        clearFeedback(moduleEditFeedback);
+        try {
+            const response = await fetch(`/reforma-tributaria/modules/${editingModuleId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ name, description }),
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Erro ao atualizar módulo');
+            }
+            window.location.reload();
+        } catch (err) {
+            console.error('Erro ao atualizar módulo:', err);
+            setFeedback(moduleEditFeedback, err.message || 'Não foi possível atualizar o módulo.', 'danger');
+        } finally {
+            if (moduleEditSubmit) {
+                moduleEditSubmit.disabled = false;
+            }
+            if (moduleEditSpinner) {
+                moduleEditSpinner.classList.add('d-none');
+            }
+        }
+    };
+
+    if (moduleEditSubmit) {
+        moduleEditSubmit.addEventListener('click', (event) => {
+            event.preventDefault();
+            saveModuleEdits();
+        });
+    }
+
+    const deleteModule = async (moduleId) => {
+        if (!canManage) {
+            return;
+        }
+        const module = modulesById.get(String(moduleId));
+        if (!module) {
+            return;
+        }
+        if (!confirm(`Deseja realmente excluir o módulo "${module.name}"?`)) {
+            return;
+        }
+        try {
+            const response = await fetch(`/reforma-tributaria/modules/${moduleId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Erro ao excluir módulo');
+            }
+            window.location.reload();
+        } catch (err) {
+            console.error('Erro ao excluir módulo:', err);
+            alert(err.message || 'Não foi possível excluir o módulo.');
+        }
+    };
+
+    updateProgressDisplay();
+
+    if (!currentModuleId && videoGroups.length > 0) {
+        currentModuleId = String(videoGroups[0].id);
+    }
+    if (currentModuleId) {
+        selectModule(currentModuleId);
+    } else {
+        clearPlayer();
+    }
+})();
 </script>
-{% endif %}
 {% endblock %}

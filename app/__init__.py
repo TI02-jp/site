@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10 GB upload limit
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
@@ -43,10 +43,11 @@ app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_FI
 app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_INFO')
 app.config['GOOGLE_SERVICE_ACCOUNT_SUBJECT'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_SUBJECT')
 app.config['GOOGLE_MEETING_ROOM_EMAIL'] = os.getenv('GOOGLE_MEETING_ROOM_EMAIL')
-app.config['REFORMA_TRIBUTARIA_FOLDER_ID'] = os.getenv(
-    'REFORMA_TRIBUTARIA_FOLDER_ID',
-    '1DJHoZjMX88LaZQr1T_bi50oQB_BIg97a',
+app.config['REFORMA_VIDEO_STORAGE'] = os.getenv(
+    'REFORMA_VIDEO_STORAGE',
+    os.path.join(app.instance_path, 'reforma_videos'),
 )
+os.makedirs(app.config['REFORMA_VIDEO_STORAGE'], exist_ok=True)
 
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
