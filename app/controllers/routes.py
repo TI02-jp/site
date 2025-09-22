@@ -257,13 +257,37 @@ def stream_file_range(path: Path, content_type: str | None = None):
                 try:
                     if start_str:
                         byte1 = int(start_str)
+                        if byte1 < 0:
+                            raise ValueError
                     if end_str:
-                        byte2 = int(end_str)
+                        byte2_candidate = int(end_str)
+                        if byte2_candidate < 0:
+                            raise ValueError
+                        if start_str:
+                            byte2 = byte2_candidate
+                        else:
+                            # Suffix-byte-range-spec, e.g. ``bytes=-500``
+                            suffix_length = byte2_candidate
+                            if suffix_length == 0:
+                                raise ValueError
+                            if suffix_length >= file_size:
+                                byte1 = 0
+                            else:
+                                byte1 = file_size - suffix_length
+                            byte2 = file_size - 1
+                    elif start_str:
+                        # ``bytes=500-`` means from ``byte1`` to the end
+                        byte2 = file_size - 1
                 except ValueError:
                     response = current_app.response_class(status=416)
                     response.headers.add("Content-Range", f"bytes */{file_size}")
                     return response
-                status_code = 206
+                else:
+                    if byte1 > byte2:
+                        response = current_app.response_class(status=416)
+                        response.headers.add("Content-Range", f"bytes */{file_size}")
+                        return response
+                    status_code = 206
         else:
             range_header = None
 
