@@ -35,6 +35,7 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    ReformaTributariaProgress,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -77,6 +78,7 @@ from app.services.meeting_room import (
     combine_events,
     delete_meeting,
 )
+from app.services.google_drive_videos import fetch_drive_videos
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -337,9 +339,74 @@ def home():
 @app.route("/reforma-tributaria")
 @login_required
 def reforma_tributaria():
-    """Display the Reforma Tributária video hub embedded from Google Drive."""
+    """Display the Reforma Tributária video hub with progress tracking."""
 
-    return render_template("reforma_tributaria.html")
+    folder_id = current_app.config.get("REFORMA_TRIBUTARIA_FOLDER_ID")
+    videos, drive_error = fetch_drive_videos(folder_id)
+    current_video_ids = {video.id for video in videos}
+
+    progress_records = []
+    if current_video_ids:
+        progress_records = (
+            ReformaTributariaProgress.query.filter_by(user_id=current_user.id)
+            .filter(ReformaTributariaProgress.video_id.in_(list(current_video_ids)))
+            .all()
+        )
+    watched_ids = {record.video_id for record in progress_records}
+
+    watched_count = len(watched_ids)
+    total_videos = len(videos)
+    progress_percent = round((watched_count / total_videos) * 100) if total_videos else 0
+
+    return render_template(
+        "reforma_tributaria.html",
+        videos=videos,
+        drive_error=drive_error,
+        watched_ids=sorted(watched_ids),
+        watched_count=watched_count,
+        total_videos=total_videos,
+        progress_percent=progress_percent,
+    )
+
+
+@app.route("/reforma-tributaria/videos/<string:video_id>/watch", methods=["POST", "DELETE"])
+@login_required
+@csrf.exempt
+def reforma_tributaria_watch(video_id: str):
+    """Mark or unmark a Reforma Tributária video as watched for the current user."""
+
+    video_id = video_id.strip()
+    if not video_id or not re.fullmatch(r"[A-Za-z0-9_-]{10,}", video_id):
+        return jsonify({"error": "Identificador de vídeo inválido."}), 400
+
+    record = ReformaTributariaProgress.query.filter_by(
+        user_id=current_user.id, video_id=video_id
+    ).first()
+
+    if request.method == "DELETE":
+        if not record:
+            return jsonify({"status": "not_watched"}), 200
+        db.session.delete(record)
+        db.session.commit()
+        return jsonify({"status": "unwatched"}), 200
+
+    payload = request.get_json(silent=True) or {}
+    video_title = (payload.get("title") or "").strip() or None
+
+    if record:
+        record.video_title = video_title or record.video_title
+        record.watched_at = datetime.utcnow()
+    else:
+        record = ReformaTributariaProgress(
+            user_id=current_user.id,
+            video_id=video_id,
+            video_title=video_title,
+            watched_at=datetime.utcnow(),
+        )
+        db.session.add(record)
+
+    db.session.commit()
+    return jsonify({"status": "watched"}), 200
 
 
 @app.route("/cursos", methods=["GET", "POST"])

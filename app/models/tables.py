@@ -176,6 +176,34 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
+class ReformaTributariaProgress(db.Model):
+    """Stores the watch status of Reforma Tributária videos per user."""
+
+    __tablename__ = "reforma_tributaria_progress"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    video_id = db.Column(db.String(128), nullable=False)
+    video_title = db.Column(db.String(255))
+    watched_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "reforma_tributaria_progress",
+            lazy=True,
+            cascade="all, delete-orphan",
+        ),
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "video_id", name="uq_reforma_tributaria_progress"),
+    )
+
+    def __repr__(self):
+        return f"<ReformaTributariaProgress user={self.user_id} video={self.video_id}>"
+
+
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"

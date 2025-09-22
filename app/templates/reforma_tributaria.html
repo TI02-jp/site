@@ -2,32 +2,292 @@
 
 {% block title %}Reforma Tributária{% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<style>
+    .rt-video-player iframe {
+        border: 0;
+    }
+
+    .rt-video-item {
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .rt-video-item.active {
+        background-color: rgba(11, 40, 139, 0.08);
+        box-shadow: inset 2px 0 0 var(--primary);
+    }
+
+    .rt-video-item .status-icon {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .rt-video-item.is-watched .status-icon {
+        opacity: 1;
+    }
+
+    .rt-video-thumb {
+        width: 110px;
+    }
+
+    .rt-video-thumb .ratio {
+        background: #f1f3f5;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="py-4 py-md-5">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="me-3 text-primary display-6"><i class="bi bi-film"></i></div>
+            <div class="col-lg-11 col-xl-10">
+                <div class="d-flex align-items-center mb-4 flex-wrap gap-3">
+                    <div class="text-primary display-6"><i class="bi bi-film"></i></div>
                     <div>
                         <h1 class="h3 mb-1">Reforma Tributária</h1>
-                        <p class="text-muted mb-0">Assista aos materiais preparados pela equipe diretamente no portal.</p>
+                        <p class="text-muted mb-0">Assista aos materiais preparados pela equipe diretamente pelo portal e acompanhe seu progresso.</p>
                     </div>
                 </div>
-                <div class="ratio ratio-16x9 shadow-sm border rounded overflow-hidden">
-                    <iframe
-                        src="https://drive.google.com/embeddedfolderview?id=1DJHoZjMX88LaZQr1T_bi50oQB_BIg97a#grid"
-                        allow="autoplay"
-                        allowfullscreen
-                        loading="lazy"
-                        style="border:0;">
-                    </iframe>
-                </div>
-                <p class="text-muted small mt-3">
-                    Dica: clique em um dos vídeos para abrir a visualização em tela cheia dentro do portal.
-                </p>
+
+                {% if drive_error %}
+                    <div class="alert alert-warning d-flex align-items-start" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                        <div>
+                            <h2 class="h6 mb-1">Integração com o Google Drive indisponível</h2>
+                            <p class="mb-0 small">{{ drive_error }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if videos %}
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <div>
+                                    <h2 class="h6 mb-1">Seu progresso</h2>
+                                    <p class="text-muted small mb-0">
+                                        <span id="rtWatchedCount">{{ watched_count }}</span> de <span id="rtTotalCount">{{ total_videos }}</span> vídeos assistidos
+                                    </p>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary fw-semibold" id="rtProgressPercent">{{ progress_percent }}%</span>
+                            </div>
+                            <div class="progress mt-3" style="height: 6px;">
+                                <div class="progress-bar" id="rtProgressBar" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress_percent }}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% set selected_video = videos[0] %}
+                    {% set initial_watched = selected_video.id in watched_ids %}
+
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body">
+                                    <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark-subtle rt-video-player mb-3">
+                                        <iframe
+                                            id="rtVideoFrame"
+                                            src="{{ selected_video.preview_url }}"
+                                            allow="autoplay; fullscreen"
+                                            allowfullscreen
+                                            loading="lazy"
+                                            title="{{ selected_video.name }}"
+                                        ></iframe>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start">
+                                        <div>
+                                            <h2 class="h5 mb-1" id="rtVideoTitle">{{ selected_video.name }}</h2>
+                                            {% if selected_video.formatted_duration %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" id="rtVideoDuration">{{ selected_video.formatted_duration }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis d-none" id="rtVideoDuration"></span>
+                                            {% endif %}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="btn {% if initial_watched %}btn-outline-secondary{% else %}btn-success{% endif %}"
+                                            id="rtWatchToggle"
+                                            data-video-id="{{ selected_video.id }}"
+                                            aria-pressed="{{ 'true' if initial_watched else 'false' }}"
+                                        >
+                                            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="rtWatchSpinner"></span>
+                                            <i class="bi {% if initial_watched %}bi-arrow-counterclockwise{% else %}bi-check2-circle{% endif %} me-2" id="rtWatchIcon"></i>
+                                            <span id="rtWatchLabel">{% if initial_watched %}Marcar como não assistido{% else %}Marcar como assistido{% endif %}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        {% for video in videos %}
+                                            {% set watched = video.id in watched_ids %}
+                                            <button
+                                                type="button"
+                                                class="list-group-item list-group-item-action rt-video-item d-flex gap-3 align-items-center{% if loop.first %} active{% endif %}{% if watched %} is-watched{% endif %}"
+                                                data-video-id="{{ video.id }}"
+                                                data-video-title="{{ video.name }}"
+                                                data-preview-url="{{ video.preview_url }}"
+                                                data-video-duration="{{ video.formatted_duration or '' }}"
+                                            >
+                                                <div class="rt-video-thumb flex-shrink-0">
+                                                    <div class="ratio ratio-16x9 rounded overflow-hidden border">
+                                                        {% if video.thumbnail_link %}
+                                                            <img src="{{ video.thumbnail_link }}" alt="Miniatura do vídeo {{ video.name }}" class="w-100 h-100 object-fit-cover" loading="lazy">
+                                                        {% else %}
+                                                            <div class="d-flex h-100 w-100 align-items-center justify-content-center bg-light">
+                                                                <i class="bi bi-play-btn text-primary fs-3"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1 text-start">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <i class="bi bi-check-circle-fill text-success status-icon me-2"></i>
+                                                        <span class="fw-semibold text-wrap">{{ video.name }}</span>
+                                                    </div>
+                                                    {% if video.formatted_duration %}
+                                                        <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ video.formatted_duration }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body text-center py-5">
+                            <div class="display-6 text-muted mb-3"><i class="bi bi-collection-play"></i></div>
+                            <h2 class="h5 mb-2">Nenhum vídeo disponível no momento</h2>
+                            <p class="text-muted mb-0">Assim que novos conteúdos forem adicionados à pasta da Reforma Tributária, eles aparecerão automaticamente por aqui.</p>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if videos %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const videoItems = Array.from(document.querySelectorAll('.rt-video-item'));
+        const iframe = document.getElementById('rtVideoFrame');
+        const titleEl = document.getElementById('rtVideoTitle');
+        const durationBadge = document.getElementById('rtVideoDuration');
+        const toggleButton = document.getElementById('rtWatchToggle');
+        const toggleIcon = document.getElementById('rtWatchIcon');
+        const toggleLabel = document.getElementById('rtWatchLabel');
+        const toggleSpinner = document.getElementById('rtWatchSpinner');
+        const watchedSet = new Set({{ watched_ids|tojson }});
+        const totalVideos = {{ total_videos }};
+        const watchedCountEl = document.getElementById('rtWatchedCount');
+        const progressPercentEl = document.getElementById('rtProgressPercent');
+        const progressBarEl = document.getElementById('rtProgressBar');
+
+        const updateProgress = () => {
+            const watchedCount = watchedSet.size;
+            watchedCountEl.textContent = watchedCount;
+            const percent = totalVideos ? Math.round((watchedCount / totalVideos) * 100) : 0;
+            progressPercentEl.textContent = `${percent}%`;
+            progressBarEl.style.width = `${percent}%`;
+            progressBarEl.setAttribute('aria-valuenow', String(percent));
+        };
+
+        const updateButtonState = (videoId) => {
+            const isWatched = watchedSet.has(videoId);
+            toggleButton.dataset.videoId = videoId;
+            toggleButton.classList.toggle('btn-success', !isWatched);
+            toggleButton.classList.toggle('btn-outline-secondary', isWatched);
+            toggleButton.setAttribute('aria-pressed', isWatched ? 'true' : 'false');
+            toggleIcon.className = isWatched ? 'bi bi-arrow-counterclockwise me-2' : 'bi bi-check2-circle me-2';
+            toggleLabel.textContent = isWatched ? 'Marcar como não assistido' : 'Marcar como assistido';
+        };
+
+        const activateItem = (item) => {
+            videoItems.forEach((btn) => btn.classList.remove('active'));
+            item.classList.add('active');
+        };
+
+        const selectVideo = (item) => {
+            const videoId = item.dataset.videoId;
+            const previewUrl = item.dataset.previewUrl;
+            const title = item.dataset.videoTitle;
+            const duration = item.dataset.videoDuration;
+
+            iframe.src = previewUrl;
+            iframe.title = title;
+            titleEl.textContent = title;
+
+            if (duration) {
+                durationBadge.textContent = duration;
+                durationBadge.classList.remove('d-none');
+            } else {
+                durationBadge.classList.add('d-none');
+            }
+
+            activateItem(item);
+            updateButtonState(videoId);
+        };
+
+        videoItems.forEach((item) => {
+            item.addEventListener('click', () => selectVideo(item));
+        });
+
+        toggleButton.addEventListener('click', async () => {
+            const videoId = toggleButton.dataset.videoId;
+            const isWatched = watchedSet.has(videoId);
+            const payload = {
+                title: titleEl.textContent || ''
+            };
+
+            toggleButton.disabled = true;
+            toggleSpinner.classList.remove('d-none');
+
+            try {
+                const response = await fetch(`/reforma-tributaria/videos/${videoId}/watch`, {
+                    method: isWatched ? 'DELETE' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: isWatched ? undefined : JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro inesperado ao atualizar o status do vídeo.');
+                }
+
+                if (data.status === 'watched') {
+                    watchedSet.add(videoId);
+                } else {
+                    watchedSet.delete(videoId);
+                }
+
+                document.querySelectorAll(`.rt-video-item[data-video-id="${videoId}"]`).forEach((item) => {
+                    item.classList.toggle('is-watched', watchedSet.has(videoId));
+                });
+
+                updateButtonState(videoId);
+                updateProgress();
+            } catch (error) {
+                console.error(error);
+                alert('Não foi possível atualizar o status do vídeo agora. Tente novamente mais tarde.');
+            } finally {
+                toggleButton.disabled = false;
+                toggleSpinner.classList.add('d-none');
+            }
+        });
+
+        updateProgress();
+    });
+</script>
+{% endif %}
 {% endblock %}
