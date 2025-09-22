@@ -10,6 +10,8 @@ from flask import (
     jsonify,
     current_app,
     session,
+    Response,
+    send_file,
 )
 from functools import wraps
 from collections import Counter
@@ -221,8 +223,8 @@ def slugify(value: str) -> str:
     return cleaned or uuid4().hex[:8]
 
 
-def _save_uploaded_video(file_storage) -> dict[str, str | int] | None:
-    """Persist an uploaded video inside ``static/uploads/videos/assets``."""
+def _save_uploaded_video(file_storage) -> dict[str, str | int | bytes] | None:
+    """Read the uploaded video into memory so it can be stored in the database."""
 
     if not file_storage or file_storage.filename == "":
         return None
@@ -231,34 +233,23 @@ def _save_uploaded_video(file_storage) -> dict[str, str | int] | None:
         return None
 
     filename = secure_filename(file_storage.filename)
-    unique_name = f"{uuid4().hex}_{filename}"
-    upload_folder = os.path.join(
-        current_app.root_path,
-        "static",
-        "uploads",
-        "videos",
-        "assets",
-    )
-    os.makedirs(upload_folder, exist_ok=True)
-    destination = os.path.join(upload_folder, unique_name)
 
     try:
-        file_storage.save(destination)
-    except OSError as exc:
-        current_app.logger.exception("Erro ao salvar vídeo enviado: %s", exc)
+        file_storage.stream.seek(0)
+    except (AttributeError, OSError):
+        pass
+
+    data = file_storage.read()
+    if not data:
         return None
 
-    mime_type, _ = mimetypes.guess_type(destination)
-    try:
-        file_size = os.path.getsize(destination)
-    except OSError:
-        file_size = 0
+    mime_type = file_storage.mimetype or mimetypes.guess_type(filename)[0]
 
     return {
-        "relative_path": f"uploads/videos/assets/{unique_name}",
+        "data": data,
         "original_name": filename,
         "mime_type": mime_type or "application/octet-stream",
-        "file_size": file_size,
+        "file_size": len(data),
     }
 
 
@@ -273,6 +264,137 @@ def _delete_static_file(static_path: str | None) -> None:
             os.remove(absolute_path)
     except OSError:
         current_app.logger.warning("Não foi possível remover o arquivo %s", static_path)
+
+
+def _video_download_name(video: VideoAsset) -> str:
+    """Return a safe filename for downloads based on the stored metadata."""
+
+    candidate = video.original_filename or f"{slugify(video.title)}.mp4"
+    safe_name = secure_filename(candidate) or f"video-{video.id}.mp4"
+    return safe_name
+
+
+def _respond_with_binary_video(video: VideoAsset, as_attachment: bool = False) -> Response:
+    """Serve video bytes that are persisted directly in the database."""
+
+    data = video.file_data
+    if not data:
+        abort(404)
+
+    total_size = len(data)
+    mime_type = video.mime_type or "video/mp4"
+
+    if as_attachment:
+        response = Response(data, mimetype=mime_type, direct_passthrough=True)
+        response.headers["Content-Length"] = str(total_size)
+        response.headers["Content-Disposition"] = (
+            f'attachment; filename="{_video_download_name(video)}"'
+        )
+        return response
+
+    range_header = request.headers.get("Range")
+    if range_header:
+        range_match = re.match(r"bytes=(\d*)-(\d*)", range_header)
+        if range_match:
+            start_raw, end_raw = range_match.groups()
+            try:
+                start = int(start_raw) if start_raw else 0
+            except ValueError:
+                start = 0
+            try:
+                end = int(end_raw) if end_raw else total_size - 1
+            except ValueError:
+                end = total_size - 1
+            end = min(end, total_size - 1)
+            if start >= total_size:
+                return Response(
+                    status=416,
+                    headers={"Content-Range": f"bytes */{total_size}"},
+                )
+            chunk = data[start : end + 1]
+            response = Response(chunk, 206, mimetype=mime_type, direct_passthrough=True)
+            response.headers["Content-Range"] = f"bytes {start}-{end}/{total_size}"
+            response.headers["Accept-Ranges"] = "bytes"
+            response.headers["Content-Length"] = str(len(chunk))
+            return response
+
+    response = Response(data, mimetype=mime_type, direct_passthrough=True)
+    response.headers["Content-Length"] = str(total_size)
+    response.headers["Accept-Ranges"] = "bytes"
+    return response
+
+
+def _respond_with_legacy_file(video: VideoAsset, as_attachment: bool = False) -> Response:
+    """Serve legacy video files that still live on disk inside ``static``."""
+
+    if not video.file_path:
+        abort(404)
+
+    absolute_path = os.path.join(current_app.static_folder, video.file_path)
+    if not os.path.exists(absolute_path):
+        abort(404)
+
+    mime_type = video.mime_type or mimetypes.guess_type(absolute_path)[0] or "video/mp4"
+    file_size = os.path.getsize(absolute_path)
+
+    if as_attachment:
+        return send_file(
+            absolute_path,
+            mimetype=mime_type,
+            as_attachment=True,
+            download_name=_video_download_name(video),
+        )
+
+    range_header = request.headers.get("Range")
+    if range_header:
+        range_match = re.match(r"bytes=(\d*)-(\d*)", range_header)
+        if range_match:
+            start_raw, end_raw = range_match.groups()
+            try:
+                start = int(start_raw) if start_raw else 0
+            except ValueError:
+                start = 0
+            try:
+                end = int(end_raw) if end_raw else file_size - 1
+            except ValueError:
+                end = file_size - 1
+            end = min(end, file_size - 1)
+            if start >= file_size:
+                return Response(
+                    status=416,
+                    headers={"Content-Range": f"bytes */{file_size}"},
+                )
+            with open(absolute_path, "rb") as fh:
+                fh.seek(start)
+                chunk = fh.read(end - start + 1)
+            response = Response(chunk, 206, mimetype=mime_type, direct_passthrough=True)
+            response.headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+            response.headers["Accept-Ranges"] = "bytes"
+            response.headers["Content-Length"] = str(len(chunk))
+            return response
+
+    def generate():
+        with open(absolute_path, "rb") as fh:
+            while True:
+                chunk = fh.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+
+    response = Response(generate(), mimetype=mime_type, direct_passthrough=True)
+    response.headers["Content-Length"] = str(file_size)
+    response.headers["Accept-Ranges"] = "bytes"
+    return response
+
+
+def _build_video_response(video: VideoAsset, as_attachment: bool = False) -> Response:
+    """Return a streaming or download response for a stored video asset."""
+
+    if video.file_data:
+        return _respond_with_binary_video(video, as_attachment=as_attachment)
+    if video.file_path:
+        return _respond_with_legacy_file(video, as_attachment=as_attachment)
+    abort(404)
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -877,11 +999,12 @@ def save_video_asset():
                 )
                 return redirect(url_for("videos_manage"))
             _delete_static_file(video.file_path)
-            video.file_path = saved_video["relative_path"]
+            video.file_data = saved_video["data"]
+            video.file_path = None
             video.original_filename = saved_video["original_name"]
             video.mime_type = saved_video["mime_type"]
             video.file_size = saved_video["file_size"]
-        elif not video.file_path:
+        elif not (video.file_data or video.file_path):
             db.session.rollback()
             flash("Envie um arquivo de vídeo para salvar o conteúdo.", "danger")
             return redirect(url_for("videos_manage"))
@@ -895,6 +1018,24 @@ def save_video_asset():
 
     _report_form_errors(form)
     return redirect(url_for("videos_manage"))
+
+
+@app.route("/videos/conteudos/<int:video_id>/arquivo")
+@login_required
+def stream_video_asset(video_id: int):
+    """Return a streaming response so the video can be watched online."""
+
+    video = VideoAsset.query.get_or_404(video_id)
+    return _build_video_response(video, as_attachment=False)
+
+
+@app.route("/videos/conteudos/<int:video_id>/download")
+@login_required
+def download_video_asset(video_id: int):
+    """Allow users to download the binary video asset."""
+
+    video = VideoAsset.query.get_or_404(video_id)
+    return _build_video_response(video, as_attachment=True)
 
 
 @app.route("/videos/conteudos/<int:video_id>/excluir", methods=["POST"])

@@ -120,15 +120,15 @@
                             Campo de upload indisponível no momento. Atualize a página ou tente novamente mais tarde.
                         </div>
                         {% endif %}
-                        {% if editing_video and editing_video.file_path %}
+                        {% if editing_video and editing_video.has_file %}
                         <div class="mb-3">
                             <label class="form-label">Arquivo atual</label>
                             <div class="small">
-                                <a href="{{ url_for('static', filename=editing_video.file_path) }}" target="_blank" rel="noopener">
+                                <a href="{{ url_for('download_video_asset', video_id=editing_video.id) }}" target="_blank" rel="noopener">
                                     {{ editing_video.original_filename or 'Vídeo enviado' }}
                                 </a>
-                                {% if editing_video.file_size %}
-                                <span class="text-muted">({{ (editing_video.file_size / (1024 * 1024))|round(2) }} MB)</span>
+                                {% if editing_video.size_bytes %}
+                                <span class="text-muted">({{ (editing_video.size_bytes / (1024 * 1024))|round(2) }} MB)</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -213,16 +213,16 @@
                                                         {% if video.description %}
                                                         <div class="text-muted">{{ video.description }}</div>
                                                         {% endif %}
-                                                        {% if video.file_path %}
+                                                        {% if video.has_file %}
                                                         <div class="mt-2">
                                                             <video controls preload="metadata" class="video-admin-preview">
-                                                                <source src="{{ url_for('static', filename=video.file_path) }}" type="{{ video.mime_type or 'video/mp4' }}">
+                                                                <source src="{{ url_for('stream_video_asset', video_id=video.id) }}" type="{{ video.mime_type or 'video/mp4' }}">
                                                                 Seu navegador não suporta a reprodução de vídeo.
                                                             </video>
                                                             <div class="text-muted small mt-1">
                                                                 {{ video.original_filename or 'Vídeo enviado' }}
-                                                                {% if video.file_size %}
-                                                                · {{ (video.file_size / (1024 * 1024))|round(2) }} MB
+                                                                {% if video.size_bytes %}
+                                                                · {{ (video.size_bytes / (1024 * 1024))|round(2) }} MB
                                                                 {% endif %}
                                                             </div>
                                                         </div>

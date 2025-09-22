@@ -108,17 +108,17 @@
                                 {% if video.description %}
                                 <div class="text-muted small mb-2">{{ video.description }}</div>
                                 {% endif %}
-                                {% if video.file_path %}
+                                {% if video.has_file %}
                                 <div class="video-card__player">
                                     <video controls preload="metadata">
-                                        <source src="{{ url_for('static', filename=video.file_path) }}" type="{{ video.mime_type or 'video/mp4' }}">
+                                        <source src="{{ url_for('stream_video_asset', video_id=video.id) }}" type="{{ video.mime_type or 'video/mp4' }}">
                                         Seu navegador não suporta a reprodução de vídeo.
                                     </video>
                                 </div>
                                 <div class="text-muted small mt-1">
                                     {{ video.original_filename or 'Vídeo disponível' }}
-                                    {% if video.file_size %}
-                                    · {{ (video.file_size / (1024 * 1024))|round(2) }} MB
+                                    {% if video.size_bytes %}
+                                    · {{ (video.size_bytes / (1024 * 1024))|round(2) }} MB
                                     {% endif %}
                                 </div>
                                 {% else %}
@@ -129,8 +129,8 @@
                                 {% if video.duration_minutes %}
                                 <span class="badge bg-dark-subtle text-dark">{{ video.duration_minutes }} min</span>
                                 {% endif %}
-                                {% if video.file_path %}
-                                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('static', filename=video.file_path) }}" download>
+                                {% if video.has_file %}
+                                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('download_video_asset', video_id=video.id) }}">
                                     <i class="bi bi-download me-1"></i>
                                     Baixar
                                 </a>

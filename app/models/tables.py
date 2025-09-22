@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 
 from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
+import sqlalchemy as sa
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -275,6 +277,10 @@ class VideoAsset(db.Model):
     original_filename = db.Column(db.String(255))
     mime_type = db.Column(db.String(120))
     file_size = db.Column(db.BigInteger)
+    file_data = db.Column(
+        sa.LargeBinary().with_variant(mysql.LONGBLOB(), "mysql"),
+        nullable=True,
+    )
     duration_minutes = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
@@ -288,6 +294,25 @@ class VideoAsset(db.Model):
 
     def __repr__(self) -> str:
         return f"<VideoAsset {self.title} (module={self.module_id})>"
+
+    @property
+    def has_file(self) -> bool:
+        """Return ``True`` when the asset has binary data or a legacy file path."""
+
+        return bool(self.file_data) or bool(self.file_path)
+
+    @property
+    def size_bytes(self) -> int:
+        """Return the stored file size in bytes, calculating it on demand if needed."""
+
+        if self.file_size:
+            return int(self.file_size)
+        if self.file_data:
+            try:
+                return len(self.file_data)
+            except TypeError:
+                return len(bytes(self.file_data))
+        return 0
 
 
 class Session(db.Model):
