@@ -61,7 +61,10 @@ from app.forms import (
     VideoFolderForm,
     VideoModuleForm,
     VideoAssetForm,
+    VIDEO_FILE_EXTENSIONS,
 )
+from flask_wtf.file import FileField, FileAllowed
+from wtforms.validators import Optional
 import os, json, re, secrets, unicodedata, mimetypes
 import requests
 from werkzeug.utils import secure_filename
@@ -603,9 +606,39 @@ def _populate_video_forms(
         module_form.tags.choices = tag_choices
 
     if video_form is not None:
+        _ensure_video_upload_field(video_form)
         video_form.module_id.choices = module_choices
 
     return folder_choices, tag_choices, module_choices
+
+
+def _ensure_video_upload_field(video_form: VideoAssetForm) -> None:
+    """Guarantee the long-form video form exposes a file upload field.
+
+    Some deployments reported ``video_form.video_file`` being missing at
+    runtime, which makes the management template crash while also preventing
+    uploads. To avoid this hard failure we recreate the field dynamically when
+    it is absent so both the view layer and the POST handler can operate
+    normally.
+    """
+
+    if hasattr(video_form, "video_file") and video_form.video_file is not None:
+        return
+
+    file_field = FileField(
+        "Arquivo do vídeo",
+        validators=[
+            Optional(),
+            FileAllowed(
+                VIDEO_FILE_EXTENSIONS,
+                "Formatos permitidos: "
+                + ", ".join(ext.upper() for ext in VIDEO_FILE_EXTENSIONS),
+            ),
+        ],
+    ).bind(form=video_form, name="video_file")
+
+    video_form._fields["video_file"] = file_field
+    setattr(video_form, "video_file", file_field)
 
 
 @app.route("/videos/gerenciar")
@@ -802,6 +835,7 @@ def save_video_asset():
     """Create or update a long-form video entry."""
 
     form = VideoAssetForm()
+    _ensure_video_upload_field(form)
     _, _, module_choices = _populate_video_forms(video_form=form)
 
     if not module_choices:

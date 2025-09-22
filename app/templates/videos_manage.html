@@ -108,11 +108,18 @@
                             {{ video_form.description.label(class="form-label") }}
                             {{ video_form.description(class="form-control", placeholder="Resumo do conteúdo") }}
                         </div>
+                        {% if video_form.video_file is defined and video_form.video_file %}
                         <div class="mb-3">
                             {{ video_form.video_file.label(class="form-label") }}
                             {{ video_form.video_file(class="form-control") }}
                             <div class="form-text">Formatos aceitos: MP4, M4V, MOV, MKV, AVI, WMV e WEBM. Envie um novo arquivo para substituir o atual.</div>
                         </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Campo de upload indisponível no momento. Atualize a página ou tente novamente mais tarde.
+                        </div>
+                        {% endif %}
                         {% if editing_video and editing_video.file_path %}
                         <div class="mb-3">
                             <label class="form-label">Arquivo atual</label>
