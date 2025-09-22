@@ -26,6 +26,12 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'reforma_tributaria' %} active{% endif %}" href="{{ url_for('reforma_tributaria') }}">
+                <i class="bi bi-film"></i>
+                REFORMA TRIBUTÁRIA
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'sala_reunioes' %} active{% endif %}" href="{{ url_for('sala_reunioes') }}">
                 <i class="bi bi-calendar-event"></i>
                 SALA DE REUNIÕES

@@ -334,6 +334,14 @@ def home():
     return render_template("home.html")
 
 
+@app.route("/reforma-tributaria")
+@login_required
+def reforma_tributaria():
+    """Display the Reforma Tributária video hub embedded from Google Drive."""
+
+    return render_template("reforma_tributaria.html")
+
+
 @app.route("/cursos", methods=["GET", "POST"])
 @login_required
 def cursos():
