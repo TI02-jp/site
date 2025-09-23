@@ -363,6 +363,127 @@ class ReuniaoParticipante(db.Model):
     usuario = db.relationship('User')
 
 
+class VideoFolder(db.Model):
+    """Logical grouping of Google Drive videos exposed inside the portal."""
+
+    __tablename__ = "video_folders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.String(255))
+    drive_folder_id = db.Column(db.String(255), unique=True, nullable=False)
+    created_by_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_by = db.relationship(
+        "User", backref=db.backref("created_video_folders", lazy=True)
+    )
+
+    permissions = db.relationship(
+        "VideoPermission",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    videos = db.relationship(
+        "Video",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    def __repr__(self):
+        return f"<VideoFolder {self.name} ({self.drive_folder_id})>"
+
+
+class Video(db.Model):
+    """Video file metadata stored for fast rendering inside the application."""
+
+    __tablename__ = "videos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    folder_id = db.Column(
+        db.Integer,
+        db.ForeignKey("video_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    drive_file_id = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    mime_type = db.Column(db.String(120))
+    size_bytes = db.Column(db.BigInteger)
+    duration_ms = db.Column(db.BigInteger)
+    thumbnail_url = db.Column(db.String(500))
+    drive_modified_time = db.Column(db.DateTime)
+    last_synced_at = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    folder = db.relationship("VideoFolder", back_populates="videos")
+
+    __table_args__ = (
+        db.Index("ix_videos_folder_id", "folder_id"),
+        db.Index("ix_videos_drive_file_id", "drive_file_id"),
+    )
+
+    def __repr__(self):
+        return f"<Video {self.name} ({self.drive_file_id})>"
+
+
+class VideoPermission(db.Model):
+    """Access control list entry linking folders to users or sectors."""
+
+    __tablename__ = "video_permissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    folder_id = db.Column(
+        db.Integer,
+        db.ForeignKey("video_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    sector_id = db.Column(
+        db.Integer,
+        db.ForeignKey("setores.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    can_manage = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    folder = db.relationship("VideoFolder", back_populates="permissions")
+    user = db.relationship("User", backref=db.backref("video_permissions", lazy="dynamic"))
+    sector = db.relationship("Setor")
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "NOT (user_id IS NULL AND sector_id IS NULL)",
+            name="ck_video_permissions_target",
+        ),
+        db.UniqueConstraint("folder_id", "user_id", name="uq_video_permissions_user"),
+        db.UniqueConstraint("folder_id", "sector_id", name="uq_video_permissions_sector"),
+        db.Index("ix_video_permissions_folder_id", "folder_id"),
+        db.Index("ix_video_permissions_user_id", "user_id"),
+        db.Index("ix_video_permissions_sector_id", "sector_id"),
+    )
+
+    def __repr__(self):
+        target = self.user or self.sector
+        return f"<VideoPermission folder={self.folder_id} target={target}>"
+
+
 class TaskStatus(Enum):
     """Enumeration of possible task states."""
     PENDING = "pending"

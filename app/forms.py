@@ -361,3 +361,102 @@ class TaskForm(FlaskForm):
     due_date = DateField("Prazo", format="%Y-%m-%d", validators=[Optional()])
     parent_id = HiddenField()
     submit = SubmitField("Salvar")
+
+
+class VideoFolderForm(FlaskForm):
+    """Formulário para cadastrar uma nova pasta de vídeos."""
+
+    name = StringField(
+        "Nome da Pasta",
+        validators=[DataRequired(), Length(max=120)],
+    )
+    description = TextAreaField(
+        "Descrição (opcional)", validators=[Optional(), Length(max=255)], render_kw={"rows": 2}
+    )
+    drive_url = StringField(
+        "Link da Pasta no Google Drive",
+        validators=[DataRequired(), Length(max=255)],
+        render_kw={"placeholder": "https://drive.google.com/..."},
+    )
+    user_ids = SelectMultipleField(
+        "Usuários com acesso",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    sector_ids = SelectMultipleField(
+        "Setores com acesso",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    manager_user_ids = SelectMultipleField(
+        "Usuários gestores",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    submit = SubmitField("Criar pasta")
+
+    def validate(self, extra_validators=None):  # type: ignore[override]
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        if not self.user_ids.data and not self.sector_ids.data:
+            message = "Selecione ao menos um usuário ou setor com acesso."
+            self.user_ids.errors.append(message)
+            self.sector_ids.errors.append(message)
+            return False
+        invalid_managers = set(self.manager_user_ids.data) - set(self.user_ids.data)
+        if invalid_managers:
+            self.manager_user_ids.errors.append(
+                "Usuários gestores precisam estar na lista de acesso."
+            )
+            return False
+        return True
+
+
+class VideoFolderPermissionForm(FlaskForm):
+    """Formulário para atualização das permissões de uma pasta de vídeos."""
+
+    folder_id = HiddenField(validators=[DataRequired()])
+    user_ids = SelectMultipleField(
+        "Usuários com acesso",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    sector_ids = SelectMultipleField(
+        "Setores com acesso",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    manager_user_ids = SelectMultipleField(
+        "Usuários gestores",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    submit = SubmitField("Salvar permissões")
+
+    def validate(self, extra_validators=None):  # type: ignore[override]
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        if not self.user_ids.data and not self.sector_ids.data:
+            message = "Selecione ao menos um usuário ou setor com acesso."
+            self.user_ids.errors.append(message)
+            self.sector_ids.errors.append(message)
+            return False
+        invalid_managers = set(self.manager_user_ids.data) - set(self.user_ids.data)
+        if invalid_managers:
+            self.manager_user_ids.errors.append(
+                "Usuários gestores precisam estar na lista de acesso."
+            )
+            return False
+        return True

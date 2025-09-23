@@ -33,6 +33,12 @@
                 SALA DE REUNIÕES
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint in ['videos', 'video_stream'] %} active{% endif %}" href="{{ url_for('videos') }}">
+                <i class="bi bi-collection-play"></i>
+                VÍDEOS
+            </a>
+        </li>
         {% if user_has_tag('Gestão') %}
         <li class="nav-item">
             <a class="nav-link" href="#" onclick="return false;">

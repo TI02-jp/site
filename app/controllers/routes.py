@@ -10,6 +10,7 @@ from flask import (
     jsonify,
     current_app,
     session,
+    send_file,
 )
 from functools import wraps
 from collections import Counter
@@ -35,6 +36,9 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    VideoFolder,
+    Video,
+    VideoPermission,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -55,6 +59,8 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    VideoFolderForm,
+    VideoFolderPermissionForm,
 )
 import os, json, re, secrets
 import requests
@@ -77,11 +83,20 @@ from app.services.meeting_room import (
     combine_events,
     delete_meeting,
 )
+from app.services.google_drive_videos import (
+    GoogleDriveVideoError,
+    coerce_int,
+    download_drive_file,
+    ensure_drive_folder,
+    extract_drive_folder_id,
+    list_drive_videos,
+    parse_google_datetime,
+)
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Iterable
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -122,6 +137,197 @@ ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
         "icon": "bi bi-box-arrow-up-right",
     },
 ]
+
+
+def _is_video_admin(user: User) -> bool:
+    """Return True when ``user`` can fully administrate the video library."""
+
+    return bool(getattr(user, "is_master", False) or user.role == "admin")
+
+
+def _resolve_user_sector_ids(user: User) -> list[int]:
+    """Return ``Setor`` IDs inferred from the tags assigned to ``user``."""
+
+    if not user.tags:
+        return []
+    tag_names = {tag.nome.lower() for tag in user.tags if tag.nome}
+    if not tag_names:
+        return []
+    setores = (
+        Setor.query.filter(sa.func.lower(Setor.nome).in_(tag_names)).all()
+    )
+    return [setor.id for setor in setores]
+
+
+def _user_accessible_folders(user: User):
+    """Return a query with the folders that ``user`` can see."""
+
+    base_query = VideoFolder.query.filter(VideoFolder.is_active.is_(True))
+    if _is_video_admin(user):
+        return base_query.order_by(VideoFolder.name.asc())
+    sector_ids = _resolve_user_sector_ids(user)
+    criteria: list = [VideoPermission.user_id == user.id]
+    if sector_ids:
+        criteria.append(VideoPermission.sector_id.in_(sector_ids))
+    return (
+        base_query.join(VideoPermission)
+        .filter(sa.or_(*criteria))
+        .distinct()
+        .order_by(VideoFolder.name.asc())
+    )
+
+
+def _user_can_view_folder(user: User, folder: VideoFolder) -> bool:
+    """Return True when ``user`` has at least viewer access to ``folder``."""
+
+    if _is_video_admin(user):
+        return True
+    if not folder.is_active:
+        return False
+    sector_ids = _resolve_user_sector_ids(user)
+    filters = [VideoPermission.user_id == user.id]
+    if sector_ids:
+        filters.append(VideoPermission.sector_id.in_(sector_ids))
+    return (
+        VideoPermission.query.filter_by(folder_id=folder.id)
+        .filter(sa.or_(*filters))
+        .count()
+        > 0
+    )
+
+
+def _user_can_manage_folder(user: User, folder: VideoFolder) -> bool:
+    """Return True when ``user`` can update permissions for ``folder``."""
+
+    if _is_video_admin(user):
+        return True
+    sector_ids = _resolve_user_sector_ids(user)
+    filters = [VideoPermission.user_id == user.id]
+    if sector_ids:
+        filters.append(VideoPermission.sector_id.in_(sector_ids))
+    return (
+        VideoPermission.query.filter_by(folder_id=folder.id, can_manage=True)
+        .filter(sa.or_(*filters))
+        .count()
+        > 0
+    )
+
+
+def _apply_folder_permissions(
+    folder: VideoFolder,
+    user_ids: Iterable[int],
+    sector_ids: Iterable[int],
+    manager_user_ids: Iterable[int],
+) -> None:
+    """Synchronise ACL entries for ``folder`` with submitted data."""
+
+    existing: dict[tuple[int | None, int | None], VideoPermission] = {
+        (perm.user_id, perm.sector_id): perm for perm in folder.permissions
+    }
+    manager_set = set(manager_user_ids)
+    desired_targets: set[tuple[int | None, int | None]] = set()
+
+    for user_id in user_ids:
+        key = (user_id, None)
+        perm = existing.get(key)
+        if not perm:
+            perm = VideoPermission(folder=folder, user_id=user_id)
+            db.session.add(perm)
+        perm.can_manage = user_id in manager_set
+        desired_targets.add(key)
+
+    for sector_id in sector_ids:
+        key = (None, sector_id)
+        perm = existing.get(key)
+        if not perm:
+            perm = VideoPermission(folder=folder, sector_id=sector_id)
+            db.session.add(perm)
+        perm.can_manage = False
+        desired_targets.add(key)
+
+    for key, perm in existing.items():
+        if key not in desired_targets:
+            db.session.delete(perm)
+
+
+def _populate_video_folder_form_choices(form) -> None:
+    """Populate ``SelectMultipleField`` choices for video related forms."""
+
+    users = User.query.order_by(User.name.asc()).all()
+    user_choices = [(user.id, f"{user.name} ({user.username})") for user in users]
+    setores = Setor.query.order_by(Setor.nome.asc()).all()
+    sector_choices = [(setor.id, setor.nome) for setor in setores]
+    if hasattr(form, "user_ids"):
+        form.user_ids.choices = user_choices
+    if hasattr(form, "manager_user_ids"):
+        form.manager_user_ids.choices = user_choices
+    if hasattr(form, "sector_ids"):
+        form.sector_ids.choices = sector_choices
+
+
+def _sync_folder_videos(folder: VideoFolder) -> tuple[list[Video], str | None]:
+    """Refresh cached metadata for ``folder`` and return visible videos."""
+
+    try:
+        payloads = list_drive_videos(folder.drive_folder_id)
+    except GoogleDriveVideoError as exc:
+        current_app.logger.warning(
+            "Falha ao sincronizar pasta de vídeos %s: %s", folder.id, exc
+        )
+        db.session.rollback()
+        videos = (
+            Video.query.filter_by(folder_id=folder.id, is_active=True)
+            .order_by(Video.name.asc())
+            .all()
+        )
+        return videos, str(exc)
+
+    existing = {video.drive_file_id: video for video in folder.videos}
+    seen: set[str] = set()
+
+    try:
+        for payload in payloads:
+            file_id = payload.get("id")
+            if not file_id:
+                continue
+            seen.add(file_id)
+            video = existing.get(file_id)
+            if not video:
+                video = Video(
+                    folder=folder,
+                    drive_file_id=file_id,
+                    name=payload.get("name") or file_id,
+                )
+                db.session.add(video)
+            video.name = payload.get("name") or video.name
+            description = payload.get("description")
+            video.description = sanitize_html(description) if description else None
+            video.mime_type = payload.get("mimeType")
+            video.thumbnail_url = payload.get("thumbnailLink")
+            video.size_bytes = coerce_int(payload.get("size"))
+            metadata = payload.get("videoMediaMetadata") or {}
+            video.duration_ms = coerce_int(metadata.get("durationMillis"))
+            video.drive_modified_time = parse_google_datetime(
+                payload.get("modifiedTime")
+            )
+            video.last_synced_at = datetime.utcnow()
+            video.is_active = True
+
+        for file_id, video in existing.items():
+            if file_id not in seen:
+                video.is_active = False
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    videos = (
+        Video.query.filter_by(folder_id=folder.id, is_active=True)
+        .order_by(Video.name.asc())
+        .all()
+    )
+    return videos, None
 
 
 def build_google_flow(state: str | None = None) -> Flow:
@@ -441,6 +647,200 @@ def cursos():
         form=form,
         editing_course_id=course_id_raw,
     )
+
+
+@app.route("/videos", methods=["GET", "POST"])
+@login_required
+def videos():
+    """Render the internal video library with Drive-backed folders."""
+
+    can_create = _is_video_admin(current_user)
+    creation_form = VideoFolderForm(prefix="create")
+    permission_form = VideoFolderPermissionForm(prefix="perm")
+
+    _populate_video_folder_form_choices(creation_form)
+    _populate_video_folder_form_choices(permission_form)
+
+    selected_folder_id = request.args.get("folder_id", type=int)
+    drive_sync_error: str | None = None
+
+    if request.method == "POST":
+        form_type = request.form.get("form_type")
+        if form_type == "create_folder":
+            if not can_create:
+                abort(403)
+            if creation_form.validate_on_submit():
+                try:
+                    drive_folder_id = extract_drive_folder_id(creation_form.drive_url.data)
+                    ensure_drive_folder(drive_folder_id)
+                except GoogleDriveVideoError as exc:
+                    creation_form.drive_url.errors.append(str(exc))
+                else:
+                    existing = VideoFolder.query.filter_by(
+                        drive_folder_id=drive_folder_id
+                    ).first()
+                    if existing:
+                        creation_form.drive_url.errors.append(
+                            "Já existe uma pasta cadastrada com este link do Google Drive."
+                        )
+                    else:
+                        folder = VideoFolder(
+                            name=creation_form.name.data.strip(),
+                            description=(
+                                sanitize_html(creation_form.description.data)
+                                if creation_form.description.data
+                                else None
+                            ),
+                            drive_folder_id=drive_folder_id,
+                            created_by=current_user,
+                        )
+                        try:
+                            db.session.add(folder)
+                            db.session.flush()
+                            _apply_folder_permissions(
+                                folder,
+                                creation_form.user_ids.data,
+                                creation_form.sector_ids.data,
+                                creation_form.manager_user_ids.data,
+                            )
+                            db.session.commit()
+                        except Exception:
+                            db.session.rollback()
+                            current_app.logger.exception(
+                                "Erro ao criar pasta de vídeos no banco de dados."
+                            )
+                            flash(
+                                "Não foi possível criar a pasta. Tente novamente em instantes.",
+                                "danger",
+                            )
+                        else:
+                            flash("Pasta criada com sucesso!", "success")
+                            return redirect(url_for("videos", folder_id=folder.id))
+        elif form_type == "update_permissions":
+            target_id_raw = permission_form.folder_id.data
+            try:
+                target_id = int(target_id_raw)
+            except (TypeError, ValueError):
+                target_id = None
+            if not target_id:
+                abort(400)
+            folder = VideoFolder.query.get_or_404(target_id)
+            if not _user_can_manage_folder(current_user, folder):
+                abort(403)
+            selected_folder_id = folder.id
+            if permission_form.validate_on_submit():
+                try:
+                    _apply_folder_permissions(
+                        folder,
+                        permission_form.user_ids.data,
+                        permission_form.sector_ids.data,
+                        permission_form.manager_user_ids.data,
+                    )
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    current_app.logger.exception(
+                        "Erro ao atualizar permissões da pasta de vídeos %s", folder.id
+                    )
+                    flash(
+                        "Não foi possível atualizar as permissões. Tente novamente.",
+                        "danger",
+                    )
+                else:
+                    flash("Permissões atualizadas com sucesso!", "success")
+                    return redirect(url_for("videos", folder_id=folder.id))
+            else:
+                flash(
+                    "Não foi possível atualizar as permissões. Verifique os campos destacados.",
+                    "danger",
+                )
+        else:
+            abort(400)
+
+    folders = _user_accessible_folders(current_user).all()
+    folder_lookup = {folder.id: folder for folder in folders}
+    active_folder: VideoFolder | None = None
+
+    if selected_folder_id:
+        active_folder = VideoFolder.query.get_or_404(selected_folder_id)
+        if not _user_can_view_folder(current_user, active_folder):
+            abort(403)
+        if active_folder.id not in folder_lookup:
+            folders.append(active_folder)
+            folders.sort(key=lambda item: item.name.lower())
+    elif folders:
+        active_folder = folders[0]
+        selected_folder_id = active_folder.id
+
+    videos_list: list[Video] = []
+    if active_folder:
+        videos_list, drive_sync_error = _sync_folder_videos(active_folder)
+
+    can_manage_active = bool(active_folder and _user_can_manage_folder(current_user, active_folder))
+    if active_folder and can_manage_active and not permission_form.is_submitted():
+        permission_form.folder_id.data = str(active_folder.id)
+        permission_form.user_ids.data = [
+            perm.user_id for perm in active_folder.permissions if perm.user_id
+        ]
+        permission_form.sector_ids.data = [
+            perm.sector_id for perm in active_folder.permissions if perm.sector_id
+        ]
+        permission_form.manager_user_ids.data = [
+            perm.user_id
+            for perm in active_folder.permissions
+            if perm.user_id and perm.can_manage
+        ]
+
+    if not can_manage_active:
+        permission_form = None
+
+    return render_template(
+        "videos.html",
+        folders=folders,
+        active_folder=active_folder,
+        videos=videos_list,
+        creation_form=creation_form if can_create else None,
+        permission_form=permission_form,
+        can_create=can_create,
+        can_manage_active=can_manage_active,
+        drive_sync_error=drive_sync_error,
+    )
+
+
+@app.route("/videos/<int:video_id>/stream")
+@login_required
+def video_stream(video_id: int):
+    """Stream a Google Drive hosted video through the application."""
+
+    video = Video.query.get_or_404(video_id)
+    if not _user_can_view_folder(current_user, video.folder):
+        abort(403)
+    try:
+        payload = download_drive_file(video.drive_file_id)
+    except GoogleDriveVideoError as exc:
+        current_app.logger.error(
+            "Falha ao transmitir vídeo %s (folder %s): %s",
+            video_id,
+            video.folder_id,
+            exc,
+        )
+        abort(503, description="Não foi possível carregar o vídeo solicitado.")
+
+    filename = secure_filename(video.name) or f"video-{video.id}"
+    if "." not in filename and video.mime_type:
+        extension = video.mime_type.split("/")[-1]
+        filename = f"{filename}.{extension}"
+
+    response = send_file(
+        payload,
+        mimetype=video.mime_type or "video/mp4",
+        as_attachment=False,
+        download_name=filename,
+        conditional=False,
+    )
+    response.headers["Cache-Control"] = "private, max-age=0, no-store"
+    response.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
 
 
 @app.route("/acessos")
