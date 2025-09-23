@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2 GB upload limit
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
