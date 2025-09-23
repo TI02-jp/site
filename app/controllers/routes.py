@@ -339,54 +339,7 @@ def home():
 def videos():
     """Display a curated collection of internal video resources."""
 
-    featured_videos = [
-        {
-            "title": "Boas-vindas ao Portal JP",
-            "description": "Um tour rápido pelas principais áreas do portal corporativo e como tirar o melhor proveito delas.",
-            "url": "https://www.youtube.com/watch?v=5qap5aO4i9A",
-            "duration": "4 min",
-            "category": "Onboarding",
-        },
-        {
-            "title": "Boas práticas nas consultorias",
-            "description": "Orientações da diretoria sobre como conduzir consultorias com foco em relacionamento e resultado.",
-            "url": "https://www.youtube.com/watch?v=oUFJJNQGwhk",
-            "duration": "7 min",
-            "category": "Relacionamento",
-        },
-        {
-            "title": "Organizando a rotina com o Mural",
-            "description": "Aprenda a acompanhar as demandas do seu setor e a atualizar o mural de forma colaborativa.",
-            "url": "https://www.youtube.com/watch?v=lTRiuFIWV54",
-            "duration": "5 min",
-            "category": "Produtividade",
-        },
-    ]
-
-    learning_paths = [
-        {
-            "title": "Integração de novos colaboradores",
-            "items": [
-                "Visão geral do portal e acessos essenciais",
-                "Como solicitar apoio da diretoria e pares",
-                "Checklist das primeiras semanas",
-            ],
-        },
-        {
-            "title": "Excelência no atendimento",
-            "items": [
-                "Uso das particularidades para personalização",
-                "Dinâmica de reuniões e follow-up",
-                "Mensuração de satisfação dos clientes",
-            ],
-        },
-    ]
-
-    return render_template(
-        "videos.html",
-        featured_videos=featured_videos,
-        learning_paths=learning_paths,
-    )
+    return render_template("videos.html")
 
 
 @app.route("/cursos", methods=["GET", "POST"])
