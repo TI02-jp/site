@@ -299,7 +299,24 @@ class VideoAsset(db.Model):
     def has_file(self) -> bool:
         """Return ``True`` when the asset has binary data or a legacy file path."""
 
-        return bool(self.file_data) or bool(self.file_path)
+        if self.file_data is not None:
+            try:
+                return len(self.file_data) > 0
+            except TypeError:
+                # Some drivers return ``memoryview`` objects; coerce to bytes
+                # before checking their length to avoid false negatives.
+                return len(bytes(self.file_data)) > 0
+
+        if self.file_path:
+            return True
+
+        if self.file_size:
+            try:
+                return int(self.file_size) > 0
+            except (TypeError, ValueError):
+                return False
+
+        return False
 
     @property
     def size_bytes(self) -> int:
