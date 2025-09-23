@@ -19,12 +19,14 @@
                 ACESSOS
             </a>
         </li>
+        {% if current_user.role == 'admin' %}
         <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'cursos' %} active{% endif %}" href="{{ url_for('cursos') }}">
                 <i class="bi bi-mortarboard"></i>
                 CURSOS
             </a>
         </li>
+        {% endif %}
         <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'sala_reunioes' %} active{% endif %}" href="{{ url_for('sala_reunioes') }}">
                 <i class="bi bi-calendar-event"></i>
