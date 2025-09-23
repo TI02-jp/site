@@ -124,6 +124,145 @@ ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
 ]
 
 
+VIDEO_LIBRARY: list[dict[str, Any]] = [
+    {
+        "id": "onboarding-boas-vindas",
+        "title": "Boas-vindas e visão geral do portal",
+        "description": (
+            "Conheça a estrutura do portal interno, como navegar pelos principais "
+            "recursos e onde encontrar materiais essenciais para o seu dia a dia."
+        ),
+        "category": "Onboarding",
+        "duration": "12 minutos",
+        "audience": "Recomendado para todos os colaboradores.",
+        "allowed_roles": ["user", "admin"],
+        "allowed_tags": [],
+        "lessons": [
+            {
+                "id": "onboarding-introducao",
+                "title": "Como navegar pelo portal",
+                "description": (
+                    "Veja um passo a passo rápido de como acessar os menus, localizar "
+                    "documentos e acompanhar suas tarefas prioritárias."
+                ),
+                "duration": "05:12",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+            {
+                "id": "onboarding-personalizacao",
+                "title": "Personalizando sua experiência",
+                "description": (
+                    "Aprenda a ajustar notificações, favoritos e atalhos para deixar o "
+                    "portal alinhado às suas necessidades."
+                ),
+                "duration": "06:48",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+        ],
+    },
+    {
+        "id": "financeiro-relatorios",
+        "title": "Financeiro - Relatórios estratégicos",
+        "description": (
+            "Mergulhe nos indicadores financeiros críticos, aprenda a configurar "
+            "dashboards e gerar relatórios automatizados para a diretoria."
+        ),
+        "category": "Financeiro",
+        "duration": "18 minutos",
+        "audience": "Disponível para integrantes da trilha Financeiro.",
+        "allowed_roles": ["user", "admin"],
+        "allowed_tags": ["Financeiro"],
+        "lessons": [
+            {
+                "id": "financeiro-configuracao",
+                "title": "Configurações iniciais",
+                "description": (
+                    "Como parametrizar os relatórios, definir filtros e compartilhar "
+                    "a visão com os responsáveis de cada célula."
+                ),
+                "duration": "08:10",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+            {
+                "id": "financeiro-aprofundando",
+                "title": "Análises avançadas",
+                "description": (
+                    "Demonstração prática de cruzamento de dados, criação de alertas e "
+                    "acompanhamento semanal de indicadores."
+                ),
+                "duration": "09:45",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+        ],
+    },
+    {
+        "id": "lideranca-feedback",
+        "title": "Liderança - Feedbacks estratégicos",
+        "description": (
+            "Conteúdo exclusivo para líderes com orientações sobre cadência de "
+            "feedbacks, comunicação empática e planos de desenvolvimento."
+        ),
+        "category": "Liderança",
+        "duration": "22 minutos",
+        "audience": "Disponível apenas para contas administrativas.",
+        "allowed_roles": ["admin"],
+        "allowed_tags": [],
+        "lessons": [
+            {
+                "id": "lideranca-rituais",
+                "title": "Rituais de acompanhamento",
+                "description": (
+                    "Estruture reuniões de acompanhamento semanais e acompanhe a "
+                    "evolução das entregas da equipe."
+                ),
+                "duration": "10:05",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+            {
+                "id": "lideranca-planos",
+                "title": "Planos de desenvolvimento",
+                "description": (
+                    "Como mapear competências-chave, criar planos de ação e registrar "
+                    "o histórico de evolução de cada liderado."
+                ),
+                "duration": "11:55",
+                "sources": [
+                    {
+                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                        "type": "video/mp4",
+                    }
+                ],
+            },
+        ],
+    },
+]
+
+
 def build_google_flow(state: str | None = None) -> Flow:
     """Return a configured Google OAuth ``Flow`` instance."""
     if not (
@@ -339,7 +478,96 @@ def home():
 def videos():
     """Display a curated collection of internal video resources."""
 
-    return render_template("videos.html")
+    user_tags = {tag.nome for tag in current_user.tags}
+
+    def resolve_sources(raw_sources: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+        resolved: list[dict[str, str]] = []
+        if not raw_sources:
+            return resolved
+        for source in raw_sources:
+            if not isinstance(source, dict):
+                continue
+            src = source.get("url")
+            if not src and source.get("path"):
+                src = url_for("static", filename=source["path"])
+            if not src:
+                continue
+            entry = {k: v for k, v in source.items() if k not in {"url", "path"}}
+            entry["src"] = src
+            resolved.append(entry)
+        return resolved
+
+    def resolve_resources(raw_resources: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+        resolved: list[dict[str, str]] = []
+        if not raw_resources:
+            return resolved
+        for resource in raw_resources:
+            if not isinstance(resource, dict):
+                continue
+            href = resource.get("url")
+            if not href and resource.get("path"):
+                href = url_for("static", filename=resource["path"])
+            if not href:
+                continue
+            entry = {k: v for k, v in resource.items() if k not in {"url", "path"}}
+            entry["href"] = href
+            resolved.append(entry)
+        return resolved
+
+    available_modules: list[dict[str, Any]] = []
+    locked_modules: list[dict[str, Any]] = []
+
+    for module in VIDEO_LIBRARY:
+        allowed_roles = set(module.get("allowed_roles") or [])
+        allowed_tags = set(module.get("allowed_tags") or [])
+        role_allowed = not allowed_roles or current_user.role in allowed_roles
+        tag_allowed = not allowed_tags or bool(user_tags.intersection(allowed_tags))
+
+        module_view = {
+            key: value
+            for key, value in module.items()
+            if key not in {"lessons", "allowed_roles", "allowed_tags"}
+        }
+        module_view["target_roles"] = sorted(allowed_roles)
+        module_view["target_tags"] = sorted(allowed_tags)
+        module_view["lessons"] = []
+
+        for lesson in module.get("lessons", []):
+            if not isinstance(lesson, dict):
+                continue
+            lesson_view = {
+                key: value for key, value in lesson.items() if key not in {"sources", "resources", "poster"}
+            }
+            lesson_view["sources"] = resolve_sources(lesson.get("sources"))
+            lesson_view["resources"] = resolve_resources(lesson.get("resources"))
+
+            poster = lesson.get("poster")
+            if poster:
+                if isinstance(poster, str) and poster.startswith("http"):
+                    lesson_view["poster"] = poster
+                else:
+                    lesson_view["poster"] = url_for("static", filename=str(poster))
+
+            module_view["lessons"].append(lesson_view)
+
+        if role_allowed and tag_allowed:
+            available_modules.append(module_view)
+        else:
+            module_view["missing_tags"] = sorted(allowed_tags - user_tags)
+            module_view["required_roles"] = module_view["target_roles"]
+            locked_modules.append(module_view)
+
+    available_modules.sort(key=lambda item: item.get("title", ""))
+    locked_modules.sort(key=lambda item: item.get("title", ""))
+
+    return render_template(
+        "videos.html",
+        available_modules=available_modules,
+        locked_modules=locked_modules,
+        user_tags=sorted(user_tags),
+        available_count=len(available_modules),
+        total_count=len(VIDEO_LIBRARY),
+    )
 
 
 @app.route("/cursos", methods=["GET", "POST"])

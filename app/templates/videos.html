@@ -7,4 +7,186 @@
 {% endblock %}
 
 {% block content %}
+<div class="container-fluid py-4 videos-page">
+    <div class="row g-4">
+        <div class="col-12 col-lg-9">
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="h3 mb-2">Biblioteca de vídeos internos</h1>
+                            <p class="text-muted mb-0">
+                                Capacite equipes com módulos sob demanda. Os conteúdos abaixo ficam disponíveis
+                                diretamente no portal, sem redirecionamentos externos.
+                            </p>
+                        </div>
+                        <div class="text-lg-end">
+                            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2">
+                                {{ available_count }} de {{ total_count }} módulos liberados
+                            </span>
+                            <div class="mt-2 small text-muted">
+                                {% if user_tags %}
+                                    <i class="bi bi-diagram-3 me-1"></i>
+                                    Trilhas habilitadas:
+                                    {% for tag in user_tags %}
+                                        <span class="badge bg-light border text-secondary fw-semibold me-1">{{ tag }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Nenhuma trilha associada à sua conta ainda.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {% if available_modules %}
+                {% for module in available_modules %}
+                    <section class="card border-0 shadow-sm mb-4 module-card">
+                        <div class="card-body">
+                            <div class="d-flex flex-column flex-lg-row gap-3">
+                                <div class="flex-grow-1">
+                                    <h2 class="h4 mb-1">{{ module.title }}</h2>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                                        {% if module.category %}
+                                            <span class="badge bg-primary-subtle text-primary fw-semibold">{{ module.category }}</span>
+                                        {% endif %}
+                                        {% if module.duration %}
+                                            <span class="badge bg-secondary-subtle text-secondary fw-semibold">
+                                                <i class="bi bi-clock-history me-1"></i>{{ module.duration }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-muted mb-3">{{ module.description }}</p>
+                                </div>
+                                <div class="module-meta small text-muted">
+                                    {% if module.audience %}
+                                        <div class="d-flex align-items-start gap-2 mb-2">
+                                            <i class="bi bi-people-fill text-primary"></i>
+                                            <span>{{ module.audience }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if module.target_tags %}
+                                        <div class="d-flex align-items-start gap-2">
+                                            <i class="bi bi-diagram-3 text-primary"></i>
+                                            <div>
+                                                <span class="d-block fw-semibold">Trilhas contempladas</span>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    {% for tag in module.target_tags %}
+                                                        <span class="badge bg-light border text-secondary">{{ tag }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <hr class="my-4" />
+
+                            <div class="lesson-list">
+                                {% for lesson in module.lessons %}
+                                    <article class="lesson border rounded-3 p-3 mb-3">
+                                        <div class="d-flex flex-column flex-lg-row gap-3">
+                                            <div class="flex-grow-1">
+                                                <h3 class="h6 mb-1">{{ lesson.title }}</h3>
+                                                {% if lesson.description %}
+                                                    <p class="small text-muted mb-3">{{ lesson.description }}</p>
+                                                {% endif %}
+                                                <div class="ratio ratio-16x9 mb-3">
+                                                    <video class="w-100 h-100 rounded" controls preload="metadata" {% if lesson.poster %}poster="{{ lesson.poster }}"{% endif %}>
+                                                        {% for source in lesson.sources %}
+                                                            <source src="{{ source.src }}" type="{{ source.type }}" />
+                                                        {% endfor %}
+                                                        Seu navegador não suporta vídeos HTML5.
+                                                    </video>
+                                                </div>
+                                            </div>
+                                            <div class="lesson-sidebar small text-muted">
+                                                {% if lesson.duration %}
+                                                    <div class="mb-2">
+                                                        <span class="badge bg-light border text-secondary fw-semibold">
+                                                            <i class="bi bi-clock me-1"></i>{{ lesson.duration }}
+                                                        </span>
+                                                    </div>
+                                                {% endif %}
+                                                {% if lesson.resources %}
+                                                    <div>
+                                                        <span class="d-block fw-semibold mb-2">Materiais de apoio</span>
+                                                        <div class="d-flex flex-column gap-2">
+                                                            {% for resource in lesson.resources %}
+                                                                <a class="btn btn-sm btn-outline-primary" href="{{ resource.href }}" target="_blank" rel="noopener">
+                                                                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ resource.label }}
+                                                                </a>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </article>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </section>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info border-0 shadow-sm" role="alert">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-info-circle-fill fs-4"></i>
+                        <div>
+                            <h2 class="h6 mb-1">Nenhum módulo liberado ainda</h2>
+                            <p class="mb-0">Solicite ao administrador a vinculação de uma trilha ou perfil para começar a assistir.</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-lg-3">
+            <div class="sticky-lg-top" style="top: 96px;">
+                <section class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="h6 text-uppercase text-muted mb-3">Como aproveitar melhor</h2>
+                        <ul class="list-unstyled small text-muted mb-0">
+                            <li class="mb-2"><i class="bi bi-check2-circle text-primary me-2"></i>Assista aos vídeos em tela cheia para melhor imersão.</li>
+                            <li class="mb-2"><i class="bi bi-clock-history text-primary me-2"></i>Use o marcador de tempo para continuar de onde parou.</li>
+                            <li class="mb-2"><i class="bi bi-share text-primary me-2"></i>Compartilhe feedbacks com o RH para melhorar os módulos.</li>
+                            <li><i class="bi bi-journal-check text-primary me-2"></i>Registre notas importantes em tarefas ou reuniões.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                {% if locked_modules %}
+                    <section class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h6 text-uppercase text-muted mb-3">Módulos pendentes</h2>
+                            {% for module in locked_modules %}
+                                <div class="locked-module mb-3">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <i class="bi bi-lock-fill text-secondary"></i>
+                                        <span class="fw-semibold">{{ module.title }}</span>
+                                    </div>
+                                    <p class="small text-muted mb-2">{{ module.description }}</p>
+                                    <ul class="list-unstyled small text-muted mb-0">
+                                        {% if module.required_roles %}
+                                            <li><i class="bi bi-shield-lock me-1"></i>Restrito a: {{ module.required_roles | join(', ') }}</li>
+                                        {% endif %}
+                                        {% if module.missing_tags %}
+                                            <li><i class="bi bi-diagram-3 me-1"></i>Solicite acesso às trilhas: {{ module.missing_tags | join(', ') }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                {% if not loop.last %}
+                                    <hr />
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
