@@ -75,6 +75,11 @@
         {% for module in modules %}
         <div class="col-xl-4 col-md-6">
             <div class="video-card h-100 shadow-sm">
+                {% if module.resolved_cover_path %}
+                <div class="video-card__cover">
+                    <img src="{{ url_for('static', filename=module.resolved_cover_path) }}" alt="Capa do módulo {{ module.title }}">
+                </div>
+                {% endif %}
                 <div class="video-card__body">
                     <div class="video-card__header d-flex align-items-start gap-3 mb-3">
                         <div class="video-card__icon">
@@ -130,6 +135,10 @@
                                 <span class="badge bg-dark-subtle text-dark">{{ video.duration_minutes }} min</span>
                                 {% endif %}
                                 {% if video.has_file %}
+                                <button type="button" class="btn btn-sm btn-primary mt-2 js-watch-video" data-bs-toggle="modal" data-bs-target="#videoPlayerModal" data-video-url="{{ url_for('stream_video_asset', video_id=video.id) }}" data-video-title="{{ video.title }}" data-video-mime="{{ video.mime_type or 'video/mp4' }}">
+                                    <i class="bi bi-play-fill me-1"></i>
+                                    Assistir
+                                </button>
                                 <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('download_video_asset', video_id=video.id) }}">
                                     <i class="bi bi-download me-1"></i>
                                     Baixar
@@ -157,4 +166,75 @@
     </div>
     {% endif %}
 </div>
+<div class="modal fade" id="videoPlayerModal" tabindex="-1" aria-labelledby="videoPlayerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoPlayerModalLabel" data-modal-title>Assistir vídeo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="ratio ratio-16x9">
+                    <video id="videoPlayerElement" controls preload="metadata" class="w-100 h-100">
+                        <source id="videoPlayerSource" src="" type="video/mp4">
+                        Seu navegador não suporta a reprodução de vídeo.
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('videoPlayerModal');
+    const videoElement = document.getElementById('videoPlayerElement');
+    const sourceElement = document.getElementById('videoPlayerSource');
+    const modalTitle = modalElement ? modalElement.querySelector('[data-modal-title]') : null;
+
+    if (modalElement) {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            if (!videoElement) {
+                return;
+            }
+            videoElement.pause();
+            if (sourceElement) {
+                sourceElement.removeAttribute('src');
+                sourceElement.removeAttribute('type');
+            }
+            videoElement.load();
+        });
+    }
+
+    document.querySelectorAll('.js-watch-video').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const url = button.getAttribute('data-video-url');
+            const title = button.getAttribute('data-video-title');
+            const mime = button.getAttribute('data-video-mime') || 'video/mp4';
+
+            if (modalTitle) {
+                modalTitle.textContent = title || 'Assistir vídeo';
+            }
+
+            if (sourceElement && url) {
+                sourceElement.src = url;
+                sourceElement.type = mime;
+            }
+
+            if (videoElement) {
+                videoElement.load();
+                const playPromise = videoElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(function () {
+                        /* Ignore autoplay errors; user interaction already opened the modal. */
+                    });
+                }
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -24,7 +24,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h2 class="h5 mb-3">{{ 'Editar pasta' if editing_folder else 'Nova pasta' }}</h2>
-                    <form method="post" action="{{ url_for('save_video_folder') }}">
+                    <form method="post" action="{{ url_for('save_video_folder') }}" enctype="multipart/form-data">
                         {{ folder_form.hidden_tag() }}
                         <div class="mb-3">
                             {{ folder_form.name.label(class="form-label") }}
@@ -34,6 +34,19 @@
                             {{ folder_form.description.label(class="form-label") }}
                             {{ folder_form.description(class="form-control", placeholder="Descrição breve") }}
                         </div>
+                        <div class="mb-3">
+                            {{ folder_form.cover_image.label(class="form-label") }}
+                            {{ folder_form.cover_image(class="form-control") }}
+                            <div class="form-text">Imagens JPG, PNG, GIF ou WEBP com até 5MB.</div>
+                        </div>
+                        {% if editing_folder and editing_folder.cover_image_path %}
+                        <div class="mb-3">
+                            <label class="form-label">Capa atual</label>
+                            <div class="video-cover-preview">
+                                <img src="{{ url_for('static', filename=editing_folder.cover_image_path) }}" alt="Capa da pasta {{ editing_folder.name }}" class="img-fluid rounded border">
+                            </div>
+                        </div>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-save me-2"></i>
                             {{ 'Atualizar pasta' if editing_folder else 'Criar pasta' }}
@@ -47,7 +60,7 @@
                 <div class="card-body">
                     <h2 class="h5 mb-3">{{ 'Editar módulo' if editing_module else 'Novo módulo' }}</h2>
                     {% if module_form.folder_id.choices %}
-                    <form method="post" action="{{ url_for('save_video_module') }}">
+                    <form method="post" action="{{ url_for('save_video_module') }}" enctype="multipart/form-data">
                         {{ module_form.hidden_tag() }}
                         <div class="mb-3">
                             {{ module_form.title.label(class="form-label") }}
@@ -61,6 +74,26 @@
                             {{ module_form.description.label(class="form-label") }}
                             {{ module_form.description(class="form-control", placeholder="Descreva os objetivos do módulo") }}
                         </div>
+                        <div class="mb-3">
+                            {{ module_form.cover_image.label(class="form-label") }}
+                            {{ module_form.cover_image(class="form-control") }}
+                            <div class="form-text">A capa do módulo é exibida na biblioteca.</div>
+                        </div>
+                        {% if editing_module and editing_module.cover_image_path %}
+                        <div class="mb-3">
+                            <label class="form-label">Capa atual</label>
+                            <div class="video-cover-preview">
+                                <img src="{{ url_for('static', filename=editing_module.cover_image_path) }}" alt="Capa do módulo {{ editing_module.title }}" class="img-fluid rounded border">
+                            </div>
+                        </div>
+                        {% elif editing_module and editing_module.folder and editing_module.folder.cover_image_path %}
+                        <div class="mb-3">
+                            <label class="form-label">Capa herdada da pasta</label>
+                            <div class="video-cover-preview">
+                                <img src="{{ url_for('static', filename=editing_module.folder.cover_image_path) }}" alt="Capa da pasta {{ editing_module.folder.name }}" class="img-fluid rounded border">
+                            </div>
+                        </div>
+                        {% endif %}
                         {% if module_form.tags.choices %}
                         <div class="mb-3">
                             <label class="form-label">{{ module_form.tags.label.text }}</label>
@@ -174,6 +207,11 @@
                     </h2>
                     <div id="folder-collapse-{{ folder.id }}" class="accordion-collapse collapse" data-bs-parent="#videoLibraryAccordion">
                         <div class="accordion-body">
+                            {% if folder.cover_image_path %}
+                            <div class="video-cover-preview mb-3">
+                                <img src="{{ url_for('static', filename=folder.cover_image_path) }}" alt="Capa da pasta {{ folder.name }}" class="img-fluid rounded border">
+                            </div>
+                            {% endif %}
                             <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
                                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('videos_manage', folder_id=folder.id) }}">
                                     <i class="bi bi-pencil me-1"></i>
@@ -194,6 +232,12 @@
                                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                                         <div>
                                             <h3 class="h6 mb-1">{{ module.title }}</h3>
+                                            {% set module_cover = module.resolved_cover_path %}
+                                            {% if module_cover %}
+                                            <div class="video-cover-thumbnail mb-2">
+                                                <img src="{{ url_for('static', filename=module_cover) }}" alt="Capa do módulo {{ module.title }}" class="img-fluid rounded border">
+                                            </div>
+                                            {% endif %}
                                             {% if module.tags %}
                                             <div class="mb-2">
                                                 {% for tag in module.tags %}

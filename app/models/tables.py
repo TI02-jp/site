@@ -203,6 +203,8 @@ class VideoFolder(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
+    cover_image_path = db.Column(db.String(255))
+    cover_image_name = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -234,6 +236,8 @@ class VideoModule(db.Model):
     )
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
+    cover_image_path = db.Column(db.String(255))
+    cover_image_name = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -258,6 +262,16 @@ class VideoModule(db.Model):
 
     def __repr__(self) -> str:
         return f"<VideoModule {self.title}>"
+
+    @property
+    def resolved_cover_path(self) -> str | None:
+        """Return the module cover path, falling back to the parent folder."""
+
+        if self.cover_image_path:
+            return self.cover_image_path
+        if self.folder and self.folder.cover_image_path:
+            return self.folder.cover_image_path
+        return None
 
 
 class VideoAsset(db.Model):

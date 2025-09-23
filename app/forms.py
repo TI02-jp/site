@@ -283,6 +283,17 @@ class VideoFolderForm(FlaskForm):
         validators=[Optional(), Length(max=500)],
         render_kw={"rows": 3},
     )
+    cover_image = FileField(
+        "Capa",
+        validators=[
+            Optional(),
+            FileAllowed(
+                IMAGE_FILE_EXTENSIONS,
+                "Formatos permitidos: "
+                + ", ".join(ext.upper() for ext in IMAGE_FILE_EXTENSIONS),
+            ),
+        ],
+    )
     submit = SubmitField("Salvar pasta")
 
 
@@ -303,6 +314,17 @@ class VideoModuleForm(FlaskForm):
         "Descrição",
         validators=[Optional(), Length(max=800)],
         render_kw={"rows": 4},
+    )
+    cover_image = FileField(
+        "Capa do módulo",
+        validators=[
+            Optional(),
+            FileAllowed(
+                IMAGE_FILE_EXTENSIONS,
+                "Formatos permitidos: "
+                + ", ".join(ext.upper() for ext in IMAGE_FILE_EXTENSIONS),
+            ),
+        ],
     )
     tags = SelectMultipleField(
         "Tags",

@@ -253,6 +253,32 @@ def _save_uploaded_video(file_storage) -> dict[str, str | int | bytes] | None:
     }
 
 
+def _save_cover_image(file_storage, subdir: str) -> dict[str, str] | None:
+    """Persist an uploaded cover image under ``static/uploads``."""
+
+    if not file_storage or file_storage.filename == "":
+        return None
+
+    filename = secure_filename(file_storage.filename)
+    if not filename:
+        return None
+
+    relative_dir = os.path.join("uploads", "video_covers", subdir)
+    absolute_dir = os.path.join(current_app.static_folder, relative_dir)
+    unique_name = f"{uuid4().hex}_{filename}"
+    absolute_path = os.path.join(absolute_dir, unique_name)
+
+    try:
+        os.makedirs(absolute_dir, exist_ok=True)
+        file_storage.save(absolute_path)
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception("Não foi possível salvar a capa enviada em %s", absolute_path)
+        return None
+
+    relative_path = os.path.join(relative_dir, unique_name).replace(os.sep, "/")
+    return {"path": relative_path, "original_name": filename}
+
+
 def _delete_static_file(static_path: str | None) -> None:
     """Remove a stored static file if it exists."""
 
@@ -866,6 +892,21 @@ def save_video_folder():
         folder.name = form.name.data.strip()
         folder.description = (form.description.data or "").strip() or None
 
+        cover_file = form.cover_image.data
+        filename = getattr(cover_file, "filename", "") if cover_file else ""
+        if filename:
+            saved_cover = _save_cover_image(cover_file, "folders")
+            if saved_cover is None:
+                db.session.rollback()
+                flash(
+                    "Não foi possível salvar a capa enviada. Verifique o formato e tente novamente.",
+                    "danger",
+                )
+                return redirect(url_for("videos_manage"))
+            _delete_static_file(folder.cover_image_path)
+            folder.cover_image_path = saved_cover["path"]
+            folder.cover_image_name = saved_cover["original_name"]
+
         db.session.commit()
         flash("Pasta salva com sucesso!", "success")
         return redirect(url_for("videos_manage"))
@@ -880,7 +921,9 @@ def delete_video_folder(folder_id: int):
     """Remove a video folder and its child modules."""
 
     folder = VideoFolder.query.get_or_404(folder_id)
+    _delete_static_file(folder.cover_image_path)
     for module in list(folder.modules):
+        _delete_static_file(module.cover_image_path)
         for video in list(module.videos):
             _delete_static_file(video.file_path)
     db.session.delete(folder)
@@ -922,6 +965,21 @@ def save_video_module():
         module.description = (form.description.data or "").strip() or None
         module.folder_id = form.folder_id.data
 
+        cover_file = form.cover_image.data
+        filename = getattr(cover_file, "filename", "") if cover_file else ""
+        if filename:
+            saved_cover = _save_cover_image(cover_file, "modules")
+            if saved_cover is None:
+                db.session.rollback()
+                flash(
+                    "Não foi possível salvar a capa enviada. Verifique o formato e tente novamente.",
+                    "danger",
+                )
+                return redirect(url_for("videos_manage"))
+            _delete_static_file(module.cover_image_path)
+            module.cover_image_path = saved_cover["path"]
+            module.cover_image_name = saved_cover["original_name"]
+
         selected_tags: list[Tag] = []
         if form.tags.data:
             selected_tags = (
@@ -943,6 +1001,7 @@ def delete_video_module(module_id: int):
     """Delete a video module."""
 
     module = VideoModule.query.get_or_404(module_id)
+    _delete_static_file(module.cover_image_path)
     for video in list(module.videos):
         _delete_static_file(video.file_path)
     db.session.delete(module)
