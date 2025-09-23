@@ -65,7 +65,7 @@
                         <div class="h-100 p-4 bg-white rounded-3 shadow-sm border-0">
                             <h3 class="h6 text-uppercase text-muted fw-semibold">{{ path.title }}</h3>
                             <ul class="list-unstyled mt-3 mb-0">
-                                {% for item in path.items %}
+                                {% for item in path["items"] %}
                                 <li class="d-flex align-items-start mb-2">
                                     <i class="bi bi-check-circle-fill text-success me-2"></i>
                                     <span class="text-muted">{{ item }}</span>
