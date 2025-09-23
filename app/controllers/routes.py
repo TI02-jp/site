@@ -145,18 +145,12 @@ def _is_video_admin(user: User) -> bool:
     return bool(getattr(user, "is_master", False) or user.role == "admin")
 
 
-def _resolve_user_sector_ids(user: User) -> list[int]:
-    """Return ``Setor`` IDs inferred from the tags assigned to ``user``."""
+def _resolve_user_tag_ids(user: User) -> list[int]:
+    """Return tag IDs associated with ``user``."""
 
     if not user.tags:
         return []
-    tag_names = {tag.nome.lower() for tag in user.tags if tag.nome}
-    if not tag_names:
-        return []
-    setores = (
-        Setor.query.filter(sa.func.lower(Setor.nome).in_(tag_names)).all()
-    )
-    return [setor.id for setor in setores]
+    return [tag.id for tag in user.tags if tag.id]
 
 
 def _user_accessible_folders(user: User):
@@ -165,10 +159,10 @@ def _user_accessible_folders(user: User):
     base_query = VideoFolder.query.filter(VideoFolder.is_active.is_(True))
     if _is_video_admin(user):
         return base_query.order_by(VideoFolder.name.asc())
-    sector_ids = _resolve_user_sector_ids(user)
+    tag_ids = _resolve_user_tag_ids(user)
     criteria: list = [VideoPermission.user_id == user.id]
-    if sector_ids:
-        criteria.append(VideoPermission.sector_id.in_(sector_ids))
+    if tag_ids:
+        criteria.append(VideoPermission.tag_id.in_(tag_ids))
     return (
         base_query.join(VideoPermission)
         .filter(sa.or_(*criteria))
@@ -184,10 +178,10 @@ def _user_can_view_folder(user: User, folder: VideoFolder) -> bool:
         return True
     if not folder.is_active:
         return False
-    sector_ids = _resolve_user_sector_ids(user)
+    tag_ids = _resolve_user_tag_ids(user)
     filters = [VideoPermission.user_id == user.id]
-    if sector_ids:
-        filters.append(VideoPermission.sector_id.in_(sector_ids))
+    if tag_ids:
+        filters.append(VideoPermission.tag_id.in_(tag_ids))
     return (
         VideoPermission.query.filter_by(folder_id=folder.id)
         .filter(sa.or_(*filters))
@@ -199,33 +193,30 @@ def _user_can_view_folder(user: User, folder: VideoFolder) -> bool:
 def _user_can_manage_folder(user: User, folder: VideoFolder) -> bool:
     """Return True when ``user`` can update permissions for ``folder``."""
 
-    if _is_video_admin(user):
-        return True
-    sector_ids = _resolve_user_sector_ids(user)
-    filters = [VideoPermission.user_id == user.id]
-    if sector_ids:
-        filters.append(VideoPermission.sector_id.in_(sector_ids))
-    return (
-        VideoPermission.query.filter_by(folder_id=folder.id, can_manage=True)
-        .filter(sa.or_(*filters))
-        .count()
-        > 0
-    )
+    return _is_video_admin(user)
 
 
 def _apply_folder_permissions(
     folder: VideoFolder,
     user_ids: Iterable[int],
-    sector_ids: Iterable[int],
-    manager_user_ids: Iterable[int],
+    tag_ids: Iterable[int],
 ) -> None:
     """Synchronise ACL entries for ``folder`` with submitted data."""
 
     existing: dict[tuple[int | None, int | None], VideoPermission] = {
-        (perm.user_id, perm.sector_id): perm for perm in folder.permissions
+        (perm.user_id, perm.tag_id): perm for perm in folder.permissions
     }
-    manager_set = set(manager_user_ids)
     desired_targets: set[tuple[int | None, int | None]] = set()
+
+    user_ids_set = set(user_ids)
+    admin_user_ids: set[int] = set()
+    if user_ids_set:
+        admins = (
+            User.query.filter(User.id.in_(user_ids_set))
+            .filter(sa.or_(User.role == "admin", User.is_master.is_(True)))
+            .all()
+        )
+        admin_user_ids = {user.id for user in admins}
 
     for user_id in user_ids:
         key = (user_id, None)
@@ -233,14 +224,14 @@ def _apply_folder_permissions(
         if not perm:
             perm = VideoPermission(folder=folder, user_id=user_id)
             db.session.add(perm)
-        perm.can_manage = user_id in manager_set
+        perm.can_manage = user_id in admin_user_ids
         desired_targets.add(key)
 
-    for sector_id in sector_ids:
-        key = (None, sector_id)
+    for tag_id in tag_ids:
+        key = (None, tag_id)
         perm = existing.get(key)
         if not perm:
-            perm = VideoPermission(folder=folder, sector_id=sector_id)
+            perm = VideoPermission(folder=folder, tag_id=tag_id)
             db.session.add(perm)
         perm.can_manage = False
         desired_targets.add(key)
@@ -255,14 +246,12 @@ def _populate_video_folder_form_choices(form) -> None:
 
     users = User.query.order_by(User.name.asc()).all()
     user_choices = [(user.id, f"{user.name} ({user.username})") for user in users]
-    setores = Setor.query.order_by(Setor.nome.asc()).all()
-    sector_choices = [(setor.id, setor.nome) for setor in setores]
+    tags = Tag.query.order_by(Tag.nome.asc()).all()
+    tag_choices = [(tag.id, tag.nome) for tag in tags]
     if hasattr(form, "user_ids"):
         form.user_ids.choices = user_choices
-    if hasattr(form, "manager_user_ids"):
-        form.manager_user_ids.choices = user_choices
-    if hasattr(form, "sector_ids"):
-        form.sector_ids.choices = sector_choices
+    if hasattr(form, "tag_ids"):
+        form.tag_ids.choices = tag_choices
 
 
 def _sync_folder_videos(folder: VideoFolder) -> tuple[list[Video], str | None]:
@@ -700,8 +689,7 @@ def videos():
                             _apply_folder_permissions(
                                 folder,
                                 creation_form.user_ids.data,
-                                creation_form.sector_ids.data,
-                                creation_form.manager_user_ids.data,
+                                creation_form.tag_ids.data,
                             )
                             db.session.commit()
                         except Exception:
@@ -733,8 +721,7 @@ def videos():
                     _apply_folder_permissions(
                         folder,
                         permission_form.user_ids.data,
-                        permission_form.sector_ids.data,
-                        permission_form.manager_user_ids.data,
+                        permission_form.tag_ids.data,
                     )
                     db.session.commit()
                 except Exception:
@@ -782,13 +769,8 @@ def videos():
         permission_form.user_ids.data = [
             perm.user_id for perm in active_folder.permissions if perm.user_id
         ]
-        permission_form.sector_ids.data = [
-            perm.sector_id for perm in active_folder.permissions if perm.sector_id
-        ]
-        permission_form.manager_user_ids.data = [
-            perm.user_id
-            for perm in active_folder.permissions
-            if perm.user_id and perm.can_manage
+        permission_form.tag_ids.data = [
+            perm.tag_id for perm in active_folder.permissions if perm.tag_id
         ]
 
     if not can_manage_active:

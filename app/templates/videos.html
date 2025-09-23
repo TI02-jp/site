@@ -75,30 +75,16 @@
                                 {% endfor %}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">{{ creation_form.sector_ids.label.text }}</label>
+                                <label class="form-label">{{ creation_form.tag_ids.label.text }}</label>
                                 <div class="form-check-group">
-                                    {% for subfield in creation_form.sector_ids %}
+                                    {% for subfield in creation_form.tag_ids %}
                                     <div class="form-check">
                                         {{ subfield(class="form-check-input") }}
                                         <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
                                     </div>
                                     {% endfor %}
                                 </div>
-                                {% for error in creation_form.sector_ids.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">{{ creation_form.manager_user_ids.label.text }}</label>
-                                <div class="form-check-group">
-                                    {% for subfield in creation_form.manager_user_ids %}
-                                    <div class="form-check">
-                                        {{ subfield(class="form-check-input") }}
-                                        <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% for error in creation_form.manager_user_ids.errors %}
+                                {% for error in creation_form.tag_ids.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}
                             </div>
@@ -197,30 +183,16 @@
                                     {% endfor %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">{{ permission_form.sector_ids.label.text }}</label>
+                                    <label class="form-label">{{ permission_form.tag_ids.label.text }}</label>
                                     <div class="form-check-group">
-                                        {% for subfield in permission_form.sector_ids %}
+                                        {% for subfield in permission_form.tag_ids %}
                                         <div class="form-check">
                                             {{ subfield(class="form-check-input") }}
                                             <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
                                         </div>
                                         {% endfor %}
                                     </div>
-                                    {% for error in permission_form.sector_ids.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">{{ permission_form.manager_user_ids.label.text }}</label>
-                                    <div class="form-check-group">
-                                        {% for subfield in permission_form.manager_user_ids %}
-                                        <div class="form-check">
-                                            {{ subfield(class="form-check-input") }}
-                                            <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    {% for error in permission_form.manager_user_ids.errors %}
+                                    {% for error in permission_form.tag_ids.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                     {% endfor %}
                                 </div>

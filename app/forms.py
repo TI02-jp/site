@@ -385,15 +385,8 @@ class VideoFolderForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
-    sector_ids = SelectMultipleField(
-        "Setores com acesso",
-        coerce=int,
-        validators=[Optional()],
-        option_widget=widgets.CheckboxInput(),
-        widget=widgets.ListWidget(prefix_label=False),
-    )
-    manager_user_ids = SelectMultipleField(
-        "Usuários gestores",
+    tag_ids = SelectMultipleField(
+        "Tags com acesso",
         coerce=int,
         validators=[Optional()],
         option_widget=widgets.CheckboxInput(),
@@ -404,16 +397,10 @@ class VideoFolderForm(FlaskForm):
     def validate(self, extra_validators=None):  # type: ignore[override]
         if not super().validate(extra_validators=extra_validators):
             return False
-        if not self.user_ids.data and not self.sector_ids.data:
-            message = "Selecione ao menos um usuário ou setor com acesso."
+        if not self.user_ids.data and not self.tag_ids.data:
+            message = "Selecione ao menos um usuário ou tag com acesso."
             self.user_ids.errors.append(message)
-            self.sector_ids.errors.append(message)
-            return False
-        invalid_managers = set(self.manager_user_ids.data) - set(self.user_ids.data)
-        if invalid_managers:
-            self.manager_user_ids.errors.append(
-                "Usuários gestores precisam estar na lista de acesso."
-            )
+            self.tag_ids.errors.append(message)
             return False
         return True
 
@@ -429,15 +416,8 @@ class VideoFolderPermissionForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
-    sector_ids = SelectMultipleField(
-        "Setores com acesso",
-        coerce=int,
-        validators=[Optional()],
-        option_widget=widgets.CheckboxInput(),
-        widget=widgets.ListWidget(prefix_label=False),
-    )
-    manager_user_ids = SelectMultipleField(
-        "Usuários gestores",
+    tag_ids = SelectMultipleField(
+        "Tags com acesso",
         coerce=int,
         validators=[Optional()],
         option_widget=widgets.CheckboxInput(),
@@ -448,15 +428,9 @@ class VideoFolderPermissionForm(FlaskForm):
     def validate(self, extra_validators=None):  # type: ignore[override]
         if not super().validate(extra_validators=extra_validators):
             return False
-        if not self.user_ids.data and not self.sector_ids.data:
-            message = "Selecione ao menos um usuário ou setor com acesso."
+        if not self.user_ids.data and not self.tag_ids.data:
+            message = "Selecione ao menos um usuário ou tag com acesso."
             self.user_ids.errors.append(message)
-            self.sector_ids.errors.append(message)
-            return False
-        invalid_managers = set(self.manager_user_ids.data) - set(self.user_ids.data)
-        if invalid_managers:
-            self.manager_user_ids.errors.append(
-                "Usuários gestores precisam estar na lista de acesso."
-            )
+            self.tag_ids.errors.append(message)
             return False
         return True

@@ -54,26 +54,26 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('folder_id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.Column('sector_id', sa.Integer(), nullable=True),
+        sa.Column('tag_id', sa.Integer(), nullable=True),
         sa.Column('can_manage', sa.Boolean(), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['folder_id'], ['video_folders.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['sector_id'], ['setores.id'], ondelete='CASCADE'),
-        sa.CheckConstraint('NOT (user_id IS NULL AND sector_id IS NULL)', name='ck_video_permissions_target'),
+        sa.ForeignKeyConstraint(['tag_id'], ['tags.id'], ondelete='CASCADE'),
+        sa.CheckConstraint('NOT (user_id IS NULL AND tag_id IS NULL)', name='ck_video_permissions_target'),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index('ix_video_permissions_folder_id', 'video_permissions', ['folder_id'], unique=False)
     op.create_index('ix_video_permissions_user_id', 'video_permissions', ['user_id'], unique=False)
-    op.create_index('ix_video_permissions_sector_id', 'video_permissions', ['sector_id'], unique=False)
+    op.create_index('ix_video_permissions_tag_id', 'video_permissions', ['tag_id'], unique=False)
     op.create_unique_constraint('uq_video_permissions_user', 'video_permissions', ['folder_id', 'user_id'])
-    op.create_unique_constraint('uq_video_permissions_sector', 'video_permissions', ['folder_id', 'sector_id'])
+    op.create_unique_constraint('uq_video_permissions_tag', 'video_permissions', ['folder_id', 'tag_id'])
 
 
 def downgrade() -> None:
-    op.drop_constraint('uq_video_permissions_sector', 'video_permissions', type_='unique')
+    op.drop_constraint('uq_video_permissions_tag', 'video_permissions', type_='unique')
     op.drop_constraint('uq_video_permissions_user', 'video_permissions', type_='unique')
-    op.drop_index('ix_video_permissions_sector_id', table_name='video_permissions')
+    op.drop_index('ix_video_permissions_tag_id', table_name='video_permissions')
     op.drop_index('ix_video_permissions_user_id', table_name='video_permissions')
     op.drop_index('ix_video_permissions_folder_id', table_name='video_permissions')
     op.drop_table('video_permissions')

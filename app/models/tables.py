@@ -440,7 +440,7 @@ class Video(db.Model):
 
 
 class VideoPermission(db.Model):
-    """Access control list entry linking folders to users or sectors."""
+    """Access control list entry linking folders to users or tags."""
 
     __tablename__ = "video_permissions"
 
@@ -455,9 +455,9 @@ class VideoPermission(db.Model):
         db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
     )
-    sector_id = db.Column(
+    tag_id = db.Column(
         db.Integer,
-        db.ForeignKey("setores.id", ondelete="CASCADE"),
+        db.ForeignKey("tags.id", ondelete="CASCADE"),
         nullable=True,
     )
     can_manage = db.Column(db.Boolean, default=False, nullable=False)
@@ -465,22 +465,22 @@ class VideoPermission(db.Model):
 
     folder = db.relationship("VideoFolder", back_populates="permissions")
     user = db.relationship("User", backref=db.backref("video_permissions", lazy="dynamic"))
-    sector = db.relationship("Setor")
+    tag = db.relationship("Tag")
 
     __table_args__ = (
         db.CheckConstraint(
-            "NOT (user_id IS NULL AND sector_id IS NULL)",
+            "NOT (user_id IS NULL AND tag_id IS NULL)",
             name="ck_video_permissions_target",
         ),
         db.UniqueConstraint("folder_id", "user_id", name="uq_video_permissions_user"),
-        db.UniqueConstraint("folder_id", "sector_id", name="uq_video_permissions_sector"),
+        db.UniqueConstraint("folder_id", "tag_id", name="uq_video_permissions_tag"),
         db.Index("ix_video_permissions_folder_id", "folder_id"),
         db.Index("ix_video_permissions_user_id", "user_id"),
-        db.Index("ix_video_permissions_sector_id", "sector_id"),
+        db.Index("ix_video_permissions_tag_id", "tag_id"),
     )
 
     def __repr__(self):
-        target = self.user or self.sector
+        target = self.user or self.tag
         return f"<VideoPermission folder={self.folder_id} target={target}>"
 
 
