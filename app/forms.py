@@ -14,6 +14,7 @@ from wtforms import (
     PasswordField,
     BooleanField,
     HiddenField,
+    IntegerField,
     widgets
 )
 from wtforms.validators import (
@@ -122,6 +123,66 @@ class EmpresaForm(FlaskForm):
     sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
     acessos_json = HiddenField('Acessos', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
+
+
+class VideoCollectionForm(FlaskForm):
+    """Formulário para criar agrupamentos de vídeos."""
+
+    name = StringField(
+        "Nome da pasta",
+        validators=[DataRequired(), Length(max=120)],
+        render_kw={"placeholder": "Ex.: Integração"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"rows": 2},
+    )
+    drive_folder_url = StringField(
+        "Link da pasta no Google Drive (opcional)",
+        validators=[Optional(), URL(require_tld=False), Length(max=255)],
+        render_kw={"placeholder": "https://drive.google.com/drive/folders/..."},
+    )
+    submit = SubmitField("Salvar pasta")
+
+
+class VideoLinkForm(FlaskForm):
+    """Formulário para cadastrar novos vídeos na biblioteca."""
+
+    title = StringField(
+        "Título do vídeo",
+        validators=[DataRequired(), Length(max=150)],
+        render_kw={"placeholder": "Nome do treinamento"},
+    )
+    url = StringField(
+        "Endereço do vídeo",
+        validators=[DataRequired(), URL(require_tld=False), Length(max=255)],
+        render_kw={"placeholder": "Cole aqui o link do Drive ou YouTube"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"rows": 2},
+    )
+    collection_id = SelectField(
+        "Pasta",
+        coerce=int,
+        validators=[DataRequired()],
+    )
+    display_order = IntegerField(
+        "Ordem de exibição",
+        validators=[Optional()],
+        default=0,
+        render_kw={"min": 0},
+    )
+    submit = SubmitField("Salvar vídeo")
+
+
+class ConfirmationForm(FlaskForm):
+    """Formulário simples usado para confirmações com proteção CSRF."""
+
+    submit = SubmitField("Confirmar")
+
 
 class EditUserForm(FlaskForm):
     """Formulário para editar um usuário existente."""

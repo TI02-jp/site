@@ -19,6 +19,12 @@
                 ACESSOS
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint in ['videos', 'create_video_collection', 'create_video_link'] %} active{% endif %}" href="{{ url_for('videos') }}">
+                <i class="bi bi-play-circle"></i>
+                VÍDEOS
+            </a>
+        </li>
         {% if current_user.role == 'admin' %}
         <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'cursos' %} active{% endif %}" href="{{ url_for('cursos') }}">

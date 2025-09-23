@@ -35,6 +35,8 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    VideoCollection,
+    VideoLink,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -55,6 +57,9 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    VideoCollectionForm,
+    VideoLinkForm,
+    ConfirmationForm,
 )
 import os, json, re, secrets
 import requests
@@ -441,6 +446,174 @@ def cursos():
         form=form,
         editing_course_id=course_id_raw,
     )
+
+
+@app.route("/videos")
+@login_required
+def videos():
+    """Display the corporate video library grouped by folders."""
+
+    collections = (
+        VideoCollection.query.options(joinedload(VideoCollection.videos))
+        .order_by(VideoCollection.name.asc())
+        .all()
+    )
+
+    active_collection_id = request.args.get("collection_id", type=int)
+    active_collection = None
+    if collections:
+        active_collection = next(
+            (c for c in collections if c.id == active_collection_id), collections[0]
+        )
+
+    active_video_id = request.args.get("video_id", type=int)
+    active_video = None
+    if active_collection:
+        for video in active_collection.videos:
+            if video.id == active_video_id:
+                active_video = video
+                break
+        if not active_video and active_collection.videos:
+            active_video = active_collection.videos[0]
+
+    folder_form = VideoCollectionForm()
+    link_form = VideoLinkForm()
+    link_form.collection_id.choices = [(c.id, c.name) for c in collections]
+    if active_collection:
+        link_form.collection_id.data = active_collection.id
+    delete_folder_form = ConfirmationForm()
+    delete_video_form = ConfirmationForm()
+
+    return render_template(
+        "videos.html",
+        collections=collections,
+        active_collection=active_collection,
+        active_video=active_video,
+        folder_form=folder_form,
+        link_form=link_form,
+        delete_folder_form=delete_folder_form,
+        delete_video_form=delete_video_form,
+    )
+
+
+def _flash_form_errors(form):
+    for field_errors in form.errors.values():
+        for error in field_errors:
+            flash(error, "danger")
+
+
+@app.route("/videos/collections", methods=["POST"])
+@login_required
+def create_video_collection():
+    """Persist a new video collection (admin only)."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = VideoCollectionForm()
+    if form.validate_on_submit():
+        collection = VideoCollection(
+            name=form.name.data.strip(),
+            description=(form.description.data or "").strip() or None,
+            drive_folder_url=(form.drive_folder_url.data or "").strip() or None,
+        )
+        db.session.add(collection)
+        db.session.commit()
+        flash("Pasta criada com sucesso!", "success")
+        return redirect(url_for("videos", collection_id=collection.id))
+
+    _flash_form_errors(form)
+    flash(
+        "Não foi possível criar a pasta de vídeos. Verifique as informações enviadas.",
+        "danger",
+    )
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/collections/<int:collection_id>/delete", methods=["POST"])
+@login_required
+def delete_video_collection(collection_id: int):
+    """Delete a video collection and all related videos (admin only)."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = ConfirmationForm()
+    if not form.validate_on_submit():
+        flash("Não foi possível validar sua solicitação.", "danger")
+        return redirect(url_for("videos", collection_id=collection_id))
+
+    collection = VideoCollection.query.get_or_404(collection_id)
+    db.session.delete(collection)
+    db.session.commit()
+    flash("Pasta removida com sucesso!", "success")
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/links", methods=["POST"])
+@login_required
+def create_video_link():
+    """Persist a new video entry inside a collection (admin only)."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = VideoLinkForm()
+    collections = VideoCollection.query.order_by(VideoCollection.name.asc()).all()
+    form.collection_id.choices = [(c.id, c.name) for c in collections]
+
+    if form.validate_on_submit():
+        collection = VideoCollection.query.get(form.collection_id.data)
+        if collection is None:
+            flash("A pasta selecionada não foi encontrada.", "danger")
+            return redirect(url_for("videos"))
+
+        video = VideoLink(
+            collection=collection,
+            title=form.title.data.strip(),
+            url=form.url.data.strip(),
+            description=(form.description.data or "").strip() or None,
+            display_order=form.display_order.data or 0,
+        )
+        db.session.add(video)
+        db.session.commit()
+        flash("Vídeo adicionado com sucesso!", "success")
+        return redirect(
+            url_for(
+                "videos",
+                collection_id=collection.id,
+                video_id=video.id,
+            )
+        )
+
+    _flash_form_errors(form)
+    flash(
+        "Não foi possível adicionar o vídeo. Revise os dados informados e tente novamente.",
+        "danger",
+    )
+    target_collection_id = form.collection_id.data if form.collection_id.data else None
+    return redirect(url_for("videos", collection_id=target_collection_id))
+
+
+@app.route("/videos/links/<int:link_id>/delete", methods=["POST"])
+@login_required
+def delete_video_link(link_id: int):
+    """Delete a single video entry from a collection (admin only)."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = ConfirmationForm()
+    video = VideoLink.query.get_or_404(link_id)
+    if not form.validate_on_submit():
+        flash("Não foi possível validar sua solicitação.", "danger")
+        return redirect(url_for("videos", collection_id=video.collection_id))
+
+    collection_id = video.collection_id
+    db.session.delete(video)
+    db.session.commit()
+    flash("Vídeo removido com sucesso!", "success")
+    return redirect(url_for("videos", collection_id=collection_id))
 
 
 @app.route("/acessos")

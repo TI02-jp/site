@@ -1,6 +1,7 @@
 """Database models used by the application."""
 
 import json
+import re
 from datetime import datetime, time, timedelta, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
@@ -577,4 +578,134 @@ def _task_assignment_after_update(mapper, connection, target):
         return
 
     _create_task_assignment_notification(connection, target, new_assignee)
+
+
+class VideoCollection(db.Model):
+    """Group of related training or onboarding videos."""
+
+    __tablename__ = "video_collections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.String(255))
+    drive_folder_url = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    videos = db.relationship(
+        "VideoLink",
+        back_populates="collection",
+        cascade="all, delete-orphan",
+        order_by="VideoLink.display_order, VideoLink.title",
+    )
+
+    @property
+    def embed_folder_url(self) -> str | None:
+        """Return the Google Drive embed URL when a folder is configured."""
+
+        if not self.drive_folder_url:
+            return None
+        folder_id = _extract_drive_folder_id(self.drive_folder_url)
+        if not folder_id:
+            return None
+        return f"https://drive.google.com/embeddedfolderview?id={folder_id}#grid"
+
+    def __repr__(self) -> str:
+        return f"<VideoCollection {self.name!r}>"
+
+
+class VideoLink(db.Model):
+    """Individual video entry stored inside a collection."""
+
+    __tablename__ = "video_links"
+
+    id = db.Column(db.Integer, primary_key=True)
+    collection_id = db.Column(
+        db.Integer,
+        db.ForeignKey("video_collections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title = db.Column(db.String(150), nullable=False)
+    url = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(255))
+    display_order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    collection = db.relationship("VideoCollection", back_populates="videos")
+
+    @property
+    def embed_url(self) -> str:
+        """Return an embeddable URL for the stored ``url`` field."""
+
+        return _build_video_embed_url(self.url)
+
+    def __repr__(self) -> str:
+        return f"<VideoLink {self.title!r} ({self.collection_id})>"
+
+
+def _extract_drive_folder_id(url: str | None) -> str | None:
+    """Return the folder identifier from a Google Drive URL, if possible."""
+
+    if not url:
+        return None
+    match = re.search(r"/folders/([a-zA-Z0-9_-]+)", url)
+    if match:
+        return match.group(1)
+    query_match = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", url)
+    if query_match:
+        return query_match.group(1)
+    return None
+
+
+def _extract_drive_file_id(url: str | None) -> str | None:
+    """Return a Google Drive file identifier from a shareable URL."""
+
+    if not url:
+        return None
+    match = re.search(r"/file/d/([a-zA-Z0-9_-]+)", url)
+    if match:
+        return match.group(1)
+    query_match = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", url)
+    if query_match:
+        return query_match.group(1)
+    return None
+
+
+def _extract_youtube_id(url: str | None) -> str | None:
+    """Return the YouTube video identifier from common URL formats."""
+
+    if not url:
+        return None
+    match = re.search(r"youtu\.be/([a-zA-Z0-9_-]{6,})", url)
+    if match:
+        return match.group(1)
+    match = re.search(r"v=([a-zA-Z0-9_-]{6,})", url)
+    if match:
+        return match.group(1)
+    match = re.search(r"/embed/([a-zA-Z0-9_-]{6,})", url)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _build_video_embed_url(url: str | None) -> str:
+    """Return an embeddable URL for Drive and YouTube links."""
+
+    if not url:
+        return ""
+
+    drive_file_id = _extract_drive_file_id(url)
+    if drive_file_id:
+        return f"https://drive.google.com/file/d/{drive_file_id}/preview"
+
+    youtube_id = _extract_youtube_id(url)
+    if youtube_id:
+        return f"https://www.youtube.com/embed/{youtube_id}"
+
+    return url
 
