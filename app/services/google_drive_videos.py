@@ -96,7 +96,11 @@ def ensure_drive_folder(folder_id: str) -> dict:
     try:
         metadata = (
             service.files()
-            .get(fileId=folder_id, fields="id, name, mimeType, webViewLink")
+            .get(
+                fileId=folder_id,
+                fields="id, name, mimeType, webViewLink",
+                supportsAllDrives=True,
+            )
             .execute()
         )
     except HttpError as exc:
