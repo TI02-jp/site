@@ -9,183 +9,372 @@
 {% block content %}
 <div class="container-fluid py-4 videos-page">
     <div class="row g-4">
-        <div class="col-12 col-lg-9">
+        <div class="col-12 col-xl-8">
             <section class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
                     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                         <div>
-                            <h1 class="h3 mb-2">Biblioteca de vídeos internos</h1>
+                            <h1 class="h3 mb-2">Biblioteca de vídeo aulas</h1>
                             <p class="text-muted mb-0">
-                                Capacite equipes com módulos sob demanda. Os conteúdos abaixo ficam disponíveis
-                                diretamente no portal, sem redirecionamentos externos.
+                                Organize e distribua conteúdos internos em pastas, módulos e vídeos para equipes específicas.
                             </p>
                         </div>
-                        <div class="text-lg-end">
-                            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2">
-                                {{ available_count }} de {{ total_count }} módulos liberados
-                            </span>
-                            <div class="mt-2 small text-muted">
-                                {% if user_tags %}
-                                    <i class="bi bi-diagram-3 me-1"></i>
-                                    Trilhas habilitadas:
-                                    {% for tag in user_tags %}
-                                        <span class="badge bg-light border text-secondary fw-semibold me-1">{{ tag }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Nenhuma trilha associada à sua conta ainda.
-                                {% endif %}
-                            </div>
+                        <div class="text-muted small text-lg-end">
+                            <i class="bi bi-collection-play me-2"></i>{{ folders|length }} pastas cadastradas
                         </div>
                     </div>
                 </div>
             </section>
 
-            {% if available_modules %}
-                {% for module in available_modules %}
-                    <section class="card border-0 shadow-sm mb-4 module-card">
+            {% if folders %}
+                {% for folder in folders %}
+                    <section class="card border-0 shadow-sm mb-4">
                         <div class="card-body">
-                            <div class="d-flex flex-column flex-lg-row gap-3">
-                                <div class="flex-grow-1">
-                                    <h2 class="h4 mb-1">{{ module.title }}</h2>
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                                        {% if module.category %}
-                                            <span class="badge bg-primary-subtle text-primary fw-semibold">{{ module.category }}</span>
-                                        {% endif %}
-                                        {% if module.duration %}
-                                            <span class="badge bg-secondary-subtle text-secondary fw-semibold">
-                                                <i class="bi bi-clock-history me-1"></i>{{ module.duration }}
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <p class="text-muted mb-3">{{ module.description }}</p>
-                                </div>
-                                <div class="module-meta small text-muted">
-                                    {% if module.audience %}
-                                        <div class="d-flex align-items-start gap-2 mb-2">
-                                            <i class="bi bi-people-fill text-primary"></i>
-                                            <span>{{ module.audience }}</span>
-                                        </div>
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                                <div>
+                                    <h2 class="h4 mb-1">{{ folder.name }}</h2>
+                                    {% if folder.description %}
+                                        <p class="text-muted mb-0">{{ folder.description }}</p>
+                                    {% else %}
+                                        <p class="text-muted mb-0 fst-italic">Sem descrição cadastrada.</p>
                                     {% endif %}
-                                    {% if module.target_tags %}
-                                        <div class="d-flex align-items-start gap-2">
-                                            <i class="bi bi-diagram-3 text-primary"></i>
-                                            <div>
-                                                <span class="d-block fw-semibold">Trilhas contempladas</span>
-                                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                                    {% for tag in module.target_tags %}
-                                                        <span class="badge bg-light border text-secondary">{{ tag }}</span>
+                                </div>
+                                {% if is_admin %}
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#folder-edit-{{ folder.id }}"
+                                                aria-expanded="false"
+                                                aria-controls="folder-edit-{{ folder.id }}">
+                                            <i class="bi bi-pencil me-1"></i>Editar
+                                        </button>
+                                        <form method="post"
+                                              action="{{ url_for('delete_video_folder', folder_id=folder.id) }}"
+                                              onsubmit="return confirm('Tem certeza que deseja remover esta pasta e todo o conteúdo vinculado?');">
+                                            {{ csrf_token() }}
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">
+                                                <i class="bi bi-trash me-1"></i>Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if is_admin %}
+                                <div class="collapse mt-3" id="folder-edit-{{ folder.id }}">
+                                    <form method="post" action="{{ url_for('save_video_folder') }}" class="row g-3">
+                                        {{ csrf_token() }}
+                                        <input type="hidden" name="folder_id" value="{{ folder.id }}">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Nome da pasta</label>
+                                            <input type="text" name="name" class="form-control form-control-sm" value="{{ folder.name }}" maxlength="120" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Descrição</label>
+                                            <textarea name="description" class="form-control form-control-sm" rows="2" maxlength="500">{{ folder.description }}</textarea>
+                                        </div>
+                                        <div class="col-12 text-end">
+                                            <button class="btn btn-sm btn-primary" type="submit">
+                                                <i class="bi bi-save me-1"></i>Salvar alterações
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            {% endif %}
+
+                            {% if folder.modules %}
+                                <div class="mt-4">
+                                    {% for module in folder.modules %}
+                                        <div class="border rounded-3 p-3 mb-3">
+                                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                                                <div>
+                                                    <h3 class="h5 mb-1">{{ module.name }}</h3>
+                                                    {% if module.description %}
+                                                        <p class="text-muted mb-0">{{ module.description }}</p>
+                                                    {% else %}
+                                                        <p class="text-muted mb-0 fst-italic">Sem descrição cadastrada.</p>
+                                                    {% endif %}
+                                                </div>
+                                                {% if is_admin %}
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                                data-bs-toggle="collapse"
+                                                                data-bs-target="#module-edit-{{ module.id }}"
+                                                                aria-expanded="false"
+                                                                aria-controls="module-edit-{{ module.id }}">
+                                                            <i class="bi bi-pencil me-1"></i>Editar
+                                                        </button>
+                                                        <form method="post"
+                                                              action="{{ url_for('delete_video_module', module_id=module.id) }}"
+                                                              onsubmit="return confirm('Remover este módulo também apagará todos os vídeos cadastrados. Deseja continuar?');">
+                                                            {{ csrf_token() }}
+                                                            <button class="btn btn-sm btn-outline-danger" type="submit">
+                                                                <i class="bi bi-trash me-1"></i>Excluir
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            {% if is_admin %}
+                                                <div class="collapse mt-3" id="module-edit-{{ module.id }}">
+                                                    <form method="post" action="{{ url_for('save_video_module') }}" class="row g-3">
+                                                        {{ csrf_token() }}
+                                                        <input type="hidden" name="module_id" value="{{ module.id }}">
+                                                        <div class="col-12 col-lg-6">
+                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Nome</label>
+                                                            <input type="text" name="name" class="form-control form-control-sm" value="{{ module.name }}" maxlength="120" required>
+                                                        </div>
+                                                        <div class="col-12 col-lg-6">
+                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Pasta</label>
+                                                            <select name="folder_id" class="form-select form-select-sm">
+                                                                {% for folder_id, folder_label in folder_choices %}
+                                                                    <option value="{{ folder_id }}" {% if folder_id == module.folder_id %}selected{% endif %}>{{ folder_label }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Descrição</label>
+                                                            <textarea name="description" class="form-control form-control-sm" rows="2" maxlength="500">{{ module.description }}</textarea>
+                                                        </div>
+                                                        <div class="col-12 text-end">
+                                                            <button class="btn btn-sm btn-primary" type="submit">
+                                                                <i class="bi bi-save me-1"></i>Salvar alterações
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if module.videos %}
+                                                <div class="mt-3">
+                                                    {% for video in module.videos %}
+                                                        <article class="video-item border rounded-3 p-3 mb-3">
+                                                            <div class="d-flex flex-column flex-lg-row gap-3">
+                                                                <div class="flex-grow-1">
+                                                                    <h4 class="h6 mb-1">{{ video.title }}</h4>
+                                                                    {% if video.description %}
+                                                                        <p class="text-muted small mb-2">{{ video.description }}</p>
+                                                                    {% endif %}
+                                                                    <div class="ratio ratio-16x9 mb-2">
+                                                                        <video controls preload="metadata" class="rounded-3">
+                                                                            <source src="{{ url_for('videos_stream', filename=video.file_name) }}" type="{{ video.content_type or 'video/mp4' }}">
+                                                                            Seu navegador não suporta vídeos HTML5.
+                                                                        </video>
+                                                                    </div>
+                                                                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                                                                        {% if video.duration %}
+                                                                            <span class="badge bg-light text-secondary border"><i class="bi bi-clock me-1"></i>{{ video.duration }}</span>
+                                                                        {% endif %}
+                                                                        {% if video.file_size %}
+                                                                            {% set size_mb = (video.file_size / 1048576.0) %}
+                                                                            <span class="badge bg-light text-secondary border"><i class="bi bi-hdd me-1"></i>{{ size_mb|round(2) }} MB</span>
+                                                                        {% endif %}
+                                                                        <a class="badge bg-primary-subtle text-primary fw-semibold" href="{{ url_for('videos_stream', filename=video.file_name) }}" download>
+                                                                            <i class="bi bi-download me-1"></i>Baixar
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                                {% if is_admin %}
+                                                                    <div class="d-flex flex-column gap-2">
+                                                                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                                                data-bs-toggle="collapse"
+                                                                                data-bs-target="#video-edit-{{ video.id }}"
+                                                                                aria-expanded="false"
+                                                                                aria-controls="video-edit-{{ video.id }}">
+                                                                            <i class="bi bi-pencil me-1"></i>Editar
+                                                                        </button>
+                                                                        <form method="post"
+                                                                              action="{{ url_for('delete_video_asset', video_id=video.id) }}"
+                                                                              onsubmit="return confirm('Deseja realmente remover este vídeo?');">
+                                                                            {{ csrf_token() }}
+                                                                            <button class="btn btn-sm btn-outline-danger" type="submit">
+                                                                                <i class="bi bi-trash me-1"></i>Excluir
+                                                                            </button>
+                                                                        </form>
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+
+                                                            {% if is_admin %}
+                                                                <div class="collapse mt-3" id="video-edit-{{ video.id }}">
+                                                                    <form method="post" action="{{ url_for('save_video_asset') }}" enctype="multipart/form-data" class="row g-3">
+                                                                        {{ csrf_token() }}
+                                                                        <input type="hidden" name="video_id" value="{{ video.id }}">
+                                                                        <div class="col-12">
+                                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Título</label>
+                                                                            <input type="text" name="title" class="form-control form-control-sm" value="{{ video.title }}" maxlength="150" required>
+                                                                        </div>
+                                                                        <div class="col-12 col-lg-6">
+                                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Módulo</label>
+                                                                            <select name="module_id" class="form-select form-select-sm">
+                                                                                {% for module_id, module_label in module_choices %}
+                                                                                    <option value="{{ module_id }}" {% if module_id == video.module_id %}selected{% endif %}>{{ module_label }}</option>
+                                                                                {% endfor %}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div class="col-12 col-lg-6">
+                                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Duração</label>
+                                                                            <input type="text" name="duration" class="form-control form-control-sm" value="{{ video.duration }}" maxlength="50">
+                                                                        </div>
+                                                                        <div class="col-12">
+                                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Descrição</label>
+                                                                            <textarea name="description" class="form-control form-control-sm" rows="2" maxlength="500">{{ video.description }}</textarea>
+                                                                        </div>
+                                                                        <div class="col-12 col-lg-6">
+                                                                            <label class="form-label small text-uppercase text-muted fw-semibold mb-1">Substituir arquivo</label>
+                                                                            <input type="file" name="file" accept="{{ video_accept }}" class="form-control form-control-sm">
+                                                                            <div class="form-text small">Formatos aceitos: {{ allowed_video_extensions|join(', ') }}</div>
+                                                                        </div>
+                                                                        <div class="col-12 text-end">
+                                                                            <button class="btn btn-sm btn-primary" type="submit">
+                                                                                <i class="bi bi-save me-1"></i>Salvar alterações
+                                                                            </button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            {% endif %}
+                                                        </article>
                                                     {% endfor %}
                                                 </div>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <hr class="my-4" />
-
-                            <div class="lesson-list">
-                                {% for lesson in module.lessons %}
-                                    <article class="lesson border rounded-3 p-3 mb-3">
-                                        <div class="d-flex flex-column flex-lg-row gap-3">
-                                            <div class="flex-grow-1">
-                                                <h3 class="h6 mb-1">{{ lesson.title }}</h3>
-                                                {% if lesson.description %}
-                                                    <p class="small text-muted mb-3">{{ lesson.description }}</p>
-                                                {% endif %}
-                                                <div class="ratio ratio-16x9 mb-3">
-                                                    <video class="w-100 h-100 rounded" controls preload="metadata" {% if lesson.poster %}poster="{{ lesson.poster }}"{% endif %}>
-                                                        {% for source in lesson.sources %}
-                                                            <source src="{{ source.src }}" type="{{ source.type }}" />
-                                                        {% endfor %}
-                                                        Seu navegador não suporta vídeos HTML5.
-                                                    </video>
+                                            {% else %}
+                                                <div class="alert alert-secondary small mb-0">
+                                                    Nenhum vídeo cadastrado neste módulo ainda.
                                                 </div>
-                                            </div>
-                                            <div class="lesson-sidebar small text-muted">
-                                                {% if lesson.duration %}
-                                                    <div class="mb-2">
-                                                        <span class="badge bg-light border text-secondary fw-semibold">
-                                                            <i class="bi bi-clock me-1"></i>{{ lesson.duration }}
-                                                        </span>
-                                                    </div>
-                                                {% endif %}
-                                                {% if lesson.resources %}
-                                                    <div>
-                                                        <span class="d-block fw-semibold mb-2">Materiais de apoio</span>
-                                                        <div class="d-flex flex-column gap-2">
-                                                            {% for resource in lesson.resources %}
-                                                                <a class="btn btn-sm btn-outline-primary" href="{{ resource.href }}" target="_blank" rel="noopener">
-                                                                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ resource.label }}
-                                                                </a>
-                                                            {% endfor %}
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
+                                            {% endif %}
                                         </div>
-                                    </article>
-                                {% endfor %}
-                            </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-secondary mb-0">
+                                    Nenhum módulo cadastrado nesta pasta. {% if is_admin %}Utilize o formulário ao lado para começar.{% endif %}
+                                </div>
+                            {% endif %}
                         </div>
                     </section>
                 {% endfor %}
             {% else %}
-                <div class="alert alert-info border-0 shadow-sm" role="alert">
-                    <div class="d-flex align-items-start gap-2">
-                        <i class="bi bi-info-circle-fill fs-4"></i>
+                <div class="alert alert-info border-0 shadow-sm">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi bi-info-circle-fill fs-4 text-primary"></i>
                         <div>
-                            <h2 class="h6 mb-1">Nenhum módulo liberado ainda</h2>
-                            <p class="mb-0">Solicite ao administrador a vinculação de uma trilha ou perfil para começar a assistir.</p>
+                            <h2 class="h6 mb-1">Nenhum conteúdo cadastrado ainda</h2>
+                            <p class="mb-0">Crie uma pasta e um módulo para iniciar a biblioteca de vídeo aulas.</p>
                         </div>
                     </div>
                 </div>
             {% endif %}
         </div>
 
-        <div class="col-12 col-lg-3">
-            <div class="sticky-lg-top" style="top: 96px;">
+        <div class="col-12 col-xl-4">
+            {% if is_admin %}
                 <section class="card border-0 shadow-sm mb-4">
                     <div class="card-body">
-                        <h2 class="h6 text-uppercase text-muted mb-3">Como aproveitar melhor</h2>
-                        <ul class="list-unstyled small text-muted mb-0">
-                            <li class="mb-2"><i class="bi bi-check2-circle text-primary me-2"></i>Assista aos vídeos em tela cheia para melhor imersão.</li>
-                            <li class="mb-2"><i class="bi bi-clock-history text-primary me-2"></i>Use o marcador de tempo para continuar de onde parou.</li>
-                            <li class="mb-2"><i class="bi bi-share text-primary me-2"></i>Compartilhe feedbacks com o RH para melhorar os módulos.</li>
-                            <li><i class="bi bi-journal-check text-primary me-2"></i>Registre notas importantes em tarefas ou reuniões.</li>
-                        </ul>
+                        <h2 class="h5 mb-3">Nova pasta</h2>
+                        <form method="post" action="{{ url_for('save_video_folder') }}" class="row g-3">
+                            {{ folder_form.hidden_tag() }}
+                            <div class="col-12">
+                                {{ folder_form.name.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                {{ folder_form.name(class_='form-control') }}
+                            </div>
+                            <div class="col-12">
+                                {{ folder_form.description.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                {{ folder_form.description(class_='form-control', rows=3) }}
+                            </div>
+                            <div class="col-12 text-end">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-plus-lg me-1"></i>Criar pasta
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </section>
 
-                {% if locked_modules %}
-                    <section class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <h2 class="h6 text-uppercase text-muted mb-3">Módulos pendentes</h2>
-                            {% for module in locked_modules %}
-                                <div class="locked-module mb-3">
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <i class="bi bi-lock-fill text-secondary"></i>
-                                        <span class="fw-semibold">{{ module.title }}</span>
-                                    </div>
-                                    <p class="small text-muted mb-2">{{ module.description }}</p>
-                                    <ul class="list-unstyled small text-muted mb-0">
-                                        {% if module.required_roles %}
-                                            <li><i class="bi bi-shield-lock me-1"></i>Restrito a: {{ module.required_roles | join(', ') }}</li>
-                                        {% endif %}
-                                        {% if module.missing_tags %}
-                                            <li><i class="bi bi-diagram-3 me-1"></i>Solicite acesso às trilhas: {{ module.missing_tags | join(', ') }}</li>
-                                        {% endif %}
-                                    </ul>
+                <section class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Novo módulo</h2>
+                        {% if module_form.folder_id.choices %}
+                            <form method="post" action="{{ url_for('save_video_module') }}" class="row g-3">
+                                {{ module_form.hidden_tag() }}
+                                <div class="col-12">
+                                    {{ module_form.name.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ module_form.name(class_='form-control') }}
                                 </div>
-                                {% if not loop.last %}
-                                    <hr />
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </section>
-                {% endif %}
-            </div>
+                                <div class="col-12">
+                                    {{ module_form.folder_id.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ module_form.folder_id(class_='form-select') }}
+                                </div>
+                                <div class="col-12">
+                                    {{ module_form.description.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ module_form.description(class_='form-control', rows=3) }}
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-plus-lg me-1"></i>Criar módulo
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-secondary mb-0">
+                                Cadastre uma pasta antes de criar módulos.
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Enviar vídeo</h2>
+                        {% if module_choices %}
+                            <form method="post" action="{{ url_for('save_video_asset') }}" enctype="multipart/form-data" class="row g-3">
+                                {{ video_form.hidden_tag() }}
+                                <div class="col-12">
+                                    {{ video_form.title.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ video_form.title(class_='form-control') }}
+                                </div>
+                                <div class="col-12">
+                                    {{ video_form.module_id.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ video_form.module_id(class_='form-select') }}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ video_form.duration.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ video_form.duration(class_='form-control') }}
+                                </div>
+                                <div class="col-12">
+                                    {{ video_form.description.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ video_form.description(class_='form-control', rows=3) }}
+                                </div>
+                                <div class="col-12">
+                                    {{ video_form.file.label(class_='form-label small text-uppercase text-muted fw-semibold mb-1') }}
+                                    {{ video_form.file(class_='form-control', accept=video_accept) }}
+                                    <div class="form-text small">Formatos aceitos: {{ allowed_video_extensions|join(', ') }}</div>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button class="btn btn-success" type="submit">
+                                        <i class="bi bi-cloud-arrow-up me-1"></i>Enviar vídeo
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-secondary mb-0">
+                                Cadastre ao menos um módulo para liberar o envio de vídeos.
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+            {% endif %}
+
+            <section class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Boas práticas</h2>
+                    <ul class="list-unstyled text-muted small mb-0">
+                        <li class="mb-2"><i class="bi bi-check-circle me-2 text-primary"></i>Organize os vídeos por temas e departamentos.</li>
+                        <li class="mb-2"><i class="bi bi-hdmi me-2 text-primary"></i>Otimize os arquivos para garantir carregamento rápido.</li>
+                        <li class="mb-2"><i class="bi bi-people me-2 text-primary"></i>Compartilhe os conteúdos apenas com quem precisa.</li>
+                        <li><i class="bi bi-chat-dots me-2 text-primary"></i>Peça feedback das equipes para manter a biblioteca atualizada.</li>
+                    </ul>
+                </div>
+            </section>
         </div>
     </div>
 </div>

@@ -1,6 +1,7 @@
 """WTForms definitions for application-specific forms."""
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileField
 from wtforms import (
     StringField,
     RadioField,
@@ -14,7 +15,7 @@ from wtforms import (
     PasswordField,
     BooleanField,
     HiddenField,
-    widgets
+    widgets,
 )
 from wtforms.validators import (
     DataRequired,
@@ -33,6 +34,16 @@ REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
     ('Competência', 'Competência')
 ]
+
+VIDEO_ALLOWED_EXTENSIONS = (
+    "mp4",
+    "m4v",
+    "mov",
+    "webm",
+    "ogv",
+    "ogg",
+    "mkv",
+)
 
 class LoginForm(FlaskForm):
     """Formulário para login de usuários."""
@@ -254,6 +265,84 @@ class CourseForm(FlaskForm):
         validators=[DataRequired()],
     )
     submit = SubmitField("Salvar curso")
+
+
+class VideoFolderForm(FlaskForm):
+    """Formulário para criar ou editar pastas de vídeos."""
+
+    folder_id = HiddenField()
+    name = StringField(
+        "Nome da pasta",
+        validators=[DataRequired(), Length(max=120)],
+        render_kw={"placeholder": "Ex.: Onboarding"},
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=500)],
+        render_kw={"rows": 3, "placeholder": "Detalhe o conteúdo desta pasta"},
+    )
+    submit = SubmitField("Salvar pasta")
+
+
+class VideoModuleForm(FlaskForm):
+    """Formulário para gerenciar módulos dentro de uma pasta de vídeos."""
+
+    module_id = HiddenField()
+    name = StringField(
+        "Nome do módulo",
+        validators=[DataRequired(), Length(max=120)],
+        render_kw={"placeholder": "Ex.: Introdução ao Sistema"},
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=500)],
+        render_kw={"rows": 3, "placeholder": "Resumo sobre este módulo"},
+    )
+    folder_id = SelectField(
+        "Pasta",
+        coerce=int,
+        validators=[DataRequired(message="Selecione uma pasta.")],
+    )
+    submit = SubmitField("Salvar módulo")
+
+
+class VideoUploadForm(FlaskForm):
+    """Formulário para subir ou editar vídeos dentro de um módulo."""
+
+    ALLOWED_EXTENSIONS = VIDEO_ALLOWED_EXTENSIONS
+
+    video_id = HiddenField()
+    title = StringField(
+        "Título do vídeo",
+        validators=[DataRequired(), Length(max=150)],
+        render_kw={"placeholder": "Ex.: Visão Geral da Plataforma"},
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional(), Length(max=500)],
+        render_kw={"rows": 3, "placeholder": "Notas ou objetivos deste vídeo"},
+    )
+    duration = StringField(
+        "Duração estimada",
+        validators=[Optional(), Length(max=50)],
+        render_kw={"placeholder": "Ex.: 12 min"},
+    )
+    module_id = SelectField(
+        "Módulo",
+        coerce=int,
+        validators=[DataRequired(message="Selecione um módulo.")],
+    )
+    file = FileField(
+        "Arquivo de vídeo",
+        validators=[
+            Optional(),
+            FileAllowed(
+                VIDEO_ALLOWED_EXTENSIONS,
+                "Formatos permitidos: mp4, m4v, mov, webm, ogv, ogg e mkv.",
+            ),
+        ],
+    )
+    submit = SubmitField("Salvar vídeo")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""

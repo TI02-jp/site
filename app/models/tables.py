@@ -155,6 +155,101 @@ class AccessLink(db.Model):
         return f"<AccessLink {self.category}:{self.label}>"
 
 
+class VideoFolder(db.Model):
+    """Logical folder that groups learning modules."""
+
+    __tablename__ = "video_folders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    modules = db.relationship(
+        "VideoModule",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="VideoModule.name",
+    )
+
+    def __repr__(self):
+        return f"<VideoFolder {self.name}>"
+
+
+class VideoModule(db.Model):
+    """Course module that belongs to a folder and contains video lessons."""
+
+    __tablename__ = "video_modules"
+
+    id = db.Column(db.Integer, primary_key=True)
+    folder_id = db.Column(
+        db.Integer,
+        db.ForeignKey("video_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    folder = db.relationship("VideoFolder", back_populates="modules")
+    videos = db.relationship(
+        "VideoAsset",
+        back_populates="module",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="VideoAsset.title",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("folder_id", "name", name="uq_video_modules_folder_name"),
+    )
+
+    def __repr__(self):
+        return f"<VideoModule {self.name} (folder={self.folder_id})>"
+
+
+class VideoAsset(db.Model):
+    """Uploaded video lesson available inside a module."""
+
+    __tablename__ = "video_assets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    module_id = db.Column(
+        db.Integer,
+        db.ForeignKey("video_modules.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    file_name = db.Column(db.String(255), nullable=False)
+    original_name = db.Column(db.String(255), nullable=False)
+    content_type = db.Column(db.String(120))
+    file_size = db.Column(db.Integer)
+    duration = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    module = db.relationship("VideoModule", back_populates="videos")
+
+    def __repr__(self):
+        return f"<VideoAsset {self.title} (module={self.module_id})>"
+
+    @property
+    def storage_key(self) -> str:
+        """Return the stored filename used on disk."""
+
+        return self.file_name
+
 class Course(db.Model):
     """Internal training course available in the knowledge hub."""
 

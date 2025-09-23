@@ -10,6 +10,7 @@ from flask import (
     jsonify,
     current_app,
     session,
+    send_from_directory,
 )
 from functools import wraps
 from collections import Counter
@@ -35,6 +36,9 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    VideoFolder,
+    VideoModule,
+    VideoAsset,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -55,14 +59,19 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    VideoFolderForm,
+    VideoModuleForm,
+    VideoUploadForm,
 )
-import os, json, re, secrets
+import os, json, re, secrets, mimetypes
 import requests
+from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import IntegrityError
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -124,185 +133,6 @@ ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
 ]
 
 
-VIDEO_LIBRARY: list[dict[str, Any]] = [
-    {
-        "id": "onboarding-boas-vindas",
-        "title": "Boas-vindas e visão geral do portal",
-        "description": (
-            "Conheça a estrutura do portal interno, como navegar pelos principais "
-            "recursos e onde encontrar materiais essenciais para o seu dia a dia."
-        ),
-        "category": "Onboarding",
-        "duration": "12 minutos",
-        "audience": "Recomendado para todos os colaboradores.",
-        "allowed_roles": ["user", "admin"],
-        "allowed_tags": [],
-        "lessons": [
-            {
-                "id": "onboarding-introducao",
-                "title": "Como navegar pelo portal",
-                "description": (
-                    "Veja um passo a passo rápido de como acessar os menus, localizar "
-                    "documentos e acompanhar suas tarefas prioritárias."
-                ),
-                "duration": "05:12",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-            {
-                "id": "onboarding-personalizacao",
-                "title": "Personalizando sua experiência",
-                "description": (
-                    "Aprenda a ajustar notificações, favoritos e atalhos para deixar o "
-                    "portal alinhado às suas necessidades."
-                ),
-                "duration": "06:48",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-        ],
-    },
-    {
-        "id": "financeiro-relatorios",
-        "title": "Financeiro - Relatórios estratégicos",
-        "description": (
-            "Mergulhe nos indicadores financeiros críticos, aprenda a configurar "
-            "dashboards e gerar relatórios automatizados para a diretoria."
-        ),
-        "category": "Financeiro",
-        "duration": "18 minutos",
-        "audience": "Disponível para integrantes da trilha Financeiro.",
-        "allowed_roles": ["user", "admin"],
-        "allowed_tags": ["Financeiro"],
-        "lessons": [
-            {
-                "id": "financeiro-configuracao",
-                "title": "Configurações iniciais",
-                "description": (
-                    "Como parametrizar os relatórios, definir filtros e compartilhar "
-                    "a visão com os responsáveis de cada célula."
-                ),
-                "duration": "08:10",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-            {
-                "id": "financeiro-aprofundando",
-                "title": "Análises avançadas",
-                "description": (
-                    "Demonstração prática de cruzamento de dados, criação de alertas e "
-                    "acompanhamento semanal de indicadores."
-                ),
-                "duration": "09:45",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-        ],
-    },
-    {
-        "id": "lideranca-feedback",
-        "title": "Liderança - Feedbacks estratégicos",
-        "description": (
-            "Conteúdo exclusivo para líderes com orientações sobre cadência de "
-            "feedbacks, comunicação empática e planos de desenvolvimento."
-        ),
-        "category": "Liderança",
-        "duration": "22 minutos",
-        "audience": "Disponível apenas para contas administrativas.",
-        "allowed_roles": ["admin"],
-        "allowed_tags": [],
-        "lessons": [
-            {
-                "id": "lideranca-rituais",
-                "title": "Rituais de acompanhamento",
-                "description": (
-                    "Estruture reuniões de acompanhamento semanais e acompanhe a "
-                    "evolução das entregas da equipe."
-                ),
-                "duration": "10:05",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-            {
-                "id": "lideranca-planos",
-                "title": "Planos de desenvolvimento",
-                "description": (
-                    "Como mapear competências-chave, criar planos de ação e registrar "
-                    "o histórico de evolução de cada liderado."
-                ),
-                "duration": "11:55",
-                "sources": [
-                    {
-                        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                        "type": "video/mp4",
-                    }
-                ],
-            },
-        ],
-    },
-]
-
-
-def build_google_flow(state: str | None = None) -> Flow:
-    """Return a configured Google OAuth ``Flow`` instance."""
-    if not (
-        current_app.config.get("GOOGLE_CLIENT_ID")
-        and current_app.config.get("GOOGLE_CLIENT_SECRET")
-    ):
-        abort(404)
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": current_app.config["GOOGLE_CLIENT_ID"],
-                "client_secret": current_app.config["GOOGLE_CLIENT_SECRET"],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=GOOGLE_OAUTH_SCOPES,
-        state=state,
-    )
-
-
-def get_google_redirect_uri() -> str:
-    """Return the redirect URI registered with Google."""
-    return current_app.config.get("GOOGLE_REDIRECT_URI") or url_for(
-        "google_callback",
-        _external=True,
-        _scheme=current_app.config["PREFERRED_URL_SCHEME"],
-    )
-
-
-def credentials_to_dict(credentials):
-    """Convert Google credentials object to a serializable dict."""
-    return {
-        "token": credentials.token,
-        "refresh_token": credentials.refresh_token,
-        "token_uri": credentials.token_uri,
-        "client_id": credentials.client_id,
-        "client_secret": credentials.client_secret,
-        "scopes": credentials.scopes,
-    }
 
 
 @app.context_processor
@@ -330,6 +160,82 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 def allowed_file(filename):
     """Check if a filename has an allowed extension."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+VIDEO_ALLOWED_EXTENSIONS = {ext.lower() for ext in VideoUploadForm.ALLOWED_EXTENSIONS}
+VIDEO_UPLOAD_SUBDIR = "video_uploads"
+
+
+def _video_upload_folder() -> str:
+    """Return the absolute path of the directory that stores uploaded videos."""
+
+    configured = current_app.config.get("VIDEO_UPLOAD_FOLDER")
+    base = configured or os.path.join(current_app.instance_path, VIDEO_UPLOAD_SUBDIR)
+    os.makedirs(base, exist_ok=True)
+    return base
+
+
+def _save_video_file(file_storage: FileStorage) -> tuple[str, str, str, int]:
+    """Persist an uploaded file to disk and return metadata."""
+
+    filename = secure_filename(file_storage.filename or "")
+    if not filename:
+        raise ValueError("Nome de arquivo inválido para upload de vídeo")
+
+    extension = filename.rsplit(".", 1)[-1].lower()
+    if extension not in VIDEO_ALLOWED_EXTENSIONS:
+        raise ValueError("Extensão de vídeo não permitida")
+
+    storage_name = f"{uuid4().hex}.{extension}"
+    upload_folder = _video_upload_folder()
+    file_path = os.path.join(upload_folder, storage_name)
+
+    stream = file_storage.stream
+    stream.seek(0, os.SEEK_END)
+    file_size = stream.tell()
+    stream.seek(0)
+
+    file_storage.save(file_path)
+
+    content_type = file_storage.mimetype or mimetypes.guess_type(filename)[0]
+    if not content_type:
+        content_type = "application/octet-stream"
+
+    return storage_name, filename, content_type, file_size
+
+
+def _remove_video_file(file_name: str | None) -> None:
+    """Remove a previously uploaded video file from disk if it exists."""
+
+    if not file_name:
+        return
+
+    file_path = os.path.join(_video_upload_folder(), file_name)
+    try:
+        os.remove(file_path)
+    except FileNotFoundError:
+        return
+
+
+def _flash_form_errors(form) -> None:
+    """Flash all validation errors present on a form instance."""
+
+    for field_name, errors in form.errors.items():
+        field = getattr(form, field_name, None)
+        label = field.label.text if field and hasattr(field, "label") else field_name
+        for error in errors:
+            flash(f"{label}: {error}", "danger")
+
+
+def _parse_int(value: Any | None) -> int | None:
+    """Safely convert the provided value to an integer if possible."""
+
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -476,97 +382,371 @@ def home():
 @app.route("/videos")
 @login_required
 def videos():
-    """Display a curated collection of internal video resources."""
+    """Render the video library dashboard with management tools."""
 
-    user_tags = {tag.nome for tag in current_user.tags}
+    folders = (
+        VideoFolder.query.options(
+            joinedload(VideoFolder.modules).joinedload(VideoModule.videos)
+        )
+        .order_by(VideoFolder.name.asc())
+        .all()
+    )
 
-    def resolve_sources(raw_sources: list[dict[str, Any]] | None) -> list[dict[str, str]]:
-        resolved: list[dict[str, str]] = []
-        if not raw_sources:
-            return resolved
-        for source in raw_sources:
-            if not isinstance(source, dict):
-                continue
-            src = source.get("url")
-            if not src and source.get("path"):
-                src = url_for("static", filename=source["path"])
-            if not src:
-                continue
-            entry = {k: v for k, v in source.items() if k not in {"url", "path"}}
-            entry["src"] = src
-            resolved.append(entry)
-        return resolved
+    folder_form = VideoFolderForm()
+    module_form = VideoModuleForm()
+    video_form = VideoUploadForm()
 
-    def resolve_resources(raw_resources: list[dict[str, Any]] | None) -> list[dict[str, str]]:
-        resolved: list[dict[str, str]] = []
-        if not raw_resources:
-            return resolved
-        for resource in raw_resources:
-            if not isinstance(resource, dict):
-                continue
-            href = resource.get("url")
-            if not href and resource.get("path"):
-                href = url_for("static", filename=resource["path"])
-            if not href:
-                continue
-            entry = {k: v for k, v in resource.items() if k not in {"url", "path"}}
-            entry["href"] = href
-            resolved.append(entry)
-        return resolved
+    folder_choices = [(folder.id, folder.name) for folder in folders]
+    module_choices = [
+        (module.id, f"{folder.name} • {module.name}")
+        for folder in folders
+        for module in folder.modules
+    ]
 
-    available_modules: list[dict[str, Any]] = []
-    locked_modules: list[dict[str, Any]] = []
+    module_form.folder_id.choices = folder_choices
+    video_form.module_id.choices = module_choices
 
-    for module in VIDEO_LIBRARY:
-        allowed_roles = set(module.get("allowed_roles") or [])
-        allowed_tags = set(module.get("allowed_tags") or [])
-        role_allowed = not allowed_roles or current_user.role in allowed_roles
-        tag_allowed = not allowed_tags or bool(user_tags.intersection(allowed_tags))
+    if folder_choices and module_form.folder_id.data is None:
+        module_form.folder_id.data = folder_choices[0][0]
+    if module_choices and video_form.module_id.data is None:
+        video_form.module_id.data = module_choices[0][0]
 
-        module_view = {
-            key: value
-            for key, value in module.items()
-            if key not in {"lessons", "allowed_roles", "allowed_tags"}
-        }
-        module_view["target_roles"] = sorted(allowed_roles)
-        module_view["target_tags"] = sorted(allowed_tags)
-        module_view["lessons"] = []
-
-        for lesson in module.get("lessons", []):
-            if not isinstance(lesson, dict):
-                continue
-            lesson_view = {
-                key: value for key, value in lesson.items() if key not in {"sources", "resources", "poster"}
-            }
-            lesson_view["sources"] = resolve_sources(lesson.get("sources"))
-            lesson_view["resources"] = resolve_resources(lesson.get("resources"))
-
-            poster = lesson.get("poster")
-            if poster:
-                if isinstance(poster, str) and poster.startswith("http"):
-                    lesson_view["poster"] = poster
-                else:
-                    lesson_view["poster"] = url_for("static", filename=str(poster))
-
-            module_view["lessons"].append(lesson_view)
-
-        if role_allowed and tag_allowed:
-            available_modules.append(module_view)
-        else:
-            module_view["missing_tags"] = sorted(allowed_tags - user_tags)
-            module_view["required_roles"] = module_view["target_roles"]
-            locked_modules.append(module_view)
-
-    available_modules.sort(key=lambda item: item.get("title", ""))
-    locked_modules.sort(key=lambda item: item.get("title", ""))
+    video_accept = ",".join(f".{ext.lower()}" for ext in VideoUploadForm.ALLOWED_EXTENSIONS)
 
     return render_template(
         "videos.html",
-        available_modules=available_modules,
-        locked_modules=locked_modules,
-        user_tags=sorted(user_tags),
-        available_count=len(available_modules),
-        total_count=len(VIDEO_LIBRARY),
+        folders=folders,
+        folder_form=folder_form,
+        module_form=module_form,
+        video_form=video_form,
+        folder_choices=folder_choices,
+        module_choices=module_choices,
+        is_admin=current_user.role == "admin",
+        video_accept=video_accept,
+        allowed_video_extensions=VideoUploadForm.ALLOWED_EXTENSIONS,
+    )
+
+
+@app.route("/videos/folders/save", methods=["POST"])
+@admin_required
+def save_video_folder():
+    """Create or update a logical video folder."""
+
+    form = VideoFolderForm()
+
+    if form.validate_on_submit():
+        folder_id = _parse_int(form.folder_id.data)
+        name = (form.name.data or "").strip()
+        description_raw = (form.description.data or "").strip()
+        description = description_raw or None
+
+        try:
+            if folder_id:
+                folder = VideoFolder.query.get(folder_id)
+                if folder is None:
+                    flash("A pasta selecionada não foi encontrada.", "danger")
+                    return redirect(url_for("videos"))
+                folder.name = name
+                folder.description = description
+                message = "Pasta atualizada com sucesso!"
+            else:
+                folder = VideoFolder(name=name, description=description)
+                db.session.add(folder)
+                message = "Pasta criada com sucesso!"
+
+            db.session.commit()
+            flash(message, "success")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Já existe uma pasta com esse nome.", "danger")
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Failed to persist video folder")
+            flash("Não foi possível salvar a pasta. Tente novamente.", "danger")
+    else:
+        _flash_form_errors(form)
+
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/modules/save", methods=["POST"])
+@admin_required
+def save_video_module():
+    """Create or update a module inside a folder."""
+
+    form = VideoModuleForm()
+    folder_choices = [
+        (folder.id, folder.name)
+        for folder in VideoFolder.query.order_by(VideoFolder.name.asc()).all()
+    ]
+    form.folder_id.choices = folder_choices
+
+    if not folder_choices:
+        flash("Crie uma pasta antes de cadastrar módulos.", "warning")
+        return redirect(url_for("videos"))
+
+    if form.validate_on_submit():
+        module_id = _parse_int(form.module_id.data)
+        folder_id = form.folder_id.data
+        name = (form.name.data or "").strip()
+        description_raw = (form.description.data or "").strip()
+        description = description_raw or None
+
+        try:
+            if module_id:
+                module = VideoModule.query.get(module_id)
+                if module is None:
+                    flash("O módulo selecionado não foi encontrado.", "danger")
+                    return redirect(url_for("videos"))
+                module.name = name
+                module.description = description
+                module.folder_id = folder_id
+                message = "Módulo atualizado com sucesso!"
+            else:
+                module = VideoModule(
+                    name=name,
+                    description=description,
+                    folder_id=folder_id,
+                )
+                db.session.add(module)
+                message = "Módulo criado com sucesso!"
+
+            db.session.commit()
+            flash(message, "success")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Já existe um módulo com este nome nesta pasta.", "danger")
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Failed to persist video module")
+            flash("Não foi possível salvar o módulo. Tente novamente.", "danger")
+    else:
+        _flash_form_errors(form)
+
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/assets/save", methods=["POST"])
+@admin_required
+def save_video_asset():
+    """Handle video uploads and metadata edits."""
+
+    form = VideoUploadForm()
+    folders = (
+        VideoFolder.query.options(joinedload(VideoFolder.modules))
+        .order_by(VideoFolder.name.asc())
+        .all()
+    )
+    module_choices = [
+        (module.id, f"{folder.name} • {module.name}")
+        for folder in folders
+        for module in folder.modules
+    ]
+    form.module_id.choices = module_choices
+
+    if not module_choices:
+        flash("Cadastre um módulo antes de enviar vídeos.", "warning")
+        return redirect(url_for("videos"))
+
+    if not form.validate_on_submit():
+        _flash_form_errors(form)
+        return redirect(url_for("videos"))
+
+    video_id = _parse_int(form.video_id.data)
+    module_id = form.module_id.data
+    title = (form.title.data or "").strip()
+    description_raw = (form.description.data or "").strip()
+    duration_raw = (form.duration.data or "").strip()
+    description = description_raw or None
+    duration = duration_raw or None
+
+    file_field = form.file.data
+    if isinstance(file_field, FileStorage) and not file_field.filename:
+        file_field = None
+
+    if video_id is None and not file_field:
+        flash("Selecione um arquivo de vídeo para enviar.", "danger")
+        return redirect(url_for("videos"))
+
+    module = VideoModule.query.get(module_id)
+    if module is None:
+        flash("O módulo selecionado não foi encontrado.", "danger")
+        return redirect(url_for("videos"))
+
+    new_file_info: tuple[str, str, str, int] | None = None
+    old_file_name: str | None = None
+
+    try:
+        if video_id:
+            video = VideoAsset.query.get(video_id)
+            if video is None:
+                flash("O vídeo selecionado não foi encontrado.", "danger")
+                return redirect(url_for("videos"))
+
+            video.title = title
+            video.description = description
+            video.duration = duration
+            video.module_id = module_id
+
+            if file_field:
+                new_file_info = _save_video_file(file_field)
+                old_file_name = video.file_name
+                video.file_name = new_file_info[0]
+                video.original_name = new_file_info[1]
+                video.content_type = new_file_info[2]
+                video.file_size = new_file_info[3]
+        else:
+            if not file_field:
+                flash("Selecione um arquivo de vídeo para enviar.", "danger")
+                return redirect(url_for("videos"))
+
+            new_file_info = _save_video_file(file_field)
+            video = VideoAsset(
+                module_id=module_id,
+                title=title,
+                description=description,
+                duration=duration,
+                file_name=new_file_info[0],
+                original_name=new_file_info[1],
+                content_type=new_file_info[2],
+                file_size=new_file_info[3],
+            )
+            db.session.add(video)
+
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        if new_file_info:
+            _remove_video_file(new_file_info[0])
+        flash("Não foi possível salvar o vídeo. Tente novamente.", "danger")
+        return redirect(url_for("videos"))
+    except ValueError as exc:
+        db.session.rollback()
+        if new_file_info:
+            _remove_video_file(new_file_info[0])
+        flash(str(exc), "danger")
+        return redirect(url_for("videos"))
+    except Exception:
+        db.session.rollback()
+        if new_file_info:
+            _remove_video_file(new_file_info[0])
+        current_app.logger.exception("Failed to persist video asset")
+        flash("Não foi possível salvar o vídeo. Tente novamente.", "danger")
+        return redirect(url_for("videos"))
+    else:
+        if new_file_info and old_file_name and old_file_name != new_file_info[0]:
+            _remove_video_file(old_file_name)
+
+    message = "Vídeo atualizado com sucesso!" if video_id else "Vídeo enviado com sucesso!"
+    flash(message, "success")
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/folders/<int:folder_id>/delete", methods=["POST"])
+@admin_required
+def delete_video_folder(folder_id: int):
+    """Delete a folder and all of its modules/videos."""
+
+    folder = (
+        VideoFolder.query.options(
+            joinedload(VideoFolder.modules).joinedload(VideoModule.videos)
+        )
+        .filter_by(id=folder_id)
+        .first()
+    )
+    if folder is None:
+        flash("A pasta selecionada não foi encontrada.", "danger")
+        return redirect(url_for("videos"))
+
+    file_names = [
+        video.file_name
+        for module in folder.modules
+        for video in module.videos
+        if video.file_name
+    ]
+
+    try:
+        db.session.delete(folder)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete video folder")
+        flash("Não foi possível remover a pasta.", "danger")
+    else:
+        for file_name in file_names:
+            _remove_video_file(file_name)
+        flash("Pasta removida com sucesso!", "success")
+
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/modules/<int:module_id>/delete", methods=["POST"])
+@admin_required
+def delete_video_module(module_id: int):
+    """Delete a module and all related videos."""
+
+    module = (
+        VideoModule.query.options(joinedload(VideoModule.videos))
+        .filter_by(id=module_id)
+        .first()
+    )
+    if module is None:
+        flash("O módulo selecionado não foi encontrado.", "danger")
+        return redirect(url_for("videos"))
+
+    file_names = [video.file_name for video in module.videos if video.file_name]
+
+    try:
+        db.session.delete(module)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete video module")
+        flash("Não foi possível remover o módulo.", "danger")
+    else:
+        for file_name in file_names:
+            _remove_video_file(file_name)
+        flash("Módulo removido com sucesso!", "success")
+
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/assets/<int:video_id>/delete", methods=["POST"])
+@admin_required
+def delete_video_asset(video_id: int):
+    """Delete a single uploaded video."""
+
+    video = VideoAsset.query.get(video_id)
+    if video is None:
+        flash("O vídeo selecionado não foi encontrado.", "danger")
+        return redirect(url_for("videos"))
+
+    file_name = video.file_name
+
+    try:
+        db.session.delete(video)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete video asset")
+        flash("Não foi possível remover o vídeo.", "danger")
+    else:
+        _remove_video_file(file_name)
+        flash("Vídeo removido com sucesso!", "success")
+
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/storage/<path:filename>")
+@login_required
+def videos_stream(filename: str):
+    """Serve uploaded video files to authenticated users."""
+
+    return send_from_directory(
+        _video_upload_folder(),
+        filename,
+        as_attachment=False,
+        conditional=True,
     )
 
 
