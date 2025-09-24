@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1200px;">
+    {% set next_url = request.args.get('next') or request.form.get('next') %}
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white text-center">
             <h2 class="mb-0">
@@ -13,6 +14,7 @@
         <div class="card-body">
             <form method="post" action="{{ url_for('editar_consultoria', codigo=inclusao.id) if inclusao else url_for('nova_inclusao') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next_url or '' }}">
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <label for="data" class="form-label">Data</label>
@@ -60,7 +62,7 @@
                     <input type="hidden" id="resposta" name="resposta" value="{{ inclusao.resposta|safe if inclusao else '' }}">
                 </div>
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="{{ url_for('inclusoes') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    <a href="{{ next_url or url_for('inclusoes') }}" class="btn btn-outline-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>

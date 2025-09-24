@@ -24,6 +24,8 @@
         </button>
     </form>
 
+    {%set current_list_url = url_for('inclusoes', page=pagination.page, q=search or None) %}
+
     <div class="card shadow-sm mb-4">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -45,10 +47,10 @@
                             <td class="text-start">{{ inc.consultoria }}</td>
                             <td class="text-start">{{ inc.assunto }}</td>
                             <td class="text-center">
-                                <a href="{{ url_for('visualizar_consultoria', codigo=inc.id) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
+                                 <a href="{{ url_for('visualizar_consultoria', codigo=inc.id, next=current_list_url) }}" class="btn btn-custom btn-sm me-1" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ url_for('editar_consultoria', codigo=inc.id) }}" class="btn btn-custom btn-sm" title="Editar">
+                                <a href="{{ url_for('editar_consultoria', codigo=inc.id, next=current_list_url) }}" class="btn btn-custom btn-sm" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                             </td>
