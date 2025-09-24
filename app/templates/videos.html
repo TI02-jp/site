@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}VIDEOS{% endblock %}
+
+{% block sidebar_nav %}
+{% include "sidebar_home.html" %}
+{% endblock %}
+
+{% block content %}
+<section class="py-4">
+    <div class="container">
+        <div class="d-flex align-items-center mb-4">
+            <div class="flex-shrink-0 me-3">
+                <span class="badge bg-primary-subtle text-primary rounded-pill p-3">
+                    <i class="bi bi-play-btn"></i>
+                </span>
+            </div>
+            <div>
+                <h1 class="h3 mb-1">Biblioteca de Vídeos</h1>
+                <p class="text-muted mb-0">
+                    Assista aos treinamentos e comunicados da equipe diretamente pelo portal.
+                </p>
+            </div>
+        </div>
+        <div class="ratio ratio-16x9 shadow-sm rounded overflow-hidden border border-light">
+            <iframe
+                src="{{ drive_embed_url }}"
+                allow="autoplay"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+                title="Biblioteca de vídeos JP"
+            ></iframe>
+        </div>
+        <p class="text-muted small mt-3">
+            Os vídeos são disponibilizados pela pasta compartilhada no Google Drive. Utilize o ícone de menu para
+            ampliar, assistir em tela cheia ou abrir diretamente no Drive quando necessário.
+        </p>
+    </div>
+</section>
+{% endblock %}
