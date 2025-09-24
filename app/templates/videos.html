@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Vídeos{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<section class="py-4 py-md-5">
+    <div class="container">
+        <div class="row justify-content-between align-items-center mb-4">
+            <div class="col-lg-8">
+                <h1 class="h3 mb-2">Biblioteca de Vídeos</h1>
+                <p class="text-muted mb-0">Assista aos conteúdos compartilhados pela equipe diretamente no portal, com acesso rápido à pasta do Google Drive.</p>
+            </div>
+        </div>
+        <div class="ratio ratio-16x9 shadow-sm rounded overflow-hidden">
+            <iframe src="{{ drive_embed_url }}" title="Biblioteca de vídeos" allow="autoplay" loading="lazy"></iframe>
+        </div>
+        <div class="alert alert-info mt-4 d-flex align-items-start gap-2" role="alert">
+            <i class="bi bi-info-circle fs-4"></i>
+            <div>
+                <strong>Dica:</strong> Selecione um vídeo na pasta para assistir em tela cheia ou abrir em uma nova aba quando necessário.
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

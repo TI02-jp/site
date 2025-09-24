@@ -334,6 +334,15 @@ def home():
     return render_template("home.html")
 
 
+@app.route("/videos")
+@login_required
+def videos():
+    """Render the curated Google Drive video gallery."""
+    drive_folder_id = "1DJHoZjMX88LaZQr1T_bi50oQB_BIg97a"
+    embed_url = f"https://drive.google.com/embeddedfolderview?id={drive_folder_id}#grid"
+    return render_template("videos.html", drive_embed_url=embed_url)
+
+
 @app.route("/cursos", methods=["GET", "POST"])
 @login_required
 def cursos():
