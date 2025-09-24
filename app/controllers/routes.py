@@ -1034,6 +1034,9 @@ def editar_consultoria(codigo):
         inclusao.resposta = sanitize_html(request.form.get("resposta"))
         db.session.commit()
         flash("Consultoria atualizada com sucesso.", "success")
+        next_url = request.form.get("next") or request.args.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect(url_for("inclusoes"))
     return render_template(
         "nova_inclusao.html",
