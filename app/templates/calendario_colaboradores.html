@@ -142,6 +142,9 @@
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
 .fc-daygrid-dot-event { display: flex; align-items: center; padding: 0; border: none; background: none; }
 .fc-daygrid-dot-event .fc-event-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 4px; border: none; }
+.fc-event-main-custom { display: flex; flex-direction: column; align-items: flex-start; font-size: 0.75rem; }
+.fc-event-participants { font-weight: 600; margin-bottom: 2px; }
+.fc-daygrid-day .fc-event-participants { font-size: 0.85rem; }
 </style>
 {% endblock %}
 
@@ -177,36 +180,13 @@
             fixedWeekCount: false,
             timeZone: '{{ calendar_timezone }}',
             locale: 'pt-br',
-            customButtons: {
-                jumpToToday: {
-                    text: 'Hoje',
-                    click: function() {
-                        calendar.today();
-                    }
-                }
-            },
             headerToolbar: {
-                left: 'prev,next jumpToToday',
+                left: 'prev,next today',
                 center: 'title',
                 right: 'dayGridDay,timeGridWeek,dayGridMonth,multiMonthYear'
             },
             navLinks: true,
             expandRows: true,
-            datesSet: function(info) {
-                var todayButton = calendarEl.querySelector('.fc-jumpToToday-button');
-                if (!todayButton) { return; }
-                var today = calendar.getNow();
-                var start = new Date(info.start.getTime());
-                var end = new Date(info.end.getTime());
-                today.setHours(0, 0, 0, 0);
-                start.setHours(0, 0, 0, 0);
-                end.setHours(0, 0, 0, 0);
-                if (today >= start && today < end) {
-                    todayButton.setAttribute('disabled', 'disabled');
-                } else {
-                    todayButton.removeAttribute('disabled');
-                }
-            },
             buttonText: {
                 dayGridDay: 'Dia',
                 timeGridWeek: 'Semana',
@@ -282,6 +262,32 @@
                 }
                 var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
                 modal.show();
+            },
+            eventContent: function(arg) {
+                if (arg.view.type !== 'dayGridDay' && arg.view.type !== 'dayGridMonth') {
+                    return;
+                }
+                var wrapper = document.createElement('div');
+                wrapper.className = 'fc-event-main-custom';
+                var participants = arg.event.extendedProps.participants || [];
+                var creator = arg.event.extendedProps.creator;
+                var whoText = '';
+                if (participants.length) {
+                    whoText = participants.join(', ');
+                } else if (creator) {
+                    whoText = creator;
+                }
+                if (whoText) {
+                    var whoEl = document.createElement('div');
+                    whoEl.className = 'fc-event-participants';
+                    whoEl.textContent = whoText;
+                    wrapper.appendChild(whoEl);
+                }
+                var titleEl = document.createElement('div');
+                titleEl.className = 'fc-event-title';
+                titleEl.textContent = arg.event.title || '';
+                wrapper.appendChild(titleEl);
+                return { domNodes: [wrapper] };
             }
         });
 
