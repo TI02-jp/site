@@ -89,6 +89,17 @@
                                     {{ form.notify_attendees(class="form-check-input", id="notify_attendees") }}
                                     <label class="form-check-label" for="notify_attendees">{{ form.notify_attendees.label.text }}</label>
                                 </div>
+                                <div class="form-check mb-3">
+                                    {{ form.apply_more_days(class="form-check-input", id="apply_more_days") }}
+                                    <label class="form-check-label" for="apply_more_days">{{ form.apply_more_days.label.text }}</label>
+                                </div>
+                                <div class="mb-3 d-none" id="additionalDateWrapper">
+                                    {{ form.additional_date.label(class="form-label") }}
+                                    {{ form.additional_date(class="form-control", type="date", id="additional_date") }}
+                                    {% if form.additional_date.errors %}
+                                        <div class="text-danger">{{ form.additional_date.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -199,9 +210,38 @@
     document.addEventListener('DOMContentLoaded', function() {
     var currentEvent;
     var calendarEl = document.getElementById('calendar');
+    var applyMoreDaysCheckbox = document.getElementById('apply_more_days');
+    var additionalDateWrapper = document.getElementById('additionalDateWrapper');
+    var additionalDateInput = document.getElementById('additional_date');
+
+    function toggleAdditionalDate() {
+        if (!applyMoreDaysCheckbox || !additionalDateWrapper) {
+            return;
+        }
+        if (applyMoreDaysCheckbox.checked) {
+            additionalDateWrapper.classList.remove('d-none');
+        } else {
+            additionalDateWrapper.classList.add('d-none');
+            if (additionalDateInput) {
+                additionalDateInput.value = '';
+            }
+        }
+    }
+
+    if (applyMoreDaysCheckbox) {
+        applyMoreDaysCheckbox.addEventListener('change', toggleAdditionalDate);
+        toggleAdditionalDate();
+    }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
         form.reset();
+        if (applyMoreDaysCheckbox) {
+            applyMoreDaysCheckbox.checked = false;
+        }
+        if (additionalDateInput) {
+            additionalDateInput.value = '';
+        }
+        toggleAdditionalDate();
         document.getElementById('meeting_id').value = '';
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
@@ -399,6 +439,13 @@
         if (form.notify_attendees) {
             form.notify_attendees.checked = false;
         }
+        if (form.apply_more_days) {
+            form.apply_more_days.checked = false;
+        }
+        if (additionalDateInput) {
+            additionalDateInput.value = '';
+        }
+        toggleAdditionalDate();
         var ids = currentEvent.extendedProps.participant_ids || [];
         document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
             cb.checked = ids.includes(parseInt(cb.value));

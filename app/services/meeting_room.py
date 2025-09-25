@@ -52,6 +52,105 @@ def _next_available(
             return start
 
 
+def _collect_intervals(raw_events):
+    intervals: list[tuple[datetime, datetime]] = []
+    for e in raw_events:
+        existing_start = isoparse(
+            e["start"].get("dateTime") or e["start"].get("date")
+        ).astimezone(CALENDAR_TZ)
+        existing_end = isoparse(
+            e["end"].get("dateTime") or e["end"].get("date")
+        ).astimezone(CALENDAR_TZ)
+        intervals.append((existing_start, existing_end))
+    for r in Reuniao.query.all():
+        existing_start = r.inicio.astimezone(CALENDAR_TZ)
+        existing_end = r.fim.astimezone(CALENDAR_TZ)
+        intervals.append((existing_start, existing_end))
+    return intervals
+
+
+def _calculate_adjusted_start(
+    start_dt: datetime, duration: timedelta, intervals: list[tuple[datetime, datetime]], now
+) -> tuple[datetime, list[str]]:
+    proposed_start = max(start_dt, now + MIN_GAP)
+    messages: list[str] = []
+    if proposed_start != start_dt:
+        messages.append(
+            "Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência."
+        )
+    adjusted_start = _next_available(proposed_start, duration, intervals)
+    if adjusted_start != proposed_start:
+        messages.append("Horário conflita com outra reunião.")
+    return adjusted_start, messages
+
+
+def _create_additional_meeting(
+    additional_date,
+    form,
+    duration: timedelta,
+    selected_users: list[User],
+    description: str,
+    participant_emails: list[str],
+    should_notify: bool,
+    user_id: int,
+):
+    start_dt = datetime.combine(
+        additional_date, form.start_time.data, tzinfo=CALENDAR_TZ
+    )
+    end_dt = start_dt + duration
+    if form.create_meet.data:
+        event = create_meet_event(
+            form.subject.data,
+            start_dt,
+            end_dt,
+            description,
+            participant_emails,
+            notify_attendees=should_notify,
+        )
+        meet_link = event.get("hangoutLink")
+    else:
+        event = create_event(
+            form.subject.data,
+            start_dt,
+            end_dt,
+            description,
+            participant_emails,
+            notify_attendees=should_notify,
+        )
+        meet_link = None
+    meeting = Reuniao(
+        inicio=start_dt,
+        fim=end_dt,
+        assunto=form.subject.data,
+        descricao=form.description.data,
+        status=ReuniaoStatus.AGENDADA,
+        meet_link=meet_link,
+        google_event_id=event["id"],
+        criador_id=user_id,
+    )
+    db.session.add(meeting)
+    db.session.flush()
+    for u in selected_users:
+        db.session.add(
+            ReuniaoParticipante(
+                reuniao_id=meeting.id, id_usuario=u.id, username_usuario=u.username
+            )
+        )
+    db.session.commit()
+    formatted_date = additional_date.strftime("%d/%m/%Y")
+    if meet_link:
+        flash(
+            Markup(
+                f"Reunião replicada para {formatted_date}! "
+                f"<a href=\"{meet_link}\" target=\"_blank\">Link do Meet</a>"
+            ),
+            "success",
+        )
+    else:
+        flash(f"Reunião replicada para {formatted_date}!", "success")
+    return meet_link
+
+
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts.
 
@@ -66,29 +165,11 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         form.date.data, form.end_time.data, tzinfo=CALENDAR_TZ
     )
     duration = end_dt - start_dt
-    intervals: list[tuple[datetime, datetime]] = []
-    for e in raw_events:
-        existing_start = isoparse(
-            e["start"].get("dateTime") or e["start"].get("date")
-        ).astimezone(CALENDAR_TZ)
-        existing_end = isoparse(
-            e["end"].get("dateTime") or e["end"].get("date")
-        ).astimezone(CALENDAR_TZ)
-        intervals.append((existing_start, existing_end))
-    for r in Reuniao.query.all():
-        existing_start = r.inicio.astimezone(CALENDAR_TZ)
-        existing_end = r.fim.astimezone(CALENDAR_TZ)
-        intervals.append((existing_start, existing_end))
+    intervals = _collect_intervals(raw_events)
 
-    proposed_start = max(start_dt, now + MIN_GAP)
-    messages: list[str] = []
-    if proposed_start != start_dt:
-        messages.append(
-            "Reuniões devem ser agendadas com pelo menos 2 minutos de antecedência."
-        )
-    adjusted_start = _next_available(proposed_start, duration, intervals)
-    if adjusted_start != proposed_start:
-        messages.append("Horário conflita com outra reunião.")
+    adjusted_start, messages = _calculate_adjusted_start(
+        start_dt, duration, intervals, now
+    )
     if adjusted_start != start_dt:
         adjusted_end = adjusted_start + duration
         form.date.data = adjusted_start.date()
@@ -99,6 +180,30 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             "warning",
         )
         return False, None
+
+    additional_date_field = getattr(form, "additional_date", None)
+    apply_more_days_field = getattr(form, "apply_more_days", None)
+    if (
+        apply_more_days_field
+        and additional_date_field
+        and apply_more_days_field.data
+        and additional_date_field.data
+    ):
+        extra_start = datetime.combine(
+            additional_date_field.data, form.start_time.data, tzinfo=CALENDAR_TZ
+        )
+        extra_adjusted_start, extra_messages = _calculate_adjusted_start(
+            extra_start, duration, intervals, now
+        )
+        if extra_adjusted_start != extra_start:
+            formatted_date = additional_date_field.data.strftime("%d/%m/%Y")
+            flash(
+                "Não foi possível agendar a reunião adicional na data selecionada. "
+                + " ".join(extra_messages)
+                + f" Ajuste o horário do dia {formatted_date} e tente novamente.",
+                "warning",
+            )
+            return False, None
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users]
@@ -147,6 +252,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             )
         )
     db.session.commit()
+    additional_meet_link = None
     if meet_link:
         flash(
             Markup(
@@ -156,7 +262,23 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
     else:
         flash("Reunião criada com sucesso!", "success")
-    return True, meet_link
+    if (
+        apply_more_days_field
+        and additional_date_field
+        and apply_more_days_field.data
+        and additional_date_field.data
+    ):
+        additional_meet_link = _create_additional_meeting(
+            additional_date_field.data,
+            form,
+            duration,
+            selected_users,
+            description,
+            participant_emails,
+            should_notify,
+            user_id,
+        )
+    return True, meet_link or additional_meet_link
 
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
