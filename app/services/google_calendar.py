@@ -102,7 +102,10 @@ def create_meet_event(
     created_event = (
         service.events()
         .insert(
-            calendarId=MEETING_ROOM_EMAIL, body=event, conferenceDataVersion=1
+            calendarId=MEETING_ROOM_EMAIL,
+            body=event,
+            conferenceDataVersion=1,
+            sendUpdates="all",
         )
         .execute()
     )
@@ -129,7 +132,9 @@ def create_event(
     if attendees:
         event["attendees"] = [{"email": email} for email in attendees]
     created_event = (
-        service.events().insert(calendarId=MEETING_ROOM_EMAIL, body=event).execute()
+        service.events()
+        .insert(calendarId=MEETING_ROOM_EMAIL, body=event, sendUpdates="all")
+        .execute()
     )
     return created_event
 
@@ -178,6 +183,7 @@ def update_event(
             calendarId=MEETING_ROOM_EMAIL,
             eventId=event_id,
             body=event,
+            sendUpdates="all",
             **kwargs,
         )
         .execute()
