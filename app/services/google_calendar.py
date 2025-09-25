@@ -74,12 +74,19 @@ def list_upcoming_events(max_results: int = 10):
     return events_result.get("items", [])
 
 
+def _send_updates_flag(notify_attendees: bool | None) -> str:
+    """Translate a boolean into the Google Calendar ``sendUpdates`` flag."""
+
+    return "all" if notify_attendees else "none"
+
+
 def create_meet_event(
     summary: str,
     start: datetime,
     end: datetime,
     description: str = "",
     attendees: list[str] | None = None,
+    notify_attendees: bool | None = None,
 ):
     """Create a calendar event with a Google Meet link."""
     service = _build_service()
@@ -105,7 +112,7 @@ def create_meet_event(
             calendarId=MEETING_ROOM_EMAIL,
             body=event,
             conferenceDataVersion=1,
-            sendUpdates="all",
+            sendUpdates=_send_updates_flag(notify_attendees),
         )
         .execute()
     )
@@ -118,6 +125,7 @@ def create_event(
     end: datetime,
     description: str = "",
     attendees: list[str] | None = None,
+    notify_attendees: bool | None = None,
 ):
     """Create a calendar event without a Google Meet link."""
     service = _build_service()
@@ -133,7 +141,11 @@ def create_event(
         event["attendees"] = [{"email": email} for email in attendees]
     created_event = (
         service.events()
-        .insert(calendarId=MEETING_ROOM_EMAIL, body=event, sendUpdates="all")
+        .insert(
+            calendarId=MEETING_ROOM_EMAIL,
+            body=event,
+            sendUpdates=_send_updates_flag(notify_attendees),
+        )
         .execute()
     )
     return created_event
@@ -147,6 +159,7 @@ def update_event(
     description: str = "",
     attendees: list[str] | None = None,
     create_meet: bool | None = None,
+    notify_attendees: bool | None = None,
 ):
     """Update an existing calendar event.
 
@@ -183,7 +196,7 @@ def update_event(
             calendarId=MEETING_ROOM_EMAIL,
             eventId=event_id,
             body=event,
-            sendUpdates="all",
+            sendUpdates=_send_updates_flag(notify_attendees),
             **kwargs,
         )
         .execute()

@@ -339,6 +339,10 @@ class MeetingForm(FlaskForm):
         "Descrição (opcional)", validators=[Optional()], render_kw={"placeholder": "Detalhes", "rows": 3}
     )
     create_meet = BooleanField("Gerar sala no Google Meet")
+    notify_attendees = BooleanField(
+        "Notificar participantes por e-mail",
+        default=True,
+    )
     submit = SubmitField("Agendar")
 
 

@@ -107,6 +107,8 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
     description += "\nStatus: Agendada"
+    notify_attendees = getattr(form, "notify_attendees", None)
+    should_notify = bool(notify_attendees.data) if notify_attendees else False
     if form.create_meet.data:
         event = create_meet_event(
             form.subject.data,
@@ -114,6 +116,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             end_dt,
             description,
             participant_emails,
+            notify_attendees=should_notify,
         )
     else:
         event = create_event(
@@ -122,6 +125,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             end_dt,
             description,
             participant_emails,
+            notify_attendees=should_notify,
         )
     meet_link = event.get("hangoutLink")
     meeting = Reuniao(
@@ -211,6 +215,8 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
     description += "\nStatus: Agendada"
+    notify_field = getattr(form, "notify_attendees", None)
+    should_notify = bool(notify_field.data) if notify_field else False
     if meeting.google_event_id:
         updated_event = update_event(
             meeting.google_event_id,
@@ -220,6 +226,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             description,
             participant_emails,
             create_meet=form.create_meet.data,
+            notify_attendees=should_notify,
         )
         meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
     else:
@@ -230,6 +237,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
                 end_dt,
                 description,
                 participant_emails,
+                notify_attendees=should_notify,
             )
         else:
             updated_event = create_event(
@@ -238,6 +246,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
                 end_dt,
                 description,
                 participant_emails,
+                notify_attendees=should_notify,
             )
         meeting.meet_link = updated_event.get("hangoutLink")
         meeting.google_event_id = updated_event.get("id")
