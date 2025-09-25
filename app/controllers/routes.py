@@ -35,6 +35,7 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    GeneralCalendarEvent,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -52,6 +53,7 @@ from app.forms import (
     SetorForm,
     TagForm,
     MeetingForm,
+    GeneralCalendarEventForm,
     TaskForm,
     AccessLinkForm,
     CourseForm,
@@ -76,6 +78,13 @@ from app.services.meeting_room import (
     update_meeting,
     combine_events,
     delete_meeting,
+)
+from app.services.general_calendar import (
+    populate_event_participants as populate_general_event_participants,
+    create_calendar_event_from_form,
+    update_calendar_event_from_form,
+    delete_calendar_event,
+    serialize_events_for_calendar,
 )
 import plotly.graph_objects as go
 from plotly.colors import qualitative
@@ -643,6 +652,62 @@ def consultorias():
     """List registered consultorias."""
     consultorias = Consultoria.query.all()
     return render_template("consultorias.html", consultorias=consultorias)
+
+
+@app.route("/calendario-colaboradores", methods=["GET", "POST"])
+@login_required
+def calendario_colaboradores():
+    """Display and manage the internal collaborators calendar."""
+
+    form = GeneralCalendarEventForm()
+    populate_general_event_participants(form)
+    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    show_modal = False
+    if form.validate_on_submit():
+        if not can_manage:
+            abort(403)
+        event_id_raw = form.event_id.data
+        if event_id_raw:
+            try:
+                event_id = int(event_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            event = GeneralCalendarEvent.query.get_or_404(event_id)
+            if current_user.role != "admin" and event.created_by_id != current_user.id:
+                flash("Você só pode editar eventos que você criou.", "danger")
+                return redirect(url_for("calendario_colaboradores"))
+            update_calendar_event_from_form(event, form)
+        else:
+            create_calendar_event_from_form(form, current_user.id)
+        return redirect(url_for("calendario_colaboradores"))
+    elif request.method == "POST":
+        show_modal = True
+
+    calendar_tz = get_calendar_timezone()
+    return render_template(
+        "calendario_colaboradores.html",
+        form=form,
+        can_manage=can_manage,
+        show_modal=show_modal,
+        calendar_timezone=calendar_tz.key,
+    )
+
+
+@app.route("/calendario-eventos/<int:event_id>/delete", methods=["POST"])
+@login_required
+def delete_calendario_evento(event_id):
+    """Delete an event from the collaborators calendar."""
+
+    event = GeneralCalendarEvent.query.get_or_404(event_id)
+    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    if not can_manage:
+        abort(403)
+    if current_user.role != "admin" and event.created_by_id != current_user.id:
+        flash("Você só pode excluir eventos que você criou.", "danger")
+        return redirect(url_for("calendario_colaboradores"))
+    delete_calendar_event(event)
+    flash("Evento removido com sucesso!", "success")
+    return redirect(url_for("calendario_colaboradores"))
 
 
 @app.route("/sala-reunioes", methods=["GET", "POST"])
@@ -1217,6 +1282,18 @@ def api_reunioes():
     now = datetime.now(calendar_tz)
     events = combine_events(
         raw_events, now, current_user.id, current_user.role == "admin"
+    )
+    return jsonify(events)
+
+
+@app.route("/api/calendario-eventos")
+@login_required
+def api_general_calendar_events():
+    """Return collaborator calendar events as JSON."""
+
+    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    events = serialize_events_for_calendar(
+        current_user.id, can_manage, current_user.role == "admin"
     )
     return jsonify(events)
 

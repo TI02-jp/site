@@ -341,6 +341,47 @@ class MeetingForm(FlaskForm):
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
 
+
+class GeneralCalendarEventForm(FlaskForm):
+    """Formulário para eventos do calendário interno."""
+
+    participants = SelectMultipleField(
+        "Participantes",
+        coerce=int,
+        validators=[Length(min=1, message="Selecione pelo menos um participante")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    event_id = HiddenField()
+    start_date = DateField(
+        "Data inicial",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        render_kw={"min": "1900-01-01"},
+    )
+    end_date = DateField(
+        "Data final (opcional)",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+        render_kw={"min": "1900-01-01"},
+    )
+    title = StringField(
+        "Título",
+        validators=[DataRequired(), Length(max=100)],
+        render_kw={"placeholder": "Título do evento"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional()],
+        render_kw={"rows": 3, "placeholder": "Informações adicionais"},
+    )
+    submit = SubmitField("Salvar")
+
+    def validate_end_date(self, field):
+        if field.data and self.start_date.data and field.data < self.start_date.data:
+            raise ValidationError("A data final deve ser igual ou posterior à data inicial.")
+
+
 class TaskForm(FlaskForm):
     """Formulário para criação de tarefas."""
 

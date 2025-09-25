@@ -130,6 +130,10 @@
                             <span class="home-journey__link-icon"><i class="bi bi-calendar-event"></i></span>
                             Reservar sala de reuniões
                         </a>
+                        <a class="home-journey__link" href="{{ url_for('calendario_colaboradores') }}">
+                            <span class="home-journey__link-icon"><i class="bi bi-calendar-check"></i></span>
+                            Consultar calendário geral
+                        </a>
                         {% set primeiro_setor = tasks_tags|first %}
                         {% if current_user.role == 'admin' %}
                         <a class="home-journey__link" href="{{ url_for('tasks_overview') }}">

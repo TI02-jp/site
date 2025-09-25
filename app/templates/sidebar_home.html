@@ -33,6 +33,12 @@
                 SALA DE REUNIÕES
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'calendario_colaboradores' %} active{% endif %}" href="{{ url_for('calendario_colaboradores') }}">
+                <i class="bi bi-calendar-check"></i>
+                CALENDÁRIO GERAL
+            </a>
+        </li>
         {% if user_has_tag('Gestão') %}
         <li class="nav-item">
             <a class="nav-link" href="#" onclick="return false;">
