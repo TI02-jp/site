@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}CALENDÁRIO DE COLABORADORES{% endblock %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+    .content-breadcrumb { display: none; }
+    .content-wrapper { padding: 0; }
+    .modal-body { max-height: none; overflow-y: visible; }
+    .participant-list { max-height: 200px; overflow-y: auto; }
+    #calendar { height: 70vh; }
+    </style>
+{% endblock %}
+
+{% block sidebar_nav %}
+    {% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Calendário de Colaboradores</h2>
+        {% if can_manage %}
+        <button id="openEventModal"
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#calendarEventModal">Novo Evento</button>
+        {% endif %}
+    </div>
+    <div id="calendar"></div>
+
+    {% if can_manage %}
+    <div class="modal fade" id="calendarEventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header align-items-start">
+                    <h5 class="modal-title">Novo Evento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post">
+                    <div class="modal-body text-start">
+                        {{ form.csrf_token }}
+                        {{ form.event_id(id='event_id') }}
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                {{ form.participants.label(class="form-label") }}
+                                <div class="participant-list border rounded p-2">
+                                    {% for subfield in form.participants %}
+                                        <div class="form-check">
+                                            {{ subfield(class="form-check-input", id=subfield.id) }}
+                                            <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.participants.errors %}
+                                    <div class="text-danger">{{ form.participants.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.title.label(class="form-label") }}
+                                    {{ form.title(class="form-control") }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.start_date.label(class="form-label") }}
+                                    {{ form.start_date(class="form-control", type="date", id="start_date") }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.end_date.label(class="form-label") }}
+                                    {{ form.end_date(class="form-control", type="date", id="end_date") }}
+                                </div>
+                                {% set show_time_fields = form.start_time.data or form.end_time.data or form.start_time.errors or form.end_time.errors %}
+                                <div class="row g-3{% if not show_time_fields %} d-none{% endif %}" id="timeFields">
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.start_time.label(class="form-label") }}
+                                        {{ form.start_time(class="form-control", type="time", id="start_time") }}
+                                        {% if form.start_time.errors %}
+                                            <div class="text-danger">{{ form.start_time.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.end_time.label(class="form-label") }}
+                                        {{ form.end_time(class="form-control", type="time", id="end_time") }}
+                                        {% if form.end_time.errors %}
+                                            <div class="text-danger">{{ form.end_time.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header align-items-start">
+                    <div class="flex-grow-1">
+                        <div id="detailCreator" class="text-muted small d-none mb-1"></div>
+                        <h5 class="modal-title mb-0" id="detailTitle"></h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <ul class="list-group text-start">
+                        <li class="list-group-item"><strong>Período:</strong> <span id="detailPeriod"></span></li>
+                        <li class="list-group-item"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
+                    </ul>
+                    <div id="detailDescription" class="mt-3 d-none">
+                        <h6>Descrição</h6>
+                        <p class="mb-0" id="detailDescriptionText"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <form id="deleteEventForm" method="post" class="d-none">
+                        {{ form.csrf_token(id='csrf_token_delete') }}
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    {% if can_manage %}
+                    <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
+                    <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
+.fc-daygrid-dot-event { display: flex; align-items: center; padding: 0; border: none; background: none; }
+.fc-daygrid-dot-event .fc-event-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 4px; border: none; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+    <script>
+    function showFlashMessage(message, category = 'success') {
+        let container = document.querySelector('.flash-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'flash-container';
+            document.body.appendChild(container);
+        }
+        const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `<i class="bi bi-${icon} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>`;
+        container.appendChild(alertDiv);
+        setTimeout(() => {
+            bootstrap.Alert.getOrCreateInstance(alertDiv).close();
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var canManage = {{ 'true' if can_manage else 'false' }};
+        var currentEvent = null;
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            fixedWeekCount: false,
+            timeZone: '{{ calendar_timezone }}',
+            locale: 'pt-br',
+            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+            dateClick: function(info) {
+                if (!canManage) { return; }
+                openNewEvent(info.dateStr);
+            },
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                currentEvent = info.event;
+                document.getElementById('detailTitle').textContent = currentEvent.title;
+                var creatorEl = document.getElementById('detailCreator');
+                if (currentEvent.extendedProps.creator) {
+                    creatorEl.textContent = 'Criado por: ' + currentEvent.extendedProps.creator;
+                    creatorEl.classList.remove('d-none');
+                } else {
+                    creatorEl.textContent = '';
+                    creatorEl.classList.add('d-none');
+                }
+                var startDate = currentEvent.extendedProps.start_date;
+                var endDate = currentEvent.extendedProps.end_date;
+                var startTime = currentEvent.extendedProps.start_time;
+                var endTime = currentEvent.extendedProps.end_time;
+                var display;
+                if (startDate === endDate) {
+                    display = formatDate(startDate);
+                    if (startTime && endTime) {
+                        display += ' das ' + startTime + ' às ' + endTime;
+                    }
+                } else {
+                    display = formatDate(startDate) + ' a ' + formatDate(endDate);
+                }
+                document.getElementById('detailPeriod').textContent = display;
+                var participants = currentEvent.extendedProps.participants || [];
+                document.getElementById('detailParticipants').textContent = participants.join(', ');
+                var description = currentEvent.extendedProps.description || '';
+                var descContainer = document.getElementById('detailDescription');
+                var descText = document.getElementById('detailDescriptionText');
+                if (description.trim()) {
+                    descText.textContent = description;
+                    descContainer.classList.remove('d-none');
+                } else {
+                    descText.textContent = '';
+                    descContainer.classList.add('d-none');
+                }
+                if (canManage) {
+                    var editBtn = document.getElementById('editEventBtn');
+                    var deleteBtn = document.getElementById('deleteEventBtn');
+                    var deleteForm = document.getElementById('deleteEventForm');
+                    if (currentEvent.extendedProps.can_edit) {
+                        editBtn.classList.remove('d-none');
+                    } else {
+                        editBtn.classList.add('d-none');
+                    }
+                    if (currentEvent.extendedProps.can_delete) {
+                        deleteBtn.classList.remove('d-none');
+                        deleteForm.action = '/calendario-eventos/' + currentEvent.id + '/delete';
+                    } else {
+                        deleteBtn.classList.add('d-none');
+                    }
+                }
+                var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+                modal.show();
+            }
+        });
+
+        calendar.render();
+
+        var startDateInput = document.getElementById('start_date');
+        var endDateInput = document.getElementById('end_date');
+        var timeFields = document.getElementById('timeFields');
+        var startTimeInput = document.getElementById('start_time');
+        var endTimeInput = document.getElementById('end_time');
+
+        function updateTimeFieldsVisibility() {
+            if (!timeFields || !startDateInput || !endDateInput) { return; }
+            var startValue = startDateInput.value;
+            var endValue = endDateInput.value || startValue;
+            var sameDay = Boolean(startValue) && Boolean(endValue) && startValue === endValue;
+            if (sameDay) {
+                timeFields.classList.remove('d-none');
+                if (startTimeInput) { startTimeInput.disabled = false; }
+                if (endTimeInput) { endTimeInput.disabled = false; }
+            } else {
+                timeFields.classList.add('d-none');
+                if (startTimeInput) {
+                    startTimeInput.value = '';
+                    startTimeInput.disabled = true;
+                }
+                if (endTimeInput) {
+                    endTimeInput.value = '';
+                    endTimeInput.disabled = true;
+                }
+            }
+        }
+
+        updateTimeFieldsVisibility();
+
+        if (startDateInput) { startDateInput.addEventListener('change', updateTimeFieldsVisibility); }
+        if (endDateInput) { endDateInput.addEventListener('change', updateTimeFieldsVisibility); }
+
+        function loadEvents() {
+            fetch('/api/calendario-eventos')
+                .then(function(resp) { return resp.json(); })
+                .then(function(data) {
+                    calendar.removeAllEvents();
+                    data.forEach(function(ev) { calendar.addEvent(ev); });
+                });
+        }
+
+        function openNewEvent(dateStr) {
+            var form = document.querySelector('#calendarEventModal form');
+            form.reset();
+            document.getElementById('event_id').value = '';
+            if (dateStr) {
+                form.start_date.value = dateStr;
+                form.end_date.value = dateStr;
+            }
+            if (startTimeInput) { startTimeInput.value = ''; }
+            if (endTimeInput) { endTimeInput.value = ''; }
+            document.querySelector('#calendarEventModal .modal-title').textContent = 'Novo Evento';
+            document.querySelector('#calendarEventModal input[type="submit"]').value = 'Salvar';
+            updateTimeFieldsVisibility();
+            var modal = new bootstrap.Modal(document.getElementById('calendarEventModal'));
+            modal.show();
+        }
+
+        function formatDate(value) {
+            var parts = value.split('-');
+            return parts.reverse().join('/');
+        }
+
+        {% if can_manage %}
+        var openBtn = document.getElementById('openEventModal');
+        if (openBtn) {
+            openBtn.addEventListener('click', function() {
+                openNewEvent('');
+            });
+        }
+
+        document.getElementById('editEventBtn').addEventListener('click', function() {
+            var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
+            detailModal.hide();
+            var form = document.querySelector('#calendarEventModal form');
+            document.getElementById('event_id').value = currentEvent.id || '';
+            form.title.value = currentEvent.title;
+            form.start_date.value = currentEvent.extendedProps.start_date;
+            form.end_date.value = currentEvent.extendedProps.end_date;
+            if (startTimeInput) {
+                startTimeInput.value = currentEvent.extendedProps.start_time || '';
+            }
+            if (endTimeInput) {
+                endTimeInput.value = currentEvent.extendedProps.end_time || '';
+            }
+            form.description.value = currentEvent.extendedProps.description || '';
+            var ids = currentEvent.extendedProps.participant_ids || [];
+            document.querySelectorAll('#calendarEventModal input[name="participants"]').forEach(function(cb) {
+                cb.checked = ids.includes(parseInt(cb.value));
+            });
+            updateTimeFieldsVisibility();
+            document.querySelector('#calendarEventModal .modal-title').textContent = 'Editar Evento';
+            document.querySelector('#calendarEventModal input[type="submit"]').value = 'Salvar';
+            var modal = new bootstrap.Modal(document.getElementById('calendarEventModal'));
+            modal.show();
+        });
+
+        document.getElementById('deleteEventBtn').addEventListener('click', function() {
+            if (confirm('Deseja excluir este evento?')) {
+                document.getElementById('deleteEventForm').submit();
+            }
+        });
+        {% endif %}
+
+        loadEvents();
+    });
+    </script>
+    {% if show_modal and can_manage %}
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = new bootstrap.Modal(document.getElementById('calendarEventModal'));
+            modal.show();
+        });
+        </script>
+    {% endif %}
+{% endblock %}
