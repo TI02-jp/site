@@ -341,6 +341,80 @@ class MeetingForm(FlaskForm):
     create_meet = BooleanField("Gerar sala no Google Meet")
     submit = SubmitField("Agendar")
 
+
+class GeneralCalendarEventForm(FlaskForm):
+    """Formulário para eventos do calendário interno."""
+
+    participants = SelectMultipleField(
+        "Participantes",
+        coerce=int,
+        validators=[Length(min=1, message="Selecione pelo menos um participante")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    event_id = HiddenField()
+    start_date = DateField(
+        "Data inicial",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        render_kw={"min": "1900-01-01"},
+    )
+    end_date = DateField(
+        "Data final (opcional)",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+        render_kw={"min": "1900-01-01"},
+    )
+    start_time = TimeField(
+        "Hora inicial (opcional)",
+        format="%H:%M",
+        validators=[Optional()],
+        render_kw={"step": 60},
+    )
+    end_time = TimeField(
+        "Hora final (opcional)",
+        format="%H:%M",
+        validators=[Optional()],
+        render_kw={"step": 60},
+    )
+    title = StringField(
+        "Título",
+        validators=[DataRequired(), Length(max=100)],
+        render_kw={"placeholder": "Título do evento"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional()],
+        render_kw={"rows": 3, "placeholder": "Informações adicionais"},
+    )
+    submit = SubmitField("Salvar")
+
+    def validate_end_date(self, field):
+        if field.data and self.start_date.data and field.data < self.start_date.data:
+            raise ValidationError("A data final deve ser igual ou posterior à data inicial.")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        start_date = self.start_date.data
+        end_date = self.end_date.data or start_date
+        start_time = self.start_time.data
+        end_time = self.end_time.data
+        if start_time and not end_time:
+            self.end_time.errors.append("Informe a hora de término.")
+            return False
+        if end_time and not start_time:
+            self.start_time.errors.append("Informe a hora de início.")
+            return False
+        if start_date and end_date and start_date != end_date and (start_time or end_time):
+            self.start_time.errors.append("Remova os horários para eventos com mais de um dia.")
+            return False
+        if start_time and end_time and end_time <= start_time:
+            self.end_time.errors.append("A hora de término deve ser posterior à hora de início.")
+            return False
+        return True
+
+
 class TaskForm(FlaskForm):
     """Formulário para criação de tarefas."""
 

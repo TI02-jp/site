@@ -363,6 +363,56 @@ class ReuniaoParticipante(db.Model):
     usuario = db.relationship('User')
 
 
+class GeneralCalendarEvent(db.Model):
+    """Company-wide calendar event managed within the application."""
+
+    __tablename__ = "general_calendar_events"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.Time, nullable=True)
+    end_time = db.Column(db.Time, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(CALENDAR_TZ),
+        nullable=False,
+    )
+
+    participants = db.relationship(
+        "GeneralCalendarEventParticipant",
+        backref="event",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+
+class GeneralCalendarEventParticipant(db.Model):
+    """Participant assigned to a general calendar event."""
+
+    __tablename__ = "general_calendar_event_participants"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey("general_calendar_events.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_name = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(CALENDAR_TZ),
+        nullable=False,
+    )
+
+    user = db.relationship("User")
+
+
 class TaskStatus(Enum):
     """Enumeration of possible task states."""
     PENDING = "pending"
