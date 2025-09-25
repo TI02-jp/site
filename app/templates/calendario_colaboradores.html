@@ -177,15 +177,37 @@
             fixedWeekCount: false,
             timeZone: '{{ calendar_timezone }}',
             locale: 'pt-br',
+            customButtons: {
+                jumpToToday: {
+                    text: 'Hoje',
+                    click: function() {
+                        calendar.today();
+                    }
+                }
+            },
             headerToolbar: {
-                left: 'prev,next today',
+                left: 'prev,next jumpToToday',
                 center: 'title',
                 right: 'dayGridDay,timeGridWeek,dayGridMonth,multiMonthYear'
             },
             navLinks: true,
             expandRows: true,
+            datesSet: function(info) {
+                var todayButton = calendarEl.querySelector('.fc-jumpToToday-button');
+                if (!todayButton) { return; }
+                var today = calendar.getNow();
+                var start = new Date(info.start.getTime());
+                var end = new Date(info.end.getTime());
+                today.setHours(0, 0, 0, 0);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(0, 0, 0, 0);
+                if (today >= start && today < end) {
+                    todayButton.setAttribute('disabled', 'disabled');
+                } else {
+                    todayButton.removeAttribute('disabled');
+                }
+            },
             buttonText: {
-                today: 'Hoje',
                 dayGridDay: 'Dia',
                 timeGridWeek: 'Semana',
                 dayGridMonth: 'Mês',
