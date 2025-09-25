@@ -7,23 +7,35 @@
     .content-breadcrumb { display: none; }
     .content-wrapper { padding: 0; }
     .modal-body { max-height: none; overflow-y: visible; }
-    .participant-list { max-height: 150px; overflow-y: auto; }
+    .participant-list { max-height: 160px; overflow-y: auto; }
     #calendar { height: 70vh; }
     .meeting-modal-dialog { max-width: 1200px; }
-    .meeting-modal-dialog .modal-body { font-size: 0.9rem; }
+    .meeting-modal-dialog .modal-header,
+    .meeting-modal-dialog .modal-body,
+    .meeting-modal-dialog .modal-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .meeting-modal-dialog .modal-header { padding-top: 1.1rem; padding-bottom: 0.9rem; }
+    .meeting-modal-dialog .modal-body { font-size: 0.85rem; padding-top: 1.1rem; padding-bottom: 1rem; }
+    .meeting-modal-dialog .modal-footer { padding-top: 0.9rem; padding-bottom: 0.9rem; }
     .meeting-modal-dialog label,
     .meeting-modal-dialog .form-check-label,
     .meeting-modal-dialog .form-control,
+    .meeting-modal-dialog .form-select,
     .meeting-modal-dialog .form-check-input,
     .meeting-modal-dialog .btn,
-    .meeting-modal-dialog .input-group-text { font-size: 0.9rem; }
-    .meeting-modal-dialog .modal-title { font-size: 1.15rem; }
-    .meeting-modal-dialog .modal-header,
-    .meeting-modal-dialog .modal-body,
-    .meeting-modal-dialog .modal-footer { padding-left: 1.5rem; padding-right: 1.5rem; }
-    .meeting-modal-dialog .modal-body .row { margin-left: -0.5rem; margin-right: -0.5rem; }
+    .meeting-modal-dialog .input-group-text { font-size: 0.85rem; }
+    .meeting-modal-dialog .modal-title { font-size: 1.05rem; }
+    .meeting-modal-dialog .form-control,
+    .meeting-modal-dialog .form-select,
+    .meeting-modal-dialog .input-group-text { padding: 0.35rem 0.6rem; }
+    .meeting-modal-dialog textarea.form-control { min-height: 5rem; }
+    .meeting-modal-dialog .form-check { margin-bottom: 0.25rem; }
+    .meeting-modal-dialog .form-check .form-check-label { line-height: 1.2; }
+    .meeting-modal-dialog .modal-body .row { margin-left: -0.35rem; margin-right: -0.35rem; }
     .meeting-modal-dialog .modal-body .col-md-6,
-    .meeting-modal-dialog .modal-body .mb-3 { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .meeting-modal-dialog .modal-body .mb-3 { padding-left: 0.35rem; padding-right: 0.35rem; }
+    .meeting-modal-dialog .meeting-options { gap: 0.75rem; }
+    .meeting-modal-dialog .meeting-options .form-check-input { margin-top: 0.2rem; }
+    .meeting-modal-dialog #additionalDatesContainer { gap: 0.5rem; }
     </style>
 {% endblock %}
 
@@ -88,25 +100,29 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    {{ form.subject.label(class="form-label") }}
-                                    {{ form.subject(class="form-control") }}
+                                <div class="row g-3 mb-1">
+                                    <div class="col-lg-6">
+                                        {{ form.subject.label(class="form-label mb-1") }}
+                                        {{ form.subject(class="form-control") }}
+                                    </div>
+                                    <div class="col-lg-6">
+                                        {{ form.description.label(class="form-label mb-1") }}
+                                        {{ form.description(class="form-control", rows=2) }}
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    {{ form.description.label(class="form-label") }}
-                                    {{ form.description(class="form-control", rows=3) }}
-                                </div>
-                                <div class="form-check mb-3">
-                                    {{ form.create_meet(class="form-check-input", id="create_meet") }}
-                                    <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
-                                </div>
-                                <div class="form-check mb-3">
-                                    {{ form.notify_attendees(class="form-check-input", id="notify_attendees") }}
-                                    <label class="form-check-label" for="notify_attendees">{{ form.notify_attendees.label.text }}</label>
-                                </div>
-                                <div class="form-check mb-3">
-                                    {{ form.apply_more_days(class="form-check-input", id="apply_more_days") }}
-                                    <label class="form-check-label" for="apply_more_days">{{ form.apply_more_days.label.text }}</label>
+                                <div class="meeting-options d-flex flex-wrap align-items-center mb-3">
+                                    <div class="form-check form-check-inline">
+                                        {{ form.create_meet(class="form-check-input", id="create_meet") }}
+                                        <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        {{ form.notify_attendees(class="form-check-input", id="notify_attendees") }}
+                                        <label class="form-check-label" for="notify_attendees">{{ form.notify_attendees.label.text }}</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        {{ form.apply_more_days(class="form-check-input", id="apply_more_days") }}
+                                        <label class="form-check-label" for="apply_more_days">{{ form.apply_more_days.label.text }}</label>
+                                    </div>
                                 </div>
                                 <div class="mb-3 d-none" id="additionalDatesWrapper">
                                     <label class="form-label" for="additional_dates-0">Aplicar também em</label>
