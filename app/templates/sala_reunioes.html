@@ -16,7 +16,7 @@
     {% include 'sidebar_home.html' %}
 {% endblock %}
 {% block content %}
-    <div class="container">
+    <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>Calendário de Agendamentos</h2>
                 <div>
@@ -32,7 +32,7 @@
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
+                <div class="modal-dialog modal-xl">
                     <div class="modal-content">
                         <div class="modal-header align-items-start">
                             <h5 class="modal-title">Agendar Reunião</h5>
@@ -93,11 +93,28 @@
                                     {{ form.apply_more_days(class="form-check-input", id="apply_more_days") }}
                                     <label class="form-check-label" for="apply_more_days">{{ form.apply_more_days.label.text }}</label>
                                 </div>
-                                <div class="mb-3 d-none" id="additionalDateWrapper">
-                                    {{ form.additional_date.label(class="form-label") }}
-                                    {{ form.additional_date(class="form-control", type="date", id="additional_date") }}
-                                    {% if form.additional_date.errors %}
-                                        <div class="text-danger">{{ form.additional_date.errors[0] }}</div>
+                                <div class="mb-3 d-none" id="additionalDatesWrapper">
+                                    <label class="form-label" for="additional_dates-0">Aplicar também em</label>
+                                    <div class="d-flex flex-column gap-2" id="additionalDatesContainer" data-next-index="{{ form.additional_dates|length }}">
+                                        {% for date_field in form.additional_dates %}
+                                            <div class="additional-date-item">
+                                                <div class="input-group additional-date-group">
+                                                    {{ date_field(class="form-control additional-date-input", type="date", id=date_field.id) }}
+                                                    <button type="button" class="btn btn-outline-danger remove-additional-date">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </div>
+                                                {% if date_field.errors %}
+                                                    <div class="text-danger small mt-1 additional-date-error">{{ date_field.errors[0] }}</div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addAdditionalDateBtn">
+                                        <i class="bi bi-plus-lg me-1"></i>Adicionar outro dia
+                                    </button>
+                                    {% if form.additional_dates.errors %}
+                                        <div class="text-danger mt-2 additional-dates-error">{{ form.additional_dates.errors[0] }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -211,26 +228,160 @@
     var currentEvent;
     var calendarEl = document.getElementById('calendar');
     var applyMoreDaysCheckbox = document.getElementById('apply_more_days');
-    var additionalDateWrapper = document.getElementById('additionalDateWrapper');
-    var additionalDateInput = document.getElementById('additional_date');
+    var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
+    var additionalDatesContainer = document.getElementById('additionalDatesContainer');
+    var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
 
-    function toggleAdditionalDate() {
-        if (!applyMoreDaysCheckbox || !additionalDateWrapper) {
+    function renumberAdditionalDates() {
+        if (!additionalDatesContainer) {
+            return;
+        }
+        var items = additionalDatesContainer.querySelectorAll('.additional-date-item');
+        items.forEach(function(item, index) {
+            var input = item.querySelector('.additional-date-input');
+            if (input) {
+                input.name = 'additional_dates-' + index;
+                input.id = 'additional_dates-' + index;
+            }
+        });
+        additionalDatesContainer.dataset.nextIndex = String(items.length);
+    }
+
+    function updateRemoveButtons() {
+        if (!additionalDatesContainer) {
+            return;
+        }
+        var items = additionalDatesContainer.querySelectorAll('.additional-date-item');
+        items.forEach(function(item) {
+            var removeBtn = item.querySelector('.remove-additional-date');
+            if (!removeBtn) {
+                return;
+            }
+            if (items.length > 1) {
+                removeBtn.classList.remove('d-none');
+            } else {
+                removeBtn.classList.add('d-none');
+            }
+        });
+    }
+
+    function attachRemoveHandler(button) {
+        if (!button) {
+            return;
+        }
+        button.addEventListener('click', function() {
+            if (!additionalDatesContainer) {
+                return;
+            }
+            var item = button.closest('.additional-date-item');
+            if (!item) {
+                return;
+            }
+            var items = additionalDatesContainer.querySelectorAll('.additional-date-item');
+            if (items.length === 1) {
+                var input = item.querySelector('.additional-date-input');
+                if (input) {
+                    input.value = '';
+                }
+                item.querySelectorAll('.additional-date-error').forEach(function(err) {
+                    err.remove();
+                });
+                return;
+            }
+            item.remove();
+            renumberAdditionalDates();
+            updateRemoveButtons();
+        });
+    }
+
+    function clearAdditionalDates() {
+        if (!additionalDatesContainer) {
+            return;
+        }
+        var items = additionalDatesContainer.querySelectorAll('.additional-date-item');
+        items.forEach(function(item, index) {
+            if (index === 0) {
+                var input = item.querySelector('.additional-date-input');
+                if (input) {
+                    input.value = '';
+                }
+                item.querySelectorAll('.additional-date-error').forEach(function(err) {
+                    err.remove();
+                });
+            } else {
+                item.remove();
+            }
+        });
+        if (additionalDatesWrapper) {
+            additionalDatesWrapper.querySelectorAll('.additional-dates-error').forEach(function(err) {
+                err.remove();
+            });
+        }
+        renumberAdditionalDates();
+        updateRemoveButtons();
+    }
+
+    function addAdditionalDateField(value) {
+        if (!additionalDatesContainer) {
+            return;
+        }
+        var item = document.createElement('div');
+        item.className = 'additional-date-item';
+        var group = document.createElement('div');
+        group.className = 'input-group additional-date-group';
+        var input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'form-control additional-date-input';
+        if (value) {
+            input.value = value;
+        }
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-outline-danger remove-additional-date';
+        removeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        group.appendChild(input);
+        group.appendChild(removeBtn);
+        item.appendChild(group);
+        additionalDatesContainer.appendChild(item);
+        attachRemoveHandler(removeBtn);
+        renumberAdditionalDates();
+        updateRemoveButtons();
+    }
+
+    function toggleAdditionalDates() {
+        if (!applyMoreDaysCheckbox || !additionalDatesWrapper) {
             return;
         }
         if (applyMoreDaysCheckbox.checked) {
-            additionalDateWrapper.classList.remove('d-none');
-        } else {
-            additionalDateWrapper.classList.add('d-none');
-            if (additionalDateInput) {
-                additionalDateInput.value = '';
+            additionalDatesWrapper.classList.remove('d-none');
+            if (
+                additionalDatesContainer &&
+                additionalDatesContainer.querySelectorAll('.additional-date-item').length === 0
+            ) {
+                addAdditionalDateField('');
             }
+            updateRemoveButtons();
+        } else {
+            additionalDatesWrapper.classList.add('d-none');
+            clearAdditionalDates();
         }
     }
 
+    if (additionalDatesContainer) {
+        renumberAdditionalDates();
+        additionalDatesContainer.querySelectorAll('.remove-additional-date').forEach(attachRemoveHandler);
+        updateRemoveButtons();
+    }
+
+    if (addAdditionalDateBtn) {
+        addAdditionalDateBtn.addEventListener('click', function() {
+            addAdditionalDateField('');
+        });
+    }
+
     if (applyMoreDaysCheckbox) {
-        applyMoreDaysCheckbox.addEventListener('change', toggleAdditionalDate);
-        toggleAdditionalDate();
+        applyMoreDaysCheckbox.addEventListener('change', toggleAdditionalDates);
+        toggleAdditionalDates();
     }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
@@ -238,10 +389,8 @@
         if (applyMoreDaysCheckbox) {
             applyMoreDaysCheckbox.checked = false;
         }
-        if (additionalDateInput) {
-            additionalDateInput.value = '';
-        }
-        toggleAdditionalDate();
+        clearAdditionalDates();
+        toggleAdditionalDates();
         document.getElementById('meeting_id').value = '';
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
@@ -442,10 +591,8 @@
         if (form.apply_more_days) {
             form.apply_more_days.checked = false;
         }
-        if (additionalDateInput) {
-            additionalDateInput.value = '';
-        }
-        toggleAdditionalDate();
+        clearAdditionalDates();
+        toggleAdditionalDates();
         var ids = currentEvent.extendedProps.participant_ids || [];
         document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
             cb.checked = ids.includes(parseInt(cb.value));

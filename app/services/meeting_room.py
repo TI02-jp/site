@@ -1,6 +1,6 @@
 """Helpers for meeting room scheduling logic."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from flask import flash
 from markupsafe import Markup
 from dateutil.parser import isoparse
@@ -181,29 +181,33 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
         return False, None
 
-    additional_date_field = getattr(form, "additional_date", None)
+    additional_dates_field = getattr(form, "additional_dates", None)
     apply_more_days_field = getattr(form, "apply_more_days", None)
+    additional_dates: list[date] = []
     if (
         apply_more_days_field
-        and additional_date_field
+        and additional_dates_field
         and apply_more_days_field.data
-        and additional_date_field.data
     ):
-        extra_start = datetime.combine(
-            additional_date_field.data, form.start_time.data, tzinfo=CALENDAR_TZ
-        )
-        extra_adjusted_start, extra_messages = _calculate_adjusted_start(
-            extra_start, duration, intervals, now
-        )
-        if extra_adjusted_start != extra_start:
-            formatted_date = additional_date_field.data.strftime("%d/%m/%Y")
-            flash(
-                "Não foi possível agendar a reunião adicional na data selecionada. "
-                + " ".join(extra_messages)
-                + f" Ajuste o horário do dia {formatted_date} e tente novamente.",
-                "warning",
+        for field in additional_dates_field:
+            if not field.data:
+                continue
+            extra_start = datetime.combine(
+                field.data, form.start_time.data, tzinfo=CALENDAR_TZ
             )
-            return False, None
+            extra_adjusted_start, extra_messages = _calculate_adjusted_start(
+                extra_start, duration, intervals, now
+            )
+            if extra_adjusted_start != extra_start:
+                formatted_date = field.data.strftime("%d/%m/%Y")
+                flash(
+                    "Não foi possível agendar a reunião adicional na data selecionada. "
+                    + " ".join(extra_messages)
+                    + f" Ajuste o horário do dia {formatted_date} e tente novamente.",
+                    "warning",
+                )
+                return False, None
+            additional_dates.append(field.data)
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users]
@@ -262,22 +266,20 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
     else:
         flash("Reunião criada com sucesso!", "success")
-    if (
-        apply_more_days_field
-        and additional_date_field
-        and apply_more_days_field.data
-        and additional_date_field.data
-    ):
-        additional_meet_link = _create_additional_meeting(
-            additional_date_field.data,
-            form,
-            duration,
-            selected_users,
-            description,
-            participant_emails,
-            should_notify,
-            user_id,
-        )
+    if additional_dates:
+        for extra_date in additional_dates:
+            link = _create_additional_meeting(
+                extra_date,
+                form,
+                duration,
+                selected_users,
+                description,
+                participant_emails,
+                should_notify,
+                user_id,
+            )
+            if not meet_link and link and not additional_meet_link:
+                additional_meet_link = link
     return True, meet_link or additional_meet_link
 
 

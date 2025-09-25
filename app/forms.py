@@ -1,5 +1,7 @@
 """WTForms definitions for application-specific forms."""
 
+from datetime import date
+
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
@@ -14,6 +16,7 @@ from wtforms import (
     PasswordField,
     BooleanField,
     HiddenField,
+    FieldList,
     widgets
 )
 from wtforms.validators import (
@@ -344,10 +347,13 @@ class MeetingForm(FlaskForm):
         default=True,
     )
     apply_more_days = BooleanField("Aplicar a mais dias")
-    additional_date = DateField(
-        "Aplicar também em",
-        format="%Y-%m-%d",
-        validators=[Optional()],
+    additional_dates = FieldList(
+        DateField(
+            "Aplicar também em",
+            format="%Y-%m-%d",
+            validators=[Optional()],
+        ),
+        min_entries=1,
     )
     submit = SubmitField("Agendar")
 
@@ -355,15 +361,33 @@ class MeetingForm(FlaskForm):
         if not super().validate(extra_validators):
             return False
         if self.apply_more_days.data:
-            if not self.additional_date.data:
-                self.additional_date.errors.append(
-                    "Selecione a data adicional para replicar a reunião."
-                )
+            valid_dates: list[date] = []
+            has_error = False
+            for idx, field in enumerate(self.additional_dates):
+                if not field.data:
+                    continue
+                if field.data == self.date.data:
+                    field.errors.append(
+                        "Escolha uma data diferente da reunião original."
+                    )
+                    has_error = True
+                    continue
+                if field.data in valid_dates:
+                    field.errors.append("Datas duplicadas não são permitidas.")
+                    has_error = True
+                    continue
+                valid_dates.append(field.data)
+            if not valid_dates:
+                if self.additional_dates:
+                    self.additional_dates[0].errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
+                else:
+                    self.additional_dates.errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
                 return False
-            if self.additional_date.data == self.date.data:
-                self.additional_date.errors.append(
-                    "Escolha uma data diferente da reunião original."
-                )
+            if has_error:
                 return False
         return True
 
