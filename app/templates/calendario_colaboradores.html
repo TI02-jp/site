@@ -176,7 +176,25 @@
             fixedWeekCount: false,
             timeZone: '{{ calendar_timezone }}',
             locale: 'pt-br',
-            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridDay,timeGridWeek,dayGridMonth,listYear'
+            },
+            navLinks: true,
+            expandRows: true,
+            buttonText: {
+                today: 'Hoje',
+                dayGridDay: 'Dia',
+                timeGridWeek: 'Semana',
+                dayGridMonth: 'Mês',
+                listYear: 'Ano'
+            },
+            views: {
+                listYear: {
+                    noEventsContent: 'Nenhum evento encontrado neste ano.'
+                }
+            },
             dateClick: function(info) {
                 if (!canManage) { return; }
                 openNewEvent(info.dateStr);
