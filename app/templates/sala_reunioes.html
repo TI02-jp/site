@@ -33,9 +33,25 @@
     .meeting-modal-dialog .modal-body .row { margin-left: -0.35rem; margin-right: -0.35rem; }
     .meeting-modal-dialog .modal-body .col-md-6,
     .meeting-modal-dialog .modal-body .mb-3 { padding-left: 0.35rem; padding-right: 0.35rem; }
-    .meeting-modal-dialog .meeting-options { gap: 0.75rem; }
-    .meeting-modal-dialog .meeting-options .form-check-input { margin-top: 0.2rem; }
-    .meeting-modal-dialog #additionalDatesContainer { gap: 0.5rem; }
+    .meeting-modal-dialog .meeting-options { gap: 1.25rem; flex-wrap: wrap; }
+    .meeting-modal-dialog .meeting-options .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-bottom: 0;
+    }
+    .meeting-modal-dialog .meeting-options .form-check-input { margin-top: 0; }
+    .meeting-modal-dialog .additional-dates-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .meeting-modal-dialog .additional-date-item {
+        flex: 0 0 auto;
+    }
+    .meeting-modal-dialog .additional-date-group {
+        min-width: 190px;
+    }
     </style>
 {% endblock %}
 
@@ -126,7 +142,7 @@
                                 </div>
                                 <div class="mb-3 d-none" id="additionalDatesWrapper">
                                     <label class="form-label" for="additional_dates-0">Aplicar também em</label>
-                                    <div class="d-flex flex-column gap-2" id="additionalDatesContainer" data-next-index="{{ form.additional_dates|length }}">
+                                    <div class="additional-dates-grid" id="additionalDatesContainer" data-next-index="{{ form.additional_dates|length }}">
                                         {% for date_field in form.additional_dates %}
                                             <div class="additional-date-item">
                                                 <div class="input-group additional-date-group">
