@@ -85,6 +85,10 @@
                                     {{ form.create_meet(class="form-check-input", id="create_meet") }}
                                     <label class="form-check-label" for="create_meet">{{ form.create_meet.label.text }}</label>
                                 </div>
+                                <div class="form-check mb-3">
+                                    {{ form.notify_attendees(class="form-check-input", id="notify_attendees") }}
+                                    <label class="form-check-label" for="notify_attendees">{{ form.notify_attendees.label.text }}</label>
+                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -391,6 +395,9 @@
         form.description.value = currentEvent.extendedProps.description || '';
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
+        }
+        if (form.notify_attendees) {
+            form.notify_attendees.checked = false;
         }
         var ids = currentEvent.extendedProps.participant_ids || [];
         document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
