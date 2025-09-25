@@ -349,6 +349,7 @@ def cursos():
     """Display the curated catalog of internal courses."""
 
     form = CourseForm()
+    can_manage_courses = current_user.role == "admin"
     sector_choices = [
         (sector.id, sector.nome)
         for sector in Setor.query.order_by(Setor.nome.asc()).all()
@@ -364,6 +365,10 @@ def cursos():
     participant_lookup = {value: label for value, label in participant_choices}
 
     course_id_raw = (form.course_id.data or "").strip()
+
+    if request.method == "POST" and not can_manage_courses:
+        flash("Apenas administradores podem cadastrar ou editar cursos.", "danger")
+        return redirect(url_for("cursos"))
 
     if form.validate_on_submit():
         course_id: int | None = None
@@ -449,6 +454,7 @@ def cursos():
         CourseStatus=CourseStatus,
         form=form,
         editing_course_id=course_id_raw,
+        can_manage_courses=can_manage_courses,
     )
 
 
