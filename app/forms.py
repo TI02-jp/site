@@ -343,7 +343,29 @@ class MeetingForm(FlaskForm):
         "Notificar participantes por e-mail",
         default=True,
     )
+    apply_more_days = BooleanField("Aplicar a mais dias")
+    additional_date = DateField(
+        "Aplicar também em",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+    )
     submit = SubmitField("Agendar")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        if self.apply_more_days.data:
+            if not self.additional_date.data:
+                self.additional_date.errors.append(
+                    "Selecione a data adicional para replicar a reunião."
+                )
+                return False
+            if self.additional_date.data == self.date.data:
+                self.additional_date.errors.append(
+                    "Escolha uma data diferente da reunião original."
+                )
+                return False
+        return True
 
 
 class GeneralCalendarEventForm(FlaskForm):
