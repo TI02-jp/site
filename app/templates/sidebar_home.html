@@ -36,7 +36,7 @@
         <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'calendario_colaboradores' %} active{% endif %}" href="{{ url_for('calendario_colaboradores') }}">
                 <i class="bi bi-calendar-check"></i>
-                CALENDÁRIO GERAL
+                AGENDA
             </a>
         </li>
         {% if user_has_tag('Gestão') %}
