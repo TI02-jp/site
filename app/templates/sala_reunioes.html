@@ -172,6 +172,7 @@
 {% block scripts %}
     {{ super() }}
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/multimonth/index.global.min.js"></script>
     <script>
     function showFlashMessage(message, category = 'success') {
         let container = document.querySelector('.flash-container');
@@ -209,7 +210,28 @@
         fixedWeekCount: false,
         timeZone: '{{ calendar_timezone }}',
         locale: 'pt-br',
-        headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridDay,timeGridWeek,dayGridMonth,multiMonthYear'
+        },
+        navLinks: true,
+        buttonText: {
+            today: 'Hoje',
+            dayGridDay: 'Dia',
+            timeGridWeek: 'Semana',
+            dayGridMonth: 'Mês',
+            multiMonthYear: 'Ano'
+        },
+        views: {
+            multiMonthYear: {
+                type: 'multiMonth',
+                duration: { years: 1 },
+                multiMonthMaxColumns: 3,
+                multiMonthMinWidth: 220,
+                titleFormat: { year: 'numeric' }
+            }
+        },
         dateClick: function(info) {
             openNewMeeting(info.dateStr);
         },
