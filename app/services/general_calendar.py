@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from flask import flash
@@ -36,12 +36,20 @@ def _selected_users(ids: Iterable[int]) -> list[User]:
 def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEvent:
     """Persist a new calendar event using data from ``form``."""
 
-    end_date = form.end_date.data or form.start_date.data
+    start_date = form.start_date.data
+    end_date = form.end_date.data or start_date
+    use_times = (
+        start_date == end_date
+        and form.start_time.data
+        and form.end_time.data
+    )
     event = GeneralCalendarEvent(
         title=form.title.data.strip(),
         description=(form.description.data or "").strip() or None,
-        start_date=form.start_date.data,
+        start_date=start_date,
         end_date=end_date,
+        start_time=form.start_time.data if use_times else None,
+        end_time=form.end_time.data if use_times else None,
         created_by_id=creator_id,
     )
     selected_users = _selected_users(form.participants.data)
@@ -64,6 +72,13 @@ def update_calendar_event_from_form(
     event.description = (form.description.data or "").strip() or None
     event.start_date = form.start_date.data
     event.end_date = form.end_date.data or form.start_date.data
+    use_times = (
+        event.start_date == event.end_date
+        and form.start_time.data
+        and form.end_time.data
+    )
+    event.start_time = form.start_time.data if use_times else None
+    event.end_time = form.end_time.data if use_times else None
     event.participants.clear()
     selected_users = _selected_users(form.participants.data)
     for user in selected_users:
@@ -93,15 +108,28 @@ def serialize_events_for_calendar(
     for event in GeneralCalendarEvent.query.order_by(GeneralCalendarEvent.start_date).all():
         can_edit = can_manage_all and (is_admin or event.created_by_id == current_user_id)
         can_delete = can_edit or is_admin
+        start_iso = event.start_date.isoformat()
+        end_iso = (event.end_date + timedelta(days=1)).isoformat()
+        all_day = True
+        if (
+            event.start_date == event.end_date
+            and event.start_time
+            and event.end_time
+        ):
+            start_iso = datetime.combine(event.start_date, event.start_time).isoformat()
+            end_iso = datetime.combine(event.end_date, event.end_time).isoformat()
+            all_day = False
         events.append(
             {
                 "id": event.id,
                 "title": event.title,
-                "start": event.start_date.isoformat(),
-                "end": (event.end_date + timedelta(days=1)).isoformat(),
-                "allDay": True,
+                "start": start_iso,
+                "end": end_iso,
+                "allDay": all_day,
                 "start_date": event.start_date.isoformat(),
                 "end_date": event.end_date.isoformat(),
+                "start_time": event.start_time.strftime("%H:%M") if event.start_time else None,
+                "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
                 "description": event.description,
                 "creator": event.created_by.name if event.created_by else None,
                 "participants": [p.user_name for p in event.participants],

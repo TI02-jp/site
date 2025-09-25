@@ -63,11 +63,28 @@
                                 </div>
                                 <div class="mb-3">
                                     {{ form.start_date.label(class="form-label") }}
-                                    {{ form.start_date(class="form-control", type="date") }}
+                                    {{ form.start_date(class="form-control", type="date", id="start_date") }}
                                 </div>
                                 <div class="mb-3">
                                     {{ form.end_date.label(class="form-label") }}
-                                    {{ form.end_date(class="form-control", type="date") }}
+                                    {{ form.end_date(class="form-control", type="date", id="end_date") }}
+                                </div>
+                                {% set show_time_fields = form.start_time.data or form.end_time.data or form.start_time.errors or form.end_time.errors %}
+                                <div class="row g-3{% if not show_time_fields %} d-none{% endif %}" id="timeFields">
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.start_time.label(class="form-label") }}
+                                        {{ form.start_time(class="form-control", type="time", id="start_time") }}
+                                        {% if form.start_time.errors %}
+                                            <div class="text-danger">{{ form.start_time.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3 col-md-6">
+                                        {{ form.end_time.label(class="form-label") }}
+                                        {{ form.end_time(class="form-control", type="time", id="end_time") }}
+                                        {% if form.end_time.errors %}
+                                            <div class="text-danger">{{ form.end_time.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -178,7 +195,17 @@
                 }
                 var startDate = currentEvent.extendedProps.start_date;
                 var endDate = currentEvent.extendedProps.end_date;
-                var display = startDate === endDate ? formatDate(startDate) : formatDate(startDate) + ' a ' + formatDate(endDate);
+                var startTime = currentEvent.extendedProps.start_time;
+                var endTime = currentEvent.extendedProps.end_time;
+                var display;
+                if (startDate === endDate) {
+                    display = formatDate(startDate);
+                    if (startTime && endTime) {
+                        display += ' das ' + startTime + ' às ' + endTime;
+                    }
+                } else {
+                    display = formatDate(startDate) + ' a ' + formatDate(endDate);
+                }
                 document.getElementById('detailPeriod').textContent = display;
                 var participants = currentEvent.extendedProps.participants || [];
                 document.getElementById('detailParticipants').textContent = participants.join(', ');
@@ -215,6 +242,39 @@
 
         calendar.render();
 
+        var startDateInput = document.getElementById('start_date');
+        var endDateInput = document.getElementById('end_date');
+        var timeFields = document.getElementById('timeFields');
+        var startTimeInput = document.getElementById('start_time');
+        var endTimeInput = document.getElementById('end_time');
+
+        function updateTimeFieldsVisibility() {
+            if (!timeFields || !startDateInput || !endDateInput) { return; }
+            var startValue = startDateInput.value;
+            var endValue = endDateInput.value || startValue;
+            var sameDay = Boolean(startValue) && Boolean(endValue) && startValue === endValue;
+            if (sameDay) {
+                timeFields.classList.remove('d-none');
+                if (startTimeInput) { startTimeInput.disabled = false; }
+                if (endTimeInput) { endTimeInput.disabled = false; }
+            } else {
+                timeFields.classList.add('d-none');
+                if (startTimeInput) {
+                    startTimeInput.value = '';
+                    startTimeInput.disabled = true;
+                }
+                if (endTimeInput) {
+                    endTimeInput.value = '';
+                    endTimeInput.disabled = true;
+                }
+            }
+        }
+
+        updateTimeFieldsVisibility();
+
+        if (startDateInput) { startDateInput.addEventListener('change', updateTimeFieldsVisibility); }
+        if (endDateInput) { endDateInput.addEventListener('change', updateTimeFieldsVisibility); }
+
         function loadEvents() {
             fetch('/api/calendario-eventos')
                 .then(function(resp) { return resp.json(); })
@@ -232,8 +292,11 @@
                 form.start_date.value = dateStr;
                 form.end_date.value = dateStr;
             }
+            if (startTimeInput) { startTimeInput.value = ''; }
+            if (endTimeInput) { endTimeInput.value = ''; }
             document.querySelector('#calendarEventModal .modal-title').textContent = 'Novo Evento';
             document.querySelector('#calendarEventModal input[type="submit"]').value = 'Salvar';
+            updateTimeFieldsVisibility();
             var modal = new bootstrap.Modal(document.getElementById('calendarEventModal'));
             modal.show();
         }
@@ -259,11 +322,18 @@
             form.title.value = currentEvent.title;
             form.start_date.value = currentEvent.extendedProps.start_date;
             form.end_date.value = currentEvent.extendedProps.end_date;
+            if (startTimeInput) {
+                startTimeInput.value = currentEvent.extendedProps.start_time || '';
+            }
+            if (endTimeInput) {
+                endTimeInput.value = currentEvent.extendedProps.end_time || '';
+            }
             form.description.value = currentEvent.extendedProps.description || '';
             var ids = currentEvent.extendedProps.participant_ids || [];
             document.querySelectorAll('#calendarEventModal input[name="participants"]').forEach(function(cb) {
                 cb.checked = ids.includes(parseInt(cb.value));
             });
+            updateTimeFieldsVisibility();
             document.querySelector('#calendarEventModal .modal-title').textContent = 'Editar Evento';
             document.querySelector('#calendarEventModal input[type="submit"]').value = 'Salvar';
             var modal = new bootstrap.Modal(document.getElementById('calendarEventModal'));
