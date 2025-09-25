@@ -9,6 +9,21 @@
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 150px; overflow-y: auto; }
     #calendar { height: 70vh; }
+    .meeting-modal-dialog { max-width: 1200px; }
+    .meeting-modal-dialog .modal-body { font-size: 0.9rem; }
+    .meeting-modal-dialog label,
+    .meeting-modal-dialog .form-check-label,
+    .meeting-modal-dialog .form-control,
+    .meeting-modal-dialog .form-check-input,
+    .meeting-modal-dialog .btn,
+    .meeting-modal-dialog .input-group-text { font-size: 0.9rem; }
+    .meeting-modal-dialog .modal-title { font-size: 1.15rem; }
+    .meeting-modal-dialog .modal-header,
+    .meeting-modal-dialog .modal-body,
+    .meeting-modal-dialog .modal-footer { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .meeting-modal-dialog .modal-body .row { margin-left: -0.5rem; margin-right: -0.5rem; }
+    .meeting-modal-dialog .modal-body .col-md-6,
+    .meeting-modal-dialog .modal-body .mb-3 { padding-left: 0.5rem; padding-right: 0.5rem; }
     </style>
 {% endblock %}
 
@@ -32,7 +47,7 @@
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
+                <div class="modal-dialog modal-xl meeting-modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header align-items-start">
                             <h5 class="modal-title">Agendar Reunião</h5>
