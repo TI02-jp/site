@@ -5,12 +5,76 @@
     {% include 'sidebar_home.html' %}
 {% endblock %}
 
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .management-event-page {
+            font-size: 0.875rem;
+        }
+
+        .management-event-page h1 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .management-event-page .page-subtitle {
+            font-size: 0.8rem;
+        }
+
+        .management-event-page .card-body {
+            padding: 1.5rem;
+        }
+
+        .management-event-page .form-label,
+        .management-event-page .form-check-label,
+        .management-event-page .text-muted,
+        .management-event-page label {
+            text-align: left;
+        }
+
+        .management-event-page .form-check {
+            margin-bottom: 0.25rem;
+        }
+
+        .management-event-page .form-control,
+        .management-event-page .form-select {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .management-event-page .form-check-input {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .management-event-page .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .management-event-page .cost-wrapper label,
+        .management-event-page .material-row label {
+            font-size: 0.75rem;
+        }
+
+        .management-event-page .material-row {
+            padding: 0.6rem;
+        }
+
+        @media (min-width: 992px) {
+            .management-event-page .card-body {
+                padding: 1.25rem 1.5rem;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+<div class="container py-3 management-event-page">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
         <div>
             <h1 class="h4 mb-1">Registrar Evento</h1>
-            <p class="text-muted mb-0">Informe todos os campos obrigatórios para cadastrar o evento da diretoria.</p>
+            <p class="text-muted mb-0 page-subtitle">Informe todos os campos obrigatórios para cadastrar o evento da diretoria.</p>
         </div>
         <a class="btn btn-outline-secondary align-self-lg-start" href="{{ url_for('diretoria_eventos') }}">
             <i class="bi bi-arrow-left me-2"></i>Voltar para eventos
@@ -20,9 +84,9 @@
         <div class="card-body">
             <form method="post" novalidate id="managementEventForm">
                 {{ form.csrf_token }}
-                <div class="row g-4">
+                <div class="row g-3">
                     <div class="col-12 col-lg-4">
-                        <label class="form-label d-block">Tipo</label>
+                        <label class="form-label d-block section-title">Tipo</label>
                         <div class="d-flex flex-column gap-2">
                             {% for subfield in form.event_type %}
                             <div class="form-check">
@@ -36,21 +100,21 @@
                         {% endif %}
                     </div>
                     <div class="col-12 col-lg-4">
-                        {{ form.event_date.label(class="form-label") }}
+                        {{ form.event_date.label(class="form-label section-title") }}
                         {{ form.event_date(class="form-control", type="date") }}
                         {% if form.event_date.errors %}
                         <div class="text-danger small mt-2">{{ form.event_date.errors[0] }}</div>
                         {% endif %}
                     </div>
                     <div class="col-12 col-lg-4">
-                        {{ form.participants_count.label(class="form-label") }}
+                        {{ form.participants_count.label(class="form-label section-title") }}
                         {{ form.participants_count(class="form-control", type="number") }}
                         {% if form.participants_count.errors %}
                         <div class="text-danger small mt-2">{{ form.participants_count.errors[0] }}</div>
                         {% endif %}
                     </div>
                     <div class="col-12">
-                        {{ form.description.label(class="form-label") }}
+                        {{ form.description.label(class="form-label section-title") }}
                         {{ form.description(class="form-control", placeholder="Descreva o objetivo, local ou observações gerais do evento") }}
                         {% if form.description.errors %}
                         <div class="text-danger small mt-2">{{ form.description.errors[0] }}</div>
@@ -69,11 +133,11 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Serviços Disponibilizados</label>
-                        <div class="row g-3">
+                        <label class="form-label section-title">Serviços Disponibilizados</label>
+                        <div class="row g-2">
                             <div class="col-md-4">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="form-check mb-2">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="form-check mb-1">
                                         {{ form.include_breakfast(class="form-check-input", id="include_breakfast") }}
                                         <label class="form-check-label" for="include_breakfast">Café da manhã</label>
                                     </div>
@@ -87,8 +151,8 @@
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="form-check mb-2">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="form-check mb-1">
                                         {{ form.include_lunch(class="form-check-input", id="include_lunch") }}
                                         <label class="form-check-label" for="include_lunch">Almoço</label>
                                     </div>
@@ -102,8 +166,8 @@
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="form-check mb-2">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="form-check mb-1">
                                         {{ form.include_snack(class="form-check-input", id="include_snack") }}
                                         <label class="form-check-label" for="include_snack">Lanche</label>
                                     </div>
@@ -120,21 +184,21 @@
                     </div>
                     <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label mb-0">Outros Materiais</label>
+                            <label class="form-label mb-0 section-title">Outros Materiais</label>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="addMaterialBtn">
                                 <i class="bi bi-plus-lg me-1"></i>Adicionar
                             </button>
                         </div>
                         {{ form.other_materials_raw(id="other_materials_data") }}
                         <div class="mt-2" id="otherMaterialsContainer" data-empty-message>
-                            <div class="text-muted small" id="noMaterialsMessage">Nenhum material adicional informado.</div>
+                            <div class="text-muted small text-start" id="noMaterialsMessage">Nenhum material adicional informado.</div>
                         </div>
                         {% if form.other_materials_raw.errors %}
                         <div class="text-danger small mt-2">{{ form.other_materials_raw.errors[0] }}</div>
                         {% endif %}
                     </div>
                 </div>
-                <div class="d-flex justify-content-end gap-2 mt-4">
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <a class="btn btn-outline-secondary" href="{{ url_for('diretoria_eventos') }}">Cancelar</a>
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
@@ -209,7 +273,7 @@
 
         const createMaterialRow = (data = {}) => {
             const row = document.createElement('div');
-            row.className = 'material-row border rounded p-3 mb-2';
+            row.className = 'material-row border rounded p-2 mb-2';
             row.innerHTML = `
                 <div class="row g-2 align-items-end">
                     <div class="col-md-7">
