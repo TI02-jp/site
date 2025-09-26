@@ -47,12 +47,12 @@
         .management-event-page .service-card {
             border: 1px solid var(--bs-border-color);
             border-radius: 0.6rem;
-            padding: 0.85rem 0.95rem;
+            padding: 0.75rem 0.9rem;
             background: #f4f6fb;
-            min-height: 18rem;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.6rem;
+            min-height: 16rem;
         }
 
         .management-event-page .service-card.disabled {
@@ -74,28 +74,45 @@
             font-weight: 600;
             background: #eef1f6;
             border-radius: 0.4rem;
-            padding: 0.4rem 0.55rem;
+            padding: 0.35rem 0.5rem;
             text-align: right;
         }
 
         .management-event-page .service-details {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 0.45rem;
+            gap: 0.6rem;
         }
 
-        .management-event-page .service-details > .service-items {
-            flex: 1;
+        .management-event-page .service-entry {
+            background: #fff;
+            border: 1px dashed rgba(33, 37, 41, 0.35);
+            border-radius: 0.5rem;
+            padding: 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .management-event-page .service-entry .form-control {
+            font-size: 0.72rem;
+            padding: 0.3rem 0.45rem;
+        }
+
+        .management-event-page .service-entry .entry-actions {
+            display: flex;
+            justify-content: flex-end;
         }
 
         .management-event-page .service-items {
             border: 1px dashed var(--bs-border-color);
             border-radius: 0.5rem;
-            padding: 0.5rem 0.65rem;
-            min-height: 5.5rem;
+            padding: 0.45rem 0.55rem;
+            min-height: 4.2rem;
             background: #fff;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
         }
 
         .management-event-page .service-item-row {
@@ -103,36 +120,11 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 0.5rem;
-            padding: 0.35rem 0;
         }
 
-        .management-event-page .service-item-row + .service-item-row {
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .management-event-page .service-item-editor {
-            border: 1px dashed rgba(33, 37, 41, 0.35);
-            border-radius: 0.5rem;
-            padding: 0.6rem;
-            margin-top: 0.6rem;
-            background: #fff;
-        }
-
-        .management-event-page .service-item-editor .form-control,
-        .management-event-page .service-item-editor .form-select {
-            font-size: 0.7rem;
-            padding: 0.28rem 0.42rem;
-        }
-
-        .management-event-page .service-item-editor .form-label {
-            margin-bottom: 0.25rem;
-        }
-
-        .management-event-page .service-item-editor-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-            margin-top: 0.6rem;
+        .management-event-page .service-item-row .item-meta {
+            font-size: 0.68rem;
+            color: #6c757d;
         }
 
         .management-event-page .materials-list {
@@ -248,14 +240,33 @@
                                 <div class="text-danger small mt-1">{{ form.breakfast_details.errors[0] }}</div>
                                 {% endif %}
                                 <div class="service-details d-none" data-service-details>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Detalhes</span>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="breakfast">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                        </button>
+                                    <div class="service-entry" data-service-entry="breakfast">
+                                        <div>
+                                            <label class="form-label mb-1">Descrição (opcional)</label>
+                                            <input type="text" class="form-control" data-service-input="description">
+                                        </div>
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Quantidade</label>
+                                                <input type="number" min="1" class="form-control" data-service-input="quantity">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Valor unitário (opcional)</label>
+                                                <input type="text" class="form-control" data-service-input="unit">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Custo total</label>
+                                                <input type="text" class="form-control" data-service-input="total">
+                                            </div>
+                                        </div>
+                                        <div class="entry-actions">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="breakfast">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="service-items" data-service-items="breakfast">
-                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                        <div class="text-muted small" data-empty-text>Nenhum item adicionado.</div>
                                     </div>
                                 </div>
                             </div>
@@ -280,14 +291,33 @@
                                 <div class="text-danger small mt-1">{{ form.lunch_details.errors[0] }}</div>
                                 {% endif %}
                                 <div class="service-details d-none" data-service-details>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Detalhes</span>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="lunch">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                        </button>
+                                    <div class="service-entry" data-service-entry="lunch">
+                                        <div>
+                                            <label class="form-label mb-1">Descrição (opcional)</label>
+                                            <input type="text" class="form-control" data-service-input="description">
+                                        </div>
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Quantidade</label>
+                                                <input type="number" min="1" class="form-control" data-service-input="quantity">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Valor unitário (opcional)</label>
+                                                <input type="text" class="form-control" data-service-input="unit">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Custo total</label>
+                                                <input type="text" class="form-control" data-service-input="total">
+                                            </div>
+                                        </div>
+                                        <div class="entry-actions">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="lunch">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="service-items" data-service-items="lunch">
-                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                        <div class="text-muted small" data-empty-text>Nenhum item adicionado.</div>
                                     </div>
                                 </div>
                             </div>
@@ -312,14 +342,33 @@
                                 <div class="text-danger small mt-1">{{ form.dinner_details.errors[0] }}</div>
                                 {% endif %}
                                 <div class="service-details d-none" data-service-details>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted small">Detalhes</span>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="dinner">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                        </button>
+                                    <div class="service-entry" data-service-entry="dinner">
+                                        <div>
+                                            <label class="form-label mb-1">Descrição (opcional)</label>
+                                            <input type="text" class="form-control" data-service-input="description">
+                                        </div>
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Quantidade</label>
+                                                <input type="number" min="1" class="form-control" data-service-input="quantity">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Valor unitário (opcional)</label>
+                                                <input type="text" class="form-control" data-service-input="unit">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-1">Custo total</label>
+                                                <input type="text" class="form-control" data-service-input="total">
+                                            </div>
+                                        </div>
+                                        <div class="entry-actions">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="dinner">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="service-items" data-service-items="dinner">
-                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                        <div class="text-muted small" data-empty-text>Nenhum item adicionado.</div>
                                     </div>
                                 </div>
                             </div>
@@ -359,481 +408,392 @@
 
 {% block extra_js %}
     {{ super() }}
-    <script>
-        (function () {
-            const form = document.getElementById('managementEventForm');
-            if (!form) {
+    
+<script>
+    (function () {
+        const form = document.getElementById('managementEventForm');
+        if (!form) {
+            return;
+        }
+
+        const servicesConfig = [
+            {
+                slug: 'breakfast',
+                selectId: 'service_breakfast',
+                fieldId: 'breakfast_details',
+                cardSelector: '[data-service-card="breakfast"]',
+                totalSelector: '[data-service-total="breakfast"]',
+            },
+            {
+                slug: 'lunch',
+                selectId: 'service_lunch',
+                fieldId: 'lunch_details',
+                cardSelector: '[data-service-card="lunch"]',
+                totalSelector: '[data-service-total="lunch"]',
+            },
+            {
+                slug: 'dinner',
+                selectId: 'service_dinner',
+                fieldId: 'dinner_details',
+                cardSelector: '[data-service-card="dinner"]',
+                totalSelector: '[data-service-total="dinner"]',
+            },
+        ];
+
+        const materialsField = document.getElementById('other_materials_data');
+        const materialsList = document.getElementById('materialsList');
+        const addMaterialBtn = document.getElementById('addMaterialBtn');
+        const eventTotalLabel = document.getElementById('eventTotal');
+
+        const servicesState = servicesConfig.reduce((acc, cfg) => {
+            acc[cfg.slug] = { items: [] };
+            return acc;
+        }, {});
+
+        let materials = [];
+
+        function parseDecimal(value) {
+            if (value === null || value === undefined) {
+                return null;
+            }
+            let raw = String(value).trim();
+            if (!raw) {
+                return null;
+            }
+            raw = raw.replace(/[R$]/gi, '').replace(/\s+/g, '');
+            raw = raw.replace(/[^0-9,.-]/g, '');
+            if (!raw) {
+                return null;
+            }
+            if (raw.includes(',') && raw.includes('.')) {
+                raw = raw.replace(/\./g, '').replace(',', '.');
+            } else if (raw.includes(',')) {
+                raw = raw.replace(',', '.');
+            }
+            const parsed = Number(raw);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function formatCurrency(value) {
+            if (value === null || value === undefined || !Number.isFinite(value)) {
+                return 'R$ 0,00';
+            }
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 2,
+            }).format(Math.round(value * 100) / 100);
+        }
+
+        function getServiceElements(cfg) {
+            const select = document.getElementById(cfg.selectId);
+            const hiddenField = document.getElementById(cfg.fieldId);
+            const card = document.querySelector(cfg.cardSelector);
+            const details = card?.querySelector('[data-service-details]') || null;
+            const itemsContainer = details?.querySelector(`[data-service-items="${cfg.slug}"]`) || null;
+            const totalDisplay = card?.querySelector(cfg.totalSelector || '') || null;
+            const entry = details?.querySelector(`[data-service-entry="${cfg.slug}"]`) || null;
+            const inputs = entry
+                ? {
+                      description: entry.querySelector('[data-service-input="description"]'),
+                      quantity: entry.querySelector('[data-service-input="quantity"]'),
+                      unit: entry.querySelector('[data-service-input="unit"]'),
+                      total: entry.querySelector('[data-service-input="total"]'),
+                  }
+                : {};
+            const addBtn = entry?.querySelector(`[data-service-add="${cfg.slug}"]`) || null;
+            return { select, hiddenField, card, details, itemsContainer, totalDisplay, entry, inputs, addBtn };
+        }
+
+        function clearEntryInputs(cfg) {
+            const { inputs } = getServiceElements(cfg);
+            if (!inputs) {
+                return;
+            }
+            if (inputs.description) inputs.description.value = '';
+            if (inputs.quantity) inputs.quantity.value = '';
+            if (inputs.unit) inputs.unit.value = '';
+            if (inputs.total) inputs.total.value = '';
+        }
+
+        function calculateItemTotal(item) {
+            if (!item) {
+                return 0;
+            }
+            if (Number.isFinite(item.totalCost)) {
+                return item.totalCost;
+            }
+            const quantity = Number.isFinite(item.quantity) ? item.quantity : null;
+            const unitCost = Number.isFinite(item.unitCost) ? item.unitCost : null;
+            if (quantity === null || unitCost === null) {
+                return 0;
+            }
+            const total = quantity * unitCost;
+            return Number.isFinite(total) ? total : 0;
+        }
+
+        function calculateServiceTotal(cfg) {
+            const items = servicesState[cfg.slug].items || [];
+            return items.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+        }
+
+        function syncServiceField(cfg) {
+            const { hiddenField } = getServiceElements(cfg);
+            if (!hiddenField) {
+                return;
+            }
+            const payload = servicesState[cfg.slug].items.map(item => ({
+                description: item.description || '',
+                quantity: Number.isFinite(item.quantity) ? item.quantity : null,
+                unit_cost: Number.isFinite(item.unitCost)
+                    ? Math.round(item.unitCost * 100) / 100
+                    : null,
+                total_cost: Number.isFinite(item.totalCost)
+                    ? Math.round(item.totalCost * 100) / 100
+                    : null,
+            }));
+            hiddenField.value = JSON.stringify(payload);
+        }
+
+        function renderServiceItems(cfg) {
+            const { itemsContainer } = getServiceElements(cfg);
+            if (!itemsContainer) {
+                return;
+            }
+            const items = servicesState[cfg.slug].items;
+            itemsContainer.innerHTML = '';
+
+            if (!items.length) {
+                const empty = document.createElement('div');
+                empty.className = 'text-muted small';
+                empty.dataset.emptyText = '';
+                empty.textContent = 'Nenhum item adicionado.';
+                itemsContainer.appendChild(empty);
                 return;
             }
 
-            const servicesConfig = [
-                {
-                    slug: 'breakfast',
-                    selectId: 'service_breakfast',
-                    fieldId: 'breakfast_details',
-                    cardSelector: '[data-service-card="breakfast"]',
-                    totalSelector: '[data-service-total="breakfast"]',
-                },
-                {
-                    slug: 'lunch',
-                    selectId: 'service_lunch',
-                    fieldId: 'lunch_details',
-                    cardSelector: '[data-service-card="lunch"]',
-                    totalSelector: '[data-service-total="lunch"]',
-                },
-                {
-                    slug: 'dinner',
-                    selectId: 'service_dinner',
-                    fieldId: 'dinner_details',
-                    cardSelector: '[data-service-card="dinner"]',
-                    totalSelector: '[data-service-total="dinner"]',
-                },
-            ];
+            items.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'service-item-row';
 
-            const materialsField = document.getElementById('other_materials_data');
-            const materialsList = document.getElementById('materialsList');
-            const addMaterialBtn = document.getElementById('addMaterialBtn');
-            const eventTotalLabel = document.getElementById('eventTotal');
+                const info = document.createElement('div');
+                info.className = 'flex-grow-1';
+                const description = document.createElement('div');
+                description.className = 'fw-semibold text-break';
+                description.textContent = item.description || 'Sem descrição';
 
-            const servicesState = servicesConfig.reduce((acc, cfg) => {
-                acc[cfg.slug] = { items: [], editor: null };
-                return acc;
-            }, {});
+                const meta = document.createElement('div');
+                meta.className = 'item-meta';
+                const quantityText = Number.isFinite(item.quantity) ? `Qtd: ${item.quantity}` : null;
+                const unitText = Number.isFinite(item.unitCost)
+                    ? `Unit: ${formatCurrency(item.unitCost)}`
+                    : null;
+                const totalText = `Total: ${formatCurrency(calculateItemTotal(item))}`;
+                meta.textContent = [quantityText, unitText, totalText].filter(Boolean).join(' • ');
 
-            let materials = [];
-
-            function parseDecimal(value) {
-                if (value === null || value === undefined) {
-                    return null;
-                }
-                const raw = String(value).trim();
-                if (!raw) {
-                    return null;
-                }
-                const normalized = raw
-                    .replace(/\s+/g, '')
-                    .replace(/\.(?=.*\.)/g, '')
-                    .replace(',', '.');
-                const parsed = Number(normalized);
-                return Number.isFinite(parsed) ? parsed : null;
-            }
-
-            function formatCurrency(value) {
-                if (value === null || value === undefined || !Number.isFinite(value)) {
-                    return 'R$ 0,00';
-                }
-                return new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    minimumFractionDigits: 2,
-                }).format(value);
-            }
-
-            function getServiceElements(cfg) {
-                const select = document.getElementById(cfg.selectId);
-                const hiddenField = document.getElementById(cfg.fieldId);
-                const card = document.querySelector(cfg.cardSelector);
-                const details = card?.querySelector('[data-service-details]');
-                const itemsContainer = card?.querySelector('[data-service-items]');
-                const totalDisplay = card?.querySelector(cfg.totalSelector || '');
-                return { select, hiddenField, card, details, itemsContainer, totalDisplay };
-            }
-
-            function removeServiceEditor(cfg) {
-                const editor = servicesState[cfg.slug].editor;
-                if (editor && editor.parentNode) {
-                    editor.parentNode.removeChild(editor);
-                }
-                servicesState[cfg.slug].editor = null;
-            }
-
-            function calculateItemTotal(item) {
-                if (!item) {
-                    return null;
-                }
-                const quantity = typeof item.quantity === 'number' ? item.quantity : null;
-                const unitCost = typeof item.unitCost === 'number' ? item.unitCost : null;
-                if (quantity === null || unitCost === null) {
-                    return null;
-                }
-                const total = quantity * unitCost;
-                return Number.isFinite(total) ? total : null;
-            }
-
-            function calculateServiceSum(cfg) {
-                const items = servicesState[cfg.slug].items || [];
-                return items.reduce((acc, item) => {
-                    const total = calculateItemTotal(item);
-                    if (total !== null) {
-                        acc += total;
-                    }
-                    return acc;
-                }, 0);
-            }
-
-            function syncServiceField(cfg) {
-                const { hiddenField } = getServiceElements(cfg);
-                if (!hiddenField) {
-                    return;
-                }
-                const payload = servicesState[cfg.slug].items.map(item => ({
-                    description: item.description,
-                    quantity: item.quantity,
-                    unit_cost: item.unitCost,
-                    total_cost: calculateItemTotal(item),
-                }));
-                hiddenField.value = JSON.stringify(payload);
-            }
-
-            function renderServiceItems(cfg) {
-                const { itemsContainer } = getServiceElements(cfg);
-                if (!itemsContainer) {
-                    return;
-                }
-                itemsContainer.innerHTML = '';
-                const items = servicesState[cfg.slug].items;
-                if (!items.length) {
-                    const empty = document.createElement('div');
-                    empty.className = 'text-muted small';
-                    empty.dataset.emptyText = '';
-                    empty.textContent = 'Nenhum detalhe adicionado.';
-                    itemsContainer.appendChild(empty);
-                    return;
-                }
-
-                items.forEach((item, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'service-item-row';
-
-                    const info = document.createElement('div');
-                    info.className = 'flex-grow-1';
-                    const title = document.createElement('div');
-                    title.className = 'fw-semibold text-break';
-                    title.textContent = item.description || 'Sem descrição';
-                    info.appendChild(title);
-
-                    const meta = document.createElement('div');
-                    meta.className = 'text-muted small';
-                    const parts = [];
-                    if (item.quantity !== null && item.quantity !== undefined) {
-                        parts.push(`Qtd: ${item.quantity}`);
-                    }
-                    if (item.unitCost !== null && item.unitCost !== undefined) {
-                        parts.push(`Unitário: ${formatCurrency(item.unitCost)}`);
-                    }
-                    meta.textContent = parts.join(' • ') || '—';
-                    info.appendChild(meta);
-
-                    const actions = document.createElement('div');
-                    actions.className = 'text-end';
-                    const totalLabel = document.createElement('div');
-                    totalLabel.className = 'fw-semibold';
-                    const totalValue = calculateItemTotal(item);
-                    totalLabel.textContent = totalValue !== null
-                        ? formatCurrency(totalValue)
-                        : '—';
-                    actions.appendChild(totalLabel);
-
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'btn btn-outline-danger btn-sm mt-1';
-                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
-                    removeBtn.addEventListener('click', () => {
-                        servicesState[cfg.slug].items.splice(index, 1);
-                        syncServiceField(cfg);
-                        renderServiceItems(cfg);
-                        updateServiceTotal(cfg);
-                        updateTotals();
-                    });
-                    actions.appendChild(removeBtn);
-
-                    row.append(info, actions);
-                    itemsContainer.appendChild(row);
-                });
-            }
-
-            function updateServiceTotal(cfg) {
-                const { select, totalDisplay } = getServiceElements(cfg);
-                if (!select || !totalDisplay) {
-                    return;
-                }
-                const enabled = select.value === 'sim';
-                const sum = enabled ? calculateServiceSum(cfg) : 0;
-                totalDisplay.textContent = formatCurrency(sum);
-                totalDisplay.dataset.totalValue = String(sum);
-            }
-
-            function updateServiceVisibility(cfg) {
-                const { select, details, card } = getServiceElements(cfg);
-                if (!select || !details || !card) {
-                    return;
-                }
-                const enabled = select.value === 'sim';
-                details.classList.toggle('d-none', !enabled);
-                card.classList.toggle('disabled', !enabled);
-                if (!enabled) {
-                    servicesState[cfg.slug].items = [];
-                    removeServiceEditor(cfg);
-                    syncServiceField(cfg);
-                    renderServiceItems(cfg);
-                    updateServiceTotal(cfg);
-                } else if (!servicesState[cfg.slug].items.length && !servicesState[cfg.slug].editor) {
-                    openItemEditor(cfg);
-                }
-            }
-
-            function openItemEditor(cfg) {
-                const { card, details } = getServiceElements(cfg);
-                if (!card || !details) {
-                    return;
-                }
-                if (servicesState[cfg.slug].editor) {
-                    return;
-                }
-
-                const editor = document.createElement('div');
-                editor.className = 'service-item-editor';
-                editor.dataset.serviceEditor = cfg.slug;
-
-                const grid = document.createElement('div');
-                grid.className = 'row g-2';
-
-                const descriptionCol = document.createElement('div');
-                descriptionCol.className = 'col-12';
-                const descriptionLabel = document.createElement('label');
-                descriptionLabel.className = 'form-label mb-1';
-                descriptionLabel.textContent = 'Descrição (opcional)';
-                const descriptionInput = document.createElement('input');
-                descriptionInput.type = 'text';
-                descriptionInput.className = 'form-control';
-                descriptionCol.append(descriptionLabel, descriptionInput);
-
-                const quantityCol = document.createElement('div');
-                quantityCol.className = 'col-12 col-md-4';
-                const quantityLabel = document.createElement('label');
-                quantityLabel.className = 'form-label mb-1';
-                quantityLabel.textContent = 'Quantidade';
-                const quantityInput = document.createElement('input');
-                quantityInput.type = 'number';
-                quantityInput.min = '1';
-                quantityInput.step = '1';
-                quantityInput.className = 'form-control';
-                quantityCol.append(quantityLabel, quantityInput);
-
-                const unitCol = document.createElement('div');
-                unitCol.className = 'col-12 col-md-4';
-                const unitLabel = document.createElement('label');
-                unitLabel.className = 'form-label mb-1';
-                unitLabel.textContent = 'Valor unitário';
-                const unitInput = document.createElement('input');
-                unitInput.type = 'number';
-                unitInput.min = '0';
-                unitInput.step = '0.01';
-                unitInput.className = 'form-control';
-                unitCol.append(unitLabel, unitInput);
-
-                const totalCol = document.createElement('div');
-                totalCol.className = 'col-12 col-md-4';
-                const totalLabel = document.createElement('label');
-                totalLabel.className = 'form-label mb-1';
-                totalLabel.textContent = 'Custo total';
-                const totalInput = document.createElement('input');
-                totalInput.type = 'text';
-                totalInput.className = 'form-control';
-                totalInput.readOnly = true;
-                totalInput.tabIndex = -1;
-                totalInput.placeholder = 'R$ 0,00';
-                totalCol.append(totalLabel, totalInput);
-
-                grid.append(descriptionCol, quantityCol, unitCol, totalCol);
-                editor.appendChild(grid);
-
-                function recalcTotal() {
-                    const quantityValue = parseDecimal(quantityInput.value);
-                    const unitValue = parseDecimal(unitInput.value);
-                    const totalValue = quantityValue !== null && unitValue !== null
-                        ? quantityValue * unitValue
-                        : null;
-                    totalInput.value = totalValue !== null ? formatCurrency(totalValue) : '';
-                }
-
-                quantityInput.addEventListener('input', recalcTotal);
-                unitInput.addEventListener('input', recalcTotal);
+                info.append(description, meta);
 
                 const actions = document.createElement('div');
-                actions.className = 'service-item-editor-actions';
-                const cancelBtn = document.createElement('button');
-                cancelBtn.type = 'button';
-                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
-                cancelBtn.textContent = 'Cancelar';
-                cancelBtn.addEventListener('click', () => {
-                    removeServiceEditor(cfg);
-                });
-
-                const saveBtn = document.createElement('button');
-                saveBtn.type = 'button';
-                saveBtn.className = 'btn btn-primary btn-sm';
-                saveBtn.textContent = 'Adicionar';
-                saveBtn.addEventListener('click', () => {
-                    const description = descriptionInput.value.trim();
-                    const quantityValue = quantityInput.value.trim()
-                        ? parseInt(quantityInput.value, 10)
-                        : NaN;
-                    const unitValue = parseDecimal(unitInput.value);
-
-                    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
-                        alert('Informe uma quantidade válida (maior que zero).');
-                        quantityInput.focus();
-                        return;
-                    }
-                    if (unitValue === null || unitValue < 0) {
-                        alert('Informe um valor unitário positivo.');
-                        unitInput.focus();
-                        return;
-                    }
-
-                    const totalValue = quantityValue * unitValue;
-
-                    servicesState[cfg.slug].items.push({
-                        description,
-                        quantity: quantityValue,
-                        unitCost: unitValue,
-                        totalCost: totalValue,
-                    });
-
-                    removeServiceEditor(cfg);
+                actions.className = 'd-flex';
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-outline-danger btn-sm';
+                removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                removeBtn.addEventListener('click', () => {
+                    servicesState[cfg.slug].items.splice(index, 1);
                     syncServiceField(cfg);
                     renderServiceItems(cfg);
                     updateServiceTotal(cfg);
                     updateTotals();
                 });
+                actions.appendChild(removeBtn);
 
-                actions.append(cancelBtn, saveBtn);
-                editor.appendChild(actions);
+                row.append(info, actions);
+                itemsContainer.appendChild(row);
+            });
+        }
 
-                servicesState[cfg.slug].editor = editor;
-                details.appendChild(editor);
-                quantityInput.focus();
+        function updateServiceTotal(cfg) {
+            const { totalDisplay, select } = getServiceElements(cfg);
+            if (!totalDisplay) {
+                return;
+            }
+            const enabled = select && select.value === 'sim';
+            const total = enabled ? calculateServiceTotal(cfg) : 0;
+            totalDisplay.textContent = formatCurrency(total);
+        }
+
+        function updateServiceVisibility(cfg) {
+            const { select, card, details } = getServiceElements(cfg);
+            if (!select || !card || !details) {
+                return;
+            }
+            const enabled = select.value === 'sim';
+            card.classList.toggle('disabled', !enabled);
+            details.classList.toggle('d-none', !enabled);
+            if (!enabled) {
+                servicesState[cfg.slug].items = [];
+                syncServiceField(cfg);
+                renderServiceItems(cfg);
+                updateServiceTotal(cfg);
+                clearEntryInputs(cfg);
+            }
+        }
+
+        function autoFillTotal(cfg) {
+            const { inputs } = getServiceElements(cfg);
+            if (!inputs || !inputs.total) {
+                return;
+            }
+            const quantityRaw = inputs.quantity ? parseInt(inputs.quantity.value, 10) : NaN;
+            const unitValue = inputs.unit ? parseDecimal(inputs.unit.value) : null;
+            if (Number.isFinite(quantityRaw) && quantityRaw > 0 && unitValue !== null && unitValue >= 0) {
+                inputs.total.value = formatCurrency(quantityRaw * unitValue);
+            }
+        }
+
+        function addServiceItem(cfg) {
+            const { select, inputs } = getServiceElements(cfg);
+            if (!select || select.value !== 'sim' || !inputs) {
+                alert('Ative o serviço antes de adicionar itens.');
+                return;
             }
 
-            function renderMaterials() {
-                materialsList.innerHTML = '';
-                if (!materials.length) {
-                    const empty = document.createElement('div');
-                    empty.className = 'materials-empty';
-                    empty.dataset.emptyText = '';
-                    empty.textContent = 'Nenhum material adicionado.';
-                    materialsList.appendChild(empty);
-                    return;
-                }
-
-                materials.forEach((item, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'material-row';
-                    const description = document.createElement('div');
-                    description.className = 'text-break flex-grow-1';
-                    description.textContent = item.description || 'Sem descrição';
-                    const value = document.createElement('div');
-                    value.className = 'text-nowrap';
-                    value.textContent = item.value !== null ? formatCurrency(item.value) : '—';
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'btn btn-outline-danger btn-sm';
-                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
-                    removeBtn.addEventListener('click', () => {
-                        materials.splice(index, 1);
-                        syncMaterialsField();
-                        renderMaterials();
-                        updateTotals();
-                    });
-                    row.append(description, value, removeBtn);
-                    materialsList.appendChild(row);
-                });
+            const description = (inputs.description?.value || '').trim();
+            const quantityRaw = inputs.quantity?.value ?? '';
+            const quantity = quantityRaw !== '' ? parseInt(quantityRaw, 10) : NaN;
+            if (!Number.isFinite(quantity) || quantity <= 0) {
+                alert('Informe uma quantidade válida (maior que zero).');
+                inputs.quantity?.focus();
+                return;
             }
 
-            function syncMaterialsField() {
-                const payload = materials.map(item => ({
-                    description: item.description,
-                    value: item.value,
-                }));
-                materialsField.value = JSON.stringify(payload);
+            const unitValue = inputs.unit ? parseDecimal(inputs.unit.value) : null;
+            if (unitValue !== null && unitValue < 0) {
+                alert('Informe um valor unitário positivo.');
+                inputs.unit?.focus();
+                return;
             }
 
-            function updateTotals() {
-                let total = 0;
-
-                servicesConfig.forEach(cfg => {
-                    const { select } = getServiceElements(cfg);
-                    if (select && select.value === 'sim') {
-                        const sum = calculateServiceSum(cfg);
-                        if (Number.isFinite(sum) && sum >= 0) {
-                            total += sum;
-                        }
-                    }
-                });
-
-                materials.forEach(item => {
-                    if (item.value !== null && item.value >= 0) {
-                        total += item.value;
-                    }
-                });
-
-                eventTotalLabel.textContent = formatCurrency(total);
+            const totalValueRaw = inputs.total ? parseDecimal(inputs.total.value) : null;
+            let totalValue = totalValueRaw;
+            if ((totalValue === null || !Number.isFinite(totalValue)) && unitValue !== null) {
+                totalValue = quantity * unitValue;
             }
 
-            function handleMaterialCreation() {
-                const description = prompt('Descrição do material:');
-                if (description === null) {
-                    return;
-                }
-                const valueRaw = prompt('Valor (use vírgula ou ponto para centavos):');
-                if (valueRaw === null) {
-                    materials.push({ description: description.trim(), value: null });
-                } else {
-                    const value = parseDecimal(valueRaw);
-                    if (value === null || value < 0) {
-                        alert('Informe um valor numérico válido.');
-                        return;
-                    }
-                    materials.push({ description: description.trim(), value });
-                }
-                syncMaterialsField();
-                renderMaterials();
-                updateTotals();
+            if (totalValue === null || !Number.isFinite(totalValue) || totalValue < 0) {
+                alert('Informe o custo total do item.');
+                inputs.total?.focus();
+                return;
             }
 
-            servicesConfig.forEach(cfg => {
-                const { select, card } = getServiceElements(cfg);
-                if (!select || !card) {
-                    return;
-                }
+            const normalizedUnit = unitValue !== null && Number.isFinite(unitValue)
+                ? Math.round(unitValue * 100) / 100
+                : null;
+            const normalizedTotal = Math.round(totalValue * 100) / 100;
 
-                select.addEventListener('change', () => {
-                    updateServiceVisibility(cfg);
-                    updateServiceTotal(cfg);
+            servicesState[cfg.slug].items.push({
+                description,
+                quantity,
+                unitCost: normalizedUnit,
+                totalCost: normalizedTotal,
+            });
+
+            syncServiceField(cfg);
+            renderServiceItems(cfg);
+            updateServiceTotal(cfg);
+            updateTotals();
+            clearEntryInputs(cfg);
+            inputs.description?.focus();
+        }
+
+        function renderMaterials() {
+            materialsList.innerHTML = '';
+            if (!materials.length) {
+                const empty = document.createElement('div');
+                empty.className = 'materials-empty';
+                empty.dataset.emptyText = '';
+                empty.textContent = 'Nenhum material adicionado.';
+                materialsList.appendChild(empty);
+                return;
+            }
+
+            materials.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'material-row';
+                const description = document.createElement('div');
+                description.className = 'text-break flex-grow-1';
+                description.textContent = item.description || 'Sem descrição';
+                const value = document.createElement('div');
+                value.className = 'text-nowrap';
+                value.textContent = item.value !== null ? formatCurrency(item.value) : '—';
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-outline-danger btn-sm';
+                removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                removeBtn.addEventListener('click', () => {
+                    materials.splice(index, 1);
+                    syncMaterialsField();
+                    renderMaterials();
                     updateTotals();
                 });
+                row.append(description, value, removeBtn);
+                materialsList.appendChild(row);
+            });
+        }
 
-                const addBtn = card.querySelector(`[data-add-detail="${cfg.slug}"]`);
-                addBtn?.addEventListener('click', () => {
-                    if (select.value !== 'sim') {
-                        alert('Ative o serviço antes de adicionar detalhes.');
-                        return;
+        function syncMaterialsField() {
+            const payload = materials.map(item => ({
+                description: item.description,
+                value: item.value,
+            }));
+            materialsField.value = JSON.stringify(payload);
+        }
+
+        function updateTotals() {
+            let total = 0;
+
+            servicesConfig.forEach(cfg => {
+                const { select } = getServiceElements(cfg);
+                if (select && select.value === 'sim') {
+                    const sum = calculateServiceTotal(cfg);
+                    if (Number.isFinite(sum) && sum >= 0) {
+                        total += sum;
                     }
-                    openItemEditor(cfg);
-                });
+                }
             });
 
-            addMaterialBtn?.addEventListener('click', handleMaterialCreation);
-
-            form.addEventListener('submit', () => {
-                servicesConfig.forEach(cfg => {
-                    removeServiceEditor(cfg);
-                    syncServiceField(cfg);
-                });
-                syncMaterialsField();
+            materials.forEach(item => {
+                if (item.value !== null && item.value >= 0) {
+                    total += item.value;
+                }
             });
 
+            eventTotalLabel.textContent = formatCurrency(total);
+        }
+
+        function handleMaterialCreation() {
+            const description = prompt('Descrição do material:');
+            if (description === null) {
+                return;
+            }
+            const valueRaw = prompt('Valor (use vírgula ou ponto para centavos):');
+            if (valueRaw === null) {
+                materials.push({ description: description.trim(), value: null });
+            } else {
+                const value = parseDecimal(valueRaw);
+                if (value === null || value < 0) {
+                    alert('Informe um valor numérico válido.');
+                    return;
+                }
+                materials.push({ description: description.trim(), value: Math.round(value * 100) / 100 });
+            }
+            syncMaterialsField();
+            renderMaterials();
+            updateTotals();
+        }
+
+        function hydrateMaterials() {
             try {
                 const existing = JSON.parse(materialsField.value || '[]');
                 if (Array.isArray(existing)) {
@@ -847,42 +807,96 @@
             } catch (err) {
                 materials = [];
             }
+        }
 
-            servicesConfig.forEach(cfg => {
-                const { hiddenField, select } = getServiceElements(cfg);
-                if (hiddenField) {
-                    try {
-                        const parsed = JSON.parse(hiddenField.value || '[]');
-                        if (Array.isArray(parsed)) {
-                            servicesState[cfg.slug].items = parsed
-                                .filter(item => item && typeof item === 'object')
-                                .map(item => {
-                                    const quantityRaw = item.quantity;
-                                    let quantityValue = null;
-                                    if (quantityRaw !== undefined && quantityRaw !== null && quantityRaw !== '') {
-                                        const parsedQuantity = Number(quantityRaw);
-                                        quantityValue = Number.isFinite(parsedQuantity) ? Math.trunc(parsedQuantity) : null;
-                                    }
-                                    return {
-                                        description: (item.description || '').trim(),
-                                        quantity: quantityValue,
-                                        unitCost: parseDecimal(item.unit_cost),
-                                        totalCost: parseDecimal(item.total_cost),
-                                    };
-                                });
-                        }
-                    } catch (err) {
-                        servicesState[cfg.slug].items = [];
+        function hydrateService(cfg) {
+            const { hiddenField } = getServiceElements(cfg);
+            servicesState[cfg.slug].items = [];
+            if (hiddenField) {
+                try {
+                    const parsed = JSON.parse(hiddenField.value || '[]');
+                    if (Array.isArray(parsed)) {
+                        servicesState[cfg.slug].items = parsed
+                            .filter(item => item && typeof item === 'object')
+                            .map(item => {
+                                const quantityRaw = item.quantity;
+                                let quantityValue = null;
+                                if (quantityRaw !== undefined && quantityRaw !== null && quantityRaw !== '') {
+                                    const parsedQuantity = Number(quantityRaw);
+                                    quantityValue = Number.isFinite(parsedQuantity)
+                                        ? Math.trunc(parsedQuantity)
+                                        : null;
+                                }
+                                return {
+                                    description: (item.description || '').trim(),
+                                    quantity: quantityValue,
+                                    unitCost: parseDecimal(item.unit_cost),
+                                    totalCost: parseDecimal(item.total_cost),
+                                };
+                            });
                     }
+                } catch (err) {
+                    servicesState[cfg.slug].items = [];
                 }
+            }
+            renderServiceItems(cfg);
+            updateServiceTotal(cfg);
+        }
 
-                renderServiceItems(cfg);
+        servicesConfig.forEach(cfg => {
+            const { select, addBtn, inputs } = getServiceElements(cfg);
+            if (!select) {
+                return;
+            }
+
+            select.addEventListener('change', () => {
                 updateServiceVisibility(cfg);
                 updateServiceTotal(cfg);
+                updateTotals();
             });
 
-            renderMaterials();
-            updateTotals();
-        })();
-    </script>
+            addBtn?.addEventListener('click', () => addServiceItem(cfg));
+
+            inputs?.quantity?.addEventListener('input', () => autoFillTotal(cfg));
+            inputs?.unit?.addEventListener('input', () => autoFillTotal(cfg));
+            inputs?.unit?.addEventListener('blur', () => {
+                const value = parseDecimal(inputs.unit.value);
+                if (value !== null) {
+                    inputs.unit.value = formatCurrency(value);
+                }
+            });
+            inputs?.total?.addEventListener('blur', () => {
+                const value = parseDecimal(inputs.total.value);
+                if (value !== null) {
+                    inputs.total.value = formatCurrency(value);
+                }
+            });
+            inputs?.total?.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addServiceItem(cfg);
+                }
+            });
+        });
+
+        addMaterialBtn?.addEventListener('click', handleMaterialCreation);
+
+        form.addEventListener('submit', () => {
+            servicesConfig.forEach(cfg => {
+                syncServiceField(cfg);
+            });
+            syncMaterialsField();
+        });
+
+        hydrateMaterials();
+        servicesConfig.forEach(cfg => {
+            hydrateService(cfg);
+            updateServiceVisibility(cfg);
+        });
+
+        renderMaterials();
+        updateTotals();
+    })();
+</script>
+
 {% endblock %}
