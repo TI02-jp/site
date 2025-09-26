@@ -381,15 +381,15 @@ def cursos():
             flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
             return redirect(url_for("cursos"))
 
-        course = db.session.execute(
-            sa.select(Course).where(Course.id == course_id)
+        existing_course_id = db.session.execute(
+            sa.select(Course.id).where(Course.id == course_id)
         ).scalar_one_or_none()
 
-        if course is None:
+        if existing_course_id is None:
             flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
             return redirect(url_for("cursos"))
 
-        db.session.delete(course)
+        db.session.execute(sa.delete(Course).where(Course.id == course_id))
         db.session.commit()
         flash("Curso excluído com sucesso!", "success")
         return redirect(url_for("cursos"))
