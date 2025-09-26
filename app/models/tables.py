@@ -176,6 +176,44 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
+class ManagementEvent(db.Model):
+    """Eventos organizados pela Diretoria JP."""
+
+    __tablename__ = "management_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_type = db.Column(db.String(50), nullable=False)
+    event_date = db.Column(db.Date, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    attendance_scope = db.Column(db.String(20), nullable=False, default="interna")
+    participants_count = db.Column(db.Integer)
+    include_breakfast = db.Column(db.Boolean, nullable=False, default=False)
+    cost_breakfast = db.Column(db.Numeric(10, 2))
+    breakfast_items = db.Column(db.JSON, nullable=False, default=list)
+    include_lunch = db.Column(db.Boolean, nullable=False, default=False)
+    cost_lunch = db.Column(db.Numeric(10, 2))
+    lunch_items = db.Column(db.JSON, nullable=False, default=list)
+    include_dinner = db.Column(db.Boolean, nullable=False, default=False)
+    cost_dinner = db.Column(db.Numeric(10, 2))
+    dinner_items = db.Column(db.JSON, nullable=False, default=list)
+    other_materials = db.Column(db.JSON, nullable=False, default=list)
+    event_total = db.Column(db.Numeric(10, 2))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    created_by_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+    created_by = db.relationship(
+        "User", backref=db.backref("management_events", lazy=True)
+    )
+
+    def __repr__(self) -> str:
+        return f"<ManagementEvent {self.event_type} on {self.event_date}>"
+
+
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"

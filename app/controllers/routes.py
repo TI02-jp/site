@@ -36,6 +36,7 @@ from app.models.tables import (
     AccessLink,
     Course,
     GeneralCalendarEvent,
+    ManagementEvent,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -57,6 +58,7 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    ManagementEventForm,
 )
 import os, json, re, secrets
 import requests
@@ -91,6 +93,7 @@ from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from decimal import Decimal, InvalidOperation
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -524,6 +527,147 @@ def cursos():
         editing_course_id=course_id_raw,
         can_manage_courses=can_manage_courses,
     )
+
+
+@app.route("/diretoria/eventos")
+@login_required
+def diretoria_eventos():
+    """Listar eventos registrados pela diretoria JP."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    events = (
+        ManagementEvent.query.options(joinedload(ManagementEvent.created_by))
+        .order_by(
+            ManagementEvent.event_date.desc(),
+            ManagementEvent.id.desc(),
+        )
+        .all()
+    )
+
+    return render_template("diretoria/eventos.html", events=events)
+
+
+@app.route("/diretoria/eventos/novo", methods=["GET", "POST"])
+@login_required
+def diretoria_eventos_novo():
+    """Allow users com a tag Gestão registrarem eventos da diretoria."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    form = ManagementEventForm()
+
+    if form.validate_on_submit():
+        def _normalize_decimal(value: Any) -> Decimal | None:
+            if value is None:
+                return None
+            if isinstance(value, Decimal):
+                candidate = value
+            else:
+                try:
+                    candidate = Decimal(str(value))
+                except (InvalidOperation, TypeError, ValueError):
+                    return None
+            return candidate.quantize(Decimal("0.01"))
+
+        def _clean_text(value: str | None) -> str | None:
+            cleaned = sanitize_html((value or "").strip())
+            return cleaned or None
+
+        sanitized_materials: list[dict[str, Any]] = []
+        for item in getattr(form, "_other_materials", []):
+            if not isinstance(item, dict):
+                continue
+            description = _clean_text(item.get("description"))
+            value_decimal = _normalize_decimal(item.get("value"))
+            sanitized_materials.append(
+                {
+                    "description": description,
+                    "value": float(value_decimal) if value_decimal is not None else None,
+                }
+            )
+
+        services_payload = getattr(form, "_services_payload", {})
+
+        def _prepare_items(items: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+            prepared: list[dict[str, Any]] = []
+            if not items:
+                return prepared
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                unit_cost_decimal = _normalize_decimal(item.get("unit_cost"))
+                total_cost_decimal = _normalize_decimal(item.get("total_cost"))
+                prepared.append(
+                    {
+                        "description": _clean_text(item.get("description")),
+                        "quantity": item.get("quantity"),
+                        "unit_cost": float(unit_cost_decimal)
+                        if unit_cost_decimal is not None
+                        else None,
+                        "total_cost": float(total_cost_decimal)
+                        if total_cost_decimal is not None
+                        else None,
+                    }
+                )
+            return prepared
+
+        service_data = {
+            "breakfast": services_payload.get("breakfast", {}),
+            "lunch": services_payload.get("lunch", {}),
+            "dinner": services_payload.get("dinner", {}),
+        }
+
+        breakfast_total = _normalize_decimal(service_data["breakfast"].get("total"))
+        lunch_total = _normalize_decimal(service_data["lunch"].get("total"))
+        dinner_total = _normalize_decimal(service_data["dinner"].get("total"))
+
+        event_total_value = getattr(form, "_event_total", Decimal("0"))
+        if isinstance(event_total_value, Decimal):
+            event_total_value = event_total_value.quantize(Decimal("0.01"))
+        else:
+            event_total_value = _normalize_decimal(event_total_value) or Decimal("0")
+
+        event = ManagementEvent(
+            event_type=form.event_type.data,
+            event_date=form.event_date.data,
+            description=_clean_text(form.description.data) or "",
+            attendance_scope=form.participation_scope.data,
+            participants_count=form.participants_count.data,
+            include_breakfast=bool(service_data["breakfast"].get("enabled")),
+            cost_breakfast=breakfast_total,
+            breakfast_items=_prepare_items(service_data["breakfast"].get("items")),
+            include_lunch=bool(service_data["lunch"].get("enabled")),
+            cost_lunch=lunch_total,
+            lunch_items=_prepare_items(service_data["lunch"].get("items")),
+            include_dinner=bool(service_data["dinner"].get("enabled")),
+            cost_dinner=dinner_total,
+            dinner_items=_prepare_items(service_data["dinner"].get("items")),
+            other_materials=sanitized_materials,
+            event_total=event_total_value,
+            created_by_id=current_user.id,
+        )
+        db.session.add(event)
+        db.session.commit()
+        flash("Evento registrado com sucesso!", "success")
+        return redirect(url_for("diretoria_eventos"))
+    elif request.method == "POST":
+        flash(
+            "Não foi possível salvar o evento. Verifique os campos destacados e tente novamente.",
+            "danger",
+        )
+
+    if request.method == "GET":
+        if not form.other_materials_raw.data:
+            form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
+        for field_name in ("breakfast_details", "lunch_details", "dinner_details"):
+            field = getattr(form, field_name, None)
+            if field is not None and not field.data:
+                field.data = json.dumps([], ensure_ascii=False)
+
+    return render_template("diretoria/eventos_registrar.html", form=form)
 
 
 @app.route("/acessos")
