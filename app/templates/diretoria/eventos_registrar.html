@@ -9,31 +9,32 @@
     {{ super() }}
     <style>
         .management-event-page {
-            font-size: 0.8125rem;
+            font-size: 0.82rem;
         }
 
         .management-event-page h1 {
-            font-size: 1.125rem;
-            margin-bottom: 0.15rem;
-        }
-
-        .management-event-page .page-subtitle {
-            font-size: 0.75rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.2rem;
         }
 
         .management-event-page .card-body {
             padding: 1rem 1.25rem;
         }
 
-        .management-event-page .form-label,
-        .management-event-page label {
+        .management-event-page label,
+        .management-event-page .form-label {
             text-align: left;
             margin-bottom: 0.35rem;
         }
 
         .management-event-page .form-control,
+        .management-event-page .form-select,
+        .management-event-page .form-check-label {
+            font-size: 0.78rem;
+        }
+
+        .management-event-page .form-control,
         .management-event-page .form-select {
-            font-size: 0.75rem;
             padding: 0.35rem 0.5rem;
         }
 
@@ -43,55 +44,48 @@
             letter-spacing: 0.01em;
         }
 
-        .management-event-page .catering-group {
+        .management-event-page .service-card {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.5rem;
             padding: 0.75rem;
+            background: #f8f9fb;
         }
 
-        .management-event-page .catering-group label,
-        .management-event-page .cost-wrapper label,
-        .management-event-page .service-extra-wrapper label,
-        .management-event-page .material-row label {
-            font-size: 0.7rem;
-            margin-bottom: 0.25rem;
+        .management-event-page .service-card.disabled {
+            opacity: 0.6;
         }
 
-        .management-event-page .material-row {
-            padding: 0.5rem 0.65rem;
-        }
-
-        .management-event-page .service-details-wrapper [data-empty-text] {
-            padding: 0.35rem 0.5rem;
-            border-radius: 0.35rem;
-            background-color: rgba(0, 0, 0, 0.03);
-        }
-
-        .management-event-page .service-item {
-            padding: 0.45rem 0.55rem;
+        .management-event-page .materials-list {
             border: 1px dashed var(--bs-border-color);
             border-radius: 0.5rem;
-            background-color: rgba(13, 110, 253, 0.03);
+            padding: 0.5rem 0.75rem;
+            min-height: 2.25rem;
         }
 
-        .management-event-page .service-item .form-label {
-            font-size: 0.68rem;
-        }
-
-        .management-event-page .btn-sm {
-            padding: 0.3rem 0.75rem;
-        }
-
-        .management-event-page .btn-icon {
-            width: 1.9rem;
-            height: 1.9rem;
-            display: inline-flex;
+        .management-event-page .materials-list .material-row {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            padding: 0;
+            gap: 0.5rem;
+            padding: 0.35rem 0;
         }
 
-        @media (min-width: 992px) {
-            .management-event-page .card-body {
-                padding: 1rem 1.25rem;
+        .management-event-page .materials-list .material-row + .material-row {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .management-event-page .materials-empty {
+            color: #6c757d;
+        }
+
+        .management-event-page .event-total {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 575.98px) {
+            .management-event-page .form-check-inline {
+                margin-right: 0.75rem;
             }
         }
     </style>
@@ -102,7 +96,7 @@
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
         <div>
             <h1 class="h4 mb-1">Registrar Evento</h1>
-            <p class="text-muted mb-0 page-subtitle">Informe todos os campos obrigatórios para cadastrar o evento da diretoria.</p>
+            <p class="text-muted mb-0">Preencha os dados do evento da Diretoria JP.</p>
         </div>
         <a class="btn btn-outline-secondary btn-sm align-self-lg-start" href="{{ url_for('diretoria_eventos') }}">
             <i class="bi bi-arrow-left me-2"></i>Voltar para eventos
@@ -113,170 +107,125 @@
             <form method="post" novalidate id="managementEventForm">
                 {{ form.csrf_token }}
                 <div class="row g-2 align-items-end">
-                    <div class="col-12 col-lg-3">
-                        {{ form.event_type.label(class="form-label section-title mb-1") }}
-                        {{ form.event_type(class="form-select form-select-sm") }}
+                    <div class="col-12 col-md-4">
+                        <span class="form-label section-title d-block">Tipo de Registro</span>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for value, label in form.event_type.choices %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="{{ form.event_type.name }}" id="event_type_{{ loop.index0 }}" value="{{ value }}" {% if form.event_type.data == value %}checked{% endif %}>
+                                    <label class="form-check-label" for="event_type_{{ loop.index0 }}">{{ label }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
                         {% if form.event_type.errors %}
                         <div class="text-danger small mt-1">{{ form.event_type.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-2">
-                        {{ form.event_date.label(class="form-label section-title mb-1") }}
-                        {{ form.event_date(class="form-control form-control-sm", type="date") }}
+                    <div class="col-6 col-md-2">
+                        {{ form.event_date.label(class="form-label section-title") }}
+                        {{ form.event_date(class="form-control", type="date") }}
                         {% if form.event_date.errors %}
                         <div class="text-danger small mt-1">{{ form.event_date.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-2">
-                        {{ form.participants_count.label(class="form-label section-title mb-1") }}
-                        {{ form.participants_count(class="form-control form-control-sm", type="number") }}
+                    <div class="col-6 col-md-2">
+                        {{ form.participants_count.label(class="form-label section-title") }}
+                        {{ form.participants_count(class="form-control", type="number", min="0") }}
                         {% if form.participants_count.errors %}
                         <div class="text-danger small mt-1">{{ form.participants_count.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3">
-                        {{ form.attendance_scope.label(class="form-label section-title mb-1") }}
-                        {{ form.attendance_scope(class="form-select form-select-sm", id="attendance_scope") }}
-                        {% if form.attendance_scope.errors %}
-                        <div class="text-danger small mt-1">{{ form.attendance_scope.errors[0] }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="row g-2 mt-2">
-                    <div class="col-12">
-                        {{ form.description.label(class="form-label section-title mb-1") }}
-                        {{ form.description(class="form-control", placeholder="Descreva o objetivo, local ou observações gerais do evento") }}
-                        {% if form.description.errors %}
-                        <div class="text-danger small mt-1">{{ form.description.errors[0] }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="row g-2 mt-2">
-                    <div class="col-12">
-                        <label class="form-label section-title mb-1">Serviços Disponibilizados</label>
-                        <div class="row g-2">
-                            <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100 p-2" data-service="breakfast">
-                                    <div class="row g-1 align-items-end">
-                                        <div class="col-7">
-                                            <label class="form-label text-muted mb-1" for="include_breakfast">Café da manhã</label>
-                                            {{ form.include_breakfast(class="form-select form-select-sm", id="include_breakfast") }}
-                                        </div>
-                                        <div class="col-5 cost-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_breakfast">Custo total</label>
-                                            {{ form.cost_breakfast(class="form-control form-control-sm", id="cost_breakfast", placeholder="0,00", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_breakfast.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_breakfast.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {{ form.breakfast_items_raw(id="breakfast_items_data") }}
-                                    {% if form.breakfast_items_raw.errors %}
-                                    <div class="text-danger small mt-1">{{ form.breakfast_items_raw.errors[0] }}</div>
-                                    {% endif %}
-                                    <div class="service-details-wrapper mt-2{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="breakfast_items_section">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
-                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="breakfast">
-                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                            </button>
-                                        </div>
-                                        <div class="d-grid gap-2" id="breakfastItemsContainer" data-empty-container>
-                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="col-12 col-md-4">
+                        <span class="form-label section-title d-block">Participação</span>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                {{ form.attendees_internal(class="form-check-input", id="attendees_internal") }}
+                                <label class="form-check-label" for="attendees_internal">Interno</label>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100 p-2" data-service="lunch">
-                                    <div class="row g-1 align-items-end">
-                                        <div class="col-7">
-                                            <label class="form-label text-muted mb-1" for="include_lunch">Almoço</label>
-                                            {{ form.include_lunch(class="form-select form-select-sm", id="include_lunch") }}
-                                        </div>
-                                        <div class="col-5 cost-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_lunch">Custo total</label>
-                                            {{ form.cost_lunch(class="form-control form-control-sm", id="cost_lunch", placeholder="0,00", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_lunch.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_lunch.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {{ form.lunch_items_raw(id="lunch_items_data") }}
-                                    {% if form.lunch_items_raw.errors %}
-                                    <div class="text-danger small mt-1">{{ form.lunch_items_raw.errors[0] }}</div>
-                                    {% endif %}
-                                    <div class="service-details-wrapper mt-2{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="lunch_items_section">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
-                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="lunch">
-                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                            </button>
-                                        </div>
-                                        <div class="d-grid gap-2" id="lunchItemsContainer" data-empty-container>
-                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100 p-2" data-service="dinner">
-                                    <div class="row g-1 align-items-end">
-                                        <div class="col-7">
-                                            <label class="form-label text-muted mb-1" for="include_dinner">Janta</label>
-                                            {{ form.include_dinner(class="form-select form-select-sm", id="include_dinner") }}
-                                        </div>
-                                        <div class="col-5 cost-wrapper{% if (form.include_dinner.data or 0)|int != 1 %} d-none{% endif %}" id="cost_dinner_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_dinner">Custo total</label>
-                                            {{ form.cost_dinner(class="form-control form-control-sm", id="cost_dinner", placeholder="0,00", disabled='disabled' if (form.include_dinner.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_dinner.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_dinner.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {{ form.dinner_items_raw(id="dinner_items_data") }}
-                                    {% if form.dinner_items_raw.errors %}
-                                    <div class="text-danger small mt-1">{{ form.dinner_items_raw.errors[0] }}</div>
-                                    {% endif %}
-                                    <div class="service-details-wrapper mt-2{% if (form.include_dinner.data or 0)|int != 1 %} d-none{% endif %}" id="dinner_items_section">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
-                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="dinner">
-                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                            </button>
-                                        </div>
-                                        <div class="d-grid gap-2" id="dinnerItemsContainer" data-empty-container>
-                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="form-check">
+                                {{ form.attendees_external(class="form-check-input", id="attendees_external") }}
+                                <label class="form-check-label" for="attendees_external">Externo</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="row g-2 mt-2">
-                    <div class="col-12">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                            <label class="form-label mb-0 section-title" for="otherMaterialsContainer">Outros Materiais</label>
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="addMaterialBtn">
-                                <i class="bi bi-plus-lg me-1"></i>Adicionar
-                            </button>
+
+                <div class="mt-3">
+                    {{ form.description.label(class="form-label section-title") }}
+                    {{ form.description(class="form-control", rows="3", placeholder="Descreva o objetivo, local ou observações gerais.") }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-3">
+                    <span class="form-label section-title d-block mb-2">Serviços disponibilizados</span>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <div class="service-card h-100" data-service-card="breakfast">
+                                <div class="form-check form-switch mb-2">
+                                    {{ form.include_breakfast(class="form-check-input", id="include_breakfast") }}
+                                    <label class="form-check-label" for="include_breakfast">Café da manhã</label>
+                                </div>
+                                <label class="form-label text-muted" for="cost_breakfast">Custo</label>
+                                {{ form.cost_breakfast(class="form-control", id="cost_breakfast", placeholder="0,00") }}
+                                {% if form.cost_breakfast.errors %}
+                                <div class="text-danger small mt-1">{{ form.cost_breakfast.errors[0] }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                        {{ form.other_materials_raw(id="other_materials_data") }}
-                        <div class="d-grid gap-2 mt-1" id="otherMaterialsContainer" data-empty-message>
-                            <div class="text-muted small text-start" id="noMaterialsMessage">Nenhum material adicional informado.</div>
+                        <div class="col-12 col-md-4">
+                            <div class="service-card h-100" data-service-card="lunch">
+                                <div class="form-check form-switch mb-2">
+                                    {{ form.include_lunch(class="form-check-input", id="include_lunch") }}
+                                    <label class="form-check-label" for="include_lunch">Almoço</label>
+                                </div>
+                                <label class="form-label text-muted" for="cost_lunch">Custo</label>
+                                {{ form.cost_lunch(class="form-control", id="cost_lunch", placeholder="0,00") }}
+                                {% if form.cost_lunch.errors %}
+                                <div class="text-danger small mt-1">{{ form.cost_lunch.errors[0] }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                        {% if form.other_materials_raw.errors %}
-                        <div class="text-danger small mt-1">{{ form.other_materials_raw.errors[0] }}</div>
-                        {% endif %}
+                        <div class="col-12 col-md-4">
+                            <div class="service-card h-100" data-service-card="snack">
+                                <div class="form-check form-switch mb-2">
+                                    {{ form.include_snack(class="form-check-input", id="include_snack") }}
+                                    <label class="form-check-label" for="include_snack">Lanche</label>
+                                </div>
+                                <label class="form-label text-muted" for="cost_snack">Custo</label>
+                                {{ form.cost_snack(class="form-control", id="cost_snack", placeholder="0,00") }}
+                                {% if form.cost_snack.errors %}
+                                <div class="text-danger small mt-1">{{ form.cost_snack.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
-                    <div class="fw-semibold text-primary small text-start" id="eventTotalDisplay">Total do evento: R$ 0,00</div>
-                    <div class="d-flex justify-content-end gap-2">
-                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('diretoria_eventos') }}">Cancelar</a>
-                        {{ form.submit(class="btn btn-primary btn-sm px-3") }}
+
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="form-label section-title mb-0">Outros materiais</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addMaterialBtn">
+                            <i class="bi bi-plus-lg me-1"></i>Adicionar
+                        </button>
                     </div>
+                    {{ form.other_materials_raw(id="other_materials_data") }}
+                    {% if form.other_materials_raw.errors %}
+                    <div class="text-danger small mb-2">{{ form.other_materials_raw.errors[0] }}</div>
+                    {% endif %}
+                    <div class="materials-list" id="materialsList">
+                        <div class="materials-empty" data-empty-text>Nenhum material adicionado.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-4 gap-2">
+                    <div class="event-total">
+                        Total estimado do evento: <span id="eventTotal">R$ 0,00</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-save me-1"></i>Salvar evento
+                    </button>
                 </div>
             </form>
         </div>
@@ -284,400 +233,188 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
     {{ super() }}
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('managementEventForm');
-        if (!form) {
-            return;
-        }
-
-        const eventTotalDisplay = document.getElementById('eventTotalDisplay');
-
-        const serviceConfigs = [
-            {
-                slug: 'breakfast',
-                selectId: 'include_breakfast',
-                totalInputId: 'cost_breakfast',
-                totalWrapperId: 'cost_breakfast_wrapper',
-                detailsWrapperId: 'breakfast_items_section',
-                containerId: 'breakfastItemsContainer',
-                hiddenInputId: 'breakfast_items_data',
-                addButtonSelector: '[data-service-add="breakfast"]',
-            },
-            {
-                slug: 'lunch',
-                selectId: 'include_lunch',
-                totalInputId: 'cost_lunch',
-                totalWrapperId: 'cost_lunch_wrapper',
-                detailsWrapperId: 'lunch_items_section',
-                containerId: 'lunchItemsContainer',
-                hiddenInputId: 'lunch_items_data',
-                addButtonSelector: '[data-service-add="lunch"]',
-            },
-            {
-                slug: 'dinner',
-                selectId: 'include_dinner',
-                totalInputId: 'cost_dinner',
-                totalWrapperId: 'cost_dinner_wrapper',
-                detailsWrapperId: 'dinner_items_section',
-                containerId: 'dinnerItemsContainer',
-                hiddenInputId: 'dinner_items_data',
-                addButtonSelector: '[data-service-add="dinner"]',
-            },
-        ];
-
-        const materialsInput = document.getElementById('other_materials_data');
-        const materialsContainer = document.getElementById('otherMaterialsContainer');
-        const addMaterialBtn = document.getElementById('addMaterialBtn');
-        const noMaterialsMessage = document.getElementById('noMaterialsMessage');
-
-        const parseDecimal = (value) => {
-            if (typeof value === 'number' && Number.isFinite(value)) {
-                return value;
+        (function() {
+            const form = document.getElementById('managementEventForm');
+            if (!form) {
+                return;
             }
-            if (typeof value !== 'string') {
-                return 0;
-            }
-            const sanitized = value.replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-            const parsed = Number.parseFloat(sanitized);
-            return Number.isFinite(parsed) ? parsed : 0;
-        };
 
-        const formatNumber = (value) => {
-            const number = Number.isFinite(value) ? value : 0;
-            return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        };
+            const services = [
+                { toggleId: 'include_breakfast', inputId: 'cost_breakfast', card: 'breakfast' },
+                { toggleId: 'include_lunch', inputId: 'cost_lunch', card: 'lunch' },
+                { toggleId: 'include_snack', inputId: 'cost_snack', card: 'snack' },
+            ];
 
-        const formatCurrency = (value) => `R$ ${formatNumber(value)}`;
+            const materialsField = document.getElementById('other_materials_data');
+            const materialsList = document.getElementById('materialsList');
+            const addMaterialBtn = document.getElementById('addMaterialBtn');
+            const eventTotalLabel = document.getElementById('eventTotal');
 
-        const updateEventTotal = () => {
-            let total = 0;
-            serviceConfigs.forEach((config) => {
-                const select = document.getElementById(config.selectId);
-                const totalInput = document.getElementById(config.totalInputId);
-                if (select && totalInput && select.value === '1') {
-                    total += parseDecimal(totalInput.value);
+            let materials = [];
+
+            function parseNumber(value) {
+                if (value === null || value === undefined) {
+                    return null;
                 }
-            });
-            if (materialsContainer) {
-                const valueInputs = materialsContainer.querySelectorAll('.material-value');
-                valueInputs.forEach((input) => {
-                    total += parseDecimal(input.value);
+                const raw = String(value).trim();
+                if (!raw) {
+                    return null;
+                }
+                const normalized = raw
+                    .replace(/\s+/g, '')
+                    .replace(/\.(?=.*\.)/g, '')
+                    .replace(',', '.');
+                const parsed = Number(normalized);
+                return Number.isFinite(parsed) ? parsed : null;
+            }
+
+            function formatCurrency(value) {
+                if (value === null || value === undefined || !Number.isFinite(value)) {
+                    return 'R$ 0,00';
+                }
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 2,
+                }).format(value);
+            }
+
+            function updateServiceState() {
+                services.forEach(({ toggleId, inputId, card }) => {
+                    const toggle = document.getElementById(toggleId);
+                    const input = document.getElementById(inputId);
+                    const cardEl = document.querySelector(`[data-service-card="${card}"]`);
+                    if (!toggle || !input || !cardEl) {
+                        return;
+                    }
+                    const enabled = toggle.checked;
+                    input.disabled = !enabled;
+                    cardEl.classList.toggle('disabled', !enabled);
+                    if (!enabled) {
+                        input.value = '';
+                    }
                 });
             }
-            if (eventTotalDisplay) {
-                eventTotalDisplay.textContent = `Total do evento: ${formatCurrency(total)}`;
-            }
-        };
 
-        const updateEmptyMessage = (config) => {
-            const container = document.getElementById(config.containerId);
-            if (!container) {
-                return;
-            }
-            const emptyMessage = container.querySelector('[data-empty-text]');
-            if (!emptyMessage) {
-                return;
-            }
-            const hasItems = container.querySelectorAll('[data-service-item]').length > 0;
-            emptyMessage.classList.toggle('d-none', hasItems);
-        };
-
-        const updateServiceTotal = (config, { recalculate = true } = {}) => {
-            const totalInput = document.getElementById(config.totalInputId);
-            const container = document.getElementById(config.containerId);
-            if (!totalInput) {
-                return;
-            }
-            if (recalculate && container) {
-                let total = 0;
-                container.querySelectorAll('[data-service-item] [data-field="total"]').forEach((input) => {
-                    total += parseDecimal(input.value);
-                });
-                totalInput.value = formatNumber(total);
-            }
-            updateEventTotal();
-        };
-
-        const createServiceItemRow = (config, data = {}) => {
-            const row = document.createElement('div');
-            row.className = 'service-item';
-            row.dataset.serviceItem = config.slug;
-            row.innerHTML = `
-                <div class="row g-1 g-sm-2 align-items-end">
-                    <div class="col-12">
-                        <label class="form-label text-muted mb-1">Descrição</label>
-                        <input type="text" class="form-control form-control-sm" data-field="description" placeholder="Descrição do item">
-                    </div>
-                    <div class="col-6 col-sm-4">
-                        <label class="form-label text-muted mb-1">Quantidade</label>
-                        <input type="text" class="form-control form-control-sm" data-field="quantity" inputmode="decimal" placeholder="0">
-                    </div>
-                    <div class="col-6 col-sm-4">
-                        <label class="form-label text-muted mb-1">Valor unitário</label>
-                        <input type="text" class="form-control form-control-sm" data-field="unit" inputmode="decimal" placeholder="0,00">
-                    </div>
-                    <div class="col-6 col-sm-3">
-                        <label class="form-label text-muted mb-1">Total</label>
-                        <input type="text" class="form-control form-control-sm" data-field="total" inputmode="decimal" placeholder="0,00">
-                    </div>
-                    <div class="col-6 col-sm-1 d-flex justify-content-end">
-                        <button type="button" class="btn btn-outline-danger btn-icon btn-sm remove-service-item" title="Remover item">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            const descriptionInput = row.querySelector('[data-field="description"]');
-            const quantityInput = row.querySelector('[data-field="quantity"]');
-            const unitInput = row.querySelector('[data-field="unit"]');
-            const totalInput = row.querySelector('[data-field="total"]');
-
-            descriptionInput.value = data.description || '';
-            quantityInput.value = data.quantity || '';
-            unitInput.value = data.unit_cost || data.unit || '';
-            totalInput.value = data.total_cost || data.total || '';
-
-            const recalcFromParts = () => {
-                const hasQuantity = quantityInput.value.trim() !== '';
-                const hasUnit = unitInput.value.trim() !== '';
-                if (hasQuantity && hasUnit) {
-                    const computed = parseDecimal(quantityInput.value) * parseDecimal(unitInput.value);
-                    totalInput.value = formatNumber(computed);
-                }
-                updateServiceTotal(config, { recalculate: true });
-            };
-
-            quantityInput.addEventListener('input', recalcFromParts);
-            unitInput.addEventListener('input', recalcFromParts);
-            totalInput.addEventListener('input', () => {
-                updateServiceTotal(config, { recalculate: false });
-            });
-
-            row.querySelector('.remove-service-item').addEventListener('click', () => {
-                row.remove();
-                updateEmptyMessage(config);
-                updateServiceTotal(config, { recalculate: true });
-            });
-
-            return row;
-        };
-
-        const serializeServiceItems = (config) => {
-            const container = document.getElementById(config.containerId);
-            const hiddenInput = document.getElementById(config.hiddenInputId);
-            if (!container || !hiddenInput) {
-                return;
-            }
-            const rows = container.querySelectorAll('[data-service-item]');
-            const serialized = [];
-            rows.forEach((row) => {
-                const description = row.querySelector('[data-field="description"]').value.trim();
-                const quantity = row.querySelector('[data-field="quantity"]').value.trim();
-                const unitCost = row.querySelector('[data-field="unit"]').value.trim();
-                const totalCost = row.querySelector('[data-field="total"]').value.trim();
-                if (description || quantity || unitCost || totalCost) {
-                    serialized.push({
-                        description,
-                        quantity,
-                        unit_cost: unitCost,
-                        total_cost: totalCost,
+            function renderMaterials() {
+                materialsList.innerHTML = '';
+                if (materials.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'materials-empty';
+                    empty.dataset.emptyText = '';
+                    empty.textContent = 'Nenhum material adicionado.';
+                    materialsList.appendChild(empty);
+                } else {
+                    materials.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'material-row';
+                        const description = document.createElement('div');
+                        description.className = 'text-break flex-grow-1';
+                        description.textContent = item.description || 'Sem descrição';
+                        const value = document.createElement('div');
+                        value.className = 'text-nowrap';
+                        value.textContent = item.value !== null ? formatCurrency(item.value) : '—';
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'btn btn-outline-danger btn-sm';
+                        removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                        removeBtn.addEventListener('click', () => {
+                            materials.splice(index, 1);
+                            syncMaterialsField();
+                            renderMaterials();
+                            updateTotals();
+                        });
+                        row.append(description, value, removeBtn);
+                        materialsList.appendChild(row);
                     });
                 }
-            });
-            hiddenInput.value = JSON.stringify(serialized);
-        };
-
-        const initService = (config) => {
-            const select = document.getElementById(config.selectId);
-            const totalWrapper = document.getElementById(config.totalWrapperId);
-            const detailsWrapper = document.getElementById(config.detailsWrapperId);
-            const container = document.getElementById(config.containerId);
-            const hiddenInput = document.getElementById(config.hiddenInputId);
-            const addButton = document.querySelector(config.addButtonSelector);
-            const totalInput = document.getElementById(config.totalInputId);
-
-            if (!select || !container || !hiddenInput) {
-                return;
             }
 
-            const setActive = (active) => {
-                if (totalWrapper) {
-                    totalWrapper.classList.toggle('d-none', !active);
-                }
-                if (detailsWrapper) {
-                    detailsWrapper.classList.toggle('d-none', !active);
-                }
-                if (totalInput) {
-                    totalInput.disabled = !active;
-                    if (!active) {
-                        totalInput.value = '';
-                    }
-                }
-                if (addButton) {
-                    addButton.disabled = !active;
-                }
-                container.querySelectorAll('input').forEach((input) => {
-                    input.disabled = !active;
-                });
-                if (!active) {
-                    container.innerHTML = '';
-                    hiddenInput.value = '[]';
-                    updateEmptyMessage(config);
-                    updateEventTotal();
-                }
-            };
-
-            const populateInitialItems = () => {
-                let initialItems = [];
-                try {
-                    const parsed = JSON.parse(hiddenInput.value || '[]');
-                    if (Array.isArray(parsed)) {
-                        initialItems = parsed;
-                    }
-                } catch (error) {
-                    console.warn(`Não foi possível interpretar os itens de ${config.slug}.`, error);
-                }
-                initialItems.forEach((item) => {
-                    const row = createServiceItemRow(config, item);
-                    container.appendChild(row);
-                });
-                updateEmptyMessage(config);
-                updateServiceTotal(config, { recalculate: true });
-            };
-
-            if (addButton) {
-                addButton.addEventListener('click', () => {
-                    const row = createServiceItemRow(config);
-                    container.appendChild(row);
-                    updateEmptyMessage(config);
-                    updateServiceTotal(config, { recalculate: true });
-                });
+            function syncMaterialsField() {
+                const payload = materials.map(item => ({
+                    description: item.description,
+                    value: item.value === null ? '' : item.value.toString(),
+                }));
+                materialsField.value = JSON.stringify(payload);
             }
 
-            select.addEventListener('change', () => {
-                const isActive = select.value === '1';
-                setActive(isActive);
-                if (isActive && container.querySelectorAll('[data-service-item]').length === 0) {
-                    const row = createServiceItemRow(config);
-                    container.appendChild(row);
-                    updateEmptyMessage(config);
-                    updateServiceTotal(config, { recalculate: true });
-                } else {
-                    updateEventTotal();
-                }
-            });
-
-            if (totalInput) {
-                totalInput.addEventListener('input', () => updateEventTotal());
+            function updateTotals() {
+                let total = 0;
+                services.forEach(({ toggleId, inputId }) => {
+                    const toggle = document.getElementById(toggleId);
+                    const input = document.getElementById(inputId);
+                    if (toggle && input && toggle.checked) {
+                        const value = parseNumber(input.value);
+                        if (value !== null && value >= 0) {
+                            total += value;
+                        }
+                    }
+                });
+                materials.forEach(item => {
+                    if (item.value !== null && item.value >= 0) {
+                        total += item.value;
+                    }
+                });
+                eventTotalLabel.textContent = formatCurrency(total);
             }
 
-            const initiallyActive = select.value === '1';
-            setActive(initiallyActive);
-            populateInitialItems();
-        };
-
-        serviceConfigs.forEach(initService);
-
-        if (materialsInput && materialsContainer && addMaterialBtn) {
-            const parseInitialMaterials = () => {
-                try {
-                    const value = materialsInput.value || '[]';
-                    const parsed = JSON.parse(value);
-                    if (Array.isArray(parsed)) {
-                        return parsed.map((item) => ({
-                            description: typeof item.description === 'string' ? item.description : '',
-                            value: item.value !== undefined && item.value !== null ? item.value : '',
-                        }));
-                    }
-                } catch (error) {
-                    console.warn('Não foi possível interpretar os materiais adicionais salvos.', error);
-                }
-                return [];
-            };
-
-            const updateMaterialsEmptyMessage = () => {
-                if (!noMaterialsMessage) {
+            function handleMaterialCreation() {
+                const description = prompt('Descrição do material:');
+                if (description === null) {
                     return;
                 }
-                const hasItems = materialsContainer.querySelectorAll('.material-row').length > 0;
-                noMaterialsMessage.classList.toggle('d-none', hasItems);
-            };
-
-            const createMaterialRow = (data = {}) => {
-                const row = document.createElement('div');
-                row.className = 'material-row border rounded';
-                row.innerHTML = `
-                    <div class="row g-1 g-sm-2 align-items-center">
-                        <div class="col-12 col-sm-7">
-                            <label class="form-label text-muted mb-1">Descrição</label>
-                            <input type="text" class="form-control form-control-sm material-description" placeholder="Nome do material">
-                        </div>
-                        <div class="col-12 col-sm-4">
-                            <label class="form-label text-muted mb-1">Valor</label>
-                            <input type="text" class="form-control form-control-sm material-value" inputmode="decimal" placeholder="0,00">
-                        </div>
-                        <div class="col-12 col-sm-auto d-flex justify-content-end">
-                            <button type="button" class="btn btn-outline-danger btn-icon btn-sm remove-material" title="Remover material">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                const descriptionInput = row.querySelector('.material-description');
-                const valueInput = row.querySelector('.material-value');
-                descriptionInput.value = data.description || '';
-                if (data.value !== undefined && data.value !== null) {
-                    valueInput.value = typeof data.value === 'number' ? formatNumber(data.value) : data.value;
+                const valueRaw = prompt('Valor (use vírgula ou ponto para centavos):');
+                if (valueRaw === null) {
+                    materials.push({ description: description.trim(), value: null });
+                } else {
+                    const value = parseNumber(valueRaw);
+                    if (value === null || value < 0) {
+                        alert('Informe um valor numérico válido.');
+                        return;
+                    }
+                    materials.push({ description: description.trim(), value });
                 }
-                valueInput.addEventListener('input', updateEventTotal);
-                row.querySelector('.remove-material').addEventListener('click', () => {
-                    row.remove();
-                    updateMaterialsEmptyMessage();
-                    updateEventTotal();
+                syncMaterialsField();
+                renderMaterials();
+                updateTotals();
+            }
+
+            addMaterialBtn?.addEventListener('click', handleMaterialCreation);
+
+            services.forEach(({ toggleId, inputId }) => {
+                const toggle = document.getElementById(toggleId);
+                const input = document.getElementById(inputId);
+                toggle?.addEventListener('change', () => {
+                    updateServiceState();
+                    updateTotals();
                 });
-                return row;
-            };
-
-            const materialsState = parseInitialMaterials();
-            materialsState.forEach((item) => {
-                const row = createMaterialRow(item);
-                materialsContainer.appendChild(row);
-            });
-
-            updateMaterialsEmptyMessage();
-
-            addMaterialBtn.addEventListener('click', () => {
-                const row = createMaterialRow();
-                materialsContainer.appendChild(row);
-                updateMaterialsEmptyMessage();
-                updateEventTotal();
+                input?.addEventListener('input', updateTotals);
             });
 
             form.addEventListener('submit', () => {
-                const rows = materialsContainer.querySelectorAll('.material-row');
-                const serialized = [];
-                rows.forEach((row) => {
-                    const descriptionInput = row.querySelector('.material-description');
-                    const valueInput = row.querySelector('.material-value');
-                    const description = descriptionInput.value.trim();
-                    const value = valueInput.value.trim();
-                    if (description || value) {
-                        serialized.push({ description, value });
-                    }
-                });
-                materialsInput.value = JSON.stringify(serialized);
+                syncMaterialsField();
             });
-        }
 
-        form.addEventListener('submit', () => {
-            serviceConfigs.forEach((config) => serializeServiceItems(config));
-        });
+            try {
+                const existing = JSON.parse(materialsField.value || '[]');
+                if (Array.isArray(existing)) {
+                    materials = existing
+                        .filter(item => item && typeof item === 'object')
+                        .map(item => ({
+                            description: (item.description || '').trim(),
+                            value: parseNumber(item.value),
+                        }));
+                }
+            } catch (err) {
+                materials = [];
+            }
 
-        updateEventTotal();
-    });
+            updateServiceState();
+            renderMaterials();
+            updateTotals();
+        })();
     </script>
 {% endblock %}

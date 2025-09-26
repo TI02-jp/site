@@ -560,53 +560,22 @@ def diretoria_eventos_novo():
     form = ManagementEventForm()
 
     if form.validate_on_submit():
-        def _normalize_decimal(value: str | None) -> Decimal | None:
+        def _normalize_decimal(value: Decimal | None) -> Decimal | None:
             if value is None:
                 return None
-            raw = value.strip()
-            if not raw:
-                return None
-            normalized = raw.replace(" ", "")
-            if normalized.count(",") == 1 and normalized.count(".") == 0:
-                normalized = normalized.replace(",", ".")
-            elif normalized.count(",") == 1 and normalized.count(".") >= 1:
-                normalized = normalized.replace(".", "").replace(",", ".")
-            else:
-                normalized = normalized.replace(",", "")
-            try:
-                return Decimal(normalized)
-            except InvalidOperation:
-                return None
+            if not isinstance(value, Decimal):
+                try:
+                    value = Decimal(str(value))
+                except (InvalidOperation, TypeError, ValueError):
+                    return None
+            return value.quantize(Decimal("0.01"))
 
         def _clean_text(value: str | None) -> str | None:
             cleaned = sanitize_html((value or "").strip())
             return cleaned or None
 
-        def _quantize_decimal(value: Decimal | None) -> Decimal | None:
-            if isinstance(value, Decimal):
-                return value.quantize(Decimal("0.01"))
-            return value
-
-        service_payloads: dict[str, list[dict[str, Any]]] = {}
-        for slug in ("breakfast", "lunch", "dinner"):
-            items = form._service_items.get(slug, []) if hasattr(form, "_service_items") else []
-            normalized_items: list[dict[str, Any]] = []
-            for item in items:
-                description = _clean_text(item.get("description"))
-                quantity_decimal = _normalize_decimal(item.get("quantity"))
-                unit_decimal = _normalize_decimal(item.get("unit_cost"))
-                total_decimal = _normalize_decimal(item.get("total_cost"))
-                normalized_items.append(
-                    {
-                        "description": description,
-                        "quantity": float(quantity_decimal.quantize(Decimal("0.01"))) if quantity_decimal is not None else None,
-                        "unit_cost": float(unit_decimal.quantize(Decimal("0.01"))) if unit_decimal is not None else None,
-                        "total_cost": float(total_decimal.quantize(Decimal("0.01"))) if total_decimal is not None else None,
-                    }
-                )
-            service_payloads[slug] = normalized_items
-
         sanitized_materials: list[dict[str, Any]] = []
+        materials_total = Decimal("0")
         for item in getattr(form, "_other_materials", []):
             if not isinstance(item, dict):
                 continue
@@ -615,31 +584,41 @@ def diretoria_eventos_novo():
             sanitized_materials.append(
                 {
                     "description": description,
-                    "value": float(value_decimal.quantize(Decimal("0.01"))) if value_decimal is not None else None,
+                    "value": float(value_decimal) if value_decimal is not None else None,
                 }
             )
+            if value_decimal is not None:
+                materials_total += value_decimal
 
-        event_total_value = getattr(form, "_event_total", None)
-        if isinstance(event_total_value, Decimal):
-            event_total_value = event_total_value.quantize(Decimal("0.01"))
+        event_total_value = getattr(form, "_event_total", Decimal("0"))
+        service_totals = Decimal("0")
+        for total in form._service_totals.values():
+            service_totals += total
+        event_total_value = materials_total + service_totals
 
         event = ManagementEvent(
             event_type=form.event_type.data,
             event_date=form.event_date.data,
-            description=sanitize_html((form.description.data or "").strip()),
-            attendance_scope=form.attendance_scope.data,
+            description=_clean_text(form.description.data) or "",
+            attendees_internal=bool(form.attendees_internal.data),
+            attendees_external=bool(form.attendees_external.data),
             participants_count=form.participants_count.data,
-            include_breakfast=form.include_breakfast.data == 1,
-            cost_breakfast=_quantize_decimal(form.cost_breakfast.data) if form.include_breakfast.data == 1 else None,
-            breakfast_items=service_payloads.get("breakfast", []) if form.include_breakfast.data == 1 else [],
-            include_lunch=form.include_lunch.data == 1,
-            cost_lunch=_quantize_decimal(form.cost_lunch.data) if form.include_lunch.data == 1 else None,
-            lunch_items=service_payloads.get("lunch", []) if form.include_lunch.data == 1 else [],
-            include_dinner=form.include_dinner.data == 1,
-            cost_dinner=_quantize_decimal(form.cost_dinner.data) if form.include_dinner.data == 1 else None,
-            dinner_items=service_payloads.get("dinner", []) if form.include_dinner.data == 1 else [],
+            include_breakfast=bool(form.include_breakfast.data),
+            cost_breakfast=_normalize_decimal(form.cost_breakfast.data)
+            if form.include_breakfast.data
+            else None,
+            include_lunch=bool(form.include_lunch.data),
+            cost_lunch=_normalize_decimal(form.cost_lunch.data)
+            if form.include_lunch.data
+            else None,
+            include_snack=bool(form.include_snack.data),
+            cost_snack=_normalize_decimal(form.cost_snack.data)
+            if form.include_snack.data
+            else None,
             other_materials=sanitized_materials,
-            event_total=event_total_value,
+            event_total=event_total_value.quantize(Decimal("0.01"))
+            if isinstance(event_total_value, Decimal)
+            else _normalize_decimal(event_total_value),
             created_by_id=current_user.id,
         )
         db.session.add(event)
@@ -652,16 +631,8 @@ def diretoria_eventos_novo():
             "danger",
         )
 
-    if request.method == "GET":
-        if not form.breakfast_items_raw.data:
-            form.breakfast_items_raw.data = json.dumps([], ensure_ascii=False)
-        if not form.lunch_items_raw.data:
-            form.lunch_items_raw.data = json.dumps([], ensure_ascii=False)
-        if not form.dinner_items_raw.data:
-            form.dinner_items_raw.data = json.dumps([], ensure_ascii=False)
-        if not form.other_materials_raw.data:
-            form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
-
+    if request.method == "GET" and not form.other_materials_raw.data:
+        form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
     return render_template("diretoria/eventos_registrar.html", form=form)
 
 

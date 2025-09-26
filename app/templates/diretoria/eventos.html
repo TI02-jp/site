@@ -5,12 +5,43 @@
     {% include 'sidebar_home.html' %}
 {% endblock %}
 
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .management-events-table {
+            font-size: 0.82rem;
+        }
+
+        .management-events-table .table {
+            margin-bottom: 0;
+        }
+
+        .management-events-table th,
+        .management-events-table td {
+            vertical-align: top;
+            text-align: left;
+        }
+
+        .management-events-table .badge {
+            font-size: 0.72rem;
+        }
+
+        .management-events-table .service-cost {
+            min-width: 6.5rem;
+        }
+
+        .management-events-table .materials-list > div + div {
+            margin-top: 0.35rem;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-3">
+<div class="container py-3 management-events-table">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
         <div>
-            <h1 class="h4 mb-1">Eventos Registrados</h1>
-            <p class="text-muted mb-0">Consulte todos os detalhes informados para treinamentos, datas comemorativas e demais eventos.</p>
+            <h1 class="h4 mb-1">Eventos registrados</h1>
+            <p class="text-muted mb-0">Acompanhe todos os registros de treinamentos, datas comemorativas e demais eventos.</p>
         </div>
         <a class="btn btn-primary btn-sm align-self-lg-start" href="{{ url_for('diretoria_eventos_novo') }}">
             <i class="bi bi-plus-lg me-2"></i>Registrar evento
@@ -18,20 +49,14 @@
     </div>
 
     {% if events %}
-    {% set type_labels = {
-        'treinamento': 'Treinamento',
-        'data_comemorativa': 'Data Comemorativa',
-        'evento': 'Evento'
-    } %}
-    {% set participation_labels = {
-        'interna': 'Interna',
-        'externa': 'Externa',
-        'ambos': 'Ambos'
-    } %}
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive-lg">
-                <table class="table table-striped table-hover table-sm align-top mb-0 small">
+        {% set type_labels = {
+            'treinamento': 'Treinamento',
+            'data_comemorativa': 'Data comemorativa',
+            'evento': 'Evento'
+        } %}
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm align-middle">
                     <thead class="table-light">
                         <tr>
                             <th scope="col">Tipo</th>
@@ -39,11 +64,11 @@
                             <th scope="col" style="min-width: 220px;">Descrição</th>
                             <th scope="col">Participação</th>
                             <th scope="col">Participantes</th>
-                            <th scope="col">Café da manhã</th>
-                            <th scope="col">Almoço</th>
-                            <th scope="col">Janta</th>
-                            <th scope="col" style="min-width: 220px;">Outros Materiais</th>
-                            <th scope="col">Total do evento</th>
+                            <th scope="col" class="service-cost">Café da manhã</th>
+                            <th scope="col" class="service-cost">Almoço</th>
+                            <th scope="col" class="service-cost">Lanche</th>
+                            <th scope="col" style="min-width: 220px;">Outros materiais</th>
+                            <th scope="col">Total estimado</th>
                             <th scope="col">Registrado por</th>
                             <th scope="col">Criado em</th>
                         </tr>
@@ -54,99 +79,52 @@
                             <td class="text-uppercase fw-semibold">{{ type_labels.get(event.event_type, event.event_type|capitalize) }}</td>
                             <td>{{ event.event_date.strftime('%d/%m/%Y') }}</td>
                             <td class="text-break">{{ event.description or '—' }}</td>
-                            <td>{{ participation_labels.get(event.attendance_scope, event.attendance_scope|capitalize) }}</td>
+                            <td>
+                                {% if event.attendees_internal %}
+                                    <span class="badge bg-primary-subtle text-primary">Interno</span>
+                                {% endif %}
+                                {% if event.attendees_external %}
+                                    <span class="badge bg-success-subtle text-success ms-1">Externo</span>
+                                {% endif %}
+                                {% if not event.attendees_internal and not event.attendees_external %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>{{ event.participants_count or 0 }}</td>
-                            <td class="text-break">
+                            <td>
                                 {% if event.include_breakfast %}
                                     <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_breakfast or 0) }}</div>
-                                    {% set items = event.breakfast_items or [] %}
-                                    {% if items %}
-                                        <ul class="list-unstyled mb-0 small text-muted">
-                                            {% for item in items %}
-                                                <li>
-                                                    {% if item.description %}{{ item.description }}{% else %}Item{% endif %}
-                                                    {% if item.quantity is not none %}
-                                                        <span>- {{ '%.2f'|format(item.quantity) }}</span>
-                                                    {% endif %}
-                                                    {% if item.unit_cost is not none %}
-                                                        <span>x R$ {{ '%.2f'|format(item.unit_cost) }}</span>
-                                                    {% endif %}
-                                                    {% if item.total_cost is not none %}
-                                                        <span>= R$ {{ '%.2f'|format(item.total_cost) }}</span>
-                                                    {% endif %}
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% endif %}
                                 {% else %}
-                                    Não
+                                    <span class="text-muted">Não</span>
                                 {% endif %}
                             </td>
-                            <td class="text-break">
+                            <td>
                                 {% if event.include_lunch %}
                                     <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_lunch or 0) }}</div>
-                                    {% set items = event.lunch_items or [] %}
-                                    {% if items %}
-                                        <ul class="list-unstyled mb-0 small text-muted">
-                                            {% for item in items %}
-                                                <li>
-                                                    {% if item.description %}{{ item.description }}{% else %}Item{% endif %}
-                                                    {% if item.quantity is not none %}
-                                                        <span>- {{ '%.2f'|format(item.quantity) }}</span>
-                                                    {% endif %}
-                                                    {% if item.unit_cost is not none %}
-                                                        <span>x R$ {{ '%.2f'|format(item.unit_cost) }}</span>
-                                                    {% endif %}
-                                                    {% if item.total_cost is not none %}
-                                                        <span>= R$ {{ '%.2f'|format(item.total_cost) }}</span>
-                                                    {% endif %}
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% endif %}
                                 {% else %}
-                                    Não
+                                    <span class="text-muted">Não</span>
                                 {% endif %}
                             </td>
-                            <td class="text-break">
-                                {% if event.include_dinner %}
-                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_dinner or 0) }}</div>
-                                    {% set items = event.dinner_items or [] %}
-                                    {% if items %}
-                                        <ul class="list-unstyled mb-0 small text-muted">
-                                            {% for item in items %}
-                                                <li>
-                                                    {% if item.description %}{{ item.description }}{% else %}Item{% endif %}
-                                                    {% if item.quantity is not none %}
-                                                        <span>- {{ '%.2f'|format(item.quantity) }}</span>
-                                                    {% endif %}
-                                                    {% if item.unit_cost is not none %}
-                                                        <span>x R$ {{ '%.2f'|format(item.unit_cost) }}</span>
-                                                    {% endif %}
-                                                    {% if item.total_cost is not none %}
-                                                        <span>= R$ {{ '%.2f'|format(item.total_cost) }}</span>
-                                                    {% endif %}
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% endif %}
+                            <td>
+                                {% if event.include_snack %}
+                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_snack or 0) }}</div>
                                 {% else %}
-                                    Não
+                                    <span class="text-muted">Não</span>
                                 {% endif %}
                             </td>
-                            <td class="text-break">
+                            <td class="materials-list">
                                 {% set materials = event.other_materials or [] %}
                                 {% if materials %}
                                     {% for material in materials %}
                                         <div>
-                                            {{ (material.description or 'Sem descrição') if material.description is defined else 'Sem descrição' }}
+                                            {{ material.description or 'Sem descrição' }}
                                             {% if material.value is not none %}
                                                 - R$ {{ '%.2f'|format(material.value) }}
                                             {% endif %}
                                         </div>
                                     {% endfor %}
                                 {% else %}
-                                    —
+                                    <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
                             <td class="fw-semibold">R$ {{ '%.2f'|format(event.event_total or 0) }}</td>
@@ -158,14 +136,13 @@
                 </table>
             </div>
         </div>
-    </div>
     {% else %}
-    <div class="card shadow-sm">
-        <div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
-            Nenhum evento cadastrado até o momento.
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+                Nenhum evento cadastrado até o momento.
+            </div>
         </div>
-    </div>
     {% endif %}
 </div>
 {% endblock %}
