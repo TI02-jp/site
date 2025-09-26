@@ -529,9 +529,29 @@ def cursos():
     )
 
 
-@app.route("/diretoria/eventos", methods=["GET", "POST"])
+@app.route("/diretoria/eventos")
 @login_required
 def diretoria_eventos():
+    """Listar eventos registrados pela diretoria JP."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    events = (
+        ManagementEvent.query.options(joinedload(ManagementEvent.created_by))
+        .order_by(
+            ManagementEvent.event_date.desc(),
+            ManagementEvent.id.desc(),
+        )
+        .all()
+    )
+
+    return render_template("diretoria/eventos.html", events=events)
+
+
+@app.route("/diretoria/eventos/novo", methods=["GET", "POST"])
+@login_required
+def diretoria_eventos_novo():
     """Allow users com a tag Gestão registrarem eventos da diretoria."""
 
     if current_user.role != "admin" and not user_has_tag("Gestão"):
@@ -601,16 +621,7 @@ def diretoria_eventos():
     if request.method == "GET" and not form.other_materials_raw.data:
         form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
 
-    events = (
-        ManagementEvent.query.options(joinedload(ManagementEvent.created_by))
-        .order_by(
-            ManagementEvent.event_date.desc(),
-            ManagementEvent.id.desc(),
-        )
-        .all()
-    )
-
-    return render_template("diretoria/eventos.html", form=form, events=events)
+    return render_template("diretoria/eventos_registrar.html", form=form)
 
 
 @app.route("/acessos")

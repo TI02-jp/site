@@ -40,7 +40,7 @@
             </a>
         </li>
         {% if user_has_tag('Gestão') %}
-        {% set diretoria_active = request.endpoint == 'diretoria_eventos' %}
+        {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_novo'] %}
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="collapse" href="#diretoriaMenu" role="button"
                aria-expanded="{{ 'true' if diretoria_active else 'false' }}" aria-controls="diretoriaMenu">

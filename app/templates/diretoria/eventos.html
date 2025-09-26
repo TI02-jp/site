@@ -7,355 +7,103 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="row g-4">
-        <div class="col-lg-5">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0">Registrar Evento</h5>
-                    <small class="text-muted">Preencha os detalhes para registrar treinamentos, datas comemorativas ou eventos organizados pela diretoria.</small>
-                </div>
-                <div class="card-body">
-                    <form method="post" novalidate id="managementEventForm">
-                        {{ form.csrf_token }}
-                        <div class="mb-3">
-                            <label class="form-label d-block">Tipo</label>
-                            <div class="d-flex flex-column gap-2">
-                                {% for subfield in form.event_type %}
-                                <div class="form-check">
-                                    {{ subfield(class="form-check-input", id=subfield.id) }}
-                                    <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% if form.event_type.errors %}
-                            <div class="text-danger small mt-1">{{ form.event_type.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.event_date.label(class="form-label") }}
-                            {{ form.event_date(class="form-control", type="date") }}
-                            {% if form.event_date.errors %}
-                            <div class="text-danger small mt-1">{{ form.event_date.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control", placeholder="Descreva o objetivo, local ou observações gerais do evento") }}
-                            {% if form.description.errors %}
-                            <div class="text-danger small mt-1">{{ form.description.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-sm-6">
-                                <div class="form-check">
-                                    {{ form.attendees_internal(class="form-check-input", id="attendees_internal") }}
-                                    <label class="form-check-label" for="attendees_internal">Participação Interna</label>
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="form-check">
-                                    {{ form.attendees_external(class="form-check-input", id="attendees_external") }}
-                                    <label class="form-check-label" for="attendees_external">Participação Externa</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-3 mb-3">
-                            {{ form.participants_count.label(class="form-label") }}
-                            {{ form.participants_count(class="form-control", type="number") }}
-                            {% if form.participants_count.errors %}
-                            <div class="text-danger small mt-1">{{ form.participants_count.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Serviços Disponibilizados</label>
-                            <div class="row g-3">
-                                <div class="col-sm-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="form-check mb-2">
-                                            {{ form.include_breakfast(class="form-check-input", id="include_breakfast") }}
-                                            <label class="form-check-label" for="include_breakfast">Café da manhã</label>
-                                        </div>
-                                        <div class="cost-wrapper{% if not form.include_breakfast.data %} d-none{% endif %}" id="cost_breakfast_wrapper">
-                                            <label class="form-label small text-muted" for="cost_breakfast">Custo</label>
-                                            {{ form.cost_breakfast(class="form-control form-control-sm", id="cost_breakfast", placeholder="0,00") }}
-                                            {% if form.cost_breakfast.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_breakfast.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-sm-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="form-check mb-2">
-                                            {{ form.include_lunch(class="form-check-input", id="include_lunch") }}
-                                            <label class="form-check-label" for="include_lunch">Almoço</label>
-                                        </div>
-                                        <div class="cost-wrapper{% if not form.include_lunch.data %} d-none{% endif %}" id="cost_lunch_wrapper">
-                                            <label class="form-label small text-muted" for="cost_lunch">Custo</label>
-                                            {{ form.cost_lunch(class="form-control form-control-sm", id="cost_lunch", placeholder="0,00") }}
-                                            {% if form.cost_lunch.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_lunch.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-sm-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="form-check mb-2">
-                                            {{ form.include_snack(class="form-check-input", id="include_snack") }}
-                                            <label class="form-check-label" for="include_snack">Lanche</label>
-                                        </div>
-                                        <div class="cost-wrapper{% if not form.include_snack.data %} d-none{% endif %}" id="cost_snack_wrapper">
-                                            <label class="form-label small text-muted" for="cost_snack">Custo</label>
-                                            {{ form.cost_snack(class="form-control form-control-sm", id="cost_snack", placeholder="0,00") }}
-                                            {% if form.cost_snack.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_snack.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label class="form-label mb-0">Outros Materiais</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="addMaterialBtn">
-                                    <i class="bi bi-plus-lg me-1"></i>Adicionar
-                                </button>
-                            </div>
-                            {{ form.other_materials_raw(id="other_materials_data") }}
-                            <div class="mt-2" id="otherMaterialsContainer" data-empty-message>
-                                <div class="text-muted small" id="noMaterialsMessage">Nenhum material adicional informado.</div>
-                            </div>
-                            {% if form.other_materials_raw.errors %}
-                            <div class="text-danger small mt-1">{{ form.other_materials_raw.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="d-flex justify-content-end">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h1 class="h4 mb-1">Eventos Registrados</h1>
+            <p class="text-muted mb-0">Consulte todos os detalhes informados para treinamentos, datas comemorativas e demais eventos.</p>
         </div>
-        <div class="col-lg-7">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Eventos Registrados</h5>
-                <span class="badge bg-primary">{{ events|length }}</span>
+        <a class="btn btn-primary align-self-lg-start" href="{{ url_for('diretoria_eventos_novo') }}">
+            <i class="bi bi-plus-lg me-2"></i>Registrar evento
+        </a>
+    </div>
+
+    {% if events %}
+    {% set type_labels = {
+        'treinamento': 'Treinamento',
+        'data_comemorativa': 'Data Comemorativa',
+        'evento': 'Evento'
+    } %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive-lg">
+                <table class="table table-striped table-hover align-top mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Tipo</th>
+                            <th scope="col">Data</th>
+                            <th scope="col" style="min-width: 220px;">Descrição</th>
+                            <th scope="col">Interno</th>
+                            <th scope="col">Externo</th>
+                            <th scope="col">Participantes</th>
+                            <th scope="col">Café da manhã</th>
+                            <th scope="col">Almoço</th>
+                            <th scope="col">Lanche</th>
+                            <th scope="col" style="min-width: 220px;">Outros Materiais</th>
+                            <th scope="col">Registrado por</th>
+                            <th scope="col">Criado em</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td class="text-uppercase fw-semibold">{{ type_labels.get(event.event_type, event.event_type|capitalize) }}</td>
+                            <td>{{ event.event_date.strftime('%d/%m/%Y') }}</td>
+                            <td class="text-break">{{ event.description or '—' }}</td>
+                            <td>{{ 'Sim' if event.attendees_internal else 'Não' }}</td>
+                            <td>{{ 'Sim' if event.attendees_external else 'Não' }}</td>
+                            <td>{{ event.participants_count or 0 }}</td>
+                            <td>
+                                {% if event.include_breakfast %}
+                                    R$ {{ '%.2f'|format(event.cost_breakfast or 0) }}
+                                {% else %}
+                                    Não
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if event.include_lunch %}
+                                    R$ {{ '%.2f'|format(event.cost_lunch or 0) }}
+                                {% else %}
+                                    Não
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if event.include_snack %}
+                                    R$ {{ '%.2f'|format(event.cost_snack or 0) }}
+                                {% else %}
+                                    Não
+                                {% endif %}
+                            </td>
+                            <td class="text-break">
+                                {% set materials = event.other_materials or [] %}
+                                {% if materials %}
+                                    {% for material in materials %}
+                                        <div>
+                                            {{ (material.description or 'Sem descrição') if material.description is defined else 'Sem descrição' }}
+                                            {% if material.value is not none %}
+                                                - R$ {{ '%.2f'|format(material.value) }}
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>{{ event.created_by.name if event.created_by else '—' }}</td>
+                            <td>{{ event.created_at.strftime('%d/%m/%Y %H:%M') if event.created_at else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% if events %}
-            {% set type_labels = {
-                'treinamento': 'Treinamento',
-                'data_comemorativa': 'Data Comemorativa',
-                'evento': 'Evento'
-            } %}
-            <div class="d-flex flex-column gap-3">
-                {% for event in events %}
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <span class="badge bg-secondary text-uppercase">{{ type_labels.get(event.event_type, event.event_type|capitalize) }}</span>
-                                    <span class="fw-semibold">{{ event.event_date.strftime('%d/%m/%Y') }}</span>
-                                </div>
-                                <p class="mb-3">{{ event.description }}</p>
-                                <div class="row g-3 small">
-                                    <div class="col-md-4">
-                                        <h6 class="text-uppercase text-muted fs-6">Participantes</h6>
-                                        <ul class="list-unstyled mb-0">
-                                            <li><strong>Total:</strong> {{ event.participants_count or 0 }}</li>
-                                            <li><strong>Internos:</strong> {{ 'Sim' if event.attendees_internal else 'Não' }}</li>
-                                            <li><strong>Externos:</strong> {{ 'Sim' if event.attendees_external else 'Não' }}</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-uppercase text-muted fs-6">Serviços</h6>
-                                        {% set services = namespace(items=[]) %}
-                                        {% if event.include_breakfast %}
-                                            {% set _ = services.items.append('Café da manhã: ' ~ ('R$ {:.2f}'.format(event.cost_breakfast) if event.cost_breakfast is not none else '—')) %}
-                                        {% endif %}
-                                        {% if event.include_lunch %}
-                                            {% set _ = services.items.append('Almoço: ' ~ ('R$ {:.2f}'.format(event.cost_lunch) if event.cost_lunch is not none else '—')) %}
-                                        {% endif %}
-                                        {% if event.include_snack %}
-                                            {% set _ = services.items.append('Lanche: ' ~ ('R$ {:.2f}'.format(event.cost_snack) if event.cost_snack is not none else '—')) %}
-                                        {% endif %}
-                                        {% if services.items %}
-                                        <ul class="list-unstyled mb-0">
-                                            {% for service in services.items %}
-                                            <li>{{ service }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                        {% else %}
-                                        <p class="text-muted mb-0">Nenhum serviço informado.</p>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-uppercase text-muted fs-6">Materiais</h6>
-                                        {% set materials = event.other_materials or [] %}
-                                        {% if materials %}
-                                        <ul class="list-unstyled mb-0">
-                                            {% for material in materials %}
-                                            <li>
-                                                {{ (material.description or 'Sem descrição') if material.description is defined else 'Sem descrição' }}
-                                                {% if material.value is not none %}
-                                                    - R$ {{ '%.2f'|format(material.value) }}
-                                                {% endif %}
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
-                                        {% else %}
-                                        <p class="text-muted mb-0">Nenhum material adicional.</p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-muted small text-md-end">
-                                <div><i class="bi bi-person-badge me-1"></i>{{ event.created_by.name if event.created_by else '—' }}</div>
-                                <div><i class="bi bi-clock me-1"></i>{{ event.created_at.strftime('%d/%m/%Y %H:%M') if event.created_at else '' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="card shadow-sm">
-                <div class="card-body text-center py-5 text-muted">
-                    <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
-                    Nenhum evento cadastrado até o momento.
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+            Nenhum evento cadastrado até o momento.
+        </div>
+    </div>
+    {% endif %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-    {{ super() }}
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const cateringOptions = [
-            { checkboxId: 'include_breakfast', wrapperId: 'cost_breakfast_wrapper', inputId: 'cost_breakfast' },
-            { checkboxId: 'include_lunch', wrapperId: 'cost_lunch_wrapper', inputId: 'cost_lunch' },
-            { checkboxId: 'include_snack', wrapperId: 'cost_snack_wrapper', inputId: 'cost_snack' },
-        ];
-
-        cateringOptions.forEach(({ checkboxId, wrapperId, inputId }) => {
-            const checkbox = document.getElementById(checkboxId);
-            const wrapper = document.getElementById(wrapperId);
-            const input = document.getElementById(inputId);
-            if (!checkbox || !wrapper || !input) {
-                return;
-            }
-            const syncVisibility = () => {
-                if (checkbox.checked) {
-                    wrapper.classList.remove('d-none');
-                    input.disabled = false;
-                } else {
-                    wrapper.classList.add('d-none');
-                    input.disabled = true;
-                    input.value = '';
-                }
-            };
-            syncVisibility();
-            checkbox.addEventListener('change', syncVisibility);
-        });
-
-        const materialsInput = document.getElementById('other_materials_data');
-        const materialsContainer = document.getElementById('otherMaterialsContainer');
-        const addMaterialBtn = document.getElementById('addMaterialBtn');
-        const noMaterialsMessage = document.getElementById('noMaterialsMessage');
-        const form = document.getElementById('managementEventForm');
-
-        const parseInitialMaterials = () => {
-            try {
-                const value = materialsInput.value || '[]';
-                const parsed = JSON.parse(value);
-                if (Array.isArray(parsed)) {
-                    return parsed.map(item => ({
-                        description: typeof item.description === 'string' ? item.description : '',
-                        value: item.value !== undefined && item.value !== null ? String(item.value) : ''
-                    }));
-                }
-            } catch (error) {
-                console.warn('Não foi possível interpretar os materiais adicionais salvos.', error);
-            }
-            return [];
-        };
-
-        const materialsState = parseInitialMaterials();
-
-        const updateEmptyMessage = () => {
-            if (!noMaterialsMessage) {
-                return;
-            }
-            const hasItems = materialsContainer.querySelectorAll('.material-row').length > 0;
-            noMaterialsMessage.classList.toggle('d-none', hasItems);
-        };
-
-        const createMaterialRow = (data = {}) => {
-            const row = document.createElement('div');
-            row.className = 'material-row border rounded p-3 mb-2';
-            row.innerHTML = `
-                <div class="row g-2 align-items-end">
-                    <div class="col-md-7">
-                        <label class="form-label small text-muted">Descrição</label>
-                        <input type="text" class="form-control form-control-sm material-description" placeholder="Nome do material">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small text-muted">Valor</label>
-                        <input type="number" class="form-control form-control-sm material-value" min="0" step="0.01" placeholder="0,00">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-center justify-content-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-material" title="Remover material">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            const descriptionInput = row.querySelector('.material-description');
-            const valueInput = row.querySelector('.material-value');
-            descriptionInput.value = data.description || '';
-            valueInput.value = data.value || '';
-            row.querySelector('.remove-material').addEventListener('click', () => {
-                row.remove();
-                updateEmptyMessage();
-            });
-            return row;
-        };
-
-        materialsState.forEach(item => {
-            const row = createMaterialRow({
-                description: item.description || '',
-                value: item.value !== undefined && item.value !== null ? item.value : ''
-            });
-            materialsContainer.appendChild(row);
-        });
-        updateEmptyMessage();
-
-        addMaterialBtn.addEventListener('click', () => {
-            const row = createMaterialRow();
-            materialsContainer.appendChild(row);
-            updateEmptyMessage();
-        });
-
-        form.addEventListener('submit', () => {
-            const rows = materialsContainer.querySelectorAll('.material-row');
-            const serialized = [];
-            rows.forEach(row => {
-                const descriptionInput = row.querySelector('.material-description');
-                const valueInput = row.querySelector('.material-value');
-                const description = descriptionInput.value.trim();
-                const value = valueInput.value.trim();
-                if (description || value) {
-                    serialized.push({ description, value });
-                }
-            });
-            materialsInput.value = JSON.stringify(serialized);
-        });
-    });
-    </script>
 {% endblock %}
