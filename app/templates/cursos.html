@@ -144,6 +144,7 @@
                         <h5 class="modal-title mb-0" id="courseModalLabel">Cadastrar novo curso</h5>
                     </div>
                     <div class="courses-modal__actions">
+                        {{ form.submit_delete(class="btn btn-outline-danger me-auto d-none", **{'data-role': 'course-delete'}) }}
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                         {{ form.submit_add_to_calendar(class="btn btn-outline-primary", **{'data-role': 'course-add-calendar'}) }}
                         {{ form.submit(class="btn btn-primary", **{'data-role': 'course-submit'}) }}
@@ -278,6 +279,7 @@
         var modalTitle = courseModalEl.querySelector('.modal-title');
         var submitPrimaryBtn = formEl.querySelector('[data-role="course-submit"]');
         var courseIdInput = formEl.querySelector('input[name="course_id"]');
+        var deleteButton = formEl.querySelector('[data-role="course-delete"]');
         var newCourseButton = document.querySelector('[data-action="open-course-create"]');
         var summaryContainer = document.querySelector('.courses-summary');
         var summaryItems = document.querySelectorAll('.courses-summary__item[data-status-filter]');
@@ -364,6 +366,14 @@
             updateSummaryActiveState();
         }
 
+        function toggleDeleteButton(shouldShow) {
+            if (!deleteButton) {
+                return;
+            }
+            deleteButton.classList.toggle('d-none', !shouldShow);
+            deleteButton.disabled = !shouldShow;
+        }
+
         function setSubmitLabel(label) {
             if (!submitPrimaryBtn) {
                 return;
@@ -447,6 +457,7 @@
             if (courseIdInput) {
                 courseIdInput.value = '';
             }
+            toggleDeleteButton(false);
         }
 
         function enterEditMode(data) {
@@ -463,6 +474,7 @@
                 courseIdInput.value = idValue;
             }
             populateFormFields(data);
+            toggleDeleteButton(true);
         }
 
         function openEditModalFromRow(row) {
@@ -503,13 +515,30 @@
                     modalTitle.textContent = 'Editar curso';
                 }
                 setSubmitLabel('Atualizar curso');
+                toggleDeleteButton(true);
             } else {
                 if (modalTitle) {
                     modalTitle.textContent = 'Cadastrar novo curso';
                 }
                 setSubmitLabel('Salvar curso');
+                toggleDeleteButton(false);
             }
             courseModal.show();
+        } else {
+            toggleDeleteButton(Boolean(formEl.dataset.editingCourseId));
+        }
+
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function (event) {
+                if (!formEl.dataset.editingCourseId) {
+                    event.preventDefault();
+                    return;
+                }
+                var confirmed = window.confirm('Tem certeza que deseja excluir este curso? Esta ação não poderá ser desfeita.');
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+            });
         }
     });
 </script>

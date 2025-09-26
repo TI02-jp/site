@@ -370,6 +370,30 @@ def cursos():
         flash("Apenas administradores podem cadastrar ou editar cursos.", "danger")
         return redirect(url_for("cursos"))
 
+    if request.method == "POST" and form.submit_delete.data:
+        if not course_id_raw:
+            flash("Selecione um curso para excluir.", "danger")
+            return redirect(url_for("cursos"))
+
+        try:
+            course_id = int(course_id_raw)
+        except ValueError:
+            flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+            return redirect(url_for("cursos"))
+
+        course = db.session.execute(
+            sa.select(Course).where(Course.id == course_id)
+        ).scalar_one_or_none()
+
+        if course is None:
+            flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+            return redirect(url_for("cursos"))
+
+        db.session.delete(course)
+        db.session.commit()
+        flash("Curso excluído com sucesso!", "success")
+        return redirect(url_for("cursos"))
+
     if form.validate_on_submit():
         course_id: int | None = None
         if course_id_raw:
