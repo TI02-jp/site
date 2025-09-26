@@ -66,6 +66,14 @@
             min-width: 6.25rem;
         }
 
+        .management-event-page .service-total-display {
+            font-weight: 600;
+            background: #eef1f6;
+            border-radius: 0.35rem;
+            padding: 0.35rem 0.45rem;
+            text-align: right;
+        }
+
         .management-event-page .service-details {
             margin-top: 0.5rem;
         }
@@ -218,11 +226,8 @@
                                         {% endif %}
                                     </div>
                                     <div class="service-total text-end">
-                                        <label class="form-label text-muted mb-1" for="total_breakfast">Custo total</label>
-                                        {{ form.total_breakfast(class="form-control form-control-sm text-end", id="total_breakfast", placeholder="0,00") }}
-                                        {% if form.total_breakfast.errors %}
-                                        <div class="text-danger small mt-1">{{ form.total_breakfast.errors[0] }}</div>
-                                        {% endif %}
+                                        <span class="form-label text-muted mb-1 d-block">Custo total</span>
+                                        <div class="service-total-display" data-service-total="breakfast">R$ 0,00</div>
                                     </div>
                                 </div>
                                 {{ form.breakfast_details(id="breakfast_details") }}
@@ -253,11 +258,8 @@
                                         {% endif %}
                                     </div>
                                     <div class="service-total text-end">
-                                        <label class="form-label text-muted mb-1" for="total_lunch">Custo total</label>
-                                        {{ form.total_lunch(class="form-control form-control-sm text-end", id="total_lunch", placeholder="0,00") }}
-                                        {% if form.total_lunch.errors %}
-                                        <div class="text-danger small mt-1">{{ form.total_lunch.errors[0] }}</div>
-                                        {% endif %}
+                                        <span class="form-label text-muted mb-1 d-block">Custo total</span>
+                                        <div class="service-total-display" data-service-total="lunch">R$ 0,00</div>
                                     </div>
                                 </div>
                                 {{ form.lunch_details(id="lunch_details") }}
@@ -288,11 +290,8 @@
                                         {% endif %}
                                     </div>
                                     <div class="service-total text-end">
-                                        <label class="form-label text-muted mb-1" for="total_dinner">Custo total</label>
-                                        {{ form.total_dinner(class="form-control form-control-sm text-end", id="total_dinner", placeholder="0,00") }}
-                                        {% if form.total_dinner.errors %}
-                                        <div class="text-danger small mt-1">{{ form.total_dinner.errors[0] }}</div>
-                                        {% endif %}
+                                        <span class="form-label text-muted mb-1 d-block">Custo total</span>
+                                        <div class="service-total-display" data-service-total="dinner">R$ 0,00</div>
                                     </div>
                                 </div>
                                 {{ form.dinner_details(id="dinner_details") }}
@@ -358,23 +357,23 @@
                 {
                     slug: 'breakfast',
                     selectId: 'service_breakfast',
-                    totalId: 'total_breakfast',
                     fieldId: 'breakfast_details',
                     cardSelector: '[data-service-card="breakfast"]',
+                    totalSelector: '[data-service-total="breakfast"]',
                 },
                 {
                     slug: 'lunch',
                     selectId: 'service_lunch',
-                    totalId: 'total_lunch',
                     fieldId: 'lunch_details',
                     cardSelector: '[data-service-card="lunch"]',
+                    totalSelector: '[data-service-total="lunch"]',
                 },
                 {
                     slug: 'dinner',
                     selectId: 'service_dinner',
-                    totalId: 'total_dinner',
                     fieldId: 'dinner_details',
                     cardSelector: '[data-service-card="dinner"]',
+                    totalSelector: '[data-service-total="dinner"]',
                 },
             ];
 
@@ -419,12 +418,12 @@
 
             function getServiceElements(cfg) {
                 const select = document.getElementById(cfg.selectId);
-                const totalInput = document.getElementById(cfg.totalId);
                 const hiddenField = document.getElementById(cfg.fieldId);
                 const card = document.querySelector(cfg.cardSelector);
                 const details = card?.querySelector('[data-service-details]');
                 const itemsContainer = card?.querySelector('[data-service-items]');
-                return { select, totalInput, hiddenField, card, details, itemsContainer };
+                const totalDisplay = card?.querySelector(cfg.totalSelector || '');
+                return { select, hiddenField, card, details, itemsContainer, totalDisplay };
             }
 
             function removeServiceEditor(cfg) {
@@ -433,6 +432,30 @@
                     editor.parentNode.removeChild(editor);
                 }
                 servicesState[cfg.slug].editor = null;
+            }
+
+            function calculateItemTotal(item) {
+                if (!item) {
+                    return null;
+                }
+                const quantity = typeof item.quantity === 'number' ? item.quantity : null;
+                const unitCost = typeof item.unitCost === 'number' ? item.unitCost : null;
+                if (quantity === null || unitCost === null) {
+                    return null;
+                }
+                const total = quantity * unitCost;
+                return Number.isFinite(total) ? total : null;
+            }
+
+            function calculateServiceSum(cfg) {
+                const items = servicesState[cfg.slug].items || [];
+                return items.reduce((acc, item) => {
+                    const total = calculateItemTotal(item);
+                    if (total !== null) {
+                        acc += total;
+                    }
+                    return acc;
+                }, 0);
             }
 
             function syncServiceField(cfg) {
@@ -444,7 +467,7 @@
                     description: item.description,
                     quantity: item.quantity,
                     unit_cost: item.unitCost,
-                    total_cost: item.totalCost,
+                    total_cost: calculateItemTotal(item),
                 }));
                 hiddenField.value = JSON.stringify(payload);
             }
@@ -492,8 +515,9 @@
                     actions.className = 'text-end';
                     const totalLabel = document.createElement('div');
                     totalLabel.className = 'fw-semibold';
-                    totalLabel.textContent = item.totalCost !== null && item.totalCost !== undefined
-                        ? formatCurrency(item.totalCost)
+                    const totalValue = calculateItemTotal(item);
+                    totalLabel.textContent = totalValue !== null
+                        ? formatCurrency(totalValue)
                         : '—';
                     actions.appendChild(totalLabel);
 
@@ -515,50 +539,31 @@
                 });
             }
 
-            function updateServiceTotal(cfg, options = {}) {
-                const { select, totalInput } = getServiceElements(cfg);
-                if (!select || !totalInput) {
+            function updateServiceTotal(cfg) {
+                const { select, totalDisplay } = getServiceElements(cfg);
+                if (!select || !totalDisplay) {
                     return;
-                }
-                if (options.resetManual) {
-                    delete totalInput.dataset.manual;
                 }
                 const enabled = select.value === 'sim';
-                if (!enabled) {
-                    totalInput.value = '';
-                    return;
-                }
-                if (totalInput.dataset.manual === 'true' && !options.force) {
-                    return;
-                }
-
-                const items = servicesState[cfg.slug].items;
-                let sum = 0;
-                items.forEach(item => {
-                    if (typeof item.totalCost === 'number') {
-                        sum += item.totalCost;
-                    } else if (typeof item.unitCost === 'number' && typeof item.quantity === 'number') {
-                        sum += item.unitCost * item.quantity;
-                    }
-                });
-
-                totalInput.value = sum > 0 ? sum.toFixed(2) : '';
+                const sum = enabled ? calculateServiceSum(cfg) : 0;
+                totalDisplay.textContent = formatCurrency(sum);
+                totalDisplay.dataset.totalValue = String(sum);
             }
 
             function updateServiceVisibility(cfg) {
-                const { select, totalInput, details, card } = getServiceElements(cfg);
-                if (!select || !totalInput || !details || !card) {
+                const { select, details, card } = getServiceElements(cfg);
+                if (!select || !details || !card) {
                     return;
                 }
                 const enabled = select.value === 'sim';
                 details.classList.toggle('d-none', !enabled);
                 card.classList.toggle('disabled', !enabled);
-                totalInput.disabled = !enabled;
                 if (!enabled) {
                     servicesState[cfg.slug].items = [];
                     removeServiceEditor(cfg);
                     syncServiceField(cfg);
                     renderServiceItems(cfg);
+                    updateServiceTotal(cfg);
                 }
             }
 
@@ -595,7 +600,7 @@
                 quantityLabel.textContent = 'Quantidade';
                 const quantityInput = document.createElement('input');
                 quantityInput.type = 'number';
-                quantityInput.min = '0';
+                quantityInput.min = '1';
                 quantityInput.step = '1';
                 quantityInput.className = 'form-control';
                 quantityCol.append(quantityLabel, quantityInput);
@@ -618,10 +623,11 @@
                 totalLabel.className = 'form-label mb-1';
                 totalLabel.textContent = 'Custo total';
                 const totalInput = document.createElement('input');
-                totalInput.type = 'number';
-                totalInput.min = '0';
-                totalInput.step = '0.01';
+                totalInput.type = 'text';
                 totalInput.className = 'form-control';
+                totalInput.readOnly = true;
+                totalInput.tabIndex = -1;
+                totalInput.placeholder = 'R$ 0,00';
                 totalCol.append(totalLabel, totalInput);
 
                 grid.append(descriptionCol, quantityCol, unitCol, totalCol);
@@ -630,9 +636,10 @@
                 function recalcTotal() {
                     const quantityValue = parseDecimal(quantityInput.value);
                     const unitValue = parseDecimal(unitInput.value);
-                    if (quantityValue !== null && unitValue !== null) {
-                        totalInput.value = (quantityValue * unitValue).toFixed(2);
-                    }
+                    const totalValue = quantityValue !== null && unitValue !== null
+                        ? quantityValue * unitValue
+                        : null;
+                    totalInput.value = totalValue !== null ? formatCurrency(totalValue) : '';
                 }
 
                 quantityInput.addEventListener('input', recalcTotal);
@@ -654,30 +661,27 @@
                 saveBtn.textContent = 'Adicionar';
                 saveBtn.addEventListener('click', () => {
                     const description = descriptionInput.value.trim();
-                    const quantityValue = quantityInput.value.trim() ? Number(quantityInput.value) : null;
+                    const quantityValue = quantityInput.value.trim()
+                        ? parseInt(quantityInput.value, 10)
+                        : NaN;
                     const unitValue = parseDecimal(unitInput.value);
-                    let totalValue = parseDecimal(totalInput.value);
 
-                    if (quantityValue !== null && (!Number.isFinite(quantityValue) || quantityValue < 0)) {
-                        alert('Informe uma quantidade válida.');
+                    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+                        alert('Informe uma quantidade válida (maior que zero).');
+                        quantityInput.focus();
                         return;
                     }
-                    if (unitValue !== null && unitValue < 0) {
+                    if (unitValue === null || unitValue < 0) {
                         alert('Informe um valor unitário positivo.');
-                        return;
-                    }
-                    if (totalValue !== null && totalValue < 0) {
-                        alert('Informe um custo total positivo.');
+                        unitInput.focus();
                         return;
                     }
 
-                    if (totalValue === null && unitValue !== null && quantityValue !== null) {
-                        totalValue = unitValue * quantityValue;
-                    }
+                    const totalValue = quantityValue * unitValue;
 
                     servicesState[cfg.slug].items.push({
                         description,
-                        quantity: quantityValue !== null ? Math.trunc(quantityValue) : null,
+                        quantity: quantityValue,
                         unitCost: unitValue,
                         totalCost: totalValue,
                     });
@@ -744,11 +748,11 @@
                 let total = 0;
 
                 servicesConfig.forEach(cfg => {
-                    const { select, totalInput } = getServiceElements(cfg);
-                    if (select && totalInput && select.value === 'sim') {
-                        const value = parseDecimal(totalInput.value);
-                        if (value !== null && value >= 0) {
-                            total += value;
+                    const { select } = getServiceElements(cfg);
+                    if (select && select.value === 'sim') {
+                        const sum = calculateServiceSum(cfg);
+                        if (Number.isFinite(sum) && sum >= 0) {
+                            total += sum;
                         }
                     }
                 });
@@ -784,20 +788,15 @@
             }
 
             servicesConfig.forEach(cfg => {
-                const { select, totalInput, card } = getServiceElements(cfg);
-                if (!select || !totalInput || !card) {
+                const { select, card } = getServiceElements(cfg);
+                if (!select || !card) {
                     return;
                 }
 
                 select.addEventListener('change', () => {
                     updateServiceVisibility(cfg);
                     removeServiceEditor(cfg);
-                    updateServiceTotal(cfg, { resetManual: true });
-                    updateTotals();
-                });
-
-                totalInput.addEventListener('input', () => {
-                    totalInput.dataset.manual = totalInput.value.trim() ? 'true' : '';
+                    updateServiceTotal(cfg);
                     updateTotals();
                 });
 
@@ -836,7 +835,7 @@
             }
 
             servicesConfig.forEach(cfg => {
-                const { hiddenField, totalInput, select } = getServiceElements(cfg);
+                const { hiddenField, select } = getServiceElements(cfg);
                 if (hiddenField) {
                     try {
                         const parsed = JSON.parse(hiddenField.value || '[]');
@@ -865,12 +864,7 @@
 
                 renderServiceItems(cfg);
                 updateServiceVisibility(cfg);
-
-                if (totalInput && totalInput.value.trim()) {
-                    totalInput.dataset.manual = 'true';
-                } else {
-                    updateServiceTotal(cfg);
-                }
+                updateServiceTotal(cfg);
             });
 
             renderMaterials();

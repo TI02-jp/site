@@ -598,12 +598,26 @@ def diretoria_eventos_novo():
             for item in items:
                 if not isinstance(item, dict):
                     continue
+                quantity_value = item.get("quantity")
+                quantity_int: int | None = None
+                if quantity_value not in (None, ""):
+                    try:
+                        quantity_int = int(quantity_value)
+                    except (TypeError, ValueError):
+                        quantity_int = None
+
                 unit_cost_decimal = _normalize_decimal(item.get("unit_cost"))
-                total_cost_decimal = _normalize_decimal(item.get("total_cost"))
+                total_cost_decimal = None
+                if unit_cost_decimal is not None and quantity_int is not None:
+                    try:
+                        total_cost_decimal = unit_cost_decimal * Decimal(quantity_int)
+                        total_cost_decimal = total_cost_decimal.quantize(Decimal("0.01"))
+                    except (InvalidOperation, TypeError):
+                        total_cost_decimal = None
                 prepared.append(
                     {
                         "description": _clean_text(item.get("description")),
-                        "quantity": item.get("quantity"),
+                        "quantity": quantity_int,
                         "unit_cost": float(unit_cost_decimal)
                         if unit_cost_decimal is not None
                         else None,
