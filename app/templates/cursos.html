@@ -145,7 +145,8 @@
                     </div>
                     <div class="courses-modal__actions">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        {{ form.submit(class="btn btn-primary") }}
+                        {{ form.submit_add_to_calendar(class="btn btn-outline-primary", **{'data-role': 'course-add-calendar'}) }}
+                        {{ form.submit(class="btn btn-primary", **{'data-role': 'course-submit'}) }}
                     </div>
                 </div>
                 <div class="modal-body">
@@ -275,7 +276,7 @@
         }
 
         var modalTitle = courseModalEl.querySelector('.modal-title');
-        var submitBtn = formEl.querySelector('[type="submit"]');
+        var submitPrimaryBtn = formEl.querySelector('[data-role="course-submit"]');
         var courseIdInput = formEl.querySelector('input[name="course_id"]');
         var newCourseButton = document.querySelector('[data-action="open-course-create"]');
         var summaryContainer = document.querySelector('.courses-summary');
@@ -364,13 +365,13 @@
         }
 
         function setSubmitLabel(label) {
-            if (!submitBtn) {
+            if (!submitPrimaryBtn) {
                 return;
             }
-            if (submitBtn.tagName === 'INPUT') {
-                submitBtn.value = label;
+            if (submitPrimaryBtn.tagName === 'INPUT') {
+                submitPrimaryBtn.value = label;
             } else {
-                submitBtn.textContent = label;
+                submitPrimaryBtn.textContent = label;
             }
         }
 
