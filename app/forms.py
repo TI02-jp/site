@@ -17,7 +17,9 @@ from wtforms import (
     BooleanField,
     HiddenField,
     FieldList,
-    widgets
+    IntegerField,
+    DecimalField,
+    widgets,
 )
 from wtforms.validators import (
     DataRequired,
@@ -27,8 +29,11 @@ from wtforms.validators import (
     EqualTo,
     ValidationError,
     URL,
+    NumberRange,
+    InputRequired,
 )
 import re
+import json
 
 from app.services.courses import CourseStatus
 
@@ -259,6 +264,120 @@ class CourseForm(FlaskForm):
     submit = SubmitField("Salvar curso")
     submit_add_to_calendar = SubmitField("Adicionar no calendário")
     submit_delete = SubmitField("Excluir curso")
+
+
+class ManagementEventForm(FlaskForm):
+    """Formulário utilizado pela Diretoria JP para registrar eventos."""
+
+    event_type = RadioField(
+        "Tipo de Registro",
+        choices=[
+            ("treinamento", "Treinamento"),
+            ("data_comemorativa", "Data Comemorativa"),
+            ("evento", "Evento"),
+        ],
+        validators=[DataRequired(message="Selecione o tipo de registro.")],
+        default="treinamento",
+    )
+    event_date = DateField(
+        "Data",
+        format="%Y-%m-%d",
+        validators=[DataRequired(message="Informe a data do evento.")],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[DataRequired(message="Informe a descrição do evento."), Length(max=1000)],
+        render_kw={"rows": 4},
+    )
+    attendees_internal = BooleanField("Participantes Internos")
+    attendees_external = BooleanField("Participantes Externos")
+    participants_count = IntegerField(
+        "Participantes (Nº de pessoas)",
+        validators=[
+            InputRequired(message="Informe o número de participantes."),
+            NumberRange(min=0, message="O número de participantes deve ser positivo."),
+        ],
+        render_kw={"min": 0},
+    )
+    include_breakfast = BooleanField("Café da manhã")
+    cost_breakfast = DecimalField(
+        "Custo - Café da manhã",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    include_lunch = BooleanField("Almoço")
+    cost_lunch = DecimalField(
+        "Custo - Almoço",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    include_snack = BooleanField("Lanche")
+    cost_snack = DecimalField(
+        "Custo - Lanche",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    other_materials_raw = HiddenField()
+    submit = SubmitField("Salvar evento")
+
+    def validate(self, extra_validators=None):
+        """Validate catering selections and normalize additional materials."""
+
+        if not super().validate(extra_validators=extra_validators):
+            return False
+
+        valid = True
+        catering_groups = [
+            (self.include_breakfast, self.cost_breakfast),
+            (self.include_lunch, self.cost_lunch),
+            (self.include_snack, self.cost_snack),
+        ]
+
+        for include_field, cost_field in catering_groups:
+            if include_field.data:
+                if cost_field.data is None:
+                    cost_field.errors.append("Informe o custo para o item selecionado.")
+                    valid = False
+            else:
+                cost_field.data = None
+
+        raw_materials = self.other_materials_raw.data or "[]"
+        try:
+            parsed_materials = json.loads(raw_materials)
+        except json.JSONDecodeError:
+            self.other_materials_raw.errors.append(
+                "Não foi possível processar os outros materiais informados."
+            )
+            return False
+
+        if not isinstance(parsed_materials, list):
+            self.other_materials_raw.errors.append("Formato inválido para outros materiais.")
+            return False
+
+        cleaned_materials: list[dict[str, str]] = []
+        for item in parsed_materials:
+            if not isinstance(item, dict):
+                continue
+            description = (item.get("description") or "").strip()
+            value = (item.get("value") or "").strip()
+            if not description and not value:
+                continue
+            if value and not re.match(r"^\d+(?:[\.,]\d{0,2})?$", value):
+                self.other_materials_raw.errors.append(
+                    "Informe valores numéricos válidos para os materiais adicionais."
+                )
+                return False
+            cleaned_materials.append({"description": description, "value": value})
+
+        self.other_materials_raw.data = json.dumps(cleaned_materials, ensure_ascii=False)
+
+        return valid
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""

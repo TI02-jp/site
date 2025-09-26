@@ -36,6 +36,7 @@ from app.models.tables import (
     AccessLink,
     Course,
     GeneralCalendarEvent,
+    ManagementEvent,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -57,6 +58,7 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    ManagementEventForm,
 )
 import os, json, re, secrets
 import requests
@@ -91,6 +93,7 @@ from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from decimal import Decimal, InvalidOperation
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -524,6 +527,90 @@ def cursos():
         editing_course_id=course_id_raw,
         can_manage_courses=can_manage_courses,
     )
+
+
+@app.route("/diretoria/eventos", methods=["GET", "POST"])
+@login_required
+def diretoria_eventos():
+    """Allow users com a tag Gestão registrarem eventos da diretoria."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    form = ManagementEventForm()
+
+    if form.validate_on_submit():
+        parsed_materials = json.loads(form.other_materials_raw.data or "[]")
+        cleaned_materials: list[dict[str, Any]] = []
+        invalid_cost = False
+        for item in parsed_materials:
+            if not isinstance(item, dict):
+                continue
+            description = sanitize_html((item.get("description") or "").strip())
+            value_raw = (item.get("value") or "").strip()
+            material_cost: Decimal | None = None
+            if value_raw:
+                normalized_value = value_raw.replace(",", ".")
+                try:
+                    material_cost = Decimal(normalized_value)
+                except InvalidOperation:
+                    invalid_cost = True
+                    form.other_materials_raw.errors.append(
+                        "Informe valores válidos para os materiais adicionais."
+                    )
+                    break
+            cleaned_materials.append(
+                {
+                    "description": description,
+                    "value": float(material_cost) if material_cost is not None else None,
+                }
+            )
+
+        if invalid_cost:
+            flash(
+                "Não foi possível salvar o evento. Verifique os campos destacados e tente novamente.",
+                "danger",
+            )
+        else:
+            event = ManagementEvent(
+                event_type=form.event_type.data,
+                event_date=form.event_date.data,
+                description=sanitize_html((form.description.data or "").strip()),
+                attendees_internal=bool(form.attendees_internal.data),
+                attendees_external=bool(form.attendees_external.data),
+                participants_count=form.participants_count.data,
+                include_breakfast=bool(form.include_breakfast.data),
+                cost_breakfast=form.cost_breakfast.data,
+                include_lunch=bool(form.include_lunch.data),
+                cost_lunch=form.cost_lunch.data,
+                include_snack=bool(form.include_snack.data),
+                cost_snack=form.cost_snack.data,
+                other_materials=cleaned_materials,
+                created_by_id=current_user.id,
+            )
+            db.session.add(event)
+            db.session.commit()
+            flash("Evento registrado com sucesso!", "success")
+            return redirect(url_for("diretoria_eventos"))
+    elif request.method == "POST":
+        flash(
+            "Não foi possível salvar o evento. Verifique os campos destacados e tente novamente.",
+            "danger",
+        )
+
+    if request.method == "GET" and not form.other_materials_raw.data:
+        form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
+
+    events = (
+        ManagementEvent.query.options(joinedload(ManagementEvent.created_by))
+        .order_by(
+            ManagementEvent.event_date.desc(),
+            ManagementEvent.id.desc(),
+        )
+        .all()
+    )
+
+    return render_template("diretoria/eventos.html", form=form, events=events)
 
 
 @app.route("/acessos")
