@@ -2,14 +2,18 @@
 
 import os
 import time
-from flask import Flask, request, redirect, session
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
-from flask_login import LoginManager, current_user
-from dotenv import load_dotenv
 from datetime import datetime, timedelta
+
+import sqlalchemy as sa
+from flask import Flask, request, redirect, session
+from flask_login import LoginManager, current_user
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
 from markupsafe import Markup, escape
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.utils.security import sanitize_html
 
 load_dotenv()
@@ -159,3 +163,28 @@ def _sanitize_filter(value):
 
 with app.app_context():
     db.create_all()
+
+    try:
+        inspector = sa.inspect(db.engine)
+        meeting_columns = {col["name"] for col in inspector.get_columns("reunioes")}
+        if "course_id" not in meeting_columns:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        "ALTER TABLE reunioes ADD COLUMN course_id INTEGER NULL"
+                    )
+                )
+                conn.execute(
+                    sa.text(
+                        """
+                        ALTER TABLE reunioes
+                        ADD CONSTRAINT fk_reunioes_course_id_courses
+                        FOREIGN KEY (course_id) REFERENCES courses (id)
+                        ON DELETE SET NULL
+                        """
+                    )
+                )
+    except SQLAlchemyError as exc:
+        app.logger.warning(
+            "Não foi possível garantir a coluna course_id em reunioes: %s", exc
+        )
