@@ -183,6 +183,200 @@ class DepartamentoFiscalForm(DepartamentoForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
+class DepartamentoContabilForm(DepartamentoForm):
+    """Formulário para o Departamento Contábil."""
+
+    metodo_importacao = SelectMultipleField(
+        'Formas de Importação',
+        choices=[('importado', 'Importado'), ('digitado', 'Digitado')],
+        validators=[Optional()],
+    )
+    forma_movimento = SelectField(
+        'Envio de Documento',
+        choices=[
+            ('', 'Selecione'),
+            ('Digital', 'Digital'),
+            ('Fisico', 'Físico'),
+            ('Digital e Físico', 'Digital e Físico'),
+        ],
+        validators=[Optional()],
+    )
+    envio_digital = SelectMultipleField(
+        'Envio Digital',
+        choices=[
+            ('email', 'Email'),
+            ('whatsapp', 'Whatsapp'),
+            ('acessorias', 'Acessórias'),
+            ('google_chat', 'Google Chat'),
+        ],
+        validators=[Optional()],
+    )
+    envio_fisico = SelectMultipleField(
+        'Envio Físico',
+        choices=[('malote', 'Malote')],
+        validators=[Optional()],
+    )
+    malote_coleta = SelectField(
+        'Coleta do Malote',
+        choices=[
+            ('', 'Selecione'),
+            ('Cliente Traz', 'Cliente Traz'),
+            ('JP Busca', 'JP Busca'),
+        ],
+        validators=[Optional()],
+    )
+    observacao_movimento = TextAreaField('Observação', validators=[Optional()])
+    controle_relatorios = SelectMultipleField(
+        'Controle por Relatórios',
+        choices=[
+            ('forn_cli_cota_unica', 'Fornecedor e clientes conta única'),
+            ('saldo_final_mes', 'Relatório com saldo final do mês'),
+            ('adiantamentos', 'Relatório de adiantamentos'),
+            ('contas_pagas', 'Relatório de contas pagas'),
+            ('contas_recebidas', 'Relatório de contas recebidas'),
+            ('conferir_aplicacao', 'Conferir aplicação'),
+        ],
+        validators=[Optional()],
+    )
+    observacao_controle_relatorios = TextAreaField(
+        'Observação', validators=[Optional()]
+    )
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoPessoalForm(DepartamentoForm):
+    """Formulário para o Departamento Pessoal."""
+
+    data_envio = StringField('Data de Envio', validators=[Optional()])
+    registro_funcionarios = StringField(
+        'Registro de Funcionários', validators=[Optional()]
+    )
+    ponto_eletronico = StringField('Ponto Eletrônico', validators=[Optional()])
+    pagamento_funcionario = StringField(
+        'Pagamento de Funcionário', validators=[Optional()]
+    )
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoAdministrativoForm(FlaskForm):
+    """Formulário para o Departamento Administrativo."""
+
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoFinanceiroForm(FlaskForm):
+    """Formulário para o Departamento Financeiro."""
+
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class ConsultoriaForm(FlaskForm):
+    """Formulário para cadastro de consultorias."""
+
+    nome = StringField('Nome da Consultoria', validators=[DataRequired()])
+    usuario = StringField('Usuário na Consultoria', validators=[DataRequired()])
+    senha = StringField('Senha na Consultoria', validators=[Optional()])
+    submit = SubmitField('Salvar')
+
+
+class SetorForm(FlaskForm):
+    """Formulário para cadastro de setores."""
+
+    nome = StringField('Setor', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class TagForm(FlaskForm):
+    """Formulário para cadastro de tags."""
+
+    nome = StringField('Tag', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class MeetingForm(FlaskForm):
+    """Formulário para agendamento de reuniões."""
+
+    participants = SelectMultipleField(
+        "Participantes",
+        coerce=int,
+        validators=[Length(min=1, message="Selecione pelo menos um participante")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    meeting_id = HiddenField()
+    course_id = HiddenField()
+    date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
+    start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
+    end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
+    subject = StringField(
+        "Assunto",
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Assunto"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional()],
+        render_kw={"placeholder": "Detalhes", "rows": 3},
+    )
+    create_meet = BooleanField("Gerar sala no Google Meet")
+    notify_attendees = BooleanField(
+        "Notificar participantes por e-mail",
+        default=True,
+    )
+    apply_more_days = BooleanField("Aplicar a mais dias")
+    additional_dates = FieldList(
+        DateField(
+            "Aplicar também em",
+            format="%Y-%m-%d",
+            validators=[Optional()],
+        ),
+        min_entries=1,
+    )
+    submit = SubmitField("Agendar")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        if self.apply_more_days.data:
+            valid_dates: list[date] = []
+            has_error = False
+            for idx, field in enumerate(self.additional_dates):
+                if not field.data:
+                    continue
+                if field.data == self.date.data:
+                    field.errors.append(
+                        "Escolha uma data diferente da reunião original."
+                    )
+                    has_error = True
+                    continue
+                if field.data in valid_dates:
+                    field.errors.append("Datas duplicadas não são permitidas.")
+                    has_error = True
+                    continue
+                valid_dates.append(field.data)
+            if not valid_dates:
+                if self.additional_dates:
+                    self.additional_dates[0].errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
+                else:
+                    self.additional_dates.errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
+                return False
+            if has_error:
+                return False
+        return True
+
+
 class AccessLinkForm(FlaskForm):
     """Formulário para criar novos atalhos na central de acessos."""
 
