@@ -169,9 +169,19 @@ def _format_time_range(start: time | None, end: time | None) -> str:
 
 
 def get_courses_overview() -> list[CourseRecord]:
-    """Return all registered courses ordered by the most recent start date."""
+    """Return all registered courses prioritizing upcoming plans and fresh completions."""
 
     from app.models.tables import Course
+
+    status_priority = sa.case(
+        (Course.status == CourseStatus.COMPLETED.value, 1),
+        else_=0,
+    )
+
+    most_recent_date = sa.case(
+        (Course.status == CourseStatus.COMPLETED.value, sa.func.coalesce(Course.completion_date, Course.start_date)),
+        else_=Course.start_date,
+    )
 
     stmt = (
         sa.select(
@@ -187,7 +197,7 @@ def get_courses_overview() -> list[CourseRecord]:
             Course.completion_date,
             Course.status,
         )
-        .order_by(Course.start_date.desc())
+        .order_by(status_priority.asc(), most_recent_date.desc(), Course.id.desc())
     )
 
     records: list[CourseRecord] = []
