@@ -607,11 +607,13 @@ def diretoria_eventos_novo():
                         quantity_int = None
 
                 unit_cost_decimal = _normalize_decimal(item.get("unit_cost"))
-                total_cost_decimal = None
-                if unit_cost_decimal is not None and quantity_int is not None:
+                total_cost_decimal = _normalize_decimal(item.get("total_cost"))
+
+                if total_cost_decimal is None and unit_cost_decimal is not None and quantity_int is not None:
                     try:
-                        total_cost_decimal = unit_cost_decimal * Decimal(quantity_int)
-                        total_cost_decimal = total_cost_decimal.quantize(Decimal("0.01"))
+                        total_cost_decimal = (
+                            unit_cost_decimal * Decimal(quantity_int)
+                        ).quantize(Decimal("0.01"))
                     except (InvalidOperation, TypeError):
                         total_cost_decimal = None
                 prepared.append(

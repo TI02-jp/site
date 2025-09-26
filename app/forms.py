@@ -606,21 +606,45 @@ class ManagementEventForm(FlaskForm):
                         details_field.errors.append("Informe a quantidade de cada item.")
                         return False
 
-                    unit_cost = _to_decimal(entry.get("unit_cost"))
-                    if unit_cost is None:
-                        details_field.errors.append("Informe o valor unitário de cada item.")
-                        return False
-                    if unit_cost < 0:
+                    unit_cost_value = _to_decimal(entry.get("unit_cost"))
+                    total_cost_value = _to_decimal(entry.get("total_cost"))
+
+                    if unit_cost_value is not None and unit_cost_value < 0:
                         details_field.errors.append(
                             "Os valores unitários devem ser positivos."
                         )
                         return False
 
-                    try:
-                        calculated_total = _quantize(unit_cost * Decimal(quantity))
-                    except (InvalidOperation, TypeError):
-                        details_field.errors.append("Não foi possível calcular o custo total do item.")
+                    if total_cost_value is not None and total_cost_value < 0:
+                        details_field.errors.append(
+                            "Os custos totais devem ser positivos."
+                        )
                         return False
+
+                    unit_cost_normalized = (
+                        _quantize(unit_cost_value) if unit_cost_value is not None else None
+                    )
+
+                    if total_cost_value is None:
+                        if unit_cost_value is None:
+                            details_field.errors.append(
+                                "Informe o custo total ou o valor unitário de cada item."
+                            )
+                            return False
+                        try:
+                            calculated_total = _quantize(unit_cost_value * Decimal(quantity))
+                        except (InvalidOperation, TypeError):
+                            details_field.errors.append(
+                                "Não foi possível calcular o custo total do item."
+                            )
+                            return False
+                    else:
+                        calculated_total = _quantize(total_cost_value)
+                        if calculated_total is None:
+                            details_field.errors.append(
+                                "Informe custos totais válidos para cada item."
+                            )
+                            return False
 
                     items_total += calculated_total
 
@@ -628,7 +652,7 @@ class ManagementEventForm(FlaskForm):
                         {
                             "description": description,
                             "quantity": quantity,
-                            "unit_cost": _quantize(unit_cost),
+                            "unit_cost": unit_cost_normalized,
                             "total_cost": calculated_total,
                         }
                     )
