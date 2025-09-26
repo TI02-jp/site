@@ -550,24 +550,12 @@ def acessos():
 @app.route("/acessos/<categoria_slug>")
 @login_required
 def acessos_categoria(categoria_slug: str):
-    """Show the shortcuts for a specific access category."""
+    """Legacy endpoint kept for compatibility; redirects to the main listing."""
 
-    categoria = ACESSOS_CATEGORIES.get(categoria_slug.lower())
-    if not categoria:
+    if categoria_slug.lower() not in ACESSOS_CATEGORIES:
         abort(404)
 
-    links = (
-        AccessLink.query.filter_by(category=categoria_slug.lower())
-        .order_by(AccessLink.created_at.desc())
-        .all()
-    )
-    return render_template(
-        "acessos_categoria.html",
-        categoria=categoria,
-        categoria_slug=categoria_slug.lower(),
-        categorias=ACESSOS_CATEGORIES,
-        links=links,
-    )
+    return redirect(url_for("acessos"))
 
 
 @app.route("/acessos/<categoria_slug>/novo", methods=["GET", "POST"])
@@ -594,7 +582,7 @@ def acessos_categoria_novo(categoria_slug: str):
         db.session.add(novo_link)
         db.session.commit()
         flash("Novo atalho criado com sucesso!", "success")
-        return redirect(url_for("acessos_categoria", categoria_slug=categoria_slug.lower()))
+        return redirect(url_for("acessos"))
 
     return render_template(
         "acessos_categoria_novo.html",

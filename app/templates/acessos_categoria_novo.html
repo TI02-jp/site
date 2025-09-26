@@ -14,16 +14,16 @@
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a class="text-decoration-none" href="{{ url_for('home') }}">Início</a></li>
                     <li class="breadcrumb-item"><a class="text-decoration-none" href="{{ url_for('acessos') }}">Acessos</a></li>
-                    <li class="breadcrumb-item"><a class="text-decoration-none" href="{{ url_for('acessos_categoria', categoria_slug=categoria_slug) }}">{{ categoria.title }}</a></li>
+                    <li class="breadcrumb-item">{{ categoria.title }}</li>
                     <li class="breadcrumb-item active" aria-current="page">Novo atalho</li>
                 </ol>
             </nav>
             <h1 class="h3 mb-1">Criar novo atalho</h1>
             <p class="text-muted mb-0">Defina um nome, link e descrição para adicionar um botão à categoria {{ categoria.title|lower }}.</p>
         </div>
-        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('acessos_categoria', categoria_slug=categoria_slug) }}">
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('acessos') }}">
             <i class="bi bi-arrow-left me-2"></i>
-            Voltar para {{ categoria.title }}
+            Voltar para Acessos
         </a>
     </div>
 
@@ -63,7 +63,7 @@
                             </div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end gap-2">
-                            <a class="btn btn-light btn-sm" href="{{ url_for('acessos_categoria', categoria_slug=categoria_slug) }}">Cancelar</a>
+                            <a class="btn btn-light btn-sm" href="{{ url_for('acessos') }}">Cancelar</a>
                             <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="bi bi-check-lg me-2"></i>
                                 Salvar atalho
