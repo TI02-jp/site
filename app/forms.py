@@ -258,6 +258,7 @@ class CourseForm(FlaskForm):
     )
     submit = SubmitField("Salvar curso")
     submit_add_to_calendar = SubmitField("Adicionar no calendário")
+    submit_delete = SubmitField("Excluir curso")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
