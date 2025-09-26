@@ -531,15 +531,19 @@ def cursos():
 def acessos():
     """Display the hub with the available access categories and direct shortcuts."""
 
-    categoria_counts = {
-        slug: AccessLink.query.filter_by(category=slug).count()
+    categoria_links = {
+        slug: (
+            AccessLink.query.filter_by(category=slug)
+            .order_by(AccessLink.created_at.desc())
+            .all()
+        )
         for slug in ACESSOS_CATEGORIES
     }
     return render_template(
         "acessos.html",
         categorias=ACESSOS_CATEGORIES,
         links=ACESSOS_DIRECT_LINKS,
-        categoria_counts=categoria_counts,
+        categoria_links=categoria_links,
     )
 
 
