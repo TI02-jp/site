@@ -52,23 +52,41 @@
                             <td>{{ 'Sim' if event.attendees_internal else 'Não' }}</td>
                             <td>{{ 'Sim' if event.attendees_external else 'Não' }}</td>
                             <td>{{ event.participants_count or 0 }}</td>
-                            <td>
+                            <td class="text-break">
                                 {% if event.include_breakfast %}
-                                    R$ {{ '%.2f'|format(event.cost_breakfast or 0) }}
+                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_breakfast or 0) }}</div>
+                                    {% if event.cost_breakfast_unit is not none %}
+                                        <div class="text-muted small">Unitário: R$ {{ '%.2f'|format(event.cost_breakfast_unit or 0) }}</div>
+                                    {% endif %}
+                                    {% if event.breakfast_description %}
+                                        <div class="text-muted small">{{ event.breakfast_description }}</div>
+                                    {% endif %}
                                 {% else %}
                                     Não
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-break">
                                 {% if event.include_lunch %}
-                                    R$ {{ '%.2f'|format(event.cost_lunch or 0) }}
+                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_lunch or 0) }}</div>
+                                    {% if event.cost_lunch_unit is not none %}
+                                        <div class="text-muted small">Unitário: R$ {{ '%.2f'|format(event.cost_lunch_unit or 0) }}</div>
+                                    {% endif %}
+                                    {% if event.lunch_description %}
+                                        <div class="text-muted small">{{ event.lunch_description }}</div>
+                                    {% endif %}
                                 {% else %}
                                     Não
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-break">
                                 {% if event.include_snack %}
-                                    R$ {{ '%.2f'|format(event.cost_snack or 0) }}
+                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_snack or 0) }}</div>
+                                    {% if event.cost_snack_unit is not none %}
+                                        <div class="text-muted small">Unitário: R$ {{ '%.2f'|format(event.cost_snack_unit or 0) }}</div>
+                                    {% endif %}
+                                    {% if event.snack_description %}
+                                        <div class="text-muted small">{{ event.snack_description }}</div>
+                                    {% endif %}
                                 {% else %}
                                     Não
                                 {% endif %}

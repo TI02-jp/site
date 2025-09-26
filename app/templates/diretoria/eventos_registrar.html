@@ -49,6 +49,7 @@
 
         .management-event-page .catering-group label,
         .management-event-page .cost-wrapper label,
+        .management-event-page .service-extra-wrapper label,
         .management-event-page .material-row label {
             font-size: 0.7rem;
             margin-bottom: 0.25rem;
@@ -151,11 +152,25 @@
                                             <label class="form-label text-muted mb-1" for="include_breakfast">Café da manhã</label>
                                             {{ form.include_breakfast(class="form-select form-select-sm", id="include_breakfast") }}
                                         </div>
+                                        <div class="col-12 service-extra-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="breakfast_description_wrapper">
+                                            <label class="form-label text-muted mb-1" for="breakfast_description">Descrição (opcional)</label>
+                                            {{ form.breakfast_description(class="form-control form-control-sm", id="breakfast_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
+                                            {% if form.breakfast_description.errors %}
+                                            <div class="text-danger small mt-1">{{ form.breakfast_description.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
                                         <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_breakfast">Custo</label>
+                                            <label class="form-label text-muted mb-1" for="cost_breakfast">Custo total</label>
                                             {{ form.cost_breakfast(class="form-control form-control-sm", id="cost_breakfast", placeholder="0,00", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
                                             {% if form.cost_breakfast.errors %}
                                             <div class="text-danger small mt-1">{{ form.cost_breakfast.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_unit_wrapper">
+                                            <label class="form-label text-muted mb-1" for="cost_breakfast_unit">Custo unitário (opcional)</label>
+                                            {{ form.cost_breakfast_unit(class="form-control form-control-sm", id="cost_breakfast_unit", placeholder="0,00", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
+                                            {% if form.cost_breakfast_unit.errors %}
+                                            <div class="text-danger small mt-1">{{ form.cost_breakfast_unit.errors[0] }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -168,11 +183,25 @@
                                             <label class="form-label text-muted mb-1" for="include_lunch">Almoço</label>
                                             {{ form.include_lunch(class="form-select form-select-sm", id="include_lunch") }}
                                         </div>
+                                        <div class="col-12 service-extra-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="lunch_description_wrapper">
+                                            <label class="form-label text-muted mb-1" for="lunch_description">Descrição (opcional)</label>
+                                            {{ form.lunch_description(class="form-control form-control-sm", id="lunch_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
+                                            {% if form.lunch_description.errors %}
+                                            <div class="text-danger small mt-1">{{ form.lunch_description.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
                                         <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_lunch">Custo</label>
+                                            <label class="form-label text-muted mb-1" for="cost_lunch">Custo total</label>
                                             {{ form.cost_lunch(class="form-control form-control-sm", id="cost_lunch", placeholder="0,00", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
                                             {% if form.cost_lunch.errors %}
                                             <div class="text-danger small mt-1">{{ form.cost_lunch.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_unit_wrapper">
+                                            <label class="form-label text-muted mb-1" for="cost_lunch_unit">Custo unitário (opcional)</label>
+                                            {{ form.cost_lunch_unit(class="form-control form-control-sm", id="cost_lunch_unit", placeholder="0,00", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
+                                            {% if form.cost_lunch_unit.errors %}
+                                            <div class="text-danger small mt-1">{{ form.cost_lunch_unit.errors[0] }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -185,11 +214,25 @@
                                             <label class="form-label text-muted mb-1" for="include_snack">Lanche</label>
                                             {{ form.include_snack(class="form-select form-select-sm", id="include_snack") }}
                                         </div>
+                                        <div class="col-12 service-extra-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="snack_description_wrapper">
+                                            <label class="form-label text-muted mb-1" for="snack_description">Descrição (opcional)</label>
+                                            {{ form.snack_description(class="form-control form-control-sm", id="snack_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
+                                            {% if form.snack_description.errors %}
+                                            <div class="text-danger small mt-1">{{ form.snack_description.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
                                         <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="cost_snack_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_snack">Custo</label>
+                                            <label class="form-label text-muted mb-1" for="cost_snack">Custo total</label>
                                             {{ form.cost_snack(class="form-control form-control-sm", id="cost_snack", placeholder="0,00", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
                                             {% if form.cost_snack.errors %}
                                             <div class="text-danger small mt-1">{{ form.cost_snack.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="cost_snack_unit_wrapper">
+                                            <label class="form-label text-muted mb-1" for="cost_snack_unit">Custo unitário (opcional)</label>
+                                            {{ form.cost_snack_unit(class="form-control form-control-sm", id="cost_snack_unit", placeholder="0,00", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
+                                            {% if form.cost_snack_unit.errors %}
+                                            <div class="text-danger small mt-1">{{ form.cost_snack_unit.errors[0] }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -230,26 +273,54 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const cateringOptions = [
-            { selectId: 'include_breakfast', wrapperId: 'cost_breakfast_wrapper', inputId: 'cost_breakfast' },
-            { selectId: 'include_lunch', wrapperId: 'cost_lunch_wrapper', inputId: 'cost_lunch' },
-            { selectId: 'include_snack', wrapperId: 'cost_snack_wrapper', inputId: 'cost_snack' },
+            {
+                selectId: 'include_breakfast',
+                fields: [
+                    { wrapperId: 'breakfast_description_wrapper', inputId: 'breakfast_description' },
+                    { wrapperId: 'cost_breakfast_wrapper', inputId: 'cost_breakfast' },
+                    { wrapperId: 'cost_breakfast_unit_wrapper', inputId: 'cost_breakfast_unit' },
+                ],
+            },
+            {
+                selectId: 'include_lunch',
+                fields: [
+                    { wrapperId: 'lunch_description_wrapper', inputId: 'lunch_description' },
+                    { wrapperId: 'cost_lunch_wrapper', inputId: 'cost_lunch' },
+                    { wrapperId: 'cost_lunch_unit_wrapper', inputId: 'cost_lunch_unit' },
+                ],
+            },
+            {
+                selectId: 'include_snack',
+                fields: [
+                    { wrapperId: 'snack_description_wrapper', inputId: 'snack_description' },
+                    { wrapperId: 'cost_snack_wrapper', inputId: 'cost_snack' },
+                    { wrapperId: 'cost_snack_unit_wrapper', inputId: 'cost_snack_unit' },
+                ],
+            },
         ];
 
-        cateringOptions.forEach(({ selectId, wrapperId, inputId }) => {
+        cateringOptions.forEach(({ selectId, fields }) => {
             const select = document.getElementById(selectId);
-            const wrapper = document.getElementById(wrapperId);
-            const input = document.getElementById(inputId);
-            if (!select || !wrapper || !input) {
+            if (!select) {
                 return;
             }
+
             const syncVisibility = () => {
                 const isActive = select.value === '1';
-                wrapper.classList.toggle('d-none', !isActive);
-                input.disabled = !isActive;
-                if (!isActive) {
-                    input.value = '';
-                }
+                fields.forEach(({ wrapperId, inputId }) => {
+                    const wrapper = document.getElementById(wrapperId);
+                    const input = document.getElementById(inputId);
+                    if (!wrapper || !input) {
+                        return;
+                    }
+                    wrapper.classList.toggle('d-none', !isActive);
+                    input.disabled = !isActive;
+                    if (!isActive) {
+                        input.value = '';
+                    }
+                });
             };
+
             syncVisibility();
             select.addEventListener('change', syncVisibility);
         });

@@ -592,6 +592,10 @@ def diretoria_eventos_novo():
                 "danger",
             )
         else:
+            def _clean_description(value: str | None) -> str | None:
+                cleaned = sanitize_html((value or "").strip())
+                return cleaned or None
+
             event = ManagementEvent(
                 event_type=form.event_type.data,
                 event_date=form.event_date.data,
@@ -600,11 +604,17 @@ def diretoria_eventos_novo():
                 attendees_external=form.attendees_external.data == 1,
                 participants_count=form.participants_count.data,
                 include_breakfast=form.include_breakfast.data == 1,
+                breakfast_description=_clean_description(form.breakfast_description.data),
                 cost_breakfast=form.cost_breakfast.data,
+                cost_breakfast_unit=form.cost_breakfast_unit.data,
                 include_lunch=form.include_lunch.data == 1,
+                lunch_description=_clean_description(form.lunch_description.data),
                 cost_lunch=form.cost_lunch.data,
+                cost_lunch_unit=form.cost_lunch_unit.data,
                 include_snack=form.include_snack.data == 1,
+                snack_description=_clean_description(form.snack_description.data),
                 cost_snack=form.cost_snack.data,
+                cost_snack_unit=form.cost_snack_unit.data,
                 other_materials=cleaned_materials,
                 created_by_id=current_user.id,
             )

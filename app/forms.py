@@ -319,8 +319,19 @@ class ManagementEventForm(FlaskForm):
         coerce=int,
         default=0,
     )
+    breakfast_description = StringField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+    )
     cost_breakfast = DecimalField(
-        "Custo - Café da manhã",
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    cost_breakfast_unit = DecimalField(
+        "Custo unitário (opcional)",
         places=2,
         rounding=None,
         validators=[Optional()],
@@ -332,8 +343,19 @@ class ManagementEventForm(FlaskForm):
         coerce=int,
         default=0,
     )
+    lunch_description = StringField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+    )
     cost_lunch = DecimalField(
-        "Custo - Almoço",
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    cost_lunch_unit = DecimalField(
+        "Custo unitário (opcional)",
         places=2,
         rounding=None,
         validators=[Optional()],
@@ -345,8 +367,19 @@ class ManagementEventForm(FlaskForm):
         coerce=int,
         default=0,
     )
+    snack_description = StringField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)],
+    )
     cost_snack = DecimalField(
-        "Custo - Lanche",
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    cost_snack_unit = DecimalField(
+        "Custo unitário (opcional)",
         places=2,
         rounding=None,
         validators=[Optional()],
@@ -363,18 +396,37 @@ class ManagementEventForm(FlaskForm):
 
         valid = True
         catering_groups = [
-            (self.include_breakfast, self.cost_breakfast),
-            (self.include_lunch, self.cost_lunch),
-            (self.include_snack, self.cost_snack),
+            (
+                self.include_breakfast,
+                self.cost_breakfast,
+                self.breakfast_description,
+                self.cost_breakfast_unit,
+            ),
+            (
+                self.include_lunch,
+                self.cost_lunch,
+                self.lunch_description,
+                self.cost_lunch_unit,
+            ),
+            (
+                self.include_snack,
+                self.cost_snack,
+                self.snack_description,
+                self.cost_snack_unit,
+            ),
         ]
 
-        for include_field, cost_field in catering_groups:
+        for include_field, total_field, description_field, unit_field in catering_groups:
             if include_field.data == 1:
-                if cost_field.data is None:
-                    cost_field.errors.append("Informe o custo para o item selecionado.")
+                if total_field.data is None:
+                    total_field.errors.append(
+                        "Informe o custo total para o item selecionado."
+                    )
                     valid = False
             else:
-                cost_field.data = None
+                total_field.data = None
+                unit_field.data = None
+                description_field.data = ""
 
         raw_materials = self.other_materials_raw.data or "[]"
         try:
