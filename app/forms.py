@@ -257,6 +257,7 @@ class CourseForm(FlaskForm):
         validators=[DataRequired()],
     )
     submit = SubmitField("Salvar curso")
+    submit_add_to_calendar = SubmitField("Adicionar no calendário")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""

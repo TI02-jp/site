@@ -388,6 +388,24 @@ def cursos():
             for user_id in form.participants.data
             if user_id in participant_lookup
         ]
+        should_add_to_calendar = bool(form.submit_add_to_calendar.data)
+        meeting_query_params: dict[str, Any] = {}
+        if should_add_to_calendar:
+            meeting_query_params = {"course_calendar": "1"}
+            name_value = (form.name.data or "").strip()
+            if name_value:
+                meeting_query_params["subject"] = name_value
+            if form.start_date.data:
+                meeting_query_params["date"] = form.start_date.data.isoformat()
+            if form.schedule_start.data:
+                meeting_query_params["start"] = form.schedule_start.data.strftime("%H:%M")
+            if form.schedule_end.data:
+                meeting_query_params["end"] = form.schedule_end.data.strftime("%H:%M")
+            participant_ids = [str(user_id) for user_id in form.participants.data]
+            if participant_ids:
+                meeting_query_params["participants"] = participant_ids
+
+        success_message = ""
         if course_id is not None:
             existing_id = db.session.execute(
                 sa.select(Course.id).where(Course.id == course_id)
@@ -414,7 +432,7 @@ def cursos():
                 )
             )
             db.session.commit()
-            flash("Curso atualizado com sucesso!", "success")
+            success_message = "Curso atualizado com sucesso!"
         else:
             course = Course(
                 name=form.name.data.strip(),
@@ -430,7 +448,15 @@ def cursos():
             )
             db.session.add(course)
             db.session.commit()
-            flash("Curso cadastrado com sucesso!", "success")
+            success_message = "Curso cadastrado com sucesso!"
+        if success_message:
+            flash(success_message, "success")
+        if (
+            should_add_to_calendar
+            and meeting_query_params.get("subject")
+            and meeting_query_params.get("date")
+        ):
+            return redirect(url_for("sala_reunioes", **meeting_query_params))
         return redirect(url_for("cursos"))
 
     elif request.method == "POST":
@@ -723,6 +749,48 @@ def sala_reunioes():
     form = MeetingForm()
     populate_participants_choices(form)
     show_modal = False
+    prefill_from_course = request.method == "GET" and request.args.get("course_calendar") == "1"
+    if prefill_from_course:
+        subject = (request.args.get("subject") or "").strip()
+        if subject:
+            form.subject.data = subject
+        date_raw = request.args.get("date")
+        if date_raw:
+            try:
+                form.date.data = datetime.strptime(date_raw, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        start_raw = request.args.get("start")
+        if start_raw:
+            try:
+                form.start_time.data = datetime.strptime(start_raw, "%H:%M").time()
+            except ValueError:
+                pass
+        end_raw = request.args.get("end")
+        if end_raw:
+            try:
+                form.end_time.data = datetime.strptime(end_raw, "%H:%M").time()
+            except ValueError:
+                pass
+        participant_ids: list[int] = []
+        for raw_id in request.args.getlist("participants"):
+            try:
+                parsed_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if parsed_id in participant_ids:
+                continue
+            if any(choice_id == parsed_id for choice_id, _ in form.participants.choices):
+                participant_ids.append(parsed_id)
+        if participant_ids:
+            form.participants.data = participant_ids
+        form.apply_more_days.data = False
+        form.notify_attendees.data = True
+        show_modal = True
+        flash(
+            "Revise os dados do curso, ajuste se necessário e confirme o agendamento da reunião.",
+            "info",
+        )
     raw_events = fetch_raw_events()
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
