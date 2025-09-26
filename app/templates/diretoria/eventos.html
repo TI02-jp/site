@@ -2,140 +2,123 @@
 {% block title %}Eventos - Diretoria JP{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-9">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-4 p-lg-5">
-                    <div class="d-flex align-items-center mb-4">
-                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold me-3">
-                            Diretoria JP
-                        </span>
-                        <h1 class="h3 mb-0">Eventos</h1>
-                    </div>
-                    <p class="text-muted mb-4">
-                        Registre os eventos da Diretoria JP informando o tipo, participantes e os custos
-                        estimados envolvidos. Os totais são calculados automaticamente conforme você adiciona
-                        itens aos serviços de alimentação.
-                    </p>
-                    <form id="formEventos" novalidate>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="tipoEvento" class="form-label">Tipo de evento</label>
-                                <select id="tipoEvento" class="form-select" required>
-                                    <option value="" selected disabled>Selecione uma opção</option>
-                                    <option value="treinamento">Treinamento</option>
-                                    <option value="data_comemorativa">Data comemorativa</option>
-                                    <option value="evento">Evento</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="dataEvento" class="form-label">Data</label>
-                                <input type="date" class="form-control" id="dataEvento" required>
-                            </div>
-                            <div class="col-12">
-                                <label for="descricaoEvento" class="form-label">Descrição</label>
-                                <textarea id="descricaoEvento" class="form-control" rows="3" placeholder="Descreva o objetivo e os detalhes do evento" required></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="publicoEvento" class="form-label">Público participante</label>
-                                <select id="publicoEvento" class="form-select" required>
-                                    <option value="" selected disabled>Selecione uma opção</option>
-                                    <option value="interno">Interno</option>
-                                    <option value="externo">Externo</option>
-                                    <option value="ambos">Ambos</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="numeroParticipantes" class="form-label">Participantes (nº de pessoas)</label>
-                                <input type="number" min="0" step="1" class="form-control" id="numeroParticipantes" placeholder="0" required>
-                            </div>
-                        </div>
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold me-3">
+            Diretoria JP
+        </span>
+        <h1 class="h3 mb-0">Eventos</h1>
+    </div>
+    <form id="formEventos" novalidate>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label for="tipoEvento" class="form-label">Tipo de evento</label>
+                <select id="tipoEvento" class="form-select" required>
+                    <option value="" selected disabled>Selecione uma opção</option>
+                    <option value="treinamento">Treinamento</option>
+                    <option value="data_comemorativa">Data comemorativa</option>
+                    <option value="evento">Evento</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="dataEvento" class="form-label">Data</label>
+                <input type="date" class="form-control" id="dataEvento" required>
+            </div>
+            <div class="col-12">
+                <label for="descricaoEvento" class="form-label">Descrição</label>
+                <textarea id="descricaoEvento" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="col-md-6">
+                <label for="publicoEvento" class="form-label">Público participante</label>
+                <select id="publicoEvento" class="form-select" required>
+                    <option value="" selected disabled>Selecione uma opção</option>
+                    <option value="interno">Interno</option>
+                    <option value="externo">Externo</option>
+                    <option value="ambos">Ambos</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="numeroParticipantes" class="form-label">Participantes (nº de pessoas)</label>
+                <input type="number" min="0" step="1" class="form-control" id="numeroParticipantes" required>
+            </div>
+        </div>
 
-                        <div class="border-top pt-4 mt-4"></div>
+        <div class="border-top pt-4 mt-4"></div>
 
-                        <div class="mb-5">
-                            <h2 class="h5 mb-3">Serviços de alimentação</h2>
-                            <p class="text-muted small mb-4">
-                                Registre os itens contratados para cada serviço. Informe o nome do item, a quantidade e o valor unitário.
-                                O total de cada serviço será calculado automaticamente.
-                            </p>
+        <div class="mb-5">
+            <h2 class="h5 mb-3">Serviços de alimentação</h2>
 
-                            <div class="event-category" data-category="cafe">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h3 class="h6 mb-0">Café da manhã</h3>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
-                                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                    </button>
-                                </div>
-                                <div class="category-items"></div>
-                                <div class="text-end mt-3">
-                                    <span class="text-muted me-2">Total café da manhã:</span>
-                                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
-                                </div>
-                                <div class="border-bottom mt-4"></div>
-                            </div>
+            <div class="event-category" data-category="cafe">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h6 mb-0">Café da manhã</h3>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
+                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                    </button>
+                </div>
+                <div class="category-items"></div>
+                <div class="mt-3">
+                    <span class="text-muted me-2">Total café da manhã:</span>
+                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
+                </div>
+                <div class="border-bottom mt-4"></div>
+            </div>
 
-                            <div class="event-category pt-4" data-category="almoco">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h3 class="h6 mb-0">Almoço</h3>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
-                                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                    </button>
-                                </div>
-                                <div class="category-items"></div>
-                                <div class="text-end mt-3">
-                                    <span class="text-muted me-2">Total almoço:</span>
-                                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
-                                </div>
-                                <div class="border-bottom mt-4"></div>
-                            </div>
+            <div class="event-category pt-4" data-category="almoco">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h6 mb-0">Almoço</h3>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
+                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                    </button>
+                </div>
+                <div class="category-items"></div>
+                <div class="mt-3">
+                    <span class="text-muted me-2">Total almoço:</span>
+                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
+                </div>
+                <div class="border-bottom mt-4"></div>
+            </div>
 
-                            <div class="event-category pt-4" data-category="lanche">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h3 class="h6 mb-0">Lanche</h3>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
-                                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
-                                    </button>
-                                </div>
-                                <div class="category-items"></div>
-                                <div class="text-end mt-3">
-                                    <span class="text-muted me-2">Total lanche:</span>
-                                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="border-top pt-4 mt-4"></div>
-
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-6">
-                                <label for="totalCafe" class="form-label">Total café da manhã</label>
-                                <input type="text" class="form-control" id="totalCafe" value="R$ 0,00" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="totalAlmoco" class="form-label">Total almoço</label>
-                                <input type="text" class="form-control" id="totalAlmoco" value="R$ 0,00" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="totalLanche" class="form-label">Total lanche</label>
-                                <input type="text" class="form-control" id="totalLanche" value="R$ 0,00" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="totalEvento" class="form-label">Valor total estimado do evento</label>
-                                <input type="text" class="form-control form-control-lg fw-semibold" id="totalEvento" value="R$ 0,00" readonly>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button type="reset" class="btn btn-outline-secondary">Limpar</button>
-                            <button type="submit" class="btn btn-primary">Salvar estimativa</button>
-                        </div>
-                    </form>
+            <div class="event-category pt-4" data-category="lanche">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h6 mb-0">Lanche</h3>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
+                        <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                    </button>
+                </div>
+                <div class="category-items"></div>
+                <div class="mt-3">
+                    <span class="text-muted me-2">Total lanche:</span>
+                    <span class="fw-semibold" data-category-total>R$ 0,00</span>
                 </div>
             </div>
         </div>
-    </div>
+
+        <div class="border-top pt-4 mt-4"></div>
+
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <label for="totalCafe" class="form-label">Total café da manhã</label>
+                <input type="text" class="form-control" id="totalCafe" value="R$ 0,00" readonly>
+            </div>
+            <div class="col-md-6">
+                <label for="totalAlmoco" class="form-label">Total almoço</label>
+                <input type="text" class="form-control" id="totalAlmoco" value="R$ 0,00" readonly>
+            </div>
+            <div class="col-md-6">
+                <label for="totalLanche" class="form-label">Total lanche</label>
+                <input type="text" class="form-control" id="totalLanche" value="R$ 0,00" readonly>
+            </div>
+            <div class="col-md-6">
+                <label for="totalEvento" class="form-label">Valor total estimado do evento</label>
+                <input type="text" class="form-control form-control-lg fw-semibold" id="totalEvento" value="R$ 0,00" readonly>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+            <button type="submit" class="btn btn-primary">Salvar estimativa</button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -166,15 +149,15 @@
                 row.innerHTML = `
                     <div class="col-md-6">
                         <label class="form-label">Item</label>
-                        <input type="text" class="form-control" placeholder="Descrição do item" required>
+                        <input type="text" class="form-control" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Quantidade</label>
-                        <input type="number" class="form-control" min="0" step="1" value="0" required>
+                        <input type="number" class="form-control" min="0" step="1" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Valor unitário (R$)</label>
-                        <input type="number" class="form-control" min="0" step="0.01" value="0" required>
+                        <input type="number" class="form-control" min="0" step="0.01" required>
                     </div>
                     <div class="col-md-2 text-end">
                         <button type="button" class="btn btn-link text-danger" data-action="remove-item">
