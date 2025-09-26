@@ -266,10 +266,14 @@ class CourseForm(FlaskForm):
     submit_delete = SubmitField("Excluir curso")
 
 
+# Opções padrão de "Sim" e "Não" utilizadas em selects binários.
+BOOLEAN_SELECT_CHOICES: list[tuple[int, str]] = [(0, "Não"), (1, "Sim")]
+
+
 class ManagementEventForm(FlaskForm):
     """Formulário utilizado pela Diretoria JP para registrar eventos."""
 
-    event_type = RadioField(
+    event_type = SelectField(
         "Tipo de Registro",
         choices=[
             ("treinamento", "Treinamento"),
@@ -287,10 +291,20 @@ class ManagementEventForm(FlaskForm):
     description = TextAreaField(
         "Descrição",
         validators=[DataRequired(message="Informe a descrição do evento."), Length(max=1000)],
-        render_kw={"rows": 4},
+        render_kw={"rows": 3},
     )
-    attendees_internal = BooleanField("Participantes Internos")
-    attendees_external = BooleanField("Participantes Externos")
+    attendees_internal = SelectField(
+        "Participação Interna",
+        choices=BOOLEAN_SELECT_CHOICES,
+        coerce=int,
+        default=0,
+    )
+    attendees_external = SelectField(
+        "Participação Externa",
+        choices=BOOLEAN_SELECT_CHOICES,
+        coerce=int,
+        default=0,
+    )
     participants_count = IntegerField(
         "Participantes (Nº de pessoas)",
         validators=[
@@ -299,7 +313,12 @@ class ManagementEventForm(FlaskForm):
         ],
         render_kw={"min": 0},
     )
-    include_breakfast = BooleanField("Café da manhã")
+    include_breakfast = SelectField(
+        "Café da manhã",
+        choices=BOOLEAN_SELECT_CHOICES,
+        coerce=int,
+        default=0,
+    )
     cost_breakfast = DecimalField(
         "Custo - Café da manhã",
         places=2,
@@ -307,7 +326,12 @@ class ManagementEventForm(FlaskForm):
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    include_lunch = BooleanField("Almoço")
+    include_lunch = SelectField(
+        "Almoço",
+        choices=BOOLEAN_SELECT_CHOICES,
+        coerce=int,
+        default=0,
+    )
     cost_lunch = DecimalField(
         "Custo - Almoço",
         places=2,
@@ -315,7 +339,12 @@ class ManagementEventForm(FlaskForm):
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    include_snack = BooleanField("Lanche")
+    include_snack = SelectField(
+        "Lanche",
+        choices=BOOLEAN_SELECT_CHOICES,
+        coerce=int,
+        default=0,
+    )
     cost_snack = DecimalField(
         "Custo - Lanche",
         places=2,
@@ -340,7 +369,7 @@ class ManagementEventForm(FlaskForm):
         ]
 
         for include_field, cost_field in catering_groups:
-            if include_field.data:
+            if include_field.data == 1:
                 if cost_field.data is None:
                     cost_field.errors.append("Informe o custo para o item selecionado.")
                     valid = False

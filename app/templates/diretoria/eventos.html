@@ -6,13 +6,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+<div class="container py-3">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
         <div>
             <h1 class="h4 mb-1">Eventos Registrados</h1>
             <p class="text-muted mb-0">Consulte todos os detalhes informados para treinamentos, datas comemorativas e demais eventos.</p>
         </div>
-        <a class="btn btn-primary align-self-lg-start" href="{{ url_for('diretoria_eventos_novo') }}">
+        <a class="btn btn-primary btn-sm align-self-lg-start" href="{{ url_for('diretoria_eventos_novo') }}">
             <i class="bi bi-plus-lg me-2"></i>Registrar evento
         </a>
     </div>
@@ -26,7 +26,7 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive-lg">
-                <table class="table table-striped table-hover align-top mb-0 small">
+                <table class="table table-striped table-hover table-sm align-top mb-0 small">
                     <thead class="table-light">
                         <tr>
                             <th scope="col">Tipo</th>
