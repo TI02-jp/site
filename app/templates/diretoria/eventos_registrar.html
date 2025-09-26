@@ -9,47 +9,50 @@
     {{ super() }}
     <style>
         .management-event-page {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
         }
 
         .management-event-page h1 {
-            font-size: 1.05rem;
+            font-size: 1rem;
             margin-bottom: 0.2rem;
         }
 
         .management-event-page .card-body {
-            padding: 1rem 1.1rem;
+            padding: 1rem 1.2rem;
         }
 
         .management-event-page label,
         .management-event-page .form-label {
             text-align: left;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.25rem;
         }
 
         .management-event-page .form-control,
         .management-event-page .form-select,
         .management-event-page .form-check-label {
-            font-size: 0.74rem;
+            font-size: 0.72rem;
         }
 
         .management-event-page .form-control,
         .management-event-page .form-select {
-            padding: 0.3rem 0.45rem;
+            padding: 0.32rem 0.45rem;
         }
 
         .management-event-page .section-title {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
             letter-spacing: 0.01em;
         }
 
         .management-event-page .service-card {
             border: 1px solid var(--bs-border-color);
-            border-radius: 0.5rem;
-            padding: 0.65rem;
-            background: #f8f9fb;
-            min-height: 100%;
+            border-radius: 0.6rem;
+            padding: 0.85rem 0.95rem;
+            background: #f4f6fb;
+            min-height: 18rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
         .management-event-page .service-card.disabled {
@@ -59,30 +62,40 @@
         .management-event-page .service-header {
             display: flex;
             align-items: flex-end;
+            justify-content: space-between;
             gap: 0.75rem;
         }
 
         .management-event-page .service-total {
-            min-width: 6.25rem;
+            min-width: 6.5rem;
         }
 
         .management-event-page .service-total-display {
             font-weight: 600;
             background: #eef1f6;
-            border-radius: 0.35rem;
-            padding: 0.35rem 0.45rem;
+            border-radius: 0.4rem;
+            padding: 0.4rem 0.55rem;
             text-align: right;
         }
 
         .management-event-page .service-details {
-            margin-top: 0.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .management-event-page .service-details > .service-items {
+            flex: 1;
         }
 
         .management-event-page .service-items {
             border: 1px dashed var(--bs-border-color);
-            border-radius: 0.45rem;
-            padding: 0.4rem 0.55rem;
-            min-height: 2rem;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.65rem;
+            min-height: 5.5rem;
+            background: #fff;
+            overflow-y: auto;
         }
 
         .management-event-page .service-item-row {
@@ -90,7 +103,7 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 0.5rem;
-            padding: 0.3rem 0;
+            padding: 0.35rem 0;
         }
 
         .management-event-page .service-item-row + .service-item-row {
@@ -99,16 +112,16 @@
 
         .management-event-page .service-item-editor {
             border: 1px dashed rgba(33, 37, 41, 0.35);
-            border-radius: 0.45rem;
-            padding: 0.5rem;
-            margin-top: 0.5rem;
+            border-radius: 0.5rem;
+            padding: 0.6rem;
+            margin-top: 0.6rem;
             background: #fff;
         }
 
         .management-event-page .service-item-editor .form-control,
         .management-event-page .service-item-editor .form-select {
-            font-size: 0.72rem;
-            padding: 0.25rem 0.4rem;
+            font-size: 0.7rem;
+            padding: 0.28rem 0.42rem;
         }
 
         .management-event-page .service-item-editor .form-label {
@@ -119,14 +132,14 @@
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
-            margin-top: 0.5rem;
+            margin-top: 0.6rem;
         }
 
         .management-event-page .materials-list {
             border: 1px dashed var(--bs-border-color);
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            min-height: 2.25rem;
+            border-radius: 0.55rem;
+            padding: 0.55rem 0.8rem;
+            min-height: 2.5rem;
         }
 
         .management-event-page .materials-list .material-row {
@@ -146,7 +159,7 @@
         }
 
         .management-event-page .event-total {
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             font-weight: 600;
         }
 
@@ -238,7 +251,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted small">Detalhes</span>
                                         <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="breakfast">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
                                         </button>
                                     </div>
                                     <div class="service-items" data-service-items="breakfast">
@@ -270,7 +283,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted small">Detalhes</span>
                                         <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="lunch">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
                                         </button>
                                     </div>
                                     <div class="service-items" data-service-items="lunch">
@@ -302,7 +315,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted small">Detalhes</span>
                                         <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="dinner">
-                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
                                         </button>
                                     </div>
                                     <div class="service-items" data-service-items="dinner">
@@ -564,6 +577,8 @@
                     syncServiceField(cfg);
                     renderServiceItems(cfg);
                     updateServiceTotal(cfg);
+                } else if (!servicesState[cfg.slug].items.length && !servicesState[cfg.slug].editor) {
+                    openItemEditor(cfg);
                 }
             }
 
@@ -594,7 +609,7 @@
                 descriptionCol.append(descriptionLabel, descriptionInput);
 
                 const quantityCol = document.createElement('div');
-                quantityCol.className = 'col-4';
+                quantityCol.className = 'col-12 col-md-4';
                 const quantityLabel = document.createElement('label');
                 quantityLabel.className = 'form-label mb-1';
                 quantityLabel.textContent = 'Quantidade';
@@ -606,7 +621,7 @@
                 quantityCol.append(quantityLabel, quantityInput);
 
                 const unitCol = document.createElement('div');
-                unitCol.className = 'col-4';
+                unitCol.className = 'col-12 col-md-4';
                 const unitLabel = document.createElement('label');
                 unitLabel.className = 'form-label mb-1';
                 unitLabel.textContent = 'Valor unitário';
@@ -618,7 +633,7 @@
                 unitCol.append(unitLabel, unitInput);
 
                 const totalCol = document.createElement('div');
-                totalCol.className = 'col-4';
+                totalCol.className = 'col-12 col-md-4';
                 const totalLabel = document.createElement('label');
                 totalLabel.className = 'form-label mb-1';
                 totalLabel.textContent = 'Custo total';
@@ -795,7 +810,6 @@
 
                 select.addEventListener('change', () => {
                     updateServiceVisibility(cfg);
-                    removeServiceEditor(cfg);
                     updateServiceTotal(cfg);
                     updateTotals();
                 });
