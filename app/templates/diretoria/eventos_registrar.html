@@ -59,6 +59,23 @@
             padding: 0.5rem 0.65rem;
         }
 
+        .management-event-page .service-details-wrapper [data-empty-text] {
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.35rem;
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .management-event-page .service-item {
+            padding: 0.45rem 0.55rem;
+            border: 1px dashed var(--bs-border-color);
+            border-radius: 0.5rem;
+            background-color: rgba(13, 110, 253, 0.03);
+        }
+
+        .management-event-page .service-item .form-label {
+            font-size: 0.68rem;
+        }
+
         .management-event-page .btn-sm {
             padding: 0.3rem 0.75rem;
         }
@@ -117,18 +134,11 @@
                         <div class="text-danger small mt-1">{{ form.participants_count.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-2">
-                        {{ form.attendees_internal.label(class="form-label section-title mb-1") }}
-                        {{ form.attendees_internal(class="form-select form-select-sm", id="attendees_internal") }}
-                        {% if form.attendees_internal.errors %}
-                        <div class="text-danger small mt-1">{{ form.attendees_internal.errors[0] }}</div>
-                        {% endif %}
-                    </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        {{ form.attendees_external.label(class="form-label section-title mb-1") }}
-                        {{ form.attendees_external(class="form-select form-select-sm", id="attendees_external") }}
-                        {% if form.attendees_external.errors %}
-                        <div class="text-danger small mt-1">{{ form.attendees_external.errors[0] }}</div>
+                        {{ form.attendance_scope.label(class="form-label section-title mb-1") }}
+                        {{ form.attendance_scope(class="form-select form-select-sm", id="attendance_scope") }}
+                        {% if form.attendance_scope.errors %}
+                        <div class="text-danger small mt-1">{{ form.attendance_scope.errors[0] }}</div>
                         {% endif %}
                     </div>
                 </div>
@@ -146,94 +156,97 @@
                         <label class="form-label section-title mb-1">Serviços Disponibilizados</label>
                         <div class="row g-2">
                             <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100">
+                                <div class="catering-group border rounded h-100 p-2" data-service="breakfast">
                                     <div class="row g-1 align-items-end">
-                                        <div class="col-12 col-sm-6">
+                                        <div class="col-7">
                                             <label class="form-label text-muted mb-1" for="include_breakfast">Café da manhã</label>
                                             {{ form.include_breakfast(class="form-select form-select-sm", id="include_breakfast") }}
                                         </div>
-                                        <div class="col-12 service-extra-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="breakfast_description_wrapper">
-                                            <label class="form-label text-muted mb-1" for="breakfast_description">Descrição (opcional)</label>
-                                            {{ form.breakfast_description(class="form-control form-control-sm", id="breakfast_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
-                                            {% if form.breakfast_description.errors %}
-                                            <div class="text-danger small mt-1">{{ form.breakfast_description.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_wrapper">
+                                        <div class="col-5 cost-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_wrapper">
                                             <label class="form-label text-muted mb-1" for="cost_breakfast">Custo total</label>
                                             {{ form.cost_breakfast(class="form-control form-control-sm", id="cost_breakfast", placeholder="0,00", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
                                             {% if form.cost_breakfast.errors %}
                                             <div class="text-danger small mt-1">{{ form.cost_breakfast.errors[0] }}</div>
                                             {% endif %}
                                         </div>
-                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="cost_breakfast_unit_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_breakfast_unit">Custo unitário (opcional)</label>
-                                            {{ form.cost_breakfast_unit(class="form-control form-control-sm", id="cost_breakfast_unit", placeholder="0,00", disabled='disabled' if (form.include_breakfast.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_breakfast_unit.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_breakfast_unit.errors[0] }}</div>
-                                            {% endif %}
+                                    </div>
+                                    {{ form.breakfast_items_raw(id="breakfast_items_data") }}
+                                    {% if form.breakfast_items_raw.errors %}
+                                    <div class="text-danger small mt-1">{{ form.breakfast_items_raw.errors[0] }}</div>
+                                    {% endif %}
+                                    <div class="service-details-wrapper mt-2{% if (form.include_breakfast.data or 0)|int != 1 %} d-none{% endif %}" id="breakfast_items_section">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="breakfast">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                                            </button>
+                                        </div>
+                                        <div class="d-grid gap-2" id="breakfastItemsContainer" data-empty-container>
+                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100">
+                                <div class="catering-group border rounded h-100 p-2" data-service="lunch">
                                     <div class="row g-1 align-items-end">
-                                        <div class="col-12 col-sm-6">
+                                        <div class="col-7">
                                             <label class="form-label text-muted mb-1" for="include_lunch">Almoço</label>
                                             {{ form.include_lunch(class="form-select form-select-sm", id="include_lunch") }}
                                         </div>
-                                        <div class="col-12 service-extra-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="lunch_description_wrapper">
-                                            <label class="form-label text-muted mb-1" for="lunch_description">Descrição (opcional)</label>
-                                            {{ form.lunch_description(class="form-control form-control-sm", id="lunch_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
-                                            {% if form.lunch_description.errors %}
-                                            <div class="text-danger small mt-1">{{ form.lunch_description.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_wrapper">
+                                        <div class="col-5 cost-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_wrapper">
                                             <label class="form-label text-muted mb-1" for="cost_lunch">Custo total</label>
                                             {{ form.cost_lunch(class="form-control form-control-sm", id="cost_lunch", placeholder="0,00", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
                                             {% if form.cost_lunch.errors %}
                                             <div class="text-danger small mt-1">{{ form.cost_lunch.errors[0] }}</div>
                                             {% endif %}
                                         </div>
-                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="cost_lunch_unit_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_lunch_unit">Custo unitário (opcional)</label>
-                                            {{ form.cost_lunch_unit(class="form-control form-control-sm", id="cost_lunch_unit", placeholder="0,00", disabled='disabled' if (form.include_lunch.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_lunch_unit.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_lunch_unit.errors[0] }}</div>
-                                            {% endif %}
+                                    </div>
+                                    {{ form.lunch_items_raw(id="lunch_items_data") }}
+                                    {% if form.lunch_items_raw.errors %}
+                                    <div class="text-danger small mt-1">{{ form.lunch_items_raw.errors[0] }}</div>
+                                    {% endif %}
+                                    <div class="service-details-wrapper mt-2{% if (form.include_lunch.data or 0)|int != 1 %} d-none{% endif %}" id="lunch_items_section">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="lunch">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                                            </button>
+                                        </div>
+                                        <div class="d-grid gap-2" id="lunchItemsContainer" data-empty-container>
+                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
-                                <div class="catering-group border rounded h-100">
+                                <div class="catering-group border rounded h-100 p-2" data-service="dinner">
                                     <div class="row g-1 align-items-end">
-                                        <div class="col-12 col-sm-6">
-                                            <label class="form-label text-muted mb-1" for="include_snack">Lanche</label>
-                                            {{ form.include_snack(class="form-select form-select-sm", id="include_snack") }}
+                                        <div class="col-7">
+                                            <label class="form-label text-muted mb-1" for="include_dinner">Janta</label>
+                                            {{ form.include_dinner(class="form-select form-select-sm", id="include_dinner") }}
                                         </div>
-                                        <div class="col-12 service-extra-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="snack_description_wrapper">
-                                            <label class="form-label text-muted mb-1" for="snack_description">Descrição (opcional)</label>
-                                            {{ form.snack_description(class="form-control form-control-sm", id="snack_description", placeholder="Detalhes do serviço", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
-                                            {% if form.snack_description.errors %}
-                                            <div class="text-danger small mt-1">{{ form.snack_description.errors[0] }}</div>
+                                        <div class="col-5 cost-wrapper{% if (form.include_dinner.data or 0)|int != 1 %} d-none{% endif %}" id="cost_dinner_wrapper">
+                                            <label class="form-label text-muted mb-1" for="cost_dinner">Custo total</label>
+                                            {{ form.cost_dinner(class="form-control form-control-sm", id="cost_dinner", placeholder="0,00", disabled='disabled' if (form.include_dinner.data or 0)|int != 1 else None) }}
+                                            {% if form.cost_dinner.errors %}
+                                            <div class="text-danger small mt-1">{{ form.cost_dinner.errors[0] }}</div>
                                             {% endif %}
                                         </div>
-                                        <div class="col-12 col-sm-6 cost-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="cost_snack_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_snack">Custo total</label>
-                                            {{ form.cost_snack(class="form-control form-control-sm", id="cost_snack", placeholder="0,00", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_snack.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_snack.errors[0] }}</div>
-                                            {% endif %}
+                                    </div>
+                                    {{ form.dinner_items_raw(id="dinner_items_data") }}
+                                    {% if form.dinner_items_raw.errors %}
+                                    <div class="text-danger small mt-1">{{ form.dinner_items_raw.errors[0] }}</div>
+                                    {% endif %}
+                                    <div class="service-details-wrapper mt-2{% if (form.include_dinner.data or 0)|int != 1 %} d-none{% endif %}" id="dinner_items_section">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="form-label text-muted mb-0">Itens do serviço</span>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-service-add="dinner">
+                                                <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                                            </button>
                                         </div>
-                                        <div class="col-12 col-sm-6 service-extra-wrapper{% if (form.include_snack.data or 0)|int != 1 %} d-none{% endif %}" id="cost_snack_unit_wrapper">
-                                            <label class="form-label text-muted mb-1" for="cost_snack_unit">Custo unitário (opcional)</label>
-                                            {{ form.cost_snack_unit(class="form-control form-control-sm", id="cost_snack_unit", placeholder="0,00", disabled='disabled' if (form.include_snack.data or 0)|int != 1 else None) }}
-                                            {% if form.cost_snack_unit.errors %}
-                                            <div class="text-danger small mt-1">{{ form.cost_snack_unit.errors[0] }}</div>
-                                            {% endif %}
+                                        <div class="d-grid gap-2" id="dinnerItemsContainer" data-empty-container>
+                                            <div class="text-muted small text-start" data-empty-text>Nenhum item informado.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -258,9 +271,12 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="d-flex justify-content-end gap-2 mt-2">
-                    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('diretoria_eventos') }}">Cancelar</a>
-                    {{ form.submit(class="btn btn-primary btn-sm px-3") }}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+                    <div class="fw-semibold text-primary small text-start" id="eventTotalDisplay">Total do evento: R$ 0,00</div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('diretoria_eventos') }}">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary btn-sm px-3") }}
+                    </div>
                 </div>
             </form>
         </div>
@@ -272,74 +288,309 @@
     {{ super() }}
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const cateringOptions = [
+        const form = document.getElementById('managementEventForm');
+        if (!form) {
+            return;
+        }
+
+        const eventTotalDisplay = document.getElementById('eventTotalDisplay');
+
+        const serviceConfigs = [
             {
+                slug: 'breakfast',
                 selectId: 'include_breakfast',
-                fields: [
-                    { wrapperId: 'breakfast_description_wrapper', inputId: 'breakfast_description' },
-                    { wrapperId: 'cost_breakfast_wrapper', inputId: 'cost_breakfast' },
-                    { wrapperId: 'cost_breakfast_unit_wrapper', inputId: 'cost_breakfast_unit' },
-                ],
+                totalInputId: 'cost_breakfast',
+                totalWrapperId: 'cost_breakfast_wrapper',
+                detailsWrapperId: 'breakfast_items_section',
+                containerId: 'breakfastItemsContainer',
+                hiddenInputId: 'breakfast_items_data',
+                addButtonSelector: '[data-service-add="breakfast"]',
             },
             {
+                slug: 'lunch',
                 selectId: 'include_lunch',
-                fields: [
-                    { wrapperId: 'lunch_description_wrapper', inputId: 'lunch_description' },
-                    { wrapperId: 'cost_lunch_wrapper', inputId: 'cost_lunch' },
-                    { wrapperId: 'cost_lunch_unit_wrapper', inputId: 'cost_lunch_unit' },
-                ],
+                totalInputId: 'cost_lunch',
+                totalWrapperId: 'cost_lunch_wrapper',
+                detailsWrapperId: 'lunch_items_section',
+                containerId: 'lunchItemsContainer',
+                hiddenInputId: 'lunch_items_data',
+                addButtonSelector: '[data-service-add="lunch"]',
             },
             {
-                selectId: 'include_snack',
-                fields: [
-                    { wrapperId: 'snack_description_wrapper', inputId: 'snack_description' },
-                    { wrapperId: 'cost_snack_wrapper', inputId: 'cost_snack' },
-                    { wrapperId: 'cost_snack_unit_wrapper', inputId: 'cost_snack_unit' },
-                ],
+                slug: 'dinner',
+                selectId: 'include_dinner',
+                totalInputId: 'cost_dinner',
+                totalWrapperId: 'cost_dinner_wrapper',
+                detailsWrapperId: 'dinner_items_section',
+                containerId: 'dinnerItemsContainer',
+                hiddenInputId: 'dinner_items_data',
+                addButtonSelector: '[data-service-add="dinner"]',
             },
         ];
-
-        cateringOptions.forEach(({ selectId, fields }) => {
-            const select = document.getElementById(selectId);
-            if (!select) {
-                return;
-            }
-
-            const syncVisibility = () => {
-                const isActive = select.value === '1';
-                fields.forEach(({ wrapperId, inputId }) => {
-                    const wrapper = document.getElementById(wrapperId);
-                    const input = document.getElementById(inputId);
-                    if (!wrapper || !input) {
-                        return;
-                    }
-                    wrapper.classList.toggle('d-none', !isActive);
-                    input.disabled = !isActive;
-                    if (!isActive) {
-                        input.value = '';
-                    }
-                });
-            };
-
-            syncVisibility();
-            select.addEventListener('change', syncVisibility);
-        });
 
         const materialsInput = document.getElementById('other_materials_data');
         const materialsContainer = document.getElementById('otherMaterialsContainer');
         const addMaterialBtn = document.getElementById('addMaterialBtn');
         const noMaterialsMessage = document.getElementById('noMaterialsMessage');
-        const form = document.getElementById('managementEventForm');
 
-        if (materialsInput && materialsContainer && addMaterialBtn && form) {
+        const parseDecimal = (value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            if (typeof value !== 'string') {
+                return 0;
+            }
+            const sanitized = value.replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+            const parsed = Number.parseFloat(sanitized);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+
+        const formatNumber = (value) => {
+            const number = Number.isFinite(value) ? value : 0;
+            return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        const formatCurrency = (value) => `R$ ${formatNumber(value)}`;
+
+        const updateEventTotal = () => {
+            let total = 0;
+            serviceConfigs.forEach((config) => {
+                const select = document.getElementById(config.selectId);
+                const totalInput = document.getElementById(config.totalInputId);
+                if (select && totalInput && select.value === '1') {
+                    total += parseDecimal(totalInput.value);
+                }
+            });
+            if (materialsContainer) {
+                const valueInputs = materialsContainer.querySelectorAll('.material-value');
+                valueInputs.forEach((input) => {
+                    total += parseDecimal(input.value);
+                });
+            }
+            if (eventTotalDisplay) {
+                eventTotalDisplay.textContent = `Total do evento: ${formatCurrency(total)}`;
+            }
+        };
+
+        const updateEmptyMessage = (config) => {
+            const container = document.getElementById(config.containerId);
+            if (!container) {
+                return;
+            }
+            const emptyMessage = container.querySelector('[data-empty-text]');
+            if (!emptyMessage) {
+                return;
+            }
+            const hasItems = container.querySelectorAll('[data-service-item]').length > 0;
+            emptyMessage.classList.toggle('d-none', hasItems);
+        };
+
+        const updateServiceTotal = (config, { recalculate = true } = {}) => {
+            const totalInput = document.getElementById(config.totalInputId);
+            const container = document.getElementById(config.containerId);
+            if (!totalInput) {
+                return;
+            }
+            if (recalculate && container) {
+                let total = 0;
+                container.querySelectorAll('[data-service-item] [data-field="total"]').forEach((input) => {
+                    total += parseDecimal(input.value);
+                });
+                totalInput.value = formatNumber(total);
+            }
+            updateEventTotal();
+        };
+
+        const createServiceItemRow = (config, data = {}) => {
+            const row = document.createElement('div');
+            row.className = 'service-item';
+            row.dataset.serviceItem = config.slug;
+            row.innerHTML = `
+                <div class="row g-1 g-sm-2 align-items-end">
+                    <div class="col-12">
+                        <label class="form-label text-muted mb-1">Descrição</label>
+                        <input type="text" class="form-control form-control-sm" data-field="description" placeholder="Descrição do item">
+                    </div>
+                    <div class="col-6 col-sm-4">
+                        <label class="form-label text-muted mb-1">Quantidade</label>
+                        <input type="text" class="form-control form-control-sm" data-field="quantity" inputmode="decimal" placeholder="0">
+                    </div>
+                    <div class="col-6 col-sm-4">
+                        <label class="form-label text-muted mb-1">Valor unitário</label>
+                        <input type="text" class="form-control form-control-sm" data-field="unit" inputmode="decimal" placeholder="0,00">
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <label class="form-label text-muted mb-1">Total</label>
+                        <input type="text" class="form-control form-control-sm" data-field="total" inputmode="decimal" placeholder="0,00">
+                    </div>
+                    <div class="col-6 col-sm-1 d-flex justify-content-end">
+                        <button type="button" class="btn btn-outline-danger btn-icon btn-sm remove-service-item" title="Remover item">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const descriptionInput = row.querySelector('[data-field="description"]');
+            const quantityInput = row.querySelector('[data-field="quantity"]');
+            const unitInput = row.querySelector('[data-field="unit"]');
+            const totalInput = row.querySelector('[data-field="total"]');
+
+            descriptionInput.value = data.description || '';
+            quantityInput.value = data.quantity || '';
+            unitInput.value = data.unit_cost || data.unit || '';
+            totalInput.value = data.total_cost || data.total || '';
+
+            const recalcFromParts = () => {
+                const hasQuantity = quantityInput.value.trim() !== '';
+                const hasUnit = unitInput.value.trim() !== '';
+                if (hasQuantity && hasUnit) {
+                    const computed = parseDecimal(quantityInput.value) * parseDecimal(unitInput.value);
+                    totalInput.value = formatNumber(computed);
+                }
+                updateServiceTotal(config, { recalculate: true });
+            };
+
+            quantityInput.addEventListener('input', recalcFromParts);
+            unitInput.addEventListener('input', recalcFromParts);
+            totalInput.addEventListener('input', () => {
+                updateServiceTotal(config, { recalculate: false });
+            });
+
+            row.querySelector('.remove-service-item').addEventListener('click', () => {
+                row.remove();
+                updateEmptyMessage(config);
+                updateServiceTotal(config, { recalculate: true });
+            });
+
+            return row;
+        };
+
+        const serializeServiceItems = (config) => {
+            const container = document.getElementById(config.containerId);
+            const hiddenInput = document.getElementById(config.hiddenInputId);
+            if (!container || !hiddenInput) {
+                return;
+            }
+            const rows = container.querySelectorAll('[data-service-item]');
+            const serialized = [];
+            rows.forEach((row) => {
+                const description = row.querySelector('[data-field="description"]').value.trim();
+                const quantity = row.querySelector('[data-field="quantity"]').value.trim();
+                const unitCost = row.querySelector('[data-field="unit"]').value.trim();
+                const totalCost = row.querySelector('[data-field="total"]').value.trim();
+                if (description || quantity || unitCost || totalCost) {
+                    serialized.push({
+                        description,
+                        quantity,
+                        unit_cost: unitCost,
+                        total_cost: totalCost,
+                    });
+                }
+            });
+            hiddenInput.value = JSON.stringify(serialized);
+        };
+
+        const initService = (config) => {
+            const select = document.getElementById(config.selectId);
+            const totalWrapper = document.getElementById(config.totalWrapperId);
+            const detailsWrapper = document.getElementById(config.detailsWrapperId);
+            const container = document.getElementById(config.containerId);
+            const hiddenInput = document.getElementById(config.hiddenInputId);
+            const addButton = document.querySelector(config.addButtonSelector);
+            const totalInput = document.getElementById(config.totalInputId);
+
+            if (!select || !container || !hiddenInput) {
+                return;
+            }
+
+            const setActive = (active) => {
+                if (totalWrapper) {
+                    totalWrapper.classList.toggle('d-none', !active);
+                }
+                if (detailsWrapper) {
+                    detailsWrapper.classList.toggle('d-none', !active);
+                }
+                if (totalInput) {
+                    totalInput.disabled = !active;
+                    if (!active) {
+                        totalInput.value = '';
+                    }
+                }
+                if (addButton) {
+                    addButton.disabled = !active;
+                }
+                container.querySelectorAll('input').forEach((input) => {
+                    input.disabled = !active;
+                });
+                if (!active) {
+                    container.innerHTML = '';
+                    hiddenInput.value = '[]';
+                    updateEmptyMessage(config);
+                    updateEventTotal();
+                }
+            };
+
+            const populateInitialItems = () => {
+                let initialItems = [];
+                try {
+                    const parsed = JSON.parse(hiddenInput.value || '[]');
+                    if (Array.isArray(parsed)) {
+                        initialItems = parsed;
+                    }
+                } catch (error) {
+                    console.warn(`Não foi possível interpretar os itens de ${config.slug}.`, error);
+                }
+                initialItems.forEach((item) => {
+                    const row = createServiceItemRow(config, item);
+                    container.appendChild(row);
+                });
+                updateEmptyMessage(config);
+                updateServiceTotal(config, { recalculate: true });
+            };
+
+            if (addButton) {
+                addButton.addEventListener('click', () => {
+                    const row = createServiceItemRow(config);
+                    container.appendChild(row);
+                    updateEmptyMessage(config);
+                    updateServiceTotal(config, { recalculate: true });
+                });
+            }
+
+            select.addEventListener('change', () => {
+                const isActive = select.value === '1';
+                setActive(isActive);
+                if (isActive && container.querySelectorAll('[data-service-item]').length === 0) {
+                    const row = createServiceItemRow(config);
+                    container.appendChild(row);
+                    updateEmptyMessage(config);
+                    updateServiceTotal(config, { recalculate: true });
+                } else {
+                    updateEventTotal();
+                }
+            });
+
+            if (totalInput) {
+                totalInput.addEventListener('input', () => updateEventTotal());
+            }
+
+            const initiallyActive = select.value === '1';
+            setActive(initiallyActive);
+            populateInitialItems();
+        };
+
+        serviceConfigs.forEach(initService);
+
+        if (materialsInput && materialsContainer && addMaterialBtn) {
             const parseInitialMaterials = () => {
                 try {
                     const value = materialsInput.value || '[]';
                     const parsed = JSON.parse(value);
                     if (Array.isArray(parsed)) {
-                        return parsed.map(item => ({
+                        return parsed.map((item) => ({
                             description: typeof item.description === 'string' ? item.description : '',
-                            value: item.value !== undefined && item.value !== null ? String(item.value) : ''
+                            value: item.value !== undefined && item.value !== null ? item.value : '',
                         }));
                     }
                 } catch (error) {
@@ -348,7 +599,7 @@
                 return [];
             };
 
-            const updateEmptyMessage = () => {
+            const updateMaterialsEmptyMessage = () => {
                 if (!noMaterialsMessage) {
                     return;
                 }
@@ -367,7 +618,7 @@
                         </div>
                         <div class="col-12 col-sm-4">
                             <label class="form-label text-muted mb-1">Valor</label>
-                            <input type="number" class="form-control form-control-sm material-value" min="0" step="0.01" placeholder="0,00">
+                            <input type="text" class="form-control form-control-sm material-value" inputmode="decimal" placeholder="0,00">
                         </div>
                         <div class="col-12 col-sm-auto d-flex justify-content-end">
                             <button type="button" class="btn btn-outline-danger btn-icon btn-sm remove-material" title="Remover material">
@@ -379,36 +630,37 @@
                 const descriptionInput = row.querySelector('.material-description');
                 const valueInput = row.querySelector('.material-value');
                 descriptionInput.value = data.description || '';
-                valueInput.value = data.value || '';
+                if (data.value !== undefined && data.value !== null) {
+                    valueInput.value = typeof data.value === 'number' ? formatNumber(data.value) : data.value;
+                }
+                valueInput.addEventListener('input', updateEventTotal);
                 row.querySelector('.remove-material').addEventListener('click', () => {
                     row.remove();
-                    updateEmptyMessage();
+                    updateMaterialsEmptyMessage();
+                    updateEventTotal();
                 });
                 return row;
             };
 
             const materialsState = parseInitialMaterials();
-
-            materialsState.forEach(item => {
-                const row = createMaterialRow({
-                    description: item.description || '',
-                    value: item.value !== undefined && item.value !== null ? item.value : ''
-                });
+            materialsState.forEach((item) => {
+                const row = createMaterialRow(item);
                 materialsContainer.appendChild(row);
             });
 
-            updateEmptyMessage();
+            updateMaterialsEmptyMessage();
 
             addMaterialBtn.addEventListener('click', () => {
                 const row = createMaterialRow();
                 materialsContainer.appendChild(row);
-                updateEmptyMessage();
+                updateMaterialsEmptyMessage();
+                updateEventTotal();
             });
 
             form.addEventListener('submit', () => {
                 const rows = materialsContainer.querySelectorAll('.material-row');
                 const serialized = [];
-                rows.forEach(row => {
+                rows.forEach((row) => {
                     const descriptionInput = row.querySelector('.material-description');
                     const valueInput = row.querySelector('.material-value');
                     const description = descriptionInput.value.trim();
@@ -420,6 +672,12 @@
                 materialsInput.value = JSON.stringify(serialized);
             });
         }
+
+        form.addEventListener('submit', () => {
+            serviceConfigs.forEach((config) => serializeServiceItems(config));
+        });
+
+        updateEventTotal();
     });
     </script>
 {% endblock %}

@@ -1,6 +1,7 @@
 """WTForms definitions for application-specific forms."""
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -31,6 +32,7 @@ from wtforms.validators import (
     URL,
     NumberRange,
     InputRequired,
+    AnyOf,
 )
 import re
 import json
@@ -293,17 +295,18 @@ class ManagementEventForm(FlaskForm):
         validators=[DataRequired(message="Informe a descrição do evento."), Length(max=1000)],
         render_kw={"rows": 3},
     )
-    attendees_internal = SelectField(
-        "Participação Interna",
-        choices=BOOLEAN_SELECT_CHOICES,
-        coerce=int,
-        default=0,
-    )
-    attendees_external = SelectField(
-        "Participação Externa",
-        choices=BOOLEAN_SELECT_CHOICES,
-        coerce=int,
-        default=0,
+    attendance_scope = SelectField(
+        "Participação",
+        choices=[
+            ("interna", "Interna"),
+            ("externa", "Externa"),
+            ("ambos", "Ambos"),
+        ],
+        validators=[
+            DataRequired(message="Informe o tipo de participação."),
+            AnyOf(["interna", "externa", "ambos"]),
+        ],
+        default="interna",
     )
     participants_count = IntegerField(
         "Participantes (Nº de pessoas)",
@@ -319,10 +322,6 @@ class ManagementEventForm(FlaskForm):
         coerce=int,
         default=0,
     )
-    breakfast_description = StringField(
-        "Descrição (opcional)",
-        validators=[Optional(), Length(max=255)],
-    )
     cost_breakfast = DecimalField(
         "Custo total",
         places=2,
@@ -330,22 +329,12 @@ class ManagementEventForm(FlaskForm):
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    cost_breakfast_unit = DecimalField(
-        "Custo unitário (opcional)",
-        places=2,
-        rounding=None,
-        validators=[Optional()],
-        render_kw={"min": 0, "step": "0.01"},
-    )
+    breakfast_items_raw = HiddenField()
     include_lunch = SelectField(
         "Almoço",
         choices=BOOLEAN_SELECT_CHOICES,
         coerce=int,
         default=0,
-    )
-    lunch_description = StringField(
-        "Descrição (opcional)",
-        validators=[Optional(), Length(max=255)],
     )
     cost_lunch = DecimalField(
         "Custo total",
@@ -354,37 +343,21 @@ class ManagementEventForm(FlaskForm):
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    cost_lunch_unit = DecimalField(
-        "Custo unitário (opcional)",
-        places=2,
-        rounding=None,
-        validators=[Optional()],
-        render_kw={"min": 0, "step": "0.01"},
-    )
-    include_snack = SelectField(
-        "Lanche",
+    lunch_items_raw = HiddenField()
+    include_dinner = SelectField(
+        "Janta",
         choices=BOOLEAN_SELECT_CHOICES,
         coerce=int,
         default=0,
     )
-    snack_description = StringField(
-        "Descrição (opcional)",
-        validators=[Optional(), Length(max=255)],
-    )
-    cost_snack = DecimalField(
+    cost_dinner = DecimalField(
         "Custo total",
         places=2,
         rounding=None,
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    cost_snack_unit = DecimalField(
-        "Custo unitário (opcional)",
-        places=2,
-        rounding=None,
-        validators=[Optional()],
-        render_kw={"min": 0, "step": "0.01"},
-    )
+    dinner_items_raw = HiddenField()
     other_materials_raw = HiddenField()
     submit = SubmitField("Salvar evento")
 
@@ -395,38 +368,156 @@ class ManagementEventForm(FlaskForm):
             return False
 
         valid = True
+
+        def _to_decimal(value: str | None) -> Decimal | None:
+            if value is None:
+                return None
+            raw = value.strip()
+            if not raw:
+                return None
+            normalized = raw.replace(" ", "")
+            if normalized.count(",") == 1 and normalized.count(".") == 0:
+                normalized = normalized.replace(",", ".")
+            elif normalized.count(",") == 1 and normalized.count(".") >= 1:
+                normalized = normalized.replace(".", "").replace(",", ".")
+            else:
+                normalized = normalized.replace(",", "")
+            try:
+                return Decimal(normalized)
+            except InvalidOperation:
+                return None
+        def _parse_service_items(raw_value: str) -> list[dict[str, str]] | None:
+            try:
+                parsed = json.loads(raw_value or "[]")
+            except json.JSONDecodeError:
+                return None
+
+            if not isinstance(parsed, list):
+                return None
+
+            cleaned: list[dict[str, str]] = []
+            for item in parsed:
+                if not isinstance(item, dict):
+                    continue
+                description = (item.get("description") or "").strip()
+                quantity = (item.get("quantity") or "").strip()
+                unit_cost = (item.get("unit_cost") or "").strip()
+                total_cost = (item.get("total_cost") or "").strip()
+                if not any([description, quantity, unit_cost, total_cost]):
+                    continue
+                cleaned.append(
+                    {
+                        "description": description,
+                        "quantity": quantity,
+                        "unit_cost": unit_cost,
+                        "total_cost": total_cost,
+                    }
+                )
+            return cleaned
+
+        self._service_items: dict[str, list[dict[str, str]]] = {}
+        self._service_totals: dict[str, Decimal] = {}
+
         catering_groups = [
-            (
-                self.include_breakfast,
-                self.cost_breakfast,
-                self.breakfast_description,
-                self.cost_breakfast_unit,
-            ),
-            (
-                self.include_lunch,
-                self.cost_lunch,
-                self.lunch_description,
-                self.cost_lunch_unit,
-            ),
-            (
-                self.include_snack,
-                self.cost_snack,
-                self.snack_description,
-                self.cost_snack_unit,
-            ),
+            ("breakfast", self.include_breakfast, self.cost_breakfast, self.breakfast_items_raw),
+            ("lunch", self.include_lunch, self.cost_lunch, self.lunch_items_raw),
+            ("dinner", self.include_dinner, self.cost_dinner, self.dinner_items_raw),
         ]
 
-        for include_field, total_field, description_field, unit_field in catering_groups:
+        for slug, include_field, total_field, raw_items_field in catering_groups:
             if include_field.data == 1:
-                if total_field.data is None:
-                    total_field.errors.append(
-                        "Informe o custo total para o item selecionado."
+                items = _parse_service_items(raw_items_field.data or "[]")
+                if items is None:
+                    raw_items_field.errors.append(
+                        "Não foi possível processar os itens informados."
                     )
                     valid = False
+                    continue
+
+                total_sum = Decimal("0")
+                normalized_items: list[dict[str, str]] = []
+
+                for item in items:
+                    description = item.get("description", "")
+                    quantity_raw = item.get("quantity", "")
+                    unit_cost_raw = item.get("unit_cost", "")
+                    line_total_raw = item.get("total_cost", "")
+
+                    quantity_decimal = _to_decimal(quantity_raw)
+                    unit_cost_decimal = _to_decimal(unit_cost_raw)
+                    line_total_decimal = _to_decimal(line_total_raw)
+
+                    if quantity_decimal is not None and quantity_decimal < 0:
+                        raw_items_field.errors.append(
+                            "As quantidades devem ser positivas."
+                        )
+                        valid = False
+                        break
+
+                    if unit_cost_decimal is not None and unit_cost_decimal < 0:
+                        raw_items_field.errors.append(
+                            "Os valores unitários devem ser positivos."
+                        )
+                        valid = False
+                        break
+
+                    if line_total_decimal is None and quantity_decimal is not None and unit_cost_decimal is not None:
+                        line_total_decimal = quantity_decimal * unit_cost_decimal
+
+                    if line_total_decimal is None:
+                        if quantity_decimal is None and unit_cost_decimal is None and not description:
+                            continue
+                        raw_items_field.errors.append(
+                            "Informe o total ou dados suficientes para calcular o custo do item."
+                        )
+                        valid = False
+                        break
+
+                    if line_total_decimal < 0:
+                        raw_items_field.errors.append(
+                            "Os custos totais devem ser positivos."
+                        )
+                        valid = False
+                        break
+
+                    total_sum += line_total_decimal
+
+                    normalized_items.append(
+                        {
+                            "description": description,
+                            "quantity": quantity_raw,
+                            "unit_cost": unit_cost_raw,
+                            "total_cost": f"{line_total_decimal:.2f}",
+                        }
+                    )
+
+                if not valid:
+                    continue
+
+                total_value = total_sum
+                if total_field.data is None:
+                    total_field.data = total_sum
+                elif total_field.data < 0:
+                    total_field.errors.append(
+                        "Informe um valor positivo para o custo total."
+                    )
+                    valid = False
+                else:
+                    try:
+                        total_value = Decimal(str(total_field.data))
+                    except InvalidOperation:
+                        total_field.errors.append(
+                            "Informe um valor válido para o custo total."
+                        )
+                        valid = False
+                raw_items_field.data = json.dumps(normalized_items, ensure_ascii=False)
+                self._service_items[slug] = normalized_items
+                self._service_totals[slug] = total_value
             else:
                 total_field.data = None
-                unit_field.data = None
-                description_field.data = ""
+                raw_items_field.data = json.dumps([], ensure_ascii=False)
+                self._service_items[slug] = []
+                self._service_totals[slug] = Decimal("0")
 
         raw_materials = self.other_materials_raw.data or "[]"
         try:
@@ -457,6 +548,21 @@ class ManagementEventForm(FlaskForm):
             cleaned_materials.append({"description": description, "value": value})
 
         self.other_materials_raw.data = json.dumps(cleaned_materials, ensure_ascii=False)
+
+        materials_total = Decimal("0")
+        for item in cleaned_materials:
+            material_value = _to_decimal(item.get("value", "") if isinstance(item, dict) else "")
+            if material_value is not None:
+                if material_value < 0:
+                    self.other_materials_raw.errors.append(
+                        "Os valores dos materiais devem ser positivos."
+                    )
+                    return False
+                materials_total += material_value
+
+        self._other_materials = cleaned_materials
+        self._other_materials_total = materials_total
+        self._event_total = sum(self._service_totals.values(), Decimal("0")) + materials_total
 
         return valid
 

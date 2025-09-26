@@ -560,76 +560,107 @@ def diretoria_eventos_novo():
     form = ManagementEventForm()
 
     if form.validate_on_submit():
-        parsed_materials = json.loads(form.other_materials_raw.data or "[]")
-        cleaned_materials: list[dict[str, Any]] = []
-        invalid_cost = False
-        for item in parsed_materials:
+        def _normalize_decimal(value: str | None) -> Decimal | None:
+            if value is None:
+                return None
+            raw = value.strip()
+            if not raw:
+                return None
+            normalized = raw.replace(" ", "")
+            if normalized.count(",") == 1 and normalized.count(".") == 0:
+                normalized = normalized.replace(",", ".")
+            elif normalized.count(",") == 1 and normalized.count(".") >= 1:
+                normalized = normalized.replace(".", "").replace(",", ".")
+            else:
+                normalized = normalized.replace(",", "")
+            try:
+                return Decimal(normalized)
+            except InvalidOperation:
+                return None
+
+        def _clean_text(value: str | None) -> str | None:
+            cleaned = sanitize_html((value or "").strip())
+            return cleaned or None
+
+        def _quantize_decimal(value: Decimal | None) -> Decimal | None:
+            if isinstance(value, Decimal):
+                return value.quantize(Decimal("0.01"))
+            return value
+
+        service_payloads: dict[str, list[dict[str, Any]]] = {}
+        for slug in ("breakfast", "lunch", "dinner"):
+            items = form._service_items.get(slug, []) if hasattr(form, "_service_items") else []
+            normalized_items: list[dict[str, Any]] = []
+            for item in items:
+                description = _clean_text(item.get("description"))
+                quantity_decimal = _normalize_decimal(item.get("quantity"))
+                unit_decimal = _normalize_decimal(item.get("unit_cost"))
+                total_decimal = _normalize_decimal(item.get("total_cost"))
+                normalized_items.append(
+                    {
+                        "description": description,
+                        "quantity": float(quantity_decimal.quantize(Decimal("0.01"))) if quantity_decimal is not None else None,
+                        "unit_cost": float(unit_decimal.quantize(Decimal("0.01"))) if unit_decimal is not None else None,
+                        "total_cost": float(total_decimal.quantize(Decimal("0.01"))) if total_decimal is not None else None,
+                    }
+                )
+            service_payloads[slug] = normalized_items
+
+        sanitized_materials: list[dict[str, Any]] = []
+        for item in getattr(form, "_other_materials", []):
             if not isinstance(item, dict):
                 continue
-            description = sanitize_html((item.get("description") or "").strip())
-            value_raw = (item.get("value") or "").strip()
-            material_cost: Decimal | None = None
-            if value_raw:
-                normalized_value = value_raw.replace(",", ".")
-                try:
-                    material_cost = Decimal(normalized_value)
-                except InvalidOperation:
-                    invalid_cost = True
-                    form.other_materials_raw.errors.append(
-                        "Informe valores válidos para os materiais adicionais."
-                    )
-                    break
-            cleaned_materials.append(
+            description = _clean_text(item.get("description"))
+            value_decimal = _normalize_decimal(item.get("value"))
+            sanitized_materials.append(
                 {
                     "description": description,
-                    "value": float(material_cost) if material_cost is not None else None,
+                    "value": float(value_decimal.quantize(Decimal("0.01"))) if value_decimal is not None else None,
                 }
             )
 
-        if invalid_cost:
-            flash(
-                "Não foi possível salvar o evento. Verifique os campos destacados e tente novamente.",
-                "danger",
-            )
-        else:
-            def _clean_description(value: str | None) -> str | None:
-                cleaned = sanitize_html((value or "").strip())
-                return cleaned or None
+        event_total_value = getattr(form, "_event_total", None)
+        if isinstance(event_total_value, Decimal):
+            event_total_value = event_total_value.quantize(Decimal("0.01"))
 
-            event = ManagementEvent(
-                event_type=form.event_type.data,
-                event_date=form.event_date.data,
-                description=sanitize_html((form.description.data or "").strip()),
-                attendees_internal=form.attendees_internal.data == 1,
-                attendees_external=form.attendees_external.data == 1,
-                participants_count=form.participants_count.data,
-                include_breakfast=form.include_breakfast.data == 1,
-                breakfast_description=_clean_description(form.breakfast_description.data),
-                cost_breakfast=form.cost_breakfast.data,
-                cost_breakfast_unit=form.cost_breakfast_unit.data,
-                include_lunch=form.include_lunch.data == 1,
-                lunch_description=_clean_description(form.lunch_description.data),
-                cost_lunch=form.cost_lunch.data,
-                cost_lunch_unit=form.cost_lunch_unit.data,
-                include_snack=form.include_snack.data == 1,
-                snack_description=_clean_description(form.snack_description.data),
-                cost_snack=form.cost_snack.data,
-                cost_snack_unit=form.cost_snack_unit.data,
-                other_materials=cleaned_materials,
-                created_by_id=current_user.id,
-            )
-            db.session.add(event)
-            db.session.commit()
-            flash("Evento registrado com sucesso!", "success")
-            return redirect(url_for("diretoria_eventos"))
+        event = ManagementEvent(
+            event_type=form.event_type.data,
+            event_date=form.event_date.data,
+            description=sanitize_html((form.description.data or "").strip()),
+            attendance_scope=form.attendance_scope.data,
+            participants_count=form.participants_count.data,
+            include_breakfast=form.include_breakfast.data == 1,
+            cost_breakfast=_quantize_decimal(form.cost_breakfast.data) if form.include_breakfast.data == 1 else None,
+            breakfast_items=service_payloads.get("breakfast", []) if form.include_breakfast.data == 1 else [],
+            include_lunch=form.include_lunch.data == 1,
+            cost_lunch=_quantize_decimal(form.cost_lunch.data) if form.include_lunch.data == 1 else None,
+            lunch_items=service_payloads.get("lunch", []) if form.include_lunch.data == 1 else [],
+            include_dinner=form.include_dinner.data == 1,
+            cost_dinner=_quantize_decimal(form.cost_dinner.data) if form.include_dinner.data == 1 else None,
+            dinner_items=service_payloads.get("dinner", []) if form.include_dinner.data == 1 else [],
+            other_materials=sanitized_materials,
+            event_total=event_total_value,
+            created_by_id=current_user.id,
+        )
+        db.session.add(event)
+        db.session.commit()
+        flash("Evento registrado com sucesso!", "success")
+        return redirect(url_for("diretoria_eventos"))
     elif request.method == "POST":
         flash(
             "Não foi possível salvar o evento. Verifique os campos destacados e tente novamente.",
             "danger",
         )
 
-    if request.method == "GET" and not form.other_materials_raw.data:
-        form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
+    if request.method == "GET":
+        if not form.breakfast_items_raw.data:
+            form.breakfast_items_raw.data = json.dumps([], ensure_ascii=False)
+        if not form.lunch_items_raw.data:
+            form.lunch_items_raw.data = json.dumps([], ensure_ascii=False)
+        if not form.dinner_items_raw.data:
+            form.dinner_items_raw.data = json.dumps([], ensure_ascii=False)
+        if not form.other_materials_raw.data:
+            form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
 
     return render_template("diretoria/eventos_registrar.html", form=form)
 
