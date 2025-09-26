@@ -343,6 +343,17 @@ def home():
     return render_template("home.html")
 
 
+@app.route("/diretoria/eventos")
+@login_required
+def diretoria_eventos():
+    """Render the Diretoria JP events planning page."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    return render_template("diretoria/eventos.html")
+
+
 @app.route("/cursos", methods=["GET", "POST"])
 @login_required
 def cursos():
