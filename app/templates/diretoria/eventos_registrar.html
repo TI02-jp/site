@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+{% block title %}Registrar Evento - Diretoria JP{% endblock %}
+
+{% block sidebar_nav %}
+    {% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .management-event-page {
+            font-size: 0.8rem;
+        }
+
+        .management-event-page h1 {
+            font-size: 1.05rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .management-event-page .card-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .management-event-page label,
+        .management-event-page .form-label {
+            text-align: left;
+            margin-bottom: 0.3rem;
+        }
+
+        .management-event-page .form-control,
+        .management-event-page .form-select,
+        .management-event-page .form-check-label {
+            font-size: 0.74rem;
+        }
+
+        .management-event-page .form-control,
+        .management-event-page .form-select {
+            padding: 0.3rem 0.45rem;
+        }
+
+        .management-event-page .section-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .management-event-page .service-card {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.5rem;
+            padding: 0.65rem;
+            background: #f8f9fb;
+            min-height: 100%;
+        }
+
+        .management-event-page .service-card.disabled {
+            opacity: 0.55;
+        }
+
+        .management-event-page .service-header {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.75rem;
+        }
+
+        .management-event-page .service-total {
+            min-width: 6.25rem;
+        }
+
+        .management-event-page .service-details {
+            margin-top: 0.5rem;
+        }
+
+        .management-event-page .service-items {
+            border: 1px dashed var(--bs-border-color);
+            border-radius: 0.45rem;
+            padding: 0.4rem 0.55rem;
+            min-height: 2rem;
+        }
+
+        .management-event-page .service-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+        }
+
+        .management-event-page .service-item-row + .service-item-row {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .management-event-page .service-item-editor {
+            border: 1px dashed rgba(33, 37, 41, 0.35);
+            border-radius: 0.45rem;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            background: #fff;
+        }
+
+        .management-event-page .service-item-editor .form-control,
+        .management-event-page .service-item-editor .form-select {
+            font-size: 0.72rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .management-event-page .service-item-editor .form-label {
+            margin-bottom: 0.25rem;
+        }
+
+        .management-event-page .service-item-editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .management-event-page .materials-list {
+            border: 1px dashed var(--bs-border-color);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            min-height: 2.25rem;
+        }
+
+        .management-event-page .materials-list .material-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0;
+        }
+
+        .management-event-page .materials-list .material-row + .material-row {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .management-event-page .materials-empty {
+            color: #6c757d;
+        }
+
+        .management-event-page .event-total {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 575.98px) {
+            .management-event-page .form-check-inline {
+                margin-right: 0.75rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3 management-event-page">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-1">Registrar Evento</h1>
+            <p class="text-muted mb-0">Preencha os dados do evento da Diretoria JP.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm align-self-lg-start" href="{{ url_for('diretoria_eventos') }}">
+            <i class="bi bi-arrow-left me-2"></i>Voltar para eventos
+        </a>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" novalidate id="managementEventForm">
+                {{ form.csrf_token }}
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-3">
+                        {{ form.event_type.label(class="form-label section-title") }}
+                        {{ form.event_type(class="form-select form-select-sm", id="event_type") }}
+                        {% if form.event_type.errors %}
+                        <div class="text-danger small mt-1">{{ form.event_type.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        {{ form.event_date.label(class="form-label section-title") }}
+                        {{ form.event_date(class="form-control", type="date") }}
+                        {% if form.event_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.event_date.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        {{ form.participants_count.label(class="form-label section-title") }}
+                        {{ form.participants_count(class="form-control", type="number", min="0") }}
+                        {% if form.participants_count.errors %}
+                        <div class="text-danger small mt-1">{{ form.participants_count.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-lg-3">
+                        {{ form.participation_scope.label(class="form-label section-title") }}
+                        {{ form.participation_scope(class="form-select form-select-sm", id="participation_scope") }}
+                        {% if form.participation_scope.errors %}
+                        <div class="text-danger small mt-1">{{ form.participation_scope.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    {{ form.description.label(class="form-label section-title") }}
+                    {{ form.description(class="form-control", rows="3", placeholder="Descreva o objetivo, local ou observações gerais.") }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-3">
+                    <span class="form-label section-title d-block mb-2">Serviços disponibilizados</span>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <div class="service-card" data-service-card="breakfast">
+                                <div class="service-header">
+                                    <div class="flex-grow-1">
+                                        {{ form.service_breakfast.label(class="form-label section-title mb-1") }}
+                                        {{ form.service_breakfast(class="form-select form-select-sm", id="service_breakfast") }}
+                                        {% if form.service_breakfast.errors %}
+                                        <div class="text-danger small mt-1">{{ form.service_breakfast.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="service-total text-end">
+                                        <label class="form-label text-muted mb-1" for="total_breakfast">Custo total</label>
+                                        {{ form.total_breakfast(class="form-control form-control-sm text-end", id="total_breakfast", placeholder="0,00") }}
+                                        {% if form.total_breakfast.errors %}
+                                        <div class="text-danger small mt-1">{{ form.total_breakfast.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {{ form.breakfast_details(id="breakfast_details") }}
+                                {% if form.breakfast_details.errors %}
+                                <div class="text-danger small mt-1">{{ form.breakfast_details.errors[0] }}</div>
+                                {% endif %}
+                                <div class="service-details d-none" data-service-details>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Detalhes</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="breakfast">
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                        </button>
+                                    </div>
+                                    <div class="service-items" data-service-items="breakfast">
+                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="service-card" data-service-card="lunch">
+                                <div class="service-header">
+                                    <div class="flex-grow-1">
+                                        {{ form.service_lunch.label(class="form-label section-title mb-1") }}
+                                        {{ form.service_lunch(class="form-select form-select-sm", id="service_lunch") }}
+                                        {% if form.service_lunch.errors %}
+                                        <div class="text-danger small mt-1">{{ form.service_lunch.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="service-total text-end">
+                                        <label class="form-label text-muted mb-1" for="total_lunch">Custo total</label>
+                                        {{ form.total_lunch(class="form-control form-control-sm text-end", id="total_lunch", placeholder="0,00") }}
+                                        {% if form.total_lunch.errors %}
+                                        <div class="text-danger small mt-1">{{ form.total_lunch.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {{ form.lunch_details(id="lunch_details") }}
+                                {% if form.lunch_details.errors %}
+                                <div class="text-danger small mt-1">{{ form.lunch_details.errors[0] }}</div>
+                                {% endif %}
+                                <div class="service-details d-none" data-service-details>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Detalhes</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="lunch">
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                        </button>
+                                    </div>
+                                    <div class="service-items" data-service-items="lunch">
+                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="service-card" data-service-card="dinner">
+                                <div class="service-header">
+                                    <div class="flex-grow-1">
+                                        {{ form.service_dinner.label(class="form-label section-title mb-1") }}
+                                        {{ form.service_dinner(class="form-select form-select-sm", id="service_dinner") }}
+                                        {% if form.service_dinner.errors %}
+                                        <div class="text-danger small mt-1">{{ form.service_dinner.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="service-total text-end">
+                                        <label class="form-label text-muted mb-1" for="total_dinner">Custo total</label>
+                                        {{ form.total_dinner(class="form-control form-control-sm text-end", id="total_dinner", placeholder="0,00") }}
+                                        {% if form.total_dinner.errors %}
+                                        <div class="text-danger small mt-1">{{ form.total_dinner.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {{ form.dinner_details(id="dinner_details") }}
+                                {% if form.dinner_details.errors %}
+                                <div class="text-danger small mt-1">{{ form.dinner_details.errors[0] }}</div>
+                                {% endif %}
+                                <div class="service-details d-none" data-service-details>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Detalhes</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-detail="dinner">
+                                            <i class="bi bi-plus-lg me-1"></i>Adicionar detalhe
+                                        </button>
+                                    </div>
+                                    <div class="service-items" data-service-items="dinner">
+                                        <div class="text-muted small" data-empty-text>Nenhum detalhe adicionado.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="form-label section-title mb-0">Outros materiais</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addMaterialBtn">
+                            <i class="bi bi-plus-lg me-1"></i>Adicionar
+                        </button>
+                    </div>
+                    {{ form.other_materials_raw(id="other_materials_data") }}
+                    {% if form.other_materials_raw.errors %}
+                    <div class="text-danger small mb-2">{{ form.other_materials_raw.errors[0] }}</div>
+                    {% endif %}
+                    <div class="materials-list" id="materialsList">
+                        <div class="materials-empty" data-empty-text>Nenhum material adicionado.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-4 gap-2">
+                    <div class="event-total">
+                        Total estimado do evento: <span id="eventTotal">R$ 0,00</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-save me-1"></i>Salvar evento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    {{ super() }}
+    <script>
+        (function () {
+            const form = document.getElementById('managementEventForm');
+            if (!form) {
+                return;
+            }
+
+            const servicesConfig = [
+                {
+                    slug: 'breakfast',
+                    selectId: 'service_breakfast',
+                    totalId: 'total_breakfast',
+                    fieldId: 'breakfast_details',
+                    cardSelector: '[data-service-card="breakfast"]',
+                },
+                {
+                    slug: 'lunch',
+                    selectId: 'service_lunch',
+                    totalId: 'total_lunch',
+                    fieldId: 'lunch_details',
+                    cardSelector: '[data-service-card="lunch"]',
+                },
+                {
+                    slug: 'dinner',
+                    selectId: 'service_dinner',
+                    totalId: 'total_dinner',
+                    fieldId: 'dinner_details',
+                    cardSelector: '[data-service-card="dinner"]',
+                },
+            ];
+
+            const materialsField = document.getElementById('other_materials_data');
+            const materialsList = document.getElementById('materialsList');
+            const addMaterialBtn = document.getElementById('addMaterialBtn');
+            const eventTotalLabel = document.getElementById('eventTotal');
+
+            const servicesState = servicesConfig.reduce((acc, cfg) => {
+                acc[cfg.slug] = { items: [], editor: null };
+                return acc;
+            }, {});
+
+            let materials = [];
+
+            function parseDecimal(value) {
+                if (value === null || value === undefined) {
+                    return null;
+                }
+                const raw = String(value).trim();
+                if (!raw) {
+                    return null;
+                }
+                const normalized = raw
+                    .replace(/\s+/g, '')
+                    .replace(/\.(?=.*\.)/g, '')
+                    .replace(',', '.');
+                const parsed = Number(normalized);
+                return Number.isFinite(parsed) ? parsed : null;
+            }
+
+            function formatCurrency(value) {
+                if (value === null || value === undefined || !Number.isFinite(value)) {
+                    return 'R$ 0,00';
+                }
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 2,
+                }).format(value);
+            }
+
+            function getServiceElements(cfg) {
+                const select = document.getElementById(cfg.selectId);
+                const totalInput = document.getElementById(cfg.totalId);
+                const hiddenField = document.getElementById(cfg.fieldId);
+                const card = document.querySelector(cfg.cardSelector);
+                const details = card?.querySelector('[data-service-details]');
+                const itemsContainer = card?.querySelector('[data-service-items]');
+                return { select, totalInput, hiddenField, card, details, itemsContainer };
+            }
+
+            function removeServiceEditor(cfg) {
+                const editor = servicesState[cfg.slug].editor;
+                if (editor && editor.parentNode) {
+                    editor.parentNode.removeChild(editor);
+                }
+                servicesState[cfg.slug].editor = null;
+            }
+
+            function syncServiceField(cfg) {
+                const { hiddenField } = getServiceElements(cfg);
+                if (!hiddenField) {
+                    return;
+                }
+                const payload = servicesState[cfg.slug].items.map(item => ({
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit_cost: item.unitCost,
+                    total_cost: item.totalCost,
+                }));
+                hiddenField.value = JSON.stringify(payload);
+            }
+
+            function renderServiceItems(cfg) {
+                const { itemsContainer } = getServiceElements(cfg);
+                if (!itemsContainer) {
+                    return;
+                }
+                itemsContainer.innerHTML = '';
+                const items = servicesState[cfg.slug].items;
+                if (!items.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'text-muted small';
+                    empty.dataset.emptyText = '';
+                    empty.textContent = 'Nenhum detalhe adicionado.';
+                    itemsContainer.appendChild(empty);
+                    return;
+                }
+
+                items.forEach((item, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'service-item-row';
+
+                    const info = document.createElement('div');
+                    info.className = 'flex-grow-1';
+                    const title = document.createElement('div');
+                    title.className = 'fw-semibold text-break';
+                    title.textContent = item.description || 'Sem descrição';
+                    info.appendChild(title);
+
+                    const meta = document.createElement('div');
+                    meta.className = 'text-muted small';
+                    const parts = [];
+                    if (item.quantity !== null && item.quantity !== undefined) {
+                        parts.push(`Qtd: ${item.quantity}`);
+                    }
+                    if (item.unitCost !== null && item.unitCost !== undefined) {
+                        parts.push(`Unitário: ${formatCurrency(item.unitCost)}`);
+                    }
+                    meta.textContent = parts.join(' • ') || '—';
+                    info.appendChild(meta);
+
+                    const actions = document.createElement('div');
+                    actions.className = 'text-end';
+                    const totalLabel = document.createElement('div');
+                    totalLabel.className = 'fw-semibold';
+                    totalLabel.textContent = item.totalCost !== null && item.totalCost !== undefined
+                        ? formatCurrency(item.totalCost)
+                        : '—';
+                    actions.appendChild(totalLabel);
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-outline-danger btn-sm mt-1';
+                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    removeBtn.addEventListener('click', () => {
+                        servicesState[cfg.slug].items.splice(index, 1);
+                        syncServiceField(cfg);
+                        renderServiceItems(cfg);
+                        updateServiceTotal(cfg);
+                        updateTotals();
+                    });
+                    actions.appendChild(removeBtn);
+
+                    row.append(info, actions);
+                    itemsContainer.appendChild(row);
+                });
+            }
+
+            function updateServiceTotal(cfg, options = {}) {
+                const { select, totalInput } = getServiceElements(cfg);
+                if (!select || !totalInput) {
+                    return;
+                }
+                if (options.resetManual) {
+                    delete totalInput.dataset.manual;
+                }
+                const enabled = select.value === 'sim';
+                if (!enabled) {
+                    totalInput.value = '';
+                    return;
+                }
+                if (totalInput.dataset.manual === 'true' && !options.force) {
+                    return;
+                }
+
+                const items = servicesState[cfg.slug].items;
+                let sum = 0;
+                items.forEach(item => {
+                    if (typeof item.totalCost === 'number') {
+                        sum += item.totalCost;
+                    } else if (typeof item.unitCost === 'number' && typeof item.quantity === 'number') {
+                        sum += item.unitCost * item.quantity;
+                    }
+                });
+
+                totalInput.value = sum > 0 ? sum.toFixed(2) : '';
+            }
+
+            function updateServiceVisibility(cfg) {
+                const { select, totalInput, details, card } = getServiceElements(cfg);
+                if (!select || !totalInput || !details || !card) {
+                    return;
+                }
+                const enabled = select.value === 'sim';
+                details.classList.toggle('d-none', !enabled);
+                card.classList.toggle('disabled', !enabled);
+                totalInput.disabled = !enabled;
+                if (!enabled) {
+                    servicesState[cfg.slug].items = [];
+                    removeServiceEditor(cfg);
+                    syncServiceField(cfg);
+                    renderServiceItems(cfg);
+                }
+            }
+
+            function openItemEditor(cfg) {
+                const { card, details } = getServiceElements(cfg);
+                if (!card || !details) {
+                    return;
+                }
+                if (servicesState[cfg.slug].editor) {
+                    return;
+                }
+
+                const editor = document.createElement('div');
+                editor.className = 'service-item-editor';
+                editor.dataset.serviceEditor = cfg.slug;
+
+                const grid = document.createElement('div');
+                grid.className = 'row g-2';
+
+                const descriptionCol = document.createElement('div');
+                descriptionCol.className = 'col-12';
+                const descriptionLabel = document.createElement('label');
+                descriptionLabel.className = 'form-label mb-1';
+                descriptionLabel.textContent = 'Descrição (opcional)';
+                const descriptionInput = document.createElement('input');
+                descriptionInput.type = 'text';
+                descriptionInput.className = 'form-control';
+                descriptionCol.append(descriptionLabel, descriptionInput);
+
+                const quantityCol = document.createElement('div');
+                quantityCol.className = 'col-4';
+                const quantityLabel = document.createElement('label');
+                quantityLabel.className = 'form-label mb-1';
+                quantityLabel.textContent = 'Quantidade';
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.min = '0';
+                quantityInput.step = '1';
+                quantityInput.className = 'form-control';
+                quantityCol.append(quantityLabel, quantityInput);
+
+                const unitCol = document.createElement('div');
+                unitCol.className = 'col-4';
+                const unitLabel = document.createElement('label');
+                unitLabel.className = 'form-label mb-1';
+                unitLabel.textContent = 'Valor unitário';
+                const unitInput = document.createElement('input');
+                unitInput.type = 'number';
+                unitInput.min = '0';
+                unitInput.step = '0.01';
+                unitInput.className = 'form-control';
+                unitCol.append(unitLabel, unitInput);
+
+                const totalCol = document.createElement('div');
+                totalCol.className = 'col-4';
+                const totalLabel = document.createElement('label');
+                totalLabel.className = 'form-label mb-1';
+                totalLabel.textContent = 'Custo total';
+                const totalInput = document.createElement('input');
+                totalInput.type = 'number';
+                totalInput.min = '0';
+                totalInput.step = '0.01';
+                totalInput.className = 'form-control';
+                totalCol.append(totalLabel, totalInput);
+
+                grid.append(descriptionCol, quantityCol, unitCol, totalCol);
+                editor.appendChild(grid);
+
+                function recalcTotal() {
+                    const quantityValue = parseDecimal(quantityInput.value);
+                    const unitValue = parseDecimal(unitInput.value);
+                    if (quantityValue !== null && unitValue !== null) {
+                        totalInput.value = (quantityValue * unitValue).toFixed(2);
+                    }
+                }
+
+                quantityInput.addEventListener('input', recalcTotal);
+                unitInput.addEventListener('input', recalcTotal);
+
+                const actions = document.createElement('div');
+                actions.className = 'service-item-editor-actions';
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'btn btn-outline-secondary btn-sm';
+                cancelBtn.textContent = 'Cancelar';
+                cancelBtn.addEventListener('click', () => {
+                    removeServiceEditor(cfg);
+                });
+
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.className = 'btn btn-primary btn-sm';
+                saveBtn.textContent = 'Adicionar';
+                saveBtn.addEventListener('click', () => {
+                    const description = descriptionInput.value.trim();
+                    const quantityValue = quantityInput.value.trim() ? Number(quantityInput.value) : null;
+                    const unitValue = parseDecimal(unitInput.value);
+                    let totalValue = parseDecimal(totalInput.value);
+
+                    if (quantityValue !== null && (!Number.isFinite(quantityValue) || quantityValue < 0)) {
+                        alert('Informe uma quantidade válida.');
+                        return;
+                    }
+                    if (unitValue !== null && unitValue < 0) {
+                        alert('Informe um valor unitário positivo.');
+                        return;
+                    }
+                    if (totalValue !== null && totalValue < 0) {
+                        alert('Informe um custo total positivo.');
+                        return;
+                    }
+
+                    if (totalValue === null && unitValue !== null && quantityValue !== null) {
+                        totalValue = unitValue * quantityValue;
+                    }
+
+                    servicesState[cfg.slug].items.push({
+                        description,
+                        quantity: quantityValue !== null ? Math.trunc(quantityValue) : null,
+                        unitCost: unitValue,
+                        totalCost: totalValue,
+                    });
+
+                    removeServiceEditor(cfg);
+                    syncServiceField(cfg);
+                    renderServiceItems(cfg);
+                    updateServiceTotal(cfg);
+                    updateTotals();
+                });
+
+                actions.append(cancelBtn, saveBtn);
+                editor.appendChild(actions);
+
+                servicesState[cfg.slug].editor = editor;
+                details.appendChild(editor);
+                quantityInput.focus();
+            }
+
+            function renderMaterials() {
+                materialsList.innerHTML = '';
+                if (!materials.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'materials-empty';
+                    empty.dataset.emptyText = '';
+                    empty.textContent = 'Nenhum material adicionado.';
+                    materialsList.appendChild(empty);
+                    return;
+                }
+
+                materials.forEach((item, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'material-row';
+                    const description = document.createElement('div');
+                    description.className = 'text-break flex-grow-1';
+                    description.textContent = item.description || 'Sem descrição';
+                    const value = document.createElement('div');
+                    value.className = 'text-nowrap';
+                    value.textContent = item.value !== null ? formatCurrency(item.value) : '—';
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-outline-danger btn-sm';
+                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    removeBtn.addEventListener('click', () => {
+                        materials.splice(index, 1);
+                        syncMaterialsField();
+                        renderMaterials();
+                        updateTotals();
+                    });
+                    row.append(description, value, removeBtn);
+                    materialsList.appendChild(row);
+                });
+            }
+
+            function syncMaterialsField() {
+                const payload = materials.map(item => ({
+                    description: item.description,
+                    value: item.value,
+                }));
+                materialsField.value = JSON.stringify(payload);
+            }
+
+            function updateTotals() {
+                let total = 0;
+
+                servicesConfig.forEach(cfg => {
+                    const { select, totalInput } = getServiceElements(cfg);
+                    if (select && totalInput && select.value === 'sim') {
+                        const value = parseDecimal(totalInput.value);
+                        if (value !== null && value >= 0) {
+                            total += value;
+                        }
+                    }
+                });
+
+                materials.forEach(item => {
+                    if (item.value !== null && item.value >= 0) {
+                        total += item.value;
+                    }
+                });
+
+                eventTotalLabel.textContent = formatCurrency(total);
+            }
+
+            function handleMaterialCreation() {
+                const description = prompt('Descrição do material:');
+                if (description === null) {
+                    return;
+                }
+                const valueRaw = prompt('Valor (use vírgula ou ponto para centavos):');
+                if (valueRaw === null) {
+                    materials.push({ description: description.trim(), value: null });
+                } else {
+                    const value = parseDecimal(valueRaw);
+                    if (value === null || value < 0) {
+                        alert('Informe um valor numérico válido.');
+                        return;
+                    }
+                    materials.push({ description: description.trim(), value });
+                }
+                syncMaterialsField();
+                renderMaterials();
+                updateTotals();
+            }
+
+            servicesConfig.forEach(cfg => {
+                const { select, totalInput, card } = getServiceElements(cfg);
+                if (!select || !totalInput || !card) {
+                    return;
+                }
+
+                select.addEventListener('change', () => {
+                    updateServiceVisibility(cfg);
+                    removeServiceEditor(cfg);
+                    updateServiceTotal(cfg, { resetManual: true });
+                    updateTotals();
+                });
+
+                totalInput.addEventListener('input', () => {
+                    totalInput.dataset.manual = totalInput.value.trim() ? 'true' : '';
+                    updateTotals();
+                });
+
+                const addBtn = card.querySelector(`[data-add-detail="${cfg.slug}"]`);
+                addBtn?.addEventListener('click', () => {
+                    if (select.value !== 'sim') {
+                        alert('Ative o serviço antes de adicionar detalhes.');
+                        return;
+                    }
+                    openItemEditor(cfg);
+                });
+            });
+
+            addMaterialBtn?.addEventListener('click', handleMaterialCreation);
+
+            form.addEventListener('submit', () => {
+                servicesConfig.forEach(cfg => {
+                    removeServiceEditor(cfg);
+                    syncServiceField(cfg);
+                });
+                syncMaterialsField();
+            });
+
+            try {
+                const existing = JSON.parse(materialsField.value || '[]');
+                if (Array.isArray(existing)) {
+                    materials = existing
+                        .filter(item => item && typeof item === 'object')
+                        .map(item => ({
+                            description: (item.description || '').trim(),
+                            value: parseDecimal(item.value),
+                        }));
+                }
+            } catch (err) {
+                materials = [];
+            }
+
+            servicesConfig.forEach(cfg => {
+                const { hiddenField, totalInput, select } = getServiceElements(cfg);
+                if (hiddenField) {
+                    try {
+                        const parsed = JSON.parse(hiddenField.value || '[]');
+                        if (Array.isArray(parsed)) {
+                            servicesState[cfg.slug].items = parsed
+                                .filter(item => item && typeof item === 'object')
+                                .map(item => {
+                                    const quantityRaw = item.quantity;
+                                    let quantityValue = null;
+                                    if (quantityRaw !== undefined && quantityRaw !== null && quantityRaw !== '') {
+                                        const parsedQuantity = Number(quantityRaw);
+                                        quantityValue = Number.isFinite(parsedQuantity) ? Math.trunc(parsedQuantity) : null;
+                                    }
+                                    return {
+                                        description: (item.description || '').trim(),
+                                        quantity: quantityValue,
+                                        unitCost: parseDecimal(item.unit_cost),
+                                        totalCost: parseDecimal(item.total_cost),
+                                    };
+                                });
+                        }
+                    } catch (err) {
+                        servicesState[cfg.slug].items = [];
+                    }
+                }
+
+                renderServiceItems(cfg);
+                updateServiceVisibility(cfg);
+
+                if (totalInput && totalInput.value.trim()) {
+                    totalInput.dataset.manual = 'true';
+                } else {
+                    updateServiceTotal(cfg);
+                }
+            });
+
+            renderMaterials();
+            updateTotals();
+        })();
+    </script>
+{% endblock %}

@@ -1,6 +1,8 @@
 """WTForms definitions for application-specific forms."""
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -17,7 +19,9 @@ from wtforms import (
     BooleanField,
     HiddenField,
     FieldList,
-    widgets
+    IntegerField,
+    DecimalField,
+    widgets,
 )
 from wtforms.validators import (
     DataRequired,
@@ -27,8 +31,11 @@ from wtforms.validators import (
     EqualTo,
     ValidationError,
     URL,
+    NumberRange,
+    InputRequired,
 )
 import re
+import json
 
 from app.services.courses import CourseStatus
 
@@ -176,6 +183,200 @@ class DepartamentoFiscalForm(DepartamentoForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
+class DepartamentoContabilForm(DepartamentoForm):
+    """Formulário para o Departamento Contábil."""
+
+    metodo_importacao = SelectMultipleField(
+        'Formas de Importação',
+        choices=[('importado', 'Importado'), ('digitado', 'Digitado')],
+        validators=[Optional()],
+    )
+    forma_movimento = SelectField(
+        'Envio de Documento',
+        choices=[
+            ('', 'Selecione'),
+            ('Digital', 'Digital'),
+            ('Fisico', 'Físico'),
+            ('Digital e Físico', 'Digital e Físico'),
+        ],
+        validators=[Optional()],
+    )
+    envio_digital = SelectMultipleField(
+        'Envio Digital',
+        choices=[
+            ('email', 'Email'),
+            ('whatsapp', 'Whatsapp'),
+            ('acessorias', 'Acessórias'),
+            ('google_chat', 'Google Chat'),
+        ],
+        validators=[Optional()],
+    )
+    envio_fisico = SelectMultipleField(
+        'Envio Físico',
+        choices=[('malote', 'Malote')],
+        validators=[Optional()],
+    )
+    malote_coleta = SelectField(
+        'Coleta do Malote',
+        choices=[
+            ('', 'Selecione'),
+            ('Cliente Traz', 'Cliente Traz'),
+            ('JP Busca', 'JP Busca'),
+        ],
+        validators=[Optional()],
+    )
+    observacao_movimento = TextAreaField('Observação', validators=[Optional()])
+    controle_relatorios = SelectMultipleField(
+        'Controle por Relatórios',
+        choices=[
+            ('forn_cli_cota_unica', 'Fornecedor e clientes conta única'),
+            ('saldo_final_mes', 'Relatório com saldo final do mês'),
+            ('adiantamentos', 'Relatório de adiantamentos'),
+            ('contas_pagas', 'Relatório de contas pagas'),
+            ('contas_recebidas', 'Relatório de contas recebidas'),
+            ('conferir_aplicacao', 'Conferir aplicação'),
+        ],
+        validators=[Optional()],
+    )
+    observacao_controle_relatorios = TextAreaField(
+        'Observação', validators=[Optional()]
+    )
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoPessoalForm(DepartamentoForm):
+    """Formulário para o Departamento Pessoal."""
+
+    data_envio = StringField('Data de Envio', validators=[Optional()])
+    registro_funcionarios = StringField(
+        'Registro de Funcionários', validators=[Optional()]
+    )
+    ponto_eletronico = StringField('Ponto Eletrônico', validators=[Optional()])
+    pagamento_funcionario = StringField(
+        'Pagamento de Funcionário', validators=[Optional()]
+    )
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoAdministrativoForm(FlaskForm):
+    """Formulário para o Departamento Administrativo."""
+
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class DepartamentoFinanceiroForm(FlaskForm):
+    """Formulário para o Departamento Financeiro."""
+
+    particularidades_texto = TextAreaField(
+        'Particularidades', validators=[Optional()]
+    )
+
+
+class ConsultoriaForm(FlaskForm):
+    """Formulário para cadastro de consultorias."""
+
+    nome = StringField('Nome da Consultoria', validators=[DataRequired()])
+    usuario = StringField('Usuário na Consultoria', validators=[DataRequired()])
+    senha = StringField('Senha na Consultoria', validators=[Optional()])
+    submit = SubmitField('Salvar')
+
+
+class SetorForm(FlaskForm):
+    """Formulário para cadastro de setores."""
+
+    nome = StringField('Setor', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class TagForm(FlaskForm):
+    """Formulário para cadastro de tags."""
+
+    nome = StringField('Tag', validators=[DataRequired()])
+    submit = SubmitField('Salvar')
+
+
+class MeetingForm(FlaskForm):
+    """Formulário para agendamento de reuniões."""
+
+    participants = SelectMultipleField(
+        "Participantes",
+        coerce=int,
+        validators=[Length(min=1, message="Selecione pelo menos um participante")],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    meeting_id = HiddenField()
+    course_id = HiddenField()
+    date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
+    start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
+    end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
+    subject = StringField(
+        "Assunto",
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Assunto"},
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional()],
+        render_kw={"placeholder": "Detalhes", "rows": 3},
+    )
+    create_meet = BooleanField("Gerar sala no Google Meet")
+    notify_attendees = BooleanField(
+        "Notificar participantes por e-mail",
+        default=True,
+    )
+    apply_more_days = BooleanField("Aplicar a mais dias")
+    additional_dates = FieldList(
+        DateField(
+            "Aplicar também em",
+            format="%Y-%m-%d",
+            validators=[Optional()],
+        ),
+        min_entries=1,
+    )
+    submit = SubmitField("Agendar")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        if self.apply_more_days.data:
+            valid_dates: list[date] = []
+            has_error = False
+            for idx, field in enumerate(self.additional_dates):
+                if not field.data:
+                    continue
+                if field.data == self.date.data:
+                    field.errors.append(
+                        "Escolha uma data diferente da reunião original."
+                    )
+                    has_error = True
+                    continue
+                if field.data in valid_dates:
+                    field.errors.append("Datas duplicadas não são permitidas.")
+                    has_error = True
+                    continue
+                valid_dates.append(field.data)
+            if not valid_dates:
+                if self.additional_dates:
+                    self.additional_dates[0].errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
+                else:
+                    self.additional_dates.errors.append(
+                        "Selecione pelo menos uma data adicional para replicar a reunião."
+                    )
+                return False
+            if has_error:
+                return False
+        return True
+
+
 class AccessLinkForm(FlaskForm):
     """Formulário para criar novos atalhos na central de acessos."""
 
@@ -260,138 +461,293 @@ class CourseForm(FlaskForm):
     submit_add_to_calendar = SubmitField("Adicionar no calendário")
     submit_delete = SubmitField("Excluir curso")
 
-class DepartamentoContabilForm(DepartamentoForm):
-    """Formulário para o Departamento Contábil."""
-    metodo_importacao = SelectMultipleField('Formas de Importação', choices=[
-        ('importado', 'Importado'), ('digitado', 'Digitado')
-    ], validators=[Optional()])
-    forma_movimento = SelectField('Envio de Documento', choices=[
-        ('', 'Selecione'), ('Digital', 'Digital'), ('Fisico', 'Físico'), ('Digital e Físico', 'Digital e Físico')
-    ], validators=[Optional()])
-    envio_digital = SelectMultipleField('Envio Digital', choices=[
-        ('email', 'Email'), ('whatsapp', 'Whatsapp'), ('acessorias', 'Acessórias'),
-        ('google_chat', 'Google Chat')
-    ], validators=[Optional()])
-    envio_fisico = SelectMultipleField('Envio Físico', choices=[
-        ('malote', 'Malote')
-    ], validators=[Optional()])
-    malote_coleta = SelectField('Coleta do Malote', choices=[
-        ('', 'Selecione'), ('Cliente Traz', 'Cliente Traz'), ('JP Busca', 'JP Busca')
-    ], validators=[Optional()])
-    observacao_movimento = TextAreaField('Observação', validators=[Optional()])
-    controle_relatorios = SelectMultipleField('Controle por Relatórios', choices=[
-        ('forn_cli_cota_unica', 'Fornecedor e clientes conta única'),
-        ('saldo_final_mes', 'Relatório com saldo final do mês'),
-        ('adiantamentos', 'Relatório de adiantamentos'), ('contas_pagas', 'Relatório de contas pagas'),
-        ('contas_recebidas', 'Relatório de contas recebidas'),
-        ('conferir_aplicacao', 'Conferir aplicação')], validators=[Optional()])
-    observacao_controle_relatorios = TextAreaField('Observação', validators=[Optional()])
-    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
-class DepartamentoPessoalForm(DepartamentoForm):
-    """Formulário para o Departamento Pessoal."""
-    data_envio = StringField('Data de Envio', validators=[Optional()])
-    registro_funcionarios = StringField('Registro de Funcionários', validators=[Optional()])
-    ponto_eletronico = StringField('Ponto Eletrônico', validators=[Optional()])
-    pagamento_funcionario = StringField('Pagamento de Funcionário', validators=[Optional()])
-    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
+class ManagementEventForm(FlaskForm):
+    """Formulário utilizado pela Diretoria JP para registrar eventos."""
 
+    _SERVICE_CHOICES = [("nao", "Não"), ("sim", "Sim")]
 
-class DepartamentoAdministrativoForm(FlaskForm):
-    """Formulário para o Departamento Administrativo."""
-    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
-
-
-class DepartamentoFinanceiroForm(FlaskForm):
-    """Formulário para o Departamento Financeiro."""
-    particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
-
-
-class ConsultoriaForm(FlaskForm):
-    """Formulário para cadastro de consultorias."""
-    nome = StringField('Nome da Consultoria', validators=[DataRequired()])
-    usuario = StringField('Usuário na Consultoria', validators=[DataRequired()])
-    senha = StringField('Senha na Consultoria', validators=[Optional()])
-    submit = SubmitField('Salvar')
-
-
-class SetorForm(FlaskForm):
-    """Formulário para cadastro de setores."""
-    nome = StringField('Setor', validators=[DataRequired()])
-    submit = SubmitField('Salvar')
-
-
-class TagForm(FlaskForm):
-    """Formulário para cadastro de tags."""
-    nome = StringField('Tag', validators=[DataRequired()])
-    submit = SubmitField('Salvar')
-
-class MeetingForm(FlaskForm):
-    """Formulário para agendamento de reuniões."""
-    participants = SelectMultipleField(
-        "Participantes",
-        coerce=int,
-        validators=[Length(min=1, message="Selecione pelo menos um participante")],
-        option_widget=widgets.CheckboxInput(),
-        widget=widgets.ListWidget(prefix_label=False),
+    event_type = SelectField(
+        "Tipo de Registro",
+        choices=[
+            ("treinamento", "Treinamento"),
+            ("data_comemorativa", "Data Comemorativa"),
+            ("evento", "Evento"),
+        ],
+        validators=[DataRequired(message="Selecione o tipo de registro.")],
+        default="treinamento",
     )
-    meeting_id = HiddenField()
-    course_id = HiddenField()
-    date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
-    start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
-    end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])
-    subject = StringField("Assunto", validators=[DataRequired()], render_kw={"placeholder": "Assunto"})
+    event_date = DateField(
+        "Data",
+        format="%Y-%m-%d",
+        validators=[DataRequired(message="Informe a data do evento.")],
+    )
     description = TextAreaField(
-        "Descrição (opcional)", validators=[Optional()], render_kw={"placeholder": "Detalhes", "rows": 3}
+        "Descrição",
+        validators=[DataRequired(message="Informe a descrição do evento."), Length(max=1000)],
+        render_kw={"rows": 3},
     )
-    create_meet = BooleanField("Gerar sala no Google Meet")
-    notify_attendees = BooleanField(
-        "Notificar participantes por e-mail",
-        default=True,
+    participation_scope = SelectField(
+        "Participação",
+        choices=[
+            ("", "Selecione"),
+            ("interna", "Interna"),
+            ("externa", "Externa"),
+            ("ambos", "Ambos"),
+        ],
+        validators=[DataRequired(message="Informe o tipo de participação.")],
+        default="",
     )
-    apply_more_days = BooleanField("Aplicar a mais dias")
-    additional_dates = FieldList(
-        DateField(
-            "Aplicar também em",
-            format="%Y-%m-%d",
-            validators=[Optional()],
-        ),
-        min_entries=1,
+    participants_count = IntegerField(
+        "Participantes (Nº de pessoas)",
+        validators=[
+            InputRequired(message="Informe o número de participantes."),
+            NumberRange(min=0, message="O número de participantes deve ser positivo."),
+        ],
+        render_kw={"min": 0},
     )
-    submit = SubmitField("Agendar")
+    service_breakfast = SelectField(
+        "Café da manhã",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_breakfast = DecimalField(
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    breakfast_details = HiddenField()
+    service_lunch = SelectField(
+        "Almoço",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_lunch = DecimalField(
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    lunch_details = HiddenField()
+    service_dinner = SelectField(
+        "Janta",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_dinner = DecimalField(
+        "Custo total",
+        places=2,
+        rounding=None,
+        validators=[Optional()],
+        render_kw={"min": 0, "step": "0.01"},
+    )
+    dinner_details = HiddenField()
+    other_materials_raw = HiddenField()
+    submit = SubmitField("Salvar evento")
 
     def validate(self, extra_validators=None):
-        if not super().validate(extra_validators):
+        """Validate catering selections and normalize additional materials."""
+
+        if not super().validate(extra_validators=extra_validators):
             return False
-        if self.apply_more_days.data:
-            valid_dates: list[date] = []
-            has_error = False
-            for idx, field in enumerate(self.additional_dates):
-                if not field.data:
-                    continue
-                if field.data == self.date.data:
-                    field.errors.append(
-                        "Escolha uma data diferente da reunião original."
-                    )
-                    has_error = True
-                    continue
-                if field.data in valid_dates:
-                    field.errors.append("Datas duplicadas não são permitidas.")
-                    has_error = True
-                    continue
-                valid_dates.append(field.data)
-            if not valid_dates:
-                if self.additional_dates:
-                    self.additional_dates[0].errors.append(
-                        "Selecione pelo menos uma data adicional para replicar a reunião."
-                    )
-                else:
-                    self.additional_dates.errors.append(
-                        "Selecione pelo menos uma data adicional para replicar a reunião."
-                    )
+
+        valid = True
+
+        def _to_decimal(value: Any) -> Decimal | None:
+            if value is None:
+                return None
+            if isinstance(value, Decimal):
+                return value
+            raw = str(value).strip()
+            if not raw:
+                return None
+            normalized = raw.replace(" ", "")
+            if normalized.count(",") == 1 and normalized.count(".") == 0:
+                normalized = normalized.replace(",", ".")
+            elif normalized.count(",") == 1 and normalized.count(".") >= 1:
+                normalized = normalized.replace(".", "").replace(",", ".")
+            else:
+                normalized = normalized.replace(",", "")
+            try:
+                return Decimal(normalized)
+            except InvalidOperation:
+                return None
+
+        def _quantize(value: Decimal | None) -> Decimal | None:
+            if value is None:
+                return None
+            return value.quantize(Decimal("0.01"))
+
+        service_fields = [
+            ("breakfast", self.service_breakfast, self.total_breakfast, self.breakfast_details),
+            ("lunch", self.service_lunch, self.total_lunch, self.lunch_details),
+            ("dinner", self.service_dinner, self.total_dinner, self.dinner_details),
+        ]
+
+        self._service_totals: dict[str, Decimal] = {}
+        self._services_payload: dict[str, dict[str, Any]] = {}
+
+        for slug, toggle_field, total_field, details_field in service_fields:
+            enabled = toggle_field.data == "sim"
+            toggle_field.data = "sim" if enabled else "nao"
+
+            details_raw = (details_field.data or "[]").strip()
+            try:
+                parsed_details = json.loads(details_raw) if details_raw else []
+            except json.JSONDecodeError:
+                details_field.errors.append("Não foi possível processar os detalhes informados.")
                 return False
-            if has_error:
+
+            items: list[dict[str, Any]] = []
+            items_total = Decimal("0")
+
+            if isinstance(parsed_details, list):
+                for entry in parsed_details:
+                    if not isinstance(entry, dict):
+                        continue
+                    description = (entry.get("description") or "").strip()
+                    quantity_raw = entry.get("quantity")
+                    quantity: int | None = None
+                    if quantity_raw not in (None, ""):
+                        try:
+                            quantity = int(quantity_raw)
+                        except (TypeError, ValueError):
+                            details_field.errors.append("Informe quantidades válidas.")
+                            return False
+                        if quantity < 0:
+                            details_field.errors.append("As quantidades devem ser positivas.")
+                            return False
+                    unit_cost = _to_decimal(entry.get("unit_cost"))
+                    total_cost = _to_decimal(entry.get("total_cost"))
+
+                    for price_field, label in ((unit_cost, "unitário"), (total_cost, "total")):
+                        if price_field is not None and price_field < 0:
+                            details_field.errors.append(
+                                f"Os valores {label} devem ser positivos."
+                            )
+                            return False
+
+                    calculated_total = total_cost
+                    if calculated_total is None and unit_cost is not None and quantity not in (None, 0):
+                        try:
+                            calculated_total = unit_cost * Decimal(quantity)
+                        except InvalidOperation:
+                            calculated_total = None
+
+                    if calculated_total is not None:
+                        calculated_total = _quantize(calculated_total)
+                        items_total += calculated_total
+
+                    items.append(
+                        {
+                            "description": description,
+                            "quantity": quantity,
+                            "unit_cost": _quantize(unit_cost),
+                            "total_cost": calculated_total,
+                        }
+                    )
+            else:
+                details_field.errors.append("Não foi possível processar os detalhes informados.")
                 return False
+
+            manual_total = _to_decimal(total_field.data)
+            if manual_total is not None and manual_total < 0:
+                total_field.errors.append("Informe um valor positivo.")
+                return False
+
+            service_total = _quantize(manual_total) if manual_total is not None else _quantize(items_total)
+
+            if not enabled:
+                service_total = None
+                items = []
+                items_total = Decimal("0")
+
+            total_field.data = service_total
+            details_field.data = json.dumps(
+                [
+                    {
+                        "description": item["description"],
+                        "quantity": item["quantity"],
+                        "unit_cost": str(item["unit_cost"]) if item["unit_cost"] is not None else "",
+                        "total_cost": str(item["total_cost"]) if item["total_cost"] is not None else "",
+                    }
+                    for item in items
+                ],
+                ensure_ascii=False,
+            )
+
+            if enabled and service_total is not None:
+                self._service_totals[slug] = service_total
+            else:
+                self._service_totals[slug] = Decimal("0")
+
+            self._services_payload[slug] = {
+                "enabled": enabled,
+                "items": items,
+                "total": service_total,
+            }
+
+        other_materials_raw = (self.other_materials_raw.data or "[]").strip()
+        try:
+            other_materials_parsed = json.loads(other_materials_raw)
+        except json.JSONDecodeError:
+            self.other_materials_raw.errors.append(
+                "Não foi possível processar os materiais informados."
+            )
+            return False
+
+        self._other_materials: list[dict[str, Any]] = []
+        materials_total = Decimal("0")
+
+        if isinstance(other_materials_parsed, list):
+            for item in other_materials_parsed:
+                if not isinstance(item, dict):
+                    continue
+                description = (item.get("description") or "").strip()
+                value_raw = item.get("value")
+                decimal_value = _to_decimal(value_raw)
+
+                if not description and decimal_value is None:
+                    continue
+
+                if decimal_value is not None and decimal_value < 0:
+                    self.other_materials_raw.errors.append(
+                        "Os valores dos materiais devem ser positivos."
+                    )
+                    valid = False
+                    break
+
+                if decimal_value is not None:
+                    decimal_value = _quantize(decimal_value)
+                    materials_total += decimal_value
+
+                self._other_materials.append(
+                    {
+                        "description": description,
+                        "value": decimal_value,
+                    }
+                )
+        else:
+            self.other_materials_raw.errors.append(
+                "Não foi possível processar os materiais informados."
+            )
+            return False
+
+        if not valid:
+            return False
+
+        event_total = materials_total
+        for total in self._service_totals.values():
+            event_total += total
+
+        self._event_total = event_total
+
         return True
 
 
