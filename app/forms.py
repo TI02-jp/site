@@ -465,7 +465,9 @@ class CourseForm(FlaskForm):
 class ManagementEventForm(FlaskForm):
     """Formulário utilizado pela Diretoria JP para registrar eventos."""
 
-    event_type = RadioField(
+    _SERVICE_CHOICES = [("nao", "Não"), ("sim", "Sim")]
+
+    event_type = SelectField(
         "Tipo de Registro",
         choices=[
             ("treinamento", "Treinamento"),
@@ -485,8 +487,17 @@ class ManagementEventForm(FlaskForm):
         validators=[DataRequired(message="Informe a descrição do evento."), Length(max=1000)],
         render_kw={"rows": 3},
     )
-    attendees_internal = BooleanField("Interno")
-    attendees_external = BooleanField("Externo")
+    participation_scope = SelectField(
+        "Participação",
+        choices=[
+            ("", "Selecione"),
+            ("interna", "Interna"),
+            ("externa", "Externa"),
+            ("ambos", "Ambos"),
+        ],
+        validators=[DataRequired(message="Informe o tipo de participação.")],
+        default="",
+    )
     participants_count = IntegerField(
         "Participantes (Nº de pessoas)",
         validators=[
@@ -495,30 +506,48 @@ class ManagementEventForm(FlaskForm):
         ],
         render_kw={"min": 0},
     )
-    include_breakfast = BooleanField("Café da manhã")
-    cost_breakfast = DecimalField(
-        "Custo",
+    service_breakfast = SelectField(
+        "Café da manhã",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_breakfast = DecimalField(
+        "Custo total",
         places=2,
         rounding=None,
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    include_lunch = BooleanField("Almoço")
-    cost_lunch = DecimalField(
-        "Custo",
+    breakfast_details = HiddenField()
+    service_lunch = SelectField(
+        "Almoço",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_lunch = DecimalField(
+        "Custo total",
         places=2,
         rounding=None,
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
-    include_snack = BooleanField("Lanche")
-    cost_snack = DecimalField(
-        "Custo",
+    lunch_details = HiddenField()
+    service_dinner = SelectField(
+        "Janta",
+        choices=_SERVICE_CHOICES,
+        default="nao",
+        validators=[DataRequired()],
+    )
+    total_dinner = DecimalField(
+        "Custo total",
         places=2,
         rounding=None,
         validators=[Optional()],
         render_kw={"min": 0, "step": "0.01"},
     )
+    dinner_details = HiddenField()
     other_materials_raw = HiddenField()
     submit = SubmitField("Salvar evento")
 
@@ -530,10 +559,12 @@ class ManagementEventForm(FlaskForm):
 
         valid = True
 
-        def _to_decimal(value: str | None) -> Decimal | None:
+        def _to_decimal(value: Any) -> Decimal | None:
             if value is None:
                 return None
-            raw = value.strip()
+            if isinstance(value, Decimal):
+                return value
+            raw = str(value).strip()
             if not raw:
                 return None
             normalized = raw.replace(" ", "")
@@ -548,25 +579,119 @@ class ManagementEventForm(FlaskForm):
             except InvalidOperation:
                 return None
 
+        def _quantize(value: Decimal | None) -> Decimal | None:
+            if value is None:
+                return None
+            return value.quantize(Decimal("0.01"))
+
         service_fields = [
-            ("breakfast", self.include_breakfast, self.cost_breakfast),
-            ("lunch", self.include_lunch, self.cost_lunch),
-            ("snack", self.include_snack, self.cost_snack),
+            ("breakfast", self.service_breakfast, self.total_breakfast, self.breakfast_details),
+            ("lunch", self.service_lunch, self.total_lunch, self.lunch_details),
+            ("dinner", self.service_dinner, self.total_dinner, self.dinner_details),
         ]
 
         self._service_totals: dict[str, Decimal] = {}
+        self._services_payload: dict[str, dict[str, Any]] = {}
 
-        for slug, toggle_field, value_field in service_fields:
-            if toggle_field.data:
-                if value_field.data is None or value_field.data < 0:
-                    value_field.errors.append("Informe um custo válido.")
-                    valid = False
-                else:
-                    self._service_totals[slug] = Decimal(value_field.data).quantize(
-                        Decimal("0.01")
+        for slug, toggle_field, total_field, details_field in service_fields:
+            enabled = toggle_field.data == "sim"
+            toggle_field.data = "sim" if enabled else "nao"
+
+            details_raw = (details_field.data or "[]").strip()
+            try:
+                parsed_details = json.loads(details_raw) if details_raw else []
+            except json.JSONDecodeError:
+                details_field.errors.append("Não foi possível processar os detalhes informados.")
+                return False
+
+            items: list[dict[str, Any]] = []
+            items_total = Decimal("0")
+
+            if isinstance(parsed_details, list):
+                for entry in parsed_details:
+                    if not isinstance(entry, dict):
+                        continue
+                    description = (entry.get("description") or "").strip()
+                    quantity_raw = entry.get("quantity")
+                    quantity: int | None = None
+                    if quantity_raw not in (None, ""):
+                        try:
+                            quantity = int(quantity_raw)
+                        except (TypeError, ValueError):
+                            details_field.errors.append("Informe quantidades válidas.")
+                            return False
+                        if quantity < 0:
+                            details_field.errors.append("As quantidades devem ser positivas.")
+                            return False
+                    unit_cost = _to_decimal(entry.get("unit_cost"))
+                    total_cost = _to_decimal(entry.get("total_cost"))
+
+                    for price_field, label in ((unit_cost, "unitário"), (total_cost, "total")):
+                        if price_field is not None and price_field < 0:
+                            details_field.errors.append(
+                                f"Os valores {label} devem ser positivos."
+                            )
+                            return False
+
+                    calculated_total = total_cost
+                    if calculated_total is None and unit_cost is not None and quantity not in (None, 0):
+                        try:
+                            calculated_total = unit_cost * Decimal(quantity)
+                        except InvalidOperation:
+                            calculated_total = None
+
+                    if calculated_total is not None:
+                        calculated_total = _quantize(calculated_total)
+                        items_total += calculated_total
+
+                    items.append(
+                        {
+                            "description": description,
+                            "quantity": quantity,
+                            "unit_cost": _quantize(unit_cost),
+                            "total_cost": calculated_total,
+                        }
                     )
             else:
-                value_field.data = None
+                details_field.errors.append("Não foi possível processar os detalhes informados.")
+                return False
+
+            manual_total = _to_decimal(total_field.data)
+            if manual_total is not None and manual_total < 0:
+                total_field.errors.append("Informe um valor positivo.")
+                return False
+
+            service_total = _quantize(manual_total) if manual_total is not None else _quantize(items_total)
+
+            if not enabled:
+                service_total = None
+                items = []
+                items_total = Decimal("0")
+
+            total_field.data = service_total
+            details_field.data = json.dumps(
+                [
+                    {
+                        "description": item["description"],
+                        "quantity": item["quantity"],
+                        "unit_cost": str(item["unit_cost"]) if item["unit_cost"] is not None else "",
+                        "total_cost": str(item["total_cost"]) if item["total_cost"] is not None else "",
+                    }
+                    for item in items
+                ],
+                ensure_ascii=False,
+            )
+
+            if enabled and service_total is not None:
+                self._service_totals[slug] = service_total
+            else:
+                self._service_totals[slug] = Decimal("0")
+
+            self._services_payload[slug] = {
+                "enabled": enabled,
+                "items": items,
+                "total": service_total,
+            }
 
         other_materials_raw = (self.other_materials_raw.data or "[]").strip()
         try:
@@ -585,7 +710,7 @@ class ManagementEventForm(FlaskForm):
                 if not isinstance(item, dict):
                     continue
                 description = (item.get("description") or "").strip()
-                value_raw = (item.get("value") or "").strip()
+                value_raw = item.get("value")
                 decimal_value = _to_decimal(value_raw)
 
                 if not description and decimal_value is None:
@@ -599,12 +724,13 @@ class ManagementEventForm(FlaskForm):
                     break
 
                 if decimal_value is not None:
-                    materials_total += decimal_value.quantize(Decimal("0.01"))
+                    decimal_value = _quantize(decimal_value)
+                    materials_total += decimal_value
 
                 self._other_materials.append(
                     {
                         "description": description,
-                        "value": str(decimal_value) if decimal_value is not None else "",
+                        "value": decimal_value,
                     }
                 )
         else:
@@ -616,9 +742,11 @@ class ManagementEventForm(FlaskForm):
         if not valid:
             return False
 
-        self._event_total = materials_total
+        event_total = materials_total
         for total in self._service_totals.values():
-            self._event_total += total
+            event_total += total
+
+        self._event_total = event_total
 
         return True
 

@@ -560,22 +560,23 @@ def diretoria_eventos_novo():
     form = ManagementEventForm()
 
     if form.validate_on_submit():
-        def _normalize_decimal(value: Decimal | None) -> Decimal | None:
+        def _normalize_decimal(value: Any) -> Decimal | None:
             if value is None:
                 return None
-            if not isinstance(value, Decimal):
+            if isinstance(value, Decimal):
+                candidate = value
+            else:
                 try:
-                    value = Decimal(str(value))
+                    candidate = Decimal(str(value))
                 except (InvalidOperation, TypeError, ValueError):
                     return None
-            return value.quantize(Decimal("0.01"))
+            return candidate.quantize(Decimal("0.01"))
 
         def _clean_text(value: str | None) -> str | None:
             cleaned = sanitize_html((value or "").strip())
             return cleaned or None
 
         sanitized_materials: list[dict[str, Any]] = []
-        materials_total = Decimal("0")
         for item in getattr(form, "_other_materials", []):
             if not isinstance(item, dict):
                 continue
@@ -587,38 +588,65 @@ def diretoria_eventos_novo():
                     "value": float(value_decimal) if value_decimal is not None else None,
                 }
             )
-            if value_decimal is not None:
-                materials_total += value_decimal
+
+        services_payload = getattr(form, "_services_payload", {})
+
+        def _prepare_items(items: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+            prepared: list[dict[str, Any]] = []
+            if not items:
+                return prepared
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                unit_cost_decimal = _normalize_decimal(item.get("unit_cost"))
+                total_cost_decimal = _normalize_decimal(item.get("total_cost"))
+                prepared.append(
+                    {
+                        "description": _clean_text(item.get("description")),
+                        "quantity": item.get("quantity"),
+                        "unit_cost": float(unit_cost_decimal)
+                        if unit_cost_decimal is not None
+                        else None,
+                        "total_cost": float(total_cost_decimal)
+                        if total_cost_decimal is not None
+                        else None,
+                    }
+                )
+            return prepared
+
+        service_data = {
+            "breakfast": services_payload.get("breakfast", {}),
+            "lunch": services_payload.get("lunch", {}),
+            "dinner": services_payload.get("dinner", {}),
+        }
+
+        breakfast_total = _normalize_decimal(service_data["breakfast"].get("total"))
+        lunch_total = _normalize_decimal(service_data["lunch"].get("total"))
+        dinner_total = _normalize_decimal(service_data["dinner"].get("total"))
 
         event_total_value = getattr(form, "_event_total", Decimal("0"))
-        service_totals = Decimal("0")
-        for total in form._service_totals.values():
-            service_totals += total
-        event_total_value = materials_total + service_totals
+        if isinstance(event_total_value, Decimal):
+            event_total_value = event_total_value.quantize(Decimal("0.01"))
+        else:
+            event_total_value = _normalize_decimal(event_total_value) or Decimal("0")
 
         event = ManagementEvent(
             event_type=form.event_type.data,
             event_date=form.event_date.data,
             description=_clean_text(form.description.data) or "",
-            attendees_internal=bool(form.attendees_internal.data),
-            attendees_external=bool(form.attendees_external.data),
+            attendance_scope=form.participation_scope.data,
             participants_count=form.participants_count.data,
-            include_breakfast=bool(form.include_breakfast.data),
-            cost_breakfast=_normalize_decimal(form.cost_breakfast.data)
-            if form.include_breakfast.data
-            else None,
-            include_lunch=bool(form.include_lunch.data),
-            cost_lunch=_normalize_decimal(form.cost_lunch.data)
-            if form.include_lunch.data
-            else None,
-            include_snack=bool(form.include_snack.data),
-            cost_snack=_normalize_decimal(form.cost_snack.data)
-            if form.include_snack.data
-            else None,
+            include_breakfast=bool(service_data["breakfast"].get("enabled")),
+            cost_breakfast=breakfast_total,
+            breakfast_items=_prepare_items(service_data["breakfast"].get("items")),
+            include_lunch=bool(service_data["lunch"].get("enabled")),
+            cost_lunch=lunch_total,
+            lunch_items=_prepare_items(service_data["lunch"].get("items")),
+            include_dinner=bool(service_data["dinner"].get("enabled")),
+            cost_dinner=dinner_total,
+            dinner_items=_prepare_items(service_data["dinner"].get("items")),
             other_materials=sanitized_materials,
-            event_total=event_total_value.quantize(Decimal("0.01"))
-            if isinstance(event_total_value, Decimal)
-            else _normalize_decimal(event_total_value),
+            event_total=event_total_value,
             created_by_id=current_user.id,
         )
         db.session.add(event)
@@ -631,8 +659,14 @@ def diretoria_eventos_novo():
             "danger",
         )
 
-    if request.method == "GET" and not form.other_materials_raw.data:
-        form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
+    if request.method == "GET":
+        if not form.other_materials_raw.data:
+            form.other_materials_raw.data = json.dumps([], ensure_ascii=False)
+        for field_name in ("breakfast_details", "lunch_details", "dinner_details"):
+            field = getattr(form, field_name, None)
+            if field is not None and not field.data:
+                field.data = json.dumps([], ensure_ascii=False)
+
     return render_template("diretoria/eventos_registrar.html", form=form)
 
 

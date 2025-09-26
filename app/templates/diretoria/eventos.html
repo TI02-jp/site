@@ -66,7 +66,7 @@
                             <th scope="col">Participantes</th>
                             <th scope="col" class="service-cost">Café da manhã</th>
                             <th scope="col" class="service-cost">Almoço</th>
-                            <th scope="col" class="service-cost">Lanche</th>
+                            <th scope="col" class="service-cost">Janta</th>
                             <th scope="col" style="min-width: 220px;">Outros materiais</th>
                             <th scope="col">Total estimado</th>
                             <th scope="col">Registrado por</th>
@@ -80,13 +80,15 @@
                             <td>{{ event.event_date.strftime('%d/%m/%Y') }}</td>
                             <td class="text-break">{{ event.description or '—' }}</td>
                             <td>
-                                {% if event.attendees_internal %}
-                                    <span class="badge bg-primary-subtle text-primary">Interno</span>
-                                {% endif %}
-                                {% if event.attendees_external %}
-                                    <span class="badge bg-success-subtle text-success ms-1">Externo</span>
-                                {% endif %}
-                                {% if not event.attendees_internal and not event.attendees_external %}
+                                {% set scope = (event.attendance_scope or '').lower() %}
+                                {% if scope == 'ambos' %}
+                                    <span class="badge bg-primary-subtle text-primary">Interna</span>
+                                    <span class="badge bg-success-subtle text-success ms-1">Externa</span>
+                                {% elif scope == 'externa' %}
+                                    <span class="badge bg-success-subtle text-success">Externa</span>
+                                {% elif scope == 'interna' %}
+                                    <span class="badge bg-primary-subtle text-primary">Interna</span>
+                                {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
@@ -94,6 +96,22 @@
                             <td>
                                 {% if event.include_breakfast %}
                                     <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_breakfast or 0) }}</div>
+                                    {% set breakfast_items = event.breakfast_items or [] %}
+                                    {% if breakfast_items %}
+                                        <div class="small text-muted mt-1">
+                                            {% for item in breakfast_items %}
+                                                <div>
+                                                    {{ item.description or 'Sem descrição' }}
+                                                    {% if item.quantity is not none %}
+                                                        • Qtd: {{ item.quantity|int }}
+                                                    {% endif %}
+                                                    {% if item.total_cost is not none %}
+                                                        • R$ {{ '%.2f'|format(item.total_cost) }}
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted">Não</span>
                                 {% endif %}
@@ -101,13 +119,45 @@
                             <td>
                                 {% if event.include_lunch %}
                                     <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_lunch or 0) }}</div>
+                                    {% set lunch_items = event.lunch_items or [] %}
+                                    {% if lunch_items %}
+                                        <div class="small text-muted mt-1">
+                                            {% for item in lunch_items %}
+                                                <div>
+                                                    {{ item.description or 'Sem descrição' }}
+                                                    {% if item.quantity is not none %}
+                                                        • Qtd: {{ item.quantity|int }}
+                                                    {% endif %}
+                                                    {% if item.total_cost is not none %}
+                                                        • R$ {{ '%.2f'|format(item.total_cost) }}
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted">Não</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if event.include_snack %}
-                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_snack or 0) }}</div>
+                                {% if event.include_dinner %}
+                                    <div class="fw-semibold">R$ {{ '%.2f'|format(event.cost_dinner or 0) }}</div>
+                                    {% set dinner_items = event.dinner_items or [] %}
+                                    {% if dinner_items %}
+                                        <div class="small text-muted mt-1">
+                                            {% for item in dinner_items %}
+                                                <div>
+                                                    {{ item.description or 'Sem descrição' }}
+                                                    {% if item.quantity is not none %}
+                                                        • Qtd: {{ item.quantity|int }}
+                                                    {% endif %}
+                                                    {% if item.total_cost is not none %}
+                                                        • R$ {{ '%.2f'|format(item.total_cost) }}
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted">Não</span>
                                 {% endif %}
