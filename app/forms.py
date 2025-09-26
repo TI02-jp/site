@@ -336,6 +336,7 @@ class MeetingForm(FlaskForm):
         widget=widgets.ListWidget(prefix_label=False),
     )
     meeting_id = HiddenField()
+    course_id = HiddenField()
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
     start_time = TimeField("Hora de Início", format="%H:%M", validators=[DataRequired()])
     end_time = TimeField("Hora de Fim", format="%H:%M", validators=[DataRequired()])

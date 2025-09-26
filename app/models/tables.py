@@ -324,6 +324,11 @@ class Reuniao(db.Model):
     descricao = db.Column(db.Text)
     meet_link = db.Column(db.String(255))
     google_event_id = db.Column(db.String(255))
+    course_id = db.Column(
+        db.Integer,
+        db.ForeignKey('courses.id', ondelete='SET NULL'),
+        nullable=True,
+    )
     status = db.Column(
         db.Enum(ReuniaoStatus, name="reuniao_status"),
         nullable=False,
@@ -342,6 +347,7 @@ class Reuniao(db.Model):
         lazy=True,
     )
     criador = db.relationship('User', foreign_keys=[criador_id])
+    course = db.relationship('Course', backref=db.backref('meetings', lazy=True))
 
 
 class ReuniaoParticipante(db.Model):

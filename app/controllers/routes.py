@@ -389,9 +389,24 @@ def cursos():
             flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
             return redirect(url_for("cursos"))
 
+        linked_meetings = Reuniao.query.filter_by(course_id=course_id).all()
+        for meeting in linked_meetings:
+            if not delete_meeting(meeting):
+                flash(
+                    "Não foi possível remover a reunião vinculada no calendário. Tente novamente em alguns instantes.",
+                    "danger",
+                )
+                return redirect(url_for("cursos"))
+
         db.session.execute(sa.delete(Course).where(Course.id == course_id))
         db.session.commit()
-        flash("Curso excluído com sucesso!", "success")
+        if linked_meetings:
+            flash(
+                "Curso e reuniões associadas excluídos com sucesso!",
+                "success",
+            )
+        else:
+            flash("Curso excluído com sucesso!", "success")
         return redirect(url_for("cursos"))
 
     if form.validate_on_submit():
@@ -472,6 +487,7 @@ def cursos():
             )
             db.session.add(course)
             db.session.commit()
+            course_id = course.id
             success_message = "Curso cadastrado com sucesso!"
         if success_message:
             flash(success_message, "success")
@@ -480,6 +496,8 @@ def cursos():
             and meeting_query_params.get("subject")
             and meeting_query_params.get("date")
         ):
+            if course_id is not None:
+                meeting_query_params["course_id"] = str(course_id)
             return redirect(url_for("sala_reunioes", **meeting_query_params))
         return redirect(url_for("cursos"))
 
@@ -810,6 +828,7 @@ def sala_reunioes():
             form.participants.data = participant_ids
         form.apply_more_days.data = False
         form.notify_attendees.data = True
+        form.course_id.data = request.args.get("course_id", "")
         show_modal = True
         flash(
             "Revise os dados do curso, ajuste se necessário e confirme o agendamento da reunião.",
