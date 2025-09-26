@@ -26,6 +26,18 @@ CALENDAR_TZ = get_calendar_timezone()
 MIN_GAP = timedelta(minutes=2)
 
 
+def _parse_course_id(form) -> int | None:
+    """Return the course identifier associated with the form submission."""
+
+    field = getattr(form, "course_id", None)
+    if not field or not getattr(field, "data", None):
+        return None
+    try:
+        return int(field.data)
+    except (TypeError, ValueError):
+        return None
+
+
 def populate_participants_choices(form):
     """Populate participant choices ordered by name."""
     form.participants.choices = [
@@ -93,6 +105,7 @@ def _create_additional_meeting(
     participant_emails: list[str],
     should_notify: bool,
     user_id: int,
+    course_id: int | None,
 ):
     start_dt = datetime.combine(
         additional_date, form.start_time.data, tzinfo=CALENDAR_TZ
@@ -127,6 +140,7 @@ def _create_additional_meeting(
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        course_id=course_id,
     )
     db.session.add(meeting)
     db.session.flush()
@@ -158,6 +172,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     whether the meeting was created and ``meet_link`` contains the generated
     Google Meet URL when available.
     """
+    course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
@@ -227,6 +242,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             participant_emails,
             notify_attendees=should_notify,
         )
+        meet_link = event.get("hangoutLink")
     else:
         event = create_event(
             form.subject.data,
@@ -236,7 +252,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             participant_emails,
             notify_attendees=should_notify,
         )
-    meet_link = event.get("hangoutLink")
+        meet_link = None
     meeting = Reuniao(
         inicio=start_dt,
         fim=end_dt,
@@ -246,6 +262,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        course_id=course_id_value,
     )
     db.session.add(meeting)
     db.session.flush()
@@ -277,6 +294,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 participant_emails,
                 should_notify,
                 user_id,
+                course_id_value,
             )
             if not meet_link and link and not additional_meet_link:
                 additional_meet_link = link
@@ -289,6 +307,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     Returns a tuple ``(success, meet_link)`` similar to
     :func:`create_meeting_and_event`.
     """
+    course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
@@ -329,6 +348,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.fim = end_dt
     meeting.assunto = form.subject.data
     meeting.descricao = form.description.data
+    meeting.course_id = course_id_value
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
@@ -446,6 +466,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "meeting_id": r.id,
             "can_edit": can_edit,
             "can_delete": can_delete,
+            "course_id": r.course_id,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link

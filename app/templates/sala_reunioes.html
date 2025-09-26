@@ -88,6 +88,7 @@
                             <div class="modal-body text-start">
                                 {{ form.csrf_token }}
                                 {{ form.meeting_id(id='meeting_id') }}
+                                {{ form.course_id(id='meeting_course_id') }}
                                 <div class="row">
                                     <div class="mb-3 col-md-6">
                                         {{ form.participants.label(class="form-label") }}
@@ -439,6 +440,10 @@
         clearAdditionalDates();
         toggleAdditionalDates();
         document.getElementById('meeting_id').value = '';
+        var courseInput = document.getElementById('meeting_course_id');
+        if (courseInput) {
+            courseInput.value = '';
+        }
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
@@ -579,6 +584,9 @@
                         if (existing.extendedProps.can_delete !== evData.can_delete) {
                             existing.setExtendedProp('can_delete', evData.can_delete);
                         }
+                        if (existing.extendedProps.course_id !== evData.course_id) {
+                            existing.setExtendedProp('course_id', evData.course_id);
+                        }
                         if (existing.extendedProps.meet_link !== evData.meet_link) {
                             existing.setExtendedProp('meet_link', evData.meet_link);
                         }
@@ -622,6 +630,10 @@
         detailModal.hide();
         var form = document.querySelector('#meetingModal form');
         document.getElementById('meeting_id').value = currentEvent.id || '';
+        var courseInput = document.getElementById('meeting_course_id');
+        if (courseInput) {
+            courseInput.value = currentEvent.extendedProps.course_id || '';
+        }
         form.subject.value = currentEvent.title;
         var start = currentEvent.startStr;
         var end = currentEvent.endStr;
