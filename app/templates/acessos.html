@@ -64,7 +64,7 @@
                                 <div class="d-flex flex-column gap-2">
                                     {% for link in categoria_links.get(slug, []) %}
                                     <a
-                                        class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-between"
+                                        class="btn btn-outline-primary d-flex align-items-center justify-content-between gap-2 px-3 align-self-start"
                                         href="{{ link.url }}"
                                         target="_blank"
                                         rel="noopener"
@@ -85,7 +85,11 @@
                                         Adicionar atalho
                                     </a>
                                     {% else %}
-                                    <button class="btn btn-sm btn-outline-secondary mt-2 align-self-start" type="button" disabled>
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary mt-2 align-self-start"
+                                        type="button"
+                                        disabled
+                                    >
                                         <i class="bi bi-plus-lg me-1"></i>
                                         Adicionar atalho
                                     </button>
