@@ -10,6 +10,7 @@ from flask import (
     jsonify,
     current_app,
     session,
+    has_request_context,
 )
 from functools import wraps
 from collections import Counter
@@ -289,11 +290,21 @@ def build_google_flow(state: str | None = None) -> Flow:
 
 def get_google_redirect_uri() -> str:
     """Return the redirect URI registered with Google."""
-    return current_app.config.get("GOOGLE_REDIRECT_URI") or url_for(
-        "google_callback",
-        _external=True,
-        _scheme=current_app.config["PREFERRED_URL_SCHEME"],
-    )
+
+    configured_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
+    if configured_uri:
+        return configured_uri
+
+    if has_request_context():
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", request.scheme or "")
+        # ``X-Forwarded-Proto`` may contain a comma-separated list when multiple
+        # proxies are involved. Google only accepts a single scheme, so we pick
+        # the first declared value and fall back to the detected request scheme.
+        scheme = (forwarded_proto.split(",", 1)[0] or request.scheme or "http").strip()
+    else:
+        scheme = current_app.config.get("PREFERRED_URL_SCHEME", "http")
+
+    return url_for("google_callback", _external=True, _scheme=scheme)
 
 
 def credentials_to_dict(credentials):
