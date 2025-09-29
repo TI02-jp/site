@@ -1539,13 +1539,18 @@ def google_login():
     """Start OAuth login with Google."""
     flow = build_google_flow()
     authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true", prompt="consent"
+        access_type="offline", include_granted_scopes=True, prompt="consent"
     )
     session["oauth_state"] = state
     # ``google-auth`` only attaches the PKCE verifier to the flow instance, so we
-    # persist it explicitly to reuse on the callback. Storing ``None`` keeps the
-    # key consistent and avoids hitting a stale value from a previous attempt.
-    session["oauth_code_verifier"] = getattr(flow, "code_verifier", None)
+    # persist it explicitly to reuse on the callback.
+    code_verifier = getattr(flow, "code_verifier", None)
+    if isinstance(code_verifier, bytes):
+        code_verifier = code_verifier.decode()
+    if code_verifier:
+        session["oauth_code_verifier"] = code_verifier
+    else:
+        session.pop("oauth_code_verifier", None)
     return redirect(authorization_url)
 
 
@@ -1561,10 +1566,10 @@ def google_callback():
         return redirect(url_for("login"))
     flow = build_google_flow(state=state)
     try:
-        flow.fetch_token(
-            authorization_response=request.url,
-            code_verifier=code_verifier,
-        )
+        fetch_kwargs = {"authorization_response": request.url}
+        if code_verifier:
+            fetch_kwargs["code_verifier"] = code_verifier
+        flow.fetch_token(**fetch_kwargs)
     except Exception:
         current_app.logger.exception("Falha ao trocar código OAuth do Google por token")
         flash("Não foi possível completar a autenticação com o Google.", "danger")
@@ -1575,9 +1580,14 @@ def google_callback():
     credentials = flow.credentials
     request_session = requests.Session()
     token_request = Request(session=request_session)
-    id_info = id_token.verify_oauth2_token(
-        credentials.id_token, token_request, current_app.config["GOOGLE_CLIENT_ID"]
-    )
+    try:
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token, token_request, current_app.config["GOOGLE_CLIENT_ID"]
+        )
+    except ValueError:
+        current_app.logger.exception("ID token do Google inválido durante login")
+        flash("Não foi possível validar a resposta do Google.", "danger")
+        return redirect(url_for("login"))
     google_id = id_info.get("sub")
     email = id_info.get("email")
     name = id_info.get("name", email)
