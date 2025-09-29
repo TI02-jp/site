@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Eventos cadastrados - Diretoria JP{% endblock %}
+
+{% macro format_currency(value) %}
+    {% set amount = (value or 0)|float %}
+    R$ {{ "{:,.2f}".format(amount).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+{% endmacro %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .eventos-list .form-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #495057;
+            text-align: left;
+        }
+
+        .eventos-list .search-actions .btn {
+            min-width: 110px;
+        }
+
+        .eventos-list .table thead th {
+            font-size: 0.75rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: #6c757d;
+        }
+
+        .eventos-list .table tbody td {
+            vertical-align: middle;
+            font-size: 0.85rem;
+        }
+
+        .eventos-list .table tbody td .small {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        .eventos-list .totals-list span {
+            color: #212529;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid eventos-list">
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
+                Diretoria JP
+            </span>
+            <h1 class="h3 mb-0">Eventos cadastrados</h1>
+        </div>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('diretoria_eventos') }}">
+            <i class="bi bi-plus-lg me-1"></i>Nova estimativa
+        </a>
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-4 search-actions">
+        <div class="col-12 col-md-6 col-lg-4">
+            <label class="form-label" for="buscarEvento">Pesquisar por nome</label>
+            <input type="text" class="form-control" id="buscarEvento" name="q" value="{{ search_query }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Pesquisar</button>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('diretoria_eventos_lista') }}" class="btn btn-outline-secondary">Limpar</a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Nome do evento</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Público</th>
+                    <th scope="col">Participantes</th>
+                    <th scope="col">Totais por serviço</th>
+                    <th scope="col">Total estimado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if events %}
+                    {% for event in events %}
+                        {% set services = event.services or {} %}
+                        {% set cafe_total = services.get('cafe', {}).get('total', 0) %}
+                        {% set almoco_total = services.get('almoco', {}).get('total', 0) %}
+                        {% set lanche_total = services.get('lanche', {}).get('total', 0) %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ event.name }}</div>
+                                <div class="small">{{ event_type_labels.get(event.event_type, event.event_type) }}</div>
+                            </td>
+                            <td>{{ event.event_date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ audience_labels.get(event.audience, event.audience) }}</td>
+                            <td>{{ event.participants }}</td>
+                            <td class="totals-list">
+                                <div class="small">{{ category_labels['cafe'] }}: <span class="fw-semibold">{{ format_currency(cafe_total) }}</span></div>
+                                <div class="small">{{ category_labels['almoco'] }}: <span class="fw-semibold">{{ format_currency(almoco_total) }}</span></div>
+                                <div class="small">{{ category_labels['lanche'] }}: <span class="fw-semibold">{{ format_currency(lanche_total) }}</span></div>
+                            </td>
+                            <td class="fw-semibold">{{ format_currency(event.total_cost) }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-muted">Nenhum evento encontrado.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

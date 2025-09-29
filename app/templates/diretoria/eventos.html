@@ -158,14 +158,23 @@
 
 {% block content %}
 <div class="container-fluid eventos-form">
-    <div class="d-flex align-items-center mb-4">
-        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold me-3">
-            Diretoria JP
-        </span>
-        <h1 class="h3 mb-0">Eventos</h1>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
+                Diretoria JP
+            </span>
+            <h1 class="h3 mb-0">Eventos</h1>
+        </div>
+        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('diretoria_eventos_lista') }}">
+            <i class="bi bi-list-ul me-1"></i>Ver eventos cadastrados
+        </a>
     </div>
     <form id="formEventos" class="needs-validation" novalidate>
         <div class="row g-3 mb-4 metadata">
+            <div class="col-12 col-lg-6">
+                <label for="nomeEvento" class="form-label">Nome do evento</label>
+                <input type="text" class="form-control" id="nomeEvento" required>
+            </div>
             <div class="col-12 col-md-6 col-lg-3">
                 <label for="tipoEvento" class="form-label">Tipo de evento</label>
                 <select id="tipoEvento" class="form-select" required>
@@ -316,6 +325,7 @@
 {% block scripts %}
     {{ super() }}
     <script>
+        window.csrfToken = "{{ csrf_token() }}";
         (() => {
             const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -333,6 +343,9 @@
 
             const form = document.getElementById('formEventos');
             const totalEventoInput = document.getElementById('totalEvento');
+            const submitUrl = "{{ url_for('diretoria_eventos') }}";
+            const listUrl = "{{ url_for('diretoria_eventos_lista') }}";
+            const csrfToken = window.csrfToken;
 
             const createItemRow = (categoryKey) => {
                 const row = document.createElement('div');
@@ -482,9 +495,87 @@
                 }, 0);
             });
 
-            form.addEventListener('submit', (event) => {
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 form.classList.add('was-validated');
+
+                if (!form.checkValidity()) {
+                    return;
+                }
+
+                const submitButton = form.querySelector('button[type="submit"]');
+                let shouldUnlockButton = true;
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                const payload = {
+                    name: document.getElementById('nomeEvento').value.trim(),
+                    type: document.getElementById('tipoEvento').value,
+                    date: document.getElementById('dataEvento').value,
+                    description: document.getElementById('descricaoEvento').value.trim(),
+                    audience: document.getElementById('publicoEvento').value,
+                    participants: Number.parseInt(document.getElementById('numeroParticipantes').value, 10) || 0,
+                    categories: {},
+                };
+
+                document.querySelectorAll('.event-category').forEach((categoryEl) => {
+                    const toggle = categoryEl.querySelector('[data-category-toggle]');
+                    if (!toggle || !toggle.checked) {
+                        return;
+                    }
+
+                    const categoryKey = categoryEl.dataset.category;
+                    const items = [];
+
+                    categoryEl.querySelectorAll('.category-item').forEach((itemRow) => {
+                        const inputs = itemRow.querySelectorAll('input');
+                        const itemName = inputs[0].value.trim();
+                        const quantityValue = Number.parseFloat(inputs[1].value);
+                        const unitValue = Number.parseFloat(inputs[2].value);
+
+                        if (!itemName || !Number.isFinite(quantityValue) || !Number.isFinite(unitValue)) {
+                            return;
+                        }
+
+                        items.push({
+                            name: itemName,
+                            quantity: quantityValue,
+                            unit_value: unitValue,
+                        });
+                    });
+
+                    payload.categories[categoryKey] = { items };
+                });
+
+                try {
+                    const response = await fetch(submitUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const data = await response.json().catch(() => null);
+
+                    if (!response.ok) {
+                        const message = (data?.errors && data.errors.join('\n')) || data?.error || 'Não foi possível salvar o evento.';
+                        alert(message);
+                        return;
+                    }
+
+                    const redirectUrl = data?.redirect_url || listUrl;
+                    shouldUnlockButton = false;
+                    window.location.href = redirectUrl;
+                } catch (error) {
+                    alert('Não foi possível salvar o evento. Tente novamente.');
+                } finally {
+                    if (submitButton && shouldUnlockButton) {
+                        submitButton.disabled = false;
+                    }
+                }
             });
         })();
     </script>

@@ -35,6 +35,7 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    DiretoriaEvent,
     GeneralCalendarEvent,
 )
 from app.forms import (
@@ -90,6 +91,7 @@ import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 GOOGLE_OAUTH_SCOPES = [
@@ -131,6 +133,25 @@ ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
         "icon": "bi bi-box-arrow-up-right",
     },
 ]
+
+
+EVENT_TYPE_LABELS = {
+    "treinamento": "Treinamento",
+    "data_comemorativa": "Data comemorativa",
+    "evento": "Evento",
+}
+
+EVENT_AUDIENCE_LABELS = {
+    "interno": "Interno",
+    "externo": "Externo",
+    "ambos": "Ambos",
+}
+
+EVENT_CATEGORY_LABELS = {
+    "cafe": "Café da manhã",
+    "almoco": "Almoço",
+    "lanche": "Lanche",
+}
 
 
 def build_google_flow(state: str | None = None) -> Flow:
@@ -343,15 +364,169 @@ def home():
     return render_template("home.html")
 
 
-@app.route("/diretoria/eventos")
+@app.route("/diretoria/eventos", methods=["GET", "POST"])
 @login_required
 def diretoria_eventos():
-    """Render the Diretoria JP events planning page."""
+    """Render or persist Diretoria JP event planning data."""
 
     if current_user.role != "admin" and not user_has_tag("Gestão"):
         abort(403)
 
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+
+        name = (payload.get("name") or "").strip()
+        event_type = payload.get("type")
+        date_raw = payload.get("date")
+        description = (payload.get("description") or "").strip()
+        audience = payload.get("audience")
+        participants_raw = payload.get("participants")
+        categories_payload = payload.get("categories") or {}
+
+        errors: list[str] = []
+
+        if not name:
+            errors.append("Informe o nome do evento.")
+
+        if event_type not in EVENT_TYPE_LABELS:
+            errors.append("Selecione um tipo de evento válido.")
+
+        try:
+            event_date = datetime.strptime(str(date_raw), "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            errors.append("Informe uma data válida para o evento.")
+            event_date = None
+
+        if audience not in EVENT_AUDIENCE_LABELS:
+            errors.append("Selecione o público participante do evento.")
+
+        try:
+            participants = int(participants_raw)
+            if participants < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            errors.append("Informe o número de participantes do evento.")
+            participants = 0
+
+        if errors:
+            return jsonify({"errors": errors}), 400
+
+        services_payload: dict[str, dict[str, object]] = {}
+        total_event = Decimal("0.00")
+
+        for key in EVENT_CATEGORY_LABELS:
+            category_data = categories_payload.get(key, {})
+            items_data = []
+            if isinstance(category_data, dict):
+                items_data = category_data.get("items", []) or []
+
+            processed_items: list[dict[str, object]] = []
+            category_total = Decimal("0.00")
+
+            if isinstance(items_data, list):
+                for item in items_data:
+                    if not isinstance(item, dict):
+                        continue
+
+                    item_name = (item.get("name") or "").strip()
+                    if not item_name:
+                        continue
+
+                    try:
+                        quantity = Decimal(str(item.get("quantity", "0")))
+                        unit_value = Decimal(str(item.get("unit_value", "0")))
+                    except (InvalidOperation, TypeError):
+                        continue
+
+                    if quantity < 0 or unit_value < 0:
+                        continue
+
+                    line_total = (quantity * unit_value).quantize(Decimal("0.01"))
+
+                    processed_items.append(
+                        {
+                            "name": item_name,
+                            "quantity": float(quantity),
+                            "unit_value": float(unit_value),
+                            "total": float(line_total),
+                        }
+                    )
+
+                    category_total += line_total
+
+            category_total = category_total.quantize(Decimal("0.01"))
+            services_payload[key] = {
+                "items": processed_items,
+                "total": float(category_total),
+            }
+            total_event += category_total
+
+        total_event = total_event.quantize(Decimal("0.01"))
+
+        diretoria_event = DiretoriaEvent(
+            name=name,
+            event_type=event_type,
+            event_date=event_date,
+            description=description or None,
+            audience=audience,
+            participants=participants,
+            services=services_payload,
+            total_cost=total_event,
+            created_by=current_user,
+        )
+
+        db.session.add(diretoria_event)
+        db.session.commit()
+
+        session["diretoria_event_saved"] = diretoria_event.name
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "redirect_url": url_for("diretoria_eventos_lista"),
+                }
+            ),
+            201,
+        )
+
     return render_template("diretoria/eventos.html")
+
+
+@app.route("/diretoria/eventos/lista")
+@login_required
+def diretoria_eventos_lista():
+    """Display saved Diretoria JP events with search support."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    search_query = (request.args.get("q") or "").strip()
+
+    events_query = DiretoriaEvent.query
+    if search_query:
+        events_query = events_query.filter(
+            DiretoriaEvent.name.ilike(f"%{search_query}%")
+        )
+
+    events = (
+        events_query.order_by(
+            DiretoriaEvent.event_date.desc(), DiretoriaEvent.created_at.desc()
+        ).all()
+    )
+
+    last_saved = session.pop("diretoria_event_saved", None)
+    if last_saved:
+        flash(f'Evento "{last_saved}" salvo com sucesso.', "success")
+
+    return render_template(
+        "diretoria/eventos_lista.html",
+        events=events,
+        search_query=search_query,
+        event_type_labels=EVENT_TYPE_LABELS,
+        audience_labels=EVENT_AUDIENCE_LABELS,
+        category_labels=EVENT_CATEGORY_LABELS,
+    )
 
 
 @app.route("/cursos", methods=["GET", "POST"])
