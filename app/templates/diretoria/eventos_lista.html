@@ -116,7 +116,7 @@
                                 </a>
                                 <form action="{{ url_for('diretoria_eventos_excluir', event_id=event.id) }}" method="post" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza de que deseja excluir o evento {{ event.name|escapejs }}?');">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza de que deseja excluir o evento ' + {{ event.name|tojson }} + '?');">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
