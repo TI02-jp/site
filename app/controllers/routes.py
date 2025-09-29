@@ -1539,7 +1539,7 @@ def google_login():
     """Start OAuth login with Google."""
     flow = build_google_flow()
     authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes=True, prompt="consent"
+        access_type="offline", include_granted_scopes="true", prompt="consent"
     )
     session["oauth_state"] = state
     # ``google-auth`` only attaches the PKCE verifier to the flow instance, so we
