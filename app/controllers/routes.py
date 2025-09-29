@@ -1602,7 +1602,16 @@ def google_callback():
         return redirect(url_for("login"))
     flow = build_google_flow(state=state)
     try:
-        fetch_kwargs = {"authorization_response": request.url}
+        # ``request.url`` may reflect the internal HTTP scheme when the app is behind
+        # a reverse proxy performing TLS termination. Reconstruct the callback URL
+        # from the configured redirect URI so Google receives the same host and
+        # scheme that was originally registered.
+        authorization_response = flow.redirect_uri or request.url
+        if request.query_string:
+            query_string = request.query_string.decode()
+            separator = "&" if "?" in authorization_response else "?"
+            authorization_response = f"{authorization_response}{separator}{query_string}"
+        fetch_kwargs = {"authorization_response": authorization_response}
         if code_verifier:
             fetch_kwargs["code_verifier"] = code_verifier
         flow.fetch_token(**fetch_kwargs)
