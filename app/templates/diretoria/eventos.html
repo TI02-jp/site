@@ -71,28 +71,12 @@
             margin-bottom: 1.25rem;
         }
 
-        .eventos-form .event-category .category-header > .category-title {
-            flex: 1 1 240px;
-            min-width: 200px;
-        }
-
         .eventos-form .event-category .category-title {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: flex-start;
             gap: 0.75rem;
-        }
-
-        .eventos-form .event-category .category-header > .category-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-start;
-            gap: 0.5rem;
-        }
-
-        .eventos-form .event-category .category-header [data-action="add-item"] {
-            flex-shrink: 0;
         }
 
         .eventos-form .event-category .toggle-wrapper {
@@ -124,6 +108,16 @@
             padding: 0.25rem 0.5rem;
         }
 
+        .eventos-form .event-category .category-footer {
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 1rem;
+        }
+
+        .eventos-form .event-category .category-footer [data-action="add-item"] {
+            flex-shrink: 0;
+        }
+
         .eventos-form .totals-row .form-control {
             font-size: 0.9rem;
         }
@@ -143,15 +137,6 @@
                 width: 50%;
             }
 
-            .eventos-form .event-category .category-header {
-                align-items: center;
-                justify-content: flex-start;
-                gap: 1rem;
-            }
-
-            .eventos-form .event-category .category-header > .category-actions {
-                justify-content: flex-start;
-            }
         }
     </style>
 {% endblock %}
@@ -227,14 +212,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="category-actions">
+                </div>
+                <div class="category-body">
+                    <div class="category-items"></div>
+                    <div class="category-footer">
                         <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item" disabled>
                             <i class="bi bi-plus-lg me-1"></i>Adicionar item
                         </button>
                     </div>
-                </div>
-                <div class="category-body">
-                    <div class="category-items"></div>
                     <div class="mt-3">
                         <span class="text-muted me-2">Total café da manhã:</span>
                         <span class="fw-semibold" data-category-total>R$ 0,00</span>
@@ -254,14 +239,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="category-actions">
+                </div>
+                <div class="category-body">
+                    <div class="category-items"></div>
+                    <div class="category-footer">
                         <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item" disabled>
                             <i class="bi bi-plus-lg me-1"></i>Adicionar item
                         </button>
                     </div>
-                </div>
-                <div class="category-body">
-                    <div class="category-items"></div>
                     <div class="mt-3">
                         <span class="text-muted me-2">Total almoço:</span>
                         <span class="fw-semibold" data-category-total>R$ 0,00</span>
@@ -281,16 +266,42 @@
                             </div>
                         </div>
                     </div>
-                    <div class="category-actions">
+                </div>
+                <div class="category-body">
+                    <div class="category-items"></div>
+                    <div class="category-footer">
                         <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item" disabled>
                             <i class="bi bi-plus-lg me-1"></i>Adicionar item
                         </button>
                     </div>
+                    <div class="mt-3">
+                        <span class="text-muted me-2">Total lanche:</span>
+                        <span class="fw-semibold" data-category-total>R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="event-category pt-4 is-disabled" data-category="outros">
+                <div class="category-header">
+                    <div class="category-title">
+                        <h3 class="fs-6 fw-semibold mb-0">Outros serviços</h3>
+                        <div class="toggle-wrapper">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="toggleOutros" data-category-toggle="outros">
+                                <label class="form-check-label" for="toggleOutros">Incluir serviço</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="category-body">
                     <div class="category-items"></div>
+                    <div class="category-footer">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item" disabled>
+                            <i class="bi bi-plus-lg me-1"></i>Adicionar item
+                        </button>
+                    </div>
                     <div class="mt-3">
-                        <span class="text-muted me-2">Total lanche:</span>
+                        <span class="text-muted me-2">Total outros serviços:</span>
                         <span class="fw-semibold" data-category-total>R$ 0,00</span>
                     </div>
                 </div>
@@ -311,6 +322,10 @@
             <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalLanche" class="form-label">Total lanche</label>
                 <input type="text" class="form-control" id="totalLanche" value="R$ 0,00" readonly>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label for="totalOutros" class="form-label">Total outros serviços</label>
+                <input type="text" class="form-control" id="totalOutros" value="R$ 0,00" readonly>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalEvento" class="form-label">Valor total estimado do evento</label>
@@ -342,6 +357,9 @@
                 },
                 lanche: {
                     input: document.getElementById('totalLanche'),
+                },
+                outros: {
+                    input: document.getElementById('totalOutros'),
                 },
             };
 
@@ -445,8 +463,12 @@
                 const setCategoryState = (active) => {
                     categoryEl.classList.toggle('is-active', active);
                     categoryEl.classList.toggle('is-disabled', !active);
-                    addButton.disabled = !active;
-                    addButton.classList.toggle('d-none', !active);
+
+                    if (addButton) {
+                        addButton.disabled = !active;
+                        addButton.classList.toggle('d-none', !active);
+                    }
+
                     categoryBody.style.display = active ? 'block' : 'none';
 
                     if (active && itemsContainer.childElementCount === 0) {
@@ -474,7 +496,7 @@
                     updateCategoryTotals();
                 };
 
-                addButton.addEventListener('click', addItem);
+                addButton?.addEventListener('click', addItem);
 
                 toggle.addEventListener('change', () => {
                     setCategoryState(toggle.checked);
