@@ -1593,6 +1593,16 @@ def google_login():
 @app.route("/oauth2callback")
 def google_callback():
     """Handle OAuth callback from Google."""
+    error = request.args.get("error")
+    if error:
+        session.pop("oauth_state", None)
+        session.pop("oauth_code_verifier", None)
+        current_app.logger.warning(
+            "Google OAuth callback returned error '%s'", error
+        )
+        flash("O Google não autorizou o login solicitado.", "danger")
+        return redirect(url_for("login"))
+
     state = session.get("oauth_state")
     code_verifier = session.get("oauth_code_verifier")
     if state is None or state != request.args.get("state"):
@@ -1626,6 +1636,8 @@ def google_callback():
             flow.oauth2session.scope = callback_scopes
 
         fetch_kwargs = {"authorization_response": authorization_response}
+        if callback_scope:
+            fetch_kwargs["scope"] = callback_scope
         if code_verifier:
             fetch_kwargs["code_verifier"] = code_verifier
         flow.fetch_token(**fetch_kwargs)
