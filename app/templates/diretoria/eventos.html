@@ -1,16 +1,17 @@
 {% extends "base.html" %}
+{% set is_editing = event_data is defined and event_data %}
 {% block title %}Eventos - Diretoria JP{% endblock %}
 
 {% block extra_css %}
     {{ super() }}
     <style>
         .eventos-form .section-heading {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             letter-spacing: 0.01em;
         }
 
         .eventos-form .form-label {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             font-weight: 600;
             letter-spacing: 0.02em;
             color: #495057;
@@ -20,8 +21,8 @@
 
         .eventos-form .form-control,
         .eventos-form .form-select {
-            font-size: 0.875rem;
-            padding: 0.45rem 0.75rem;
+            font-size: 0.775rem;
+            padding: 0.35rem 0.65rem;
         }
 
         .eventos-form textarea.form-control {
@@ -29,16 +30,16 @@
         }
 
         .eventos-form .category-item .form-control {
-            font-size: 0.82rem;
+            font-size: 0.72rem;
         }
 
         .eventos-form .category-item .form-label {
-            font-size: 0.72rem;
+            font-size: 0.62rem;
             text-align: left;
         }
 
         .eventos-form .category-item [data-item-total] {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
         }
 
         .eventos-form .event-category {
@@ -80,7 +81,7 @@
         }
 
         .eventos-form .event-category .toggle-wrapper {
-            font-size: 0.78rem;
+            font-size: 0.68rem;
         }
 
         .eventos-form .event-category .toggle-wrapper .form-check {
@@ -104,8 +105,8 @@
         }
 
         .eventos-form .category-item button[data-action="remove-item"] {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.45rem;
         }
 
         .eventos-form .event-category .category-footer {
@@ -119,7 +120,7 @@
         }
 
         .eventos-form .totals-row .form-control {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .eventos-form .totals-row .form-label {
@@ -152,10 +153,10 @@
             <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
                 Diretoria JP
             </span>
-            <h1 class="h3 mb-0">Eventos</h1>
+            <h1 class="h3 mb-0">{{ 'Editar Evento' if is_editing else 'Criar Evento' }}</h1>
         </div>
         <a class="btn btn-outline-primary btn-sm" href="{{ url_for('diretoria_eventos_lista') }}">
-            <i class="bi bi-list-ul me-1"></i>Ver eventos cadastrados
+            <i class="bi bi-list-ul me-1"></i>Listar eventos
         </a>
     </div>
     <form id="formEventos" class="needs-validation" novalidate>
@@ -335,7 +336,7 @@
 
         <div class="d-flex justify-content-start gap-2 mt-4">
             <button type="reset" class="btn btn-outline-secondary">Limpar</button>
-            <button type="submit" class="btn btn-primary">Salvar estimativa</button>
+            <button type="submit" class="btn btn-primary">{{ 'Atualizar evento' if is_editing else 'Salvar estimativa' }}</button>
         </div>
     </form>
 </div>
@@ -345,6 +346,7 @@
     {{ super() }}
     <script>
         window.csrfToken = "{{ csrf_token() }}";
+        window.diretoriaEventData = {% if is_editing %}{{ event_data | tojson }}{% else %}null{% endif %};
         (() => {
             const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -365,11 +367,15 @@
 
             const form = document.getElementById('formEventos');
             const totalEventoInput = document.getElementById('totalEvento');
-            const submitUrl = "{{ url_for('diretoria_eventos') }}";
+            const initialEvent = window.diretoriaEventData || null;
+            const submitUrl = (initialEvent && initialEvent.submit_url)
+                ? initialEvent.submit_url
+                : "{{ url_for('diretoria_eventos') }}";
             const listUrl = "{{ url_for('diretoria_eventos_lista') }}";
             const csrfToken = window.csrfToken;
+            const categoryControllers = {};
 
-            const createItemRow = (categoryKey) => {
+            const createItemRow = (categoryKey, values = {}) => {
                 const row = document.createElement('div');
                 row.className = 'row g-3 align-items-end category-item mb-3';
                 row.innerHTML = `
@@ -414,6 +420,20 @@
                     updateCategoryTotals();
                 });
 
+                const nameValue = values.name != null ? values.name : '';
+                const quantityValue = Number.isFinite(values.quantity) ? values.quantity : '';
+                const unitValue = Number.isFinite(values.unit_value) ? values.unit_value : '';
+
+                inputs[0].value = nameValue;
+                if (quantityValue !== '') {
+                    quantityInput.value = quantityValue;
+                }
+                if (unitValue !== '') {
+                    unitInput.value = unitValue;
+                }
+
+                updateItemTotal();
+
                 return row;
             };
 
@@ -423,7 +443,7 @@
                 document.querySelectorAll('.event-category').forEach((categoryEl) => {
                     const categoryKey = categoryEl.dataset.category;
                     const toggle = categoryEl.querySelector('[data-category-toggle]');
-                    const isActive = toggle?.checked;
+                    const isActive = !!(toggle && toggle.checked);
                     let categoryTotal = 0;
 
                     if (isActive) {
@@ -442,7 +462,7 @@
                         totalDisplay.textContent = formatter.format(categoryTotal);
                     }
 
-                    if (categories[categoryKey]?.input) {
+                    if (categories[categoryKey] && categories[categoryKey].input) {
                         categories[categoryKey].input.value = formatter.format(categoryTotal);
                     }
 
@@ -460,7 +480,7 @@
                 const toggle = categoryEl.querySelector('[data-category-toggle]');
                 const categoryBody = categoryEl.querySelector('.category-body');
 
-                const setCategoryState = (active) => {
+                const setCategoryState = (active, options = {}) => {
                     categoryEl.classList.toggle('is-active', active);
                     categoryEl.classList.toggle('is-disabled', !active);
 
@@ -471,7 +491,11 @@
 
                     categoryBody.style.display = active ? 'block' : 'none';
 
-                    if (active && itemsContainer.childElementCount === 0) {
+                     if (toggle) {
+                        toggle.checked = active;
+                    }
+
+                    if (active && itemsContainer.childElementCount === 0 && !options.prefill) {
                         const row = createItemRow(categoryKey);
                         itemsContainer.appendChild(row);
                     }
@@ -490,20 +514,34 @@
                     updateCategoryTotals();
                 };
 
-                const addItem = () => {
-                    const row = createItemRow(categoryKey);
+                const addItem = (values = {}) => {
+                    const row = createItemRow(categoryKey, values);
                     itemsContainer.appendChild(row);
                     updateCategoryTotals();
+                    return row;
                 };
 
-                addButton?.addEventListener('click', addItem);
+                if (addButton) {
+                    addButton.addEventListener('click', () => addItem());
+                }
 
-                toggle.addEventListener('change', () => {
-                    setCategoryState(toggle.checked);
-                });
+                if (toggle) {
+                    toggle.addEventListener('change', () => {
+                        setCategoryState(toggle.checked);
+                    });
+                }
 
                 categoryBody.style.display = 'none';
                 setCategoryState(false);
+
+                categoryControllers[categoryKey] = {
+                    setState: (active, options = {}) => setCategoryState(active, options),
+                    addItem,
+                    clearItems: () => {
+                        itemsContainer.innerHTML = '';
+                    },
+                    itemsContainer,
+                };
             });
 
             form.addEventListener('reset', () => {
@@ -518,8 +556,63 @@
                     });
 
                     updateCategoryTotals();
+                    if (initialEvent) {
+                        applyInitialData();
+                    }
                 }, 0);
             });
+
+            const applyInitialData = () => {
+                if (!initialEvent) {
+                    updateCategoryTotals();
+                    return;
+                }
+
+                document.getElementById('nomeEvento').value = initialEvent.name || '';
+                document.getElementById('tipoEvento').value = initialEvent.type || '';
+                document.getElementById('dataEvento').value = initialEvent.date || '';
+                document.getElementById('descricaoEvento').value = initialEvent.description || '';
+                document.getElementById('publicoEvento').value = initialEvent.audience || '';
+                document.getElementById('numeroParticipantes').value =
+                    initialEvent.participants != null ? initialEvent.participants : '';
+
+                const initialCategories = (initialEvent && initialEvent.categories) || {};
+
+                Object.keys(categoryControllers).forEach((key) => {
+                    const controller = categoryControllers[key];
+                    const categoryData = initialCategories[key] || {};
+                    const items = Array.isArray(categoryData.items) ? categoryData.items : [];
+
+                    if (!controller) {
+                        return;
+                    }
+
+                    if (!items.length) {
+                        controller.setState(false, { prefill: true });
+                        controller.clearItems();
+                        return;
+                    }
+
+                    controller.setState(true, { prefill: true });
+                    controller.clearItems();
+
+                    items.forEach((item) => {
+                        controller.addItem({
+                            name: (item && item.name) || '',
+                            quantity: Number.isFinite(item && item.quantity)
+                                ? item.quantity
+                                : parseFloat(item && item.quantity) || 0,
+                            unit_value: Number.isFinite(item && item.unit_value)
+                                ? item.unit_value
+                                : parseFloat(item && item.unit_value) || 0,
+                        });
+                    });
+                });
+
+                updateCategoryTotals();
+            };
+
+            applyInitialData();
 
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -587,12 +680,16 @@
                     const data = await response.json().catch(() => null);
 
                     if (!response.ok) {
-                        const message = (data?.errors && data.errors.join('\n')) || data?.error || 'Não foi possível salvar o evento.';
+                    const message = (
+                        data && Array.isArray(data.errors) && data.errors.length
+                            ? data.errors.join('\n')
+                            : (data && data.error) || 'Não foi possível salvar o evento.'
+                    );
                         alert(message);
                         return;
                     }
 
-                    const redirectUrl = data?.redirect_url || listUrl;
+                    const redirectUrl = (data && data.redirect_url) || listUrl;
                     shouldUnlockButton = false;
                     window.location.href = redirectUrl;
                 } catch (error) {

@@ -151,7 +151,114 @@ EVENT_CATEGORY_LABELS = {
     "cafe": "Café da manhã",
     "almoco": "Almoço",
     "lanche": "Lanche",
+    "outros": "Outros serviços",
 }
+
+
+def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Validate and normalize Diretoria JP event data sent from the form."""
+
+    name = (payload.get("name") or "").strip()
+    event_type = payload.get("type")
+    date_raw = payload.get("date")
+    description = (payload.get("description") or "").strip()
+    audience = payload.get("audience")
+    participants_raw = payload.get("participants")
+    categories_payload = payload.get("categories") or {}
+
+    errors: list[str] = []
+
+    if not name:
+        errors.append("Informe o nome do evento.")
+
+    if event_type not in EVENT_TYPE_LABELS:
+        errors.append("Selecione um tipo de evento válido.")
+
+    try:
+        event_date = datetime.strptime(str(date_raw), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        errors.append("Informe uma data válida para o evento.")
+        event_date = None
+
+    if audience not in EVENT_AUDIENCE_LABELS:
+        errors.append("Selecione o público participante do evento.")
+
+    try:
+        participants = int(participants_raw)
+        if participants < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("Informe o número de participantes do evento.")
+        participants = 0
+
+    services_payload: dict[str, dict[str, object]] = {}
+    total_event = Decimal("0.00")
+
+    for key in EVENT_CATEGORY_LABELS:
+        category_data = (
+            categories_payload.get(key, {})
+            if isinstance(categories_payload, dict)
+            else {}
+        )
+        items_data = []
+        if isinstance(category_data, dict):
+            items_data = category_data.get("items", []) or []
+
+        processed_items: list[dict[str, object]] = []
+        category_total = Decimal("0.00")
+
+        if isinstance(items_data, list):
+            for item in items_data:
+                if not isinstance(item, dict):
+                    continue
+
+                item_name = (item.get("name") or "").strip()
+                if not item_name:
+                    continue
+
+                try:
+                    quantity = Decimal(str(item.get("quantity", "0")))
+                    unit_value = Decimal(str(item.get("unit_value", "0")))
+                except (InvalidOperation, TypeError):
+                    continue
+
+                if quantity < 0 or unit_value < 0:
+                    continue
+
+                line_total = (quantity * unit_value).quantize(Decimal("0.01"))
+
+                processed_items.append(
+                    {
+                        "name": item_name,
+                        "quantity": float(quantity),
+                        "unit_value": float(unit_value),
+                        "total": float(line_total),
+                    }
+                )
+
+                category_total += line_total
+
+        category_total = category_total.quantize(Decimal("0.01"))
+        services_payload[key] = {
+            "items": processed_items,
+            "total": float(category_total),
+        }
+        total_event += category_total
+
+    total_event = total_event.quantize(Decimal("0.01"))
+
+    normalized = {
+        "name": name,
+        "event_type": event_type,
+        "event_date": event_date,
+        "description": description or None,
+        "audience": audience,
+        "participants": participants,
+        "services": services_payload,
+        "total_cost": total_event,
+    }
+
+    return normalized, errors
 
 
 def build_google_flow(state: str | None = None) -> Flow:
@@ -374,111 +481,23 @@ def diretoria_eventos():
 
     if request.method == "POST":
         payload = request.get_json(silent=True) or {}
-
-        name = (payload.get("name") or "").strip()
-        event_type = payload.get("type")
-        date_raw = payload.get("date")
-        description = (payload.get("description") or "").strip()
-        audience = payload.get("audience")
-        participants_raw = payload.get("participants")
-        categories_payload = payload.get("categories") or {}
-
-        errors: list[str] = []
-
-        if not name:
-            errors.append("Informe o nome do evento.")
-
-        if event_type not in EVENT_TYPE_LABELS:
-            errors.append("Selecione um tipo de evento válido.")
-
-        try:
-            event_date = datetime.strptime(str(date_raw), "%Y-%m-%d").date()
-        except (TypeError, ValueError):
-            errors.append("Informe uma data válida para o evento.")
-            event_date = None
-
-        if audience not in EVENT_AUDIENCE_LABELS:
-            errors.append("Selecione o público participante do evento.")
-
-        try:
-            participants = int(participants_raw)
-            if participants < 0:
-                raise ValueError
-        except (TypeError, ValueError):
-            errors.append("Informe o número de participantes do evento.")
-            participants = 0
+        normalized, errors = parse_diretoria_event_payload(payload)
 
         if errors:
             return jsonify({"errors": errors}), 400
 
-        services_payload: dict[str, dict[str, object]] = {}
-        total_event = Decimal("0.00")
-
-        for key in EVENT_CATEGORY_LABELS:
-            category_data = categories_payload.get(key, {})
-            items_data = []
-            if isinstance(category_data, dict):
-                items_data = category_data.get("items", []) or []
-
-            processed_items: list[dict[str, object]] = []
-            category_total = Decimal("0.00")
-
-            if isinstance(items_data, list):
-                for item in items_data:
-                    if not isinstance(item, dict):
-                        continue
-
-                    item_name = (item.get("name") or "").strip()
-                    if not item_name:
-                        continue
-
-                    try:
-                        quantity = Decimal(str(item.get("quantity", "0")))
-                        unit_value = Decimal(str(item.get("unit_value", "0")))
-                    except (InvalidOperation, TypeError):
-                        continue
-
-                    if quantity < 0 or unit_value < 0:
-                        continue
-
-                    line_total = (quantity * unit_value).quantize(Decimal("0.01"))
-
-                    processed_items.append(
-                        {
-                            "name": item_name,
-                            "quantity": float(quantity),
-                            "unit_value": float(unit_value),
-                            "total": float(line_total),
-                        }
-                    )
-
-                    category_total += line_total
-
-            category_total = category_total.quantize(Decimal("0.01"))
-            services_payload[key] = {
-                "items": processed_items,
-                "total": float(category_total),
-            }
-            total_event += category_total
-
-        total_event = total_event.quantize(Decimal("0.01"))
-
         diretoria_event = DiretoriaEvent(
-            name=name,
-            event_type=event_type,
-            event_date=event_date,
-            description=description or None,
-            audience=audience,
-            participants=participants,
-            services=services_payload,
-            total_cost=total_event,
+            **normalized,
             created_by=current_user,
         )
 
         db.session.add(diretoria_event)
         db.session.commit()
 
-        session["diretoria_event_saved"] = diretoria_event.name
+        session["diretoria_event_feedback"] = {
+            "message": f'Evento "{diretoria_event.name}" salvo com sucesso.',
+            "category": "success",
+        }
 
         return (
             jsonify(
@@ -491,6 +510,64 @@ def diretoria_eventos():
         )
 
     return render_template("diretoria/eventos.html")
+
+
+@app.route("/diretoria/eventos/<int:event_id>/editar", methods=["GET", "POST"])
+@login_required
+def diretoria_eventos_editar(event_id: int):
+    """Edit an existing Diretoria JP event."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    event = DiretoriaEvent.query.get_or_404(event_id)
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        normalized, errors = parse_diretoria_event_payload(payload)
+
+        if errors:
+            return jsonify({"errors": errors}), 400
+
+        if not normalized.get("event_date"):
+            return jsonify({"errors": ["Informe uma data válida para o evento."]}), 400
+
+        event.name = normalized["name"]
+        event.event_type = normalized["event_type"]
+        event.event_date = normalized["event_date"]
+        event.description = normalized["description"]
+        event.audience = normalized["audience"]
+        event.participants = normalized["participants"]
+        event.services = normalized["services"]
+        event.total_cost = normalized["total_cost"]
+
+        db.session.commit()
+
+        session["diretoria_event_feedback"] = {
+            "message": f'Evento "{event.name}" atualizado com sucesso.',
+            "category": "success",
+        }
+
+        return jsonify(
+            {
+                "success": True,
+                "redirect_url": url_for("diretoria_eventos_lista"),
+            }
+        )
+
+    event_payload = {
+        "id": event.id,
+        "name": event.name,
+        "type": event.event_type,
+        "date": event.event_date.strftime("%Y-%m-%d"),
+        "description": event.description or "",
+        "audience": event.audience,
+        "participants": event.participants,
+        "categories": event.services or {},
+        "submit_url": url_for("diretoria_eventos_editar", event_id=event.id),
+    }
+
+    return render_template("diretoria/eventos.html", event_data=event_payload)
 
 
 @app.route("/diretoria/eventos/lista")
@@ -515,9 +592,9 @@ def diretoria_eventos_lista():
         ).all()
     )
 
-    last_saved = session.pop("diretoria_event_saved", None)
-    if last_saved:
-        flash(f'Evento "{last_saved}" salvo com sucesso.', "success")
+    feedback = session.pop("diretoria_event_feedback", None)
+    if isinstance(feedback, dict) and feedback.get("message"):
+        flash(feedback["message"], feedback.get("category", "success"))
 
     return render_template(
         "diretoria/eventos_lista.html",
@@ -527,6 +604,25 @@ def diretoria_eventos_lista():
         audience_labels=EVENT_AUDIENCE_LABELS,
         category_labels=EVENT_CATEGORY_LABELS,
     )
+
+
+@app.route("/diretoria/eventos/<int:event_id>/excluir", methods=["POST"])
+@login_required
+def diretoria_eventos_excluir(event_id: int):
+    """Remove a Diretoria JP event."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    event = DiretoriaEvent.query.get_or_404(event_id)
+    event_name = event.name
+
+    db.session.delete(event)
+    db.session.commit()
+
+    flash(f'Evento "{event_name}" removido com sucesso.', "success")
+
+    return redirect(url_for("diretoria_eventos_lista"))
 
 
 @app.route("/cursos", methods=["GET", "POST"])

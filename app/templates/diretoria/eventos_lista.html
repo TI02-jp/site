@@ -10,7 +10,7 @@
     {{ super() }}
     <style>
         .eventos-list .form-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: #495057;
             text-align: left;
@@ -21,7 +21,7 @@
         }
 
         .eventos-list .table thead th {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
             color: #6c757d;
@@ -29,11 +29,11 @@
 
         .eventos-list .table tbody td {
             vertical-align: middle;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .eventos-list .table tbody td .small {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #6c757d;
         }
 
@@ -54,10 +54,10 @@
             <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
                 Diretoria JP
             </span>
-            <h1 class="h3 mb-0">Eventos cadastrados</h1>
+            <h1 class="h3 mb-0">Listar Eventos</h1>
         </div>
         <a class="btn btn-primary btn-sm" href="{{ url_for('diretoria_eventos') }}">
-            <i class="bi bi-plus-lg me-1"></i>Nova estimativa
+            <i class="bi bi-plus-lg me-1"></i>Criar evento
         </a>
     </div>
 
@@ -84,6 +84,7 @@
                     <th scope="col">Participantes</th>
                     <th scope="col">Totais por serviço</th>
                     <th scope="col">Total estimado</th>
+                    <th scope="col" class="text-nowrap">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -93,6 +94,7 @@
                         {% set cafe_total = services.get('cafe', {}).get('total', 0) %}
                         {% set almoco_total = services.get('almoco', {}).get('total', 0) %}
                         {% set lanche_total = services.get('lanche', {}).get('total', 0) %}
+                        {% set outros_total = services.get('outros', {}).get('total', 0) %}
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ event.name }}</div>
@@ -105,13 +107,25 @@
                                 <div class="small">{{ category_labels['cafe'] }}: <span class="fw-semibold">{{ format_currency(cafe_total) }}</span></div>
                                 <div class="small">{{ category_labels['almoco'] }}: <span class="fw-semibold">{{ format_currency(almoco_total) }}</span></div>
                                 <div class="small">{{ category_labels['lanche'] }}: <span class="fw-semibold">{{ format_currency(lanche_total) }}</span></div>
+                                <div class="small">{{ category_labels['outros'] }}: <span class="fw-semibold">{{ format_currency(outros_total) }}</span></div>
                             </td>
                             <td class="fw-semibold">{{ format_currency(event.total_cost) }}</td>
+                            <td class="text-nowrap">
+                                <a class="btn btn-outline-primary btn-sm me-1" href="{{ url_for('diretoria_eventos_editar', event_id=event.id) }}">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{{ url_for('diretoria_eventos_excluir', event_id=event.id) }}" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza de que deseja excluir o evento {{ event.name|escapejs }}?');">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="text-muted">Nenhum evento encontrado.</td>
+                        <td colspan="7" class="text-muted">Nenhum evento encontrado.</td>
                     </tr>
                 {% endif %}
             </tbody>
