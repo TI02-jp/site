@@ -1611,6 +1611,20 @@ def google_callback():
             query_string = request.query_string.decode()
             separator = "&" if "?" in authorization_response else "?"
             authorization_response = f"{authorization_response}{separator}{query_string}"
+
+        callback_scope = request.args.get("scope")
+        if callback_scope and hasattr(flow, "oauth2session"):
+            callback_scopes = callback_scope.split()
+            requested_scopes = set(flow.oauth2session.scope or [])
+            returned_scopes = set(callback_scopes)
+            if requested_scopes and returned_scopes != requested_scopes:
+                current_app.logger.warning(
+                    "Escopos do Google retornados divergiram do solicitado. Solicitado: %s. Retornado: %s.",
+                    sorted(requested_scopes),
+                    sorted(returned_scopes),
+                )
+            flow.oauth2session.scope = callback_scopes
+
         fetch_kwargs = {"authorization_response": authorization_response}
         if code_verifier:
             fetch_kwargs["code_verifier"] = code_verifier
