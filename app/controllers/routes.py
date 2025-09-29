@@ -263,23 +263,28 @@ def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, An
 
 def build_google_flow(state: str | None = None) -> Flow:
     """Return a configured Google OAuth ``Flow`` instance."""
-    if not (
-        current_app.config.get("GOOGLE_CLIENT_ID")
-        and current_app.config.get("GOOGLE_CLIENT_SECRET")
-    ):
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID")
+    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET")
+    if not (client_id and client_secret):
         abort(404)
-    return Flow.from_client_config(
+
+    redirect_uri = get_google_redirect_uri()
+
+    flow = Flow.from_client_config(
         {
             "web": {
-                "client_id": current_app.config["GOOGLE_CLIENT_ID"],
-                "client_secret": current_app.config["GOOGLE_CLIENT_SECRET"],
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [redirect_uri],
             }
         },
         scopes=GOOGLE_OAUTH_SCOPES,
         state=state,
     )
+    flow.redirect_uri = redirect_uri
+    return flow
 
 
 def get_google_redirect_uri() -> str:
@@ -1522,9 +1527,8 @@ def revoke_cookies():
 def google_login():
     """Start OAuth login with Google."""
     flow = build_google_flow()
-    flow.redirect_uri = get_google_redirect_uri()
     authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true", prompt="consent"
+        access_type="offline", include_granted_scopes=True, prompt="consent"
     )
     session["oauth_state"] = state
     return redirect(authorization_url)
@@ -1539,10 +1543,10 @@ def google_callback():
         flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
         return redirect(url_for("login"))
     flow = build_google_flow(state=state)
-    flow.redirect_uri = get_google_redirect_uri()
     try:
         flow.fetch_token(authorization_response=request.url)
     except Exception:
+        current_app.logger.exception("Falha ao trocar código OAuth do Google por token")
         flash("Não foi possível completar a autenticação com o Google.", "danger")
         return redirect(url_for("login"))
     credentials = flow.credentials
