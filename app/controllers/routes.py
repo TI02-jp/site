@@ -1531,18 +1531,22 @@ def google_login():
         access_type="offline", include_granted_scopes="true", prompt="consent"
     )
     session["oauth_state"] = state
+    if flow.code_verifier:
+        session["oauth_code_verifier"] = flow.code_verifier
     return redirect(authorization_url)
 
 
 @app.route("/oauth2callback")
 def google_callback():
     """Handle OAuth callback from Google."""
-    state = session.get("oauth_state")
-    session.pop("oauth_state", None)
+    state = session.pop("oauth_state", None)
+    code_verifier = session.pop("oauth_code_verifier", None)
     if state is None or state != request.args.get("state"):
         flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
         return redirect(url_for("login"))
     flow = build_google_flow(state=state)
+    if code_verifier:
+        flow.code_verifier = code_verifier
     try:
         flow.fetch_token(authorization_response=request.url)
     except Exception:
