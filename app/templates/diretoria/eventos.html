@@ -1,17 +1,78 @@
 {% extends "base.html" %}
 {% block title %}Eventos - Diretoria JP{% endblock %}
 
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .eventos-form .section-heading {
+            font-size: 0.95rem;
+            letter-spacing: 0.01em;
+        }
+
+        .eventos-form .form-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: #495057;
+        }
+
+        .eventos-form .form-control,
+        .eventos-form .form-select {
+            font-size: 0.875rem;
+            padding: 0.45rem 0.75rem;
+        }
+
+        .eventos-form textarea.form-control {
+            min-height: 110px;
+        }
+
+        .eventos-form .category-item .form-control {
+            font-size: 0.82rem;
+        }
+
+        .eventos-form .category-item .form-label {
+            font-size: 0.72rem;
+        }
+
+        .eventos-form .category-item [data-item-total] {
+            font-size: 0.75rem;
+        }
+
+        .eventos-form .category-item button[data-action="remove-item"] {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .eventos-form .totals-row .form-control {
+            font-size: 0.9rem;
+        }
+
+        @media (min-width: 992px) {
+            .eventos-form .metadata .col-lg-3 {
+                flex: 0 0 auto;
+                width: 25%;
+            }
+
+            .eventos-form .metadata .col-lg-6 {
+                flex: 0 0 auto;
+                width: 50%;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid eventos-form">
     <div class="d-flex align-items-center mb-4">
         <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold me-3">
             Diretoria JP
         </span>
         <h1 class="h3 mb-0">Eventos</h1>
     </div>
-    <form id="formEventos" novalidate>
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
+    <form id="formEventos" class="needs-validation" novalidate>
+        <div class="row g-3 mb-4 metadata">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="tipoEvento" class="form-label">Tipo de evento</label>
                 <select id="tipoEvento" class="form-select" required>
                     <option value="" selected disabled>Selecione uma opção</option>
@@ -20,15 +81,15 @@
                     <option value="evento">Evento</option>
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="dataEvento" class="form-label">Data</label>
                 <input type="date" class="form-control" id="dataEvento" required>
             </div>
-            <div class="col-12">
+            <div class="col-12 col-lg-6">
                 <label for="descricaoEvento" class="form-label">Descrição</label>
                 <textarea id="descricaoEvento" class="form-control" rows="3" required></textarea>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="publicoEvento" class="form-label">Público participante</label>
                 <select id="publicoEvento" class="form-select" required>
                     <option value="" selected disabled>Selecione uma opção</option>
@@ -37,7 +98,7 @@
                     <option value="ambos">Ambos</option>
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="numeroParticipantes" class="form-label">Participantes (nº de pessoas)</label>
                 <input type="number" min="0" step="1" class="form-control" id="numeroParticipantes" required>
             </div>
@@ -46,11 +107,11 @@
         <div class="border-top pt-4 mt-4"></div>
 
         <div class="mb-5">
-            <h2 class="h5 mb-3">Serviços de alimentação</h2>
+            <h2 class="h6 text-uppercase text-muted fw-semibold section-heading mb-3">Serviços de alimentação</h2>
 
             <div class="event-category" data-category="cafe">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 mb-0">Café da manhã</h3>
+                    <h3 class="fs-6 fw-semibold mb-0">Café da manhã</h3>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
                         <i class="bi bi-plus-lg me-1"></i>Adicionar item
                     </button>
@@ -65,7 +126,7 @@
 
             <div class="event-category pt-4" data-category="almoco">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 mb-0">Almoço</h3>
+                    <h3 class="fs-6 fw-semibold mb-0">Almoço</h3>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
                         <i class="bi bi-plus-lg me-1"></i>Adicionar item
                     </button>
@@ -80,7 +141,7 @@
 
             <div class="event-category pt-4" data-category="lanche">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h3 class="h6 mb-0">Lanche</h3>
+                    <h3 class="fs-6 fw-semibold mb-0">Lanche</h3>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-action="add-item">
                         <i class="bi bi-plus-lg me-1"></i>Adicionar item
                     </button>
@@ -95,22 +156,22 @@
 
         <div class="border-top pt-4 mt-4"></div>
 
-        <div class="row g-3 align-items-center">
-            <div class="col-md-6">
+        <div class="row g-3 align-items-center totals-row">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalCafe" class="form-label">Total café da manhã</label>
                 <input type="text" class="form-control" id="totalCafe" value="R$ 0,00" readonly>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalAlmoco" class="form-label">Total almoço</label>
                 <input type="text" class="form-control" id="totalAlmoco" value="R$ 0,00" readonly>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalLanche" class="form-label">Total lanche</label>
                 <input type="text" class="form-control" id="totalLanche" value="R$ 0,00" readonly>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalEvento" class="form-label">Valor total estimado do evento</label>
-                <input type="text" class="form-control form-control-lg fw-semibold" id="totalEvento" value="R$ 0,00" readonly>
+                <input type="text" class="form-control fw-semibold" id="totalEvento" value="R$ 0,00" readonly>
             </div>
         </div>
 
@@ -147,20 +208,20 @@
                 const row = document.createElement('div');
                 row.className = 'row g-3 align-items-end category-item mb-3';
                 row.innerHTML = `
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6 col-lg-5">
                         <label class="form-label">Item</label>
                         <input type="text" class="form-control" required>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-3 col-lg-2">
                         <label class="form-label">Quantidade</label>
                         <input type="number" class="form-control" min="0" step="1" required>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-3 col-lg-2">
                         <label class="form-label">Valor unitário (R$)</label>
                         <input type="number" class="form-control" min="0" step="0.01" required>
                     </div>
-                    <div class="col-md-2 text-end">
-                        <button type="button" class="btn btn-link text-danger" data-action="remove-item">
+                    <div class="col-12 col-md-6 col-lg-3 text-md-end d-flex d-md-block align-items-center justify-content-between">
+                        <button type="button" class="btn btn-link text-danger px-0" data-action="remove-item">
                             <i class="bi bi-trash"></i>
                         </button>
                         <div class="small text-muted" data-item-total>R$ 0,00</div>
