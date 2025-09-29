@@ -94,6 +94,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
+from urllib.parse import urlunsplit
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -295,14 +296,49 @@ def get_google_redirect_uri() -> str:
     if configured_uri:
         return configured_uri
 
+    callback_path = url_for("google_callback", _external=False)
+
     if has_request_context():
-        forwarded_proto = request.headers.get("X-Forwarded-Proto", request.scheme or "")
-        # ``X-Forwarded-Proto`` may contain a comma-separated list when multiple
-        # proxies are involved. Google only accepts a single scheme, so we pick
-        # the first declared value and fall back to the detected request scheme.
-        scheme = (forwarded_proto.split(",", 1)[0] or request.scheme or "http").strip()
-    else:
-        scheme = current_app.config.get("PREFERRED_URL_SCHEME", "http")
+        scheme = request.scheme or "http"
+        host = request.host
+
+        forwarded = request.headers.get("Forwarded")
+        if forwarded:
+            forwarded = forwarded.split(",", 1)[0]
+            forwarded_parts = {}
+            for part in forwarded.split(";"):
+                if "=" not in part:
+                    continue
+                key, value = part.split("=", 1)
+                forwarded_parts[key.strip().lower()] = value.strip().strip('"')
+            scheme = forwarded_parts.get("proto", scheme) or scheme
+            host = forwarded_parts.get("host", host) or host
+
+        forwarded_proto = request.headers.get("X-Forwarded-Proto")
+        if forwarded_proto:
+            scheme = forwarded_proto.split(",", 1)[0].strip() or scheme
+
+        forwarded_host = request.headers.get("X-Forwarded-Host")
+        if forwarded_host:
+            host = forwarded_host.split(",", 1)[0].strip() or host
+
+        forwarded_port = request.headers.get("X-Forwarded-Port")
+        if forwarded_port:
+            port = forwarded_port.split(",", 1)[0].strip()
+            if port:
+                default_port = "443" if scheme == "https" else "80"
+                if ":" not in host and port != default_port:
+                    host = f"{host}:{port}"
+
+        scheme = scheme or current_app.config.get("PREFERRED_URL_SCHEME", "http")
+        host = host or request.host
+
+        return urlunsplit((scheme, host, callback_path, "", ""))
+
+    scheme = current_app.config.get("PREFERRED_URL_SCHEME", "http")
+    server_name = current_app.config.get("SERVER_NAME")
+    if server_name:
+        return urlunsplit((scheme, server_name, callback_path, "", ""))
 
     return url_for("google_callback", _external=True, _scheme=scheme)
 
