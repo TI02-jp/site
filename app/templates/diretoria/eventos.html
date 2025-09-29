@@ -429,6 +429,7 @@
                     categoryEl.classList.toggle('is-active', active);
                     categoryEl.classList.toggle('is-disabled', !active);
                     addButton.disabled = !active;
+                    addButton.classList.toggle('d-none', !active);
                     categoryBody.style.display = active ? 'block' : 'none';
 
                     if (active && itemsContainer.childElementCount === 0) {
