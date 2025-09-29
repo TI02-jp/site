@@ -41,24 +41,10 @@
         </li>
         {% if user_has_tag('Gestão') %}
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="collapse" href="#diretoriaMenu" role="button"
-               aria-expanded="{{ 'true' if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista'] else 'false' }}"
-               aria-controls="diretoriaMenu">
+            <a class="nav-link" href="#" onclick="return false;">
                 <i class="bi bi-people"></i>
                 DIRETORIA JP
             </a>
-            <div class="collapse{% if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista'] %} show{% endif %}" id="diretoriaMenu">
-                <ul class="nav flex-column ms-3">
-                    <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint == 'diretoria_eventos' %} active{% endif %}"
-                           href="{{ url_for('diretoria_eventos') }}">Nova estimativa</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint == 'diretoria_eventos_lista' %} active{% endif %}"
-                           href="{{ url_for('diretoria_eventos_lista') }}">Listagem</a>
-                    </li>
-                </ul>
-            </div>
         </li>
         {% endif %}
         <li class="nav-item">
