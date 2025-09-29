@@ -1531,28 +1531,36 @@ def google_login():
         access_type="offline", include_granted_scopes="true", prompt="consent"
     )
     session["oauth_state"] = state
-    if flow.code_verifier:
-        session["oauth_code_verifier"] = flow.code_verifier
+    # ``google-auth`` only attaches the PKCE verifier to the flow instance, so we
+    # persist it explicitly to reuse on the callback. Storing ``None`` keeps the
+    # key consistent and avoids hitting a stale value from a previous attempt.
+    session["oauth_code_verifier"] = getattr(flow, "code_verifier", None)
     return redirect(authorization_url)
 
 
 @app.route("/oauth2callback")
 def google_callback():
     """Handle OAuth callback from Google."""
-    state = session.pop("oauth_state", None)
-    code_verifier = session.pop("oauth_code_verifier", None)
+    state = session.get("oauth_state")
+    code_verifier = session.get("oauth_code_verifier")
     if state is None or state != request.args.get("state"):
+        session.pop("oauth_state", None)
+        session.pop("oauth_code_verifier", None)
         flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
         return redirect(url_for("login"))
     flow = build_google_flow(state=state)
-    if code_verifier:
-        flow.code_verifier = code_verifier
     try:
-        flow.fetch_token(authorization_response=request.url)
+        flow.fetch_token(
+            authorization_response=request.url,
+            code_verifier=code_verifier,
+        )
     except Exception:
         current_app.logger.exception("Falha ao trocar código OAuth do Google por token")
         flash("Não foi possível completar a autenticação com o Google.", "danger")
         return redirect(url_for("login"))
+    finally:
+        session.pop("oauth_state", None)
+        session.pop("oauth_code_verifier", None)
     credentials = flow.credentials
     request_session = requests.Session()
     token_request = Request(session=request_session)
