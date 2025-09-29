@@ -176,6 +176,32 @@ class Course(db.Model):
         return f"<Course {self.name} ({self.status})>"
 
 
+class DiretoriaEvent(db.Model):
+    """Event planning record for Diretoria JP."""
+
+    __tablename__ = "diretoria_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    event_type = db.Column(db.String(30), nullable=False)
+    event_date = db.Column(db.Date, nullable=False)
+    description = db.Column(db.Text)
+    audience = db.Column(db.String(20), nullable=False)
+    participants = db.Column(db.Integer, nullable=False, default=0)
+    services = db.Column(db.JSON, nullable=False, default=dict)
+    total_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    created_by = db.relationship("User", backref=db.backref("diretoria_events", lazy=True))
+
+    def __repr__(self):
+        return f"<DiretoriaEvent {self.name} ({self.event_type})>"
+
+
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"
