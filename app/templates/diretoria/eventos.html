@@ -219,6 +219,17 @@
             flex: 1 1 auto;
         }
 
+        .eventos-form .photos-section .event-photo-card .photo-url-field {
+            background: rgba(248, 249, 250, 0.75);
+            border: 1px dashed rgba(13, 110, 253, 0.2);
+            border-radius: 0.85rem;
+            padding: 0.75rem 0.85rem;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field.is-collapsed {
+            display: none;
+        }
+
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-label {
             font-size: 0.65rem;
             font-weight: 700;
@@ -592,6 +603,7 @@
 
             const photosController = (() => {
                 let items = [];
+                const expandedState = new Map();
 
                 const normalizePhotoValue = (value) => {
                     if (typeof value !== 'string') {
@@ -614,7 +626,11 @@
                     if (index < 0 || index >= items.length) {
                         return false;
                     }
+                    const target = items[index];
                     items = [...items.slice(0, index), ...items.slice(index + 1)];
+                    if (target) {
+                        expandedState.delete(target);
+                    }
                     render();
                     return true;
                 }
@@ -624,6 +640,7 @@
                         return false;
                     }
 
+                    const previousValue = items[index];
                     const normalized = normalizePhotoValue(value);
                     if (!normalized) {
                         return false;
@@ -641,11 +658,19 @@
                         return true;
                     }
 
+                    const wasExpanded = previousValue ? expandedState.get(previousValue) === true : false;
+                    if (previousValue) {
+                        expandedState.delete(previousValue);
+                    }
+
                     items = [
                         ...items.slice(0, index),
                         normalized,
                         ...items.slice(index + 1),
                     ];
+                    if (wasExpanded) {
+                        expandedState.set(normalized, true);
+                    }
                     render();
                     return true;
                 }
@@ -668,6 +693,13 @@
                         photosEmptyState.classList.add('d-none');
                     }
 
+                    const currentUrls = new Set(items);
+                    Array.from(expandedState.keys()).forEach((key) => {
+                        if (!currentUrls.has(key)) {
+                            expandedState.delete(key);
+                        }
+                    });
+
                     items.forEach((url, index) => {
                         const col = document.createElement('div');
                         col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
@@ -680,6 +712,11 @@
                             .replace(/"/g, '&quot;')
                             .replace(/'/g, '&#x27;');
                         const inputId = `fotoEventoUrl${index}`;
+                        const wrapperId = `fotoEventoUrlWrapper${index}`;
+                        const isExpanded = expandedState.get(url) === true;
+                        const toggleIcon = isExpanded ? 'bi-chevron-up' : 'bi-pencil-square';
+                        const toggleLabel = isExpanded ? 'Ocultar link' : 'Editar link';
+                        const urlFieldClass = isExpanded ? 'photo-url-field' : 'photo-url-field is-collapsed';
 
                         col.innerHTML = `
                             <div class="event-photo-card">
@@ -694,11 +731,6 @@
                                     </div>
                                 </div>
                                 <div class="event-photo-body">
-                                    <div class="photo-url-field">
-                                        <label class="form-label" for="${inputId}">Link da foto</label>
-                                        <input type="url" class="form-control form-control-sm" id="${inputId}" value="${safeUrl}" data-photo-url-input>
-                                        <div class="form-text">Edite o link manualmente ou utilize o botão "Substituir".</div>
-                                    </div>
                                     <div class="event-photo-actions">
                                         <a href="${safeUrl}" target="_blank" rel="noopener" class="btn btn-soft-secondary btn-sm">
                                             <i class="bi bi-eye me-1"></i>Visualizar
@@ -706,6 +738,15 @@
                                         <button type="button" class="btn btn-soft-primary btn-sm" data-action="replace-photo">
                                             <i class="bi bi-arrow-repeat me-1"></i>Substituir
                                         </button>
+                                        <button type="button" class="btn btn-soft-secondary btn-sm" data-action="toggle-photo-url" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${wrapperId}">
+                                            <i class="bi ${toggleIcon} me-1" data-toggle-icon></i>
+                                            <span data-toggle-label>${toggleLabel}</span>
+                                        </button>
+                                    </div>
+                                    <div class="${urlFieldClass}" id="${wrapperId}" data-photo-url-wrapper>
+                                        <label class="form-label" for="${inputId}">Link da foto</label>
+                                        <input type="url" class="form-control form-control-sm" id="${inputId}" value="${safeUrl}" data-photo-url-input>
+                                        <div class="form-text">Edite o link manualmente ou utilize o botão "Substituir".</div>
                                     </div>
                                 </div>
                             </div>
@@ -731,7 +772,38 @@
                             });
                         }
 
-                        const urlInput = col.querySelector('[data-photo-url-input]');
+                        const urlWrapper = col.querySelector('[data-photo-url-wrapper]');
+                        const urlInput = urlWrapper
+                            ? urlWrapper.querySelector('[data-photo-url-input]')
+                            : col.querySelector('[data-photo-url-input]');
+                        const toggleButton = col.querySelector('[data-action="toggle-photo-url"]');
+                        const toggleLabelEl = toggleButton ? toggleButton.querySelector('[data-toggle-label]') : null;
+                        const toggleIconEl = toggleButton ? toggleButton.querySelector('[data-toggle-icon]') : null;
+
+                        if (toggleButton && urlWrapper) {
+                            toggleButton.addEventListener('click', () => {
+                                const currentlyExpanded = !urlWrapper.classList.contains('is-collapsed');
+                                const nextExpanded = !currentlyExpanded;
+                                urlWrapper.classList.toggle('is-collapsed', !nextExpanded);
+                                toggleButton.setAttribute('aria-expanded', String(nextExpanded));
+                                if (toggleLabelEl) {
+                                    toggleLabelEl.textContent = nextExpanded ? 'Ocultar link' : 'Editar link';
+                                }
+                                if (toggleIconEl) {
+                                    toggleIconEl.className = `bi ${nextExpanded ? 'bi-chevron-up' : 'bi-pencil-square'} me-1`;
+                                }
+                                if (nextExpanded) {
+                                    expandedState.set(url, true);
+                                    if (urlInput instanceof HTMLInputElement) {
+                                        urlInput.focus({ preventScroll: true });
+                                        urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length);
+                                    }
+                                } else {
+                                    expandedState.delete(url);
+                                }
+                            });
+                        }
+
                         if (urlInput instanceof HTMLInputElement) {
                             const commitUpdate = () => {
                                 const currentItems = getItems();
@@ -798,15 +870,22 @@
                 function setItems(values) {
                     if (!Array.isArray(values)) {
                         items = [];
+                        expandedState.clear();
                         render();
                         return;
                     }
+
+                    const previousState = new Map(expandedState);
+                    expandedState.clear();
 
                     const nextItems = [];
                     values.forEach((value) => {
                         const normalized = normalizePhotoValue(value);
                         if (normalized && !nextItems.includes(normalized)) {
                             nextItems.push(normalized);
+                            if (previousState.get(normalized) === true) {
+                                expandedState.set(normalized, true);
+                            }
                         }
                     });
 
@@ -830,6 +909,7 @@
 
                 function clear() {
                     items = [];
+                    expandedState.clear();
                     render();
                 }
 
