@@ -30,3 +30,11 @@ pip-wheel-metadata/
 coverage.xml
 *.cover
 nosetests.xml
+
+# Ignorar imagens e arquivos
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
