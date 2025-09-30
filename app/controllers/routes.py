@@ -2957,36 +2957,70 @@ def logout():
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
-    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
+    tag_form = TagForm()
+    tag_form.submit.label.text = "Adicionar"
+    tag_query = Tag.query.order_by(Tag.nome)
+    tag_list = tag_query.all()
+    form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
+    open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
 
-    if form.validate_on_submit():
-        existing_user = User.query.filter(
-            (User.username == form.username.data) | (User.email == form.email.data)
-        ).first()
-        if existing_user:
-            flash("Usuário ou email já cadastrado.", "warning")
-        else:
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                name=form.name.data,
-                role=form.role.data,
-            )
-            user.set_password(form.password.data)
-            if form.tags.data:
-                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
-            db.session.add(user)
-            db.session.commit()
-            flash("Novo usuário cadastrado com sucesso!", "success")
-        return redirect(url_for("list_users"))
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+
+        if form_name == "user" and form.validate_on_submit():
+            existing_user = User.query.filter(
+                (User.username == form.username.data)
+                | (User.email == form.email.data)
+            ).first()
+            if existing_user:
+                flash("Usuário ou email já cadastrado.", "warning")
+            else:
+                user = User(
+                    username=form.username.data,
+                    email=form.email.data,
+                    name=form.name.data,
+                    role=form.role.data,
+                )
+                user.set_password(form.password.data)
+                if form.tags.data:
+                    user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
+                db.session.add(user)
+                db.session.commit()
+                flash("Novo usuário cadastrado com sucesso!", "success")
+            return redirect(url_for("list_users"))
+
+        if form_name == "tag":
+            open_tag_modal = True
+            if tag_form.validate_on_submit():
+                tag_name = (tag_form.nome.data or "").strip()
+                existing_tag = (
+                    Tag.query.filter(db.func.lower(Tag.nome) == tag_name.lower()).first()
+                    if tag_name
+                    else None
+                )
+                if existing_tag:
+                    tag_form.nome.errors.append("Já existe uma tag com esse nome.")
+                    flash("Já existe uma tag com esse nome.", "warning")
+                elif tag_name:
+                    tag = Tag(nome=tag_name)
+                    db.session.add(tag)
+                    db.session.commit()
+                    flash("Tag cadastrada com sucesso!", "success")
+                    return redirect(url_for("list_users", open_tag_modal="1"))
 
     users_query = User.query
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
     users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template(
-        "list_users.html", users=users, form=form, show_inactive=show_inactive
+        "list_users.html",
+        users=users,
+        form=form,
+        tag_form=tag_form,
+        tag_list=tag_list,
+        show_inactive=show_inactive,
+        open_tag_modal=open_tag_modal,
     )
 
 
