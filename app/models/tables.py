@@ -190,6 +190,7 @@ class DiretoriaEvent(db.Model):
     participants = db.Column(db.Integer, nullable=False, default=0)
     services = db.Column(db.JSON, nullable=False, default=dict)
     total_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    photos = db.Column(db.JSON, nullable=True, default=list)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(

@@ -127,6 +127,48 @@
             text-align: left;
         }
 
+        .eventos-form .photos-section .event-photo-card {
+            background-color: #fff;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 0.75rem;
+            height: 100%;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.04);
+        }
+
+        .eventos-form .photos-section .event-photo-thumb {
+            position: relative;
+            width: 100%;
+            padding-top: 66.6667%;
+            border-radius: 0.65rem;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 110, 253, 0.02));
+        }
+
+        .eventos-form .photos-section .event-photo-thumb img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .eventos-form .photos-section .event-photo-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .eventos-form .photos-section .empty-state {
+            border: 1px dashed rgba(13, 110, 253, 0.25);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            font-size: 0.8rem;
+            background: rgba(13, 110, 253, 0.03);
+        }
+
         @media (min-width: 992px) {
             .eventos-form .metadata .col-lg-3 {
                 flex: 0 0 auto;
@@ -311,6 +353,25 @@
 
         <div class="border-top pt-4 mt-4"></div>
 
+        <div class="mb-5 photos-section">
+            <h2 class="h6 text-uppercase text-muted fw-semibold section-heading mb-3">Fotos do evento</h2>
+            <p class="text-muted small mb-3">Envie imagens para ilustrar o evento planejado. Elas poderão ser consultadas posteriormente na edição.</p>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-6">
+                    <label for="fotosEventoInput" class="form-label">Adicionar fotos</label>
+                    <input type="file" class="form-control" id="fotosEventoInput" accept="image/*" multiple>
+                    <div class="form-text">Formatos permitidos: PNG, JPG, JPEG ou GIF (até 2&nbsp;MB por arquivo).</div>
+                </div>
+            </div>
+            <div id="fotosEventoStatus" class="small mt-2 d-none"></div>
+            <div id="fotosEventoEmpty" class="empty-state text-center text-muted mt-3">
+                <i class="bi bi-images me-2"></i>Nenhuma foto adicionada até o momento.
+            </div>
+            <div id="fotosEventoLista" class="row g-3 mt-1 photos-grid"></div>
+        </div>
+
+        <div class="border-top pt-4 mt-4"></div>
+
         <div class="row g-3 align-items-center totals-row">
             <div class="col-12 col-md-6 col-lg-3">
                 <label for="totalCafe" class="form-label">Total café da manhã</label>
@@ -374,6 +435,196 @@
             const listUrl = "{{ url_for('diretoria_eventos_lista') }}";
             const csrfToken = window.csrfToken;
             const categoryControllers = {};
+            const uploadUrl = "{{ url_for('upload_image') }}";
+            const photosInput = document.getElementById('fotosEventoInput');
+            const photosListEl = document.getElementById('fotosEventoLista');
+            const photosEmptyState = document.getElementById('fotosEventoEmpty');
+            const photosStatusEl = document.getElementById('fotosEventoStatus');
+            let photoStatusTimeoutId = null;
+
+            const photosController = (() => {
+                let items = [];
+
+                function removeAt(index) {
+                    if (index < 0 || index >= items.length) {
+                        return;
+                    }
+                    items = [...items.slice(0, index), ...items.slice(index + 1)];
+                    render();
+                }
+
+                function render() {
+                    if (!photosListEl) {
+                        return;
+                    }
+
+                    photosListEl.innerHTML = '';
+
+                    if (!items.length) {
+                        if (photosEmptyState) {
+                            photosEmptyState.classList.remove('d-none');
+                        }
+                        return;
+                    }
+
+                    if (photosEmptyState) {
+                        photosEmptyState.classList.add('d-none');
+                    }
+
+                    items.forEach((url, index) => {
+                        const col = document.createElement('div');
+                        col.className = 'col-6 col-md-4 col-lg-3';
+                        col.innerHTML = `
+                            <div class="event-photo-card">
+                                <div class="event-photo-thumb">
+                                    <img src="${url}" alt="Foto do evento ${index + 1}">
+                                </div>
+                                <div class="event-photo-actions">
+                                    <a href="${url}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver
+                                    </a>
+                                    <button type="button" class="btn btn-link btn-sm text-danger px-0" data-action="remove-photo">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+
+                        const removeButton = col.querySelector('[data-action="remove-photo"]');
+                        if (removeButton) {
+                            removeButton.addEventListener('click', () => removeAt(index));
+                        }
+
+                        photosListEl.appendChild(col);
+                    });
+                }
+
+                function setItems(values) {
+                    items = Array.isArray(values)
+                        ? values
+                            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+                            .filter((value) => value.length > 0)
+                        : [];
+                    render();
+                }
+
+                function addItem(value) {
+                    if (typeof value !== 'string') {
+                        return;
+                    }
+                    const normalized = value.trim();
+                    if (!normalized || items.includes(normalized)) {
+                        return;
+                    }
+                    items = [...items, normalized];
+                    render();
+                }
+
+                function getItems() {
+                    return items.slice();
+                }
+
+                function clear() {
+                    items = [];
+                    render();
+                }
+
+                render();
+
+                return { setItems, addItem, removeAt, getItems, clear };
+            })();
+
+            const setPhotoStatus = (message = '', type = 'muted', timeoutMs = 0) => {
+                if (!photosStatusEl) {
+                    return;
+                }
+
+                if (photoStatusTimeoutId) {
+                    clearTimeout(photoStatusTimeoutId);
+                    photoStatusTimeoutId = null;
+                }
+
+                if (!message) {
+                    photosStatusEl.textContent = '';
+                    photosStatusEl.classList.add('d-none');
+                    photosStatusEl.classList.remove('text-danger', 'text-success', 'text-muted');
+                    return;
+                }
+
+                photosStatusEl.textContent = message;
+                photosStatusEl.classList.remove('d-none', 'text-danger', 'text-success', 'text-muted');
+
+                if (type === 'danger') {
+                    photosStatusEl.classList.add('text-danger');
+                } else if (type === 'success') {
+                    photosStatusEl.classList.add('text-success');
+                } else {
+                    photosStatusEl.classList.add('text-muted');
+                }
+
+                if (timeoutMs > 0) {
+                    photoStatusTimeoutId = window.setTimeout(() => {
+                        setPhotoStatus('');
+                    }, timeoutMs);
+                }
+            };
+
+            const uploadPhoto = async (file) => {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json().catch(() => null);
+
+                if (!response.ok || !data || !data.image_url) {
+                    const message = (data && (data.error || data.message)) || 'Não foi possível enviar a foto.';
+                    throw new Error(message);
+                }
+
+                return data.image_url;
+            };
+
+            const handlePhotoSelection = async (files) => {
+                for (const file of files) {
+                    if (!(file instanceof File)) {
+                        continue;
+                    }
+
+                    if (!file.type || !file.type.startsWith('image/')) {
+                        setPhotoStatus(`O arquivo "${file.name}" não parece ser uma imagem válida.`, 'danger', 5000);
+                        continue;
+                    }
+
+                    try {
+                        setPhotoStatus(`Enviando "${file.name}"...`, 'muted');
+                        const imageUrl = await uploadPhoto(file);
+                        photosController.addItem(imageUrl);
+                        setPhotoStatus(`Foto "${file.name}" adicionada com sucesso.`, 'success', 3500);
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : 'Não foi possível enviar a foto.';
+                        setPhotoStatus(message, 'danger');
+                    }
+                }
+            };
+
+            if (photosInput) {
+                photosInput.addEventListener('change', () => {
+                    if (!photosInput.files || !photosInput.files.length) {
+                        return;
+                    }
+
+                    const files = Array.from(photosInput.files);
+                    handlePhotoSelection(files);
+                    photosInput.value = '';
+                });
+            }
 
             const createItemRow = (categoryKey, values = {}) => {
                 const row = document.createElement('div');
@@ -555,14 +806,24 @@
                         toggle.dispatchEvent(new Event('change'));
                     });
 
-                    updateCategoryTotals();
+                    photosController.clear();
+                    setPhotoStatus('');
+
                     if (initialEvent) {
                         applyInitialData();
+                    } else {
+                        updateCategoryTotals();
                     }
                 }, 0);
             });
 
             const applyInitialData = () => {
+                const initialPhotos = initialEvent && Array.isArray(initialEvent.photos)
+                    ? initialEvent.photos
+                    : [];
+                photosController.setItems(initialPhotos);
+                setPhotoStatus('');
+
                 if (!initialEvent) {
                     updateCategoryTotals();
                     return;
@@ -636,6 +897,7 @@
                     audience: document.getElementById('publicoEvento').value,
                     participants: Number.parseInt(document.getElementById('numeroParticipantes').value, 10) || 0,
                     categories: {},
+                    photos: photosController.getItems(),
                 };
 
                 document.querySelectorAll('.event-category').forEach((categoryEl) => {
