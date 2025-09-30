@@ -43,14 +43,16 @@ class CourseRecord:
     def start_date_label(self) -> str:
         """Return the formatted start date for display in tables."""
 
-        return self.start_date.strftime("%d/%m/%Y")
+        normalized = _coerce_date(self.start_date)
+        return normalized.strftime("%d/%m/%Y") if normalized else "-"
 
     @property
     def completion_label(self) -> str:
         """Return the formatted completion date or fallback note."""
 
-        if self.completion_date:
-            return self.completion_date.strftime("%d/%m/%Y")
+        normalized = _coerce_date(self.completion_date)
+        if normalized:
+            return normalized.strftime("%d/%m/%Y")
         if self.completion_note:
             return self.completion_note
         return "-"
@@ -119,13 +121,15 @@ class CourseRecord:
     def start_date_value(self) -> str:
         """Return the ISO start date suitable for date inputs."""
 
-        return self.start_date.isoformat()
+        normalized = _coerce_date(self.start_date)
+        return normalized.isoformat() if normalized else ""
 
     @property
     def completion_date_value(self) -> str:
         """Return the ISO completion date suitable for date inputs."""
 
-        return self.completion_date.isoformat() if self.completion_date else ""
+        normalized = _coerce_date(self.completion_date)
+        return normalized.isoformat() if normalized else ""
 
 
 def _split_values(raw: str) -> tuple[str, ...]:
@@ -175,6 +179,16 @@ def _format_time_range(start: time | None, end: time | None) -> str:
     if start_label == "-":
         return end_label
     return f"{start_label} - {end_label}"
+
+
+def _coerce_date(value: date | datetime | None) -> date | None:
+    """Normalize database date or datetime payloads to ``date`` objects."""
+
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    return value
 
 
 def get_courses_overview() -> list[CourseRecord]:
@@ -241,3 +255,4 @@ __all__ = [
     "CourseStatus",
     "get_courses_overview",
 ]
+
