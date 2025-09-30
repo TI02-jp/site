@@ -111,6 +111,11 @@
                             </td>
                             <td class="fw-semibold">{{ format_currency(event.total_cost) }}</td>
                             <td class="text-nowrap">
+                                <a class="btn btn-outline-secondary btn-sm me-1"
+                                   href="{{ url_for('diretoria_eventos_visualizar', event_id=event.id) }}"
+                                   title="Visualizar evento">
+                                    <i class="bi bi-eye"></i>
+                                </a>
                                 <a class="btn btn-outline-primary btn-sm me-1" href="{{ url_for('diretoria_eventos_editar', event_id=event.id) }}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
