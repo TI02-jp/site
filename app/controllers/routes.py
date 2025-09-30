@@ -131,22 +131,6 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
 }
 
 
-ACESSOS_DIRECT_LINKS: list[dict[str, str]] = [
-    {
-        "label": "Acessórias",
-        "url": "https://app.acessorias.com/sysmain.php",
-        "description": "Acesse o sistema Acessórias para conferir obrigações fiscais.",
-        "icon": "bi bi-box-arrow-up-right",
-    },
-    {
-        "label": "SIEG",
-        "url": "https://auth.sieg.com/login",
-        "description": "Portal SIEG para captura de notas e integrações contábeis.",
-        "icon": "bi bi-box-arrow-up-right",
-    },
-]
-
-
 EVENT_TYPE_LABELS = {
     "treinamento": "Treinamento",
     "data_comemorativa": "Data comemorativa",
@@ -1126,7 +1110,7 @@ def cursos():
 @app.route("/acessos")
 @login_required
 def acessos():
-    """Display the hub with the available access categories and direct shortcuts."""
+    """Display the hub with the available access categories and saved shortcuts."""
 
     categoria_links = {
         slug: (
@@ -1139,8 +1123,48 @@ def acessos():
     return render_template(
         "acessos.html",
         categorias=ACESSOS_CATEGORIES,
-        links=ACESSOS_DIRECT_LINKS,
         categoria_links=categoria_links,
+    )
+
+
+def _access_category_choices() -> list[tuple[str, str]]:
+    """Return available categories formatted for WTForms choice fields."""
+
+    return [
+        (slug, data["title"])
+        for slug, data in ACESSOS_CATEGORIES.items()
+    ]
+
+
+@app.route("/acessos/novo", methods=["GET", "POST"])
+@login_required
+def acessos_novo():
+    """Display and process the form to create a new shortcut for any category."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = AccessLinkForm()
+    form.category.choices = _access_category_choices()
+
+    if form.validate_on_submit():
+        novo_link = AccessLink(
+            category=form.category.data,
+            label=form.label.data.strip(),
+            url=form.url.data.strip(),
+            description=(form.description.data or "").strip() or None,
+            created_by=current_user,
+        )
+        db.session.add(novo_link)
+        db.session.commit()
+        flash("Novo atalho criado com sucesso!", "success")
+        return redirect(url_for("acessos"))
+
+    return render_template(
+        "acessos_categoria_novo.html",
+        categoria=None,
+        categoria_slug=None,
+        form=form,
     )
 
 
@@ -1168,9 +1192,13 @@ def acessos_categoria_novo(categoria_slug: str):
         abort(404)
 
     form = AccessLinkForm()
+    form.category.choices = _access_category_choices()
+    if request.method == "GET":
+        form.category.data = categoria_slug.lower()
+
     if form.validate_on_submit():
         novo_link = AccessLink(
-            category=categoria_slug.lower(),
+            category=form.category.data,
             label=form.label.data.strip(),
             url=form.url.data.strip(),
             description=(form.description.data or "").strip() or None,
