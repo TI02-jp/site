@@ -700,7 +700,7 @@ def diretoria_eventos_visualizar(event_id: int):
             {
                 "key": key,
                 "label": label,
-                "items": processed_items,
+                "entries": processed_items,
                 "total": category_total or Decimal("0.00"),
             }
         )
