@@ -3252,7 +3252,7 @@ def update_task_status(task_id):
     if current_user.role != "admin":
         allowed = {
             TaskStatus.PENDING: {TaskStatus.IN_PROGRESS},
-            TaskStatus.IN_PROGRESS: {TaskStatus.DONE},
+            TaskStatus.IN_PROGRESS: {TaskStatus.DONE, TaskStatus.PENDING},
         }
         if new_status not in allowed.get(task.status, set()):
             abort(403)
@@ -3284,4 +3284,27 @@ def update_task_status(task_id):
             task.completed_at = None
         db.session.add(history)
         db.session.commit()
+    return jsonify({"success": True})
+
+
+def _delete_task_recursive(task: Task) -> None:
+    """Delete a task and all of its subtasks recursively."""
+
+    for child in list(task.children or []):
+        _delete_task_recursive(child)
+    TaskStatusHistory.query.filter_by(task_id=task.id).delete(synchronize_session=False)
+    TaskNotification.query.filter_by(task_id=task.id).delete(synchronize_session=False)
+    db.session.delete(task)
+
+
+@app.route("/tasks/<int:task_id>/delete", methods=["POST"])
+@admin_required
+def delete_task(task_id):
+    """Remove a task from the system, including its subtasks and history."""
+
+    task = Task.query.get_or_404(task_id)
+    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+        abort(404)
+    _delete_task_recursive(task)
+    db.session.commit()
     return jsonify({"success": True})

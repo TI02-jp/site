@@ -337,6 +337,14 @@
   background: #157347;
 }
 
+.action.to-pending {
+  background: #6c757d;
+}
+
+.action.to-pending:hover {
+  background: #5c636a;
+}
+
 .action.reopen {
   background: #ffc107;
   color: #212529;
@@ -352,6 +360,14 @@
 
 .action.view:hover {
   background: #0284c7;
+}
+
+.action.delete {
+  background: #dc3545;
+}
+
+.action.delete:hover {
+  background: #bb2d3b;
 }
 
 .task-actions .subtask {

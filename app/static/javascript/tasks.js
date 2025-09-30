@@ -16,6 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('.delete-task').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const taskId = btn.dataset.id;
+            const title = btn.dataset.title || '';
+            const confirmationMessage = title
+                ? `Deseja realmente excluir a tarefa "${title}"? Esta ação não pode ser desfeita.`
+                : 'Deseja realmente excluir esta tarefa? Esta ação não pode ser desfeita.';
+            if (!window.confirm(confirmationMessage)) {
+                return;
+            }
+            fetch(`/tasks/${taskId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Falha ao excluir a tarefa.');
+                    }
+                    return response.json();
+                })
+                .then(() => window.location.reload())
+                .catch(error => {
+                    console.error(error);
+                    window.alert('Não foi possível excluir a tarefa. Tente novamente mais tarde.');
+                });
+        });
+    });
+
     document.querySelectorAll('.toggle-children').forEach(btn => {
         btn.addEventListener('click', () => {
             const card = btn.closest('.task-card');
