@@ -2,6 +2,10 @@
 
 {% block title %}{{ 'Editar Tag' if tag else 'Cadastrar Tag' }}{% endblock %}
 
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4" style="max-width: 800px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
