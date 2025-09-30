@@ -1,4 +1,4 @@
-{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None) %}
+{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False) %}
 <li id="task-{{ task.id }}" class="task-card{% if task.children %} has-children{% endif %}">
   <div class="task-header">
     {% if task.children %}
@@ -40,12 +40,16 @@
       {% if task.status == TaskStatus.PENDING %}
       <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
       {% elif task.status == TaskStatus.IN_PROGRESS %}
+      <button class="action to-pending change-status" data-id="{{ task.id }}" data-status="pending" title="Mover para pendente"><i class="bi bi-arrow-return-left"></i></button>
       <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
       {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
       <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
       {% if current_user.role == 'admin' %}
       <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
+      {% if allow_delete %}
+      <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
+      {% endif %}
       {% endif %}
     </div>
   </div>
@@ -93,7 +97,7 @@
   {% if task.children %}
   <ul class="subtasks">
     {% for child in task.children %}
-      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels) }}
+      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete) }}
     {% endfor %}
   </ul>
   {% endif %}
