@@ -263,7 +263,7 @@
                             <span class="fw-semibold">{{ format_currency(category.total) }}</span>
                         </div>
                         <div class="card-body">
-                            {% if category.items %}
+                            {% if category.entries %}
                                 <div class="table-responsive">
                                     <table class="table table-sm align-middle mb-0">
                                         <thead>
@@ -275,7 +275,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {% for item in category.items %}
+                                            {% for item in category.entries %}
                                                 <tr>
                                                     <td class="fw-semibold">{{ item.name }}</td>
                                                     <td class="text-center">{{ format_decimal(item.quantity) }}</td>
