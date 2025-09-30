@@ -69,7 +69,15 @@
                                 </div>
                                 {% endif %}
                             </div>
-                            {{ tag_form.submit(class="btn btn-outline-primary flex-shrink-0") }}
+                            <button
+                                type="submit"
+                                name="{{ tag_form.submit.name }}"
+                                value="1"
+                                class="btn btn-primary courses-table-actions__button courses-tags-form__button"
+                            >
+                                <i class="bi bi-plus-circle me-2"></i>
+                                {{ tag_form.submit.label.text }}
+                            </button>
                         </form>
                     </div>
                     <div class="courses-tags-list">

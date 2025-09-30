@@ -321,6 +321,10 @@ Página de Cursos
     min-height: 1.5rem;
 }
 
+.courses-tags-form__button {
+    flex-shrink: 0;
+}
+
 .courses-table-section {
     margin-top: 2.5rem;
 }
@@ -603,6 +607,10 @@ Página de Cursos
     .courses-table-actions__button {
         width: 100%;
         justify-content: center;
+    }
+
+    .courses-tags-form__button {
+        width: auto;
     }
 
     .courses-table tbody tr {
