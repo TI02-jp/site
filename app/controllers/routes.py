@@ -128,6 +128,11 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
         "description": "Ferramentas que apoiam a rotina contábil e o envio de documentos.",
         "icon": "bi bi-journal-check",
     },
+    "pessoal": {
+        "title": "Pessoal",
+        "description": "Portais e ferramentas de apoio às rotinas de Departamento Pessoal e RH.",
+        "icon": "bi bi-people",
+    },
 }
 
 
