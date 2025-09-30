@@ -153,12 +153,36 @@
             object-fit: cover;
         }
 
+        .eventos-form .photos-section .event-photo-card .photo-url-field {
+            margin-top: 0.75rem;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field .form-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: #6c757d;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field .form-control {
+            font-size: 0.72rem;
+            padding: 0.3rem 0.5rem;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field .form-text {
+            font-size: 0.6rem;
+        }
+
         .eventos-form .photos-section .event-photo-actions {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 0.5rem;
             margin-top: 0.75rem;
+        }
+
+        .eventos-form .photos-section .event-photo-actions .btn + .btn {
+            margin-left: 0.35rem;
         }
 
         .eventos-form .photos-section .empty-state {
@@ -363,6 +387,7 @@
                     <div class="form-text">Formatos permitidos: PNG, JPG, JPEG ou GIF (até 2&nbsp;MB por arquivo).</div>
                 </div>
             </div>
+            <input type="file" class="d-none" id="fotosEventoReplaceInput" accept="image/*">
             <div id="fotosEventoStatus" class="small mt-2 d-none"></div>
             <div id="fotosEventoEmpty" class="empty-state text-center text-muted mt-3">
                 <i class="bi bi-images me-2"></i>Nenhuma foto adicionada até o momento.
@@ -440,17 +465,55 @@
             const photosListEl = document.getElementById('fotosEventoLista');
             const photosEmptyState = document.getElementById('fotosEventoEmpty');
             const photosStatusEl = document.getElementById('fotosEventoStatus');
+            const photosReplaceInput = document.getElementById('fotosEventoReplaceInput');
             let photoStatusTimeoutId = null;
+            let photoReplacementIndex = null;
 
             const photosController = (() => {
                 let items = [];
 
                 function removeAt(index) {
                     if (index < 0 || index >= items.length) {
-                        return;
+                        return false;
                     }
                     items = [...items.slice(0, index), ...items.slice(index + 1)];
                     render();
+                    return true;
+                }
+
+                function updateAt(index, value) {
+                    if (index < 0 || index >= items.length) {
+                        return false;
+                    }
+
+                    if (typeof value !== 'string') {
+                        return false;
+                    }
+
+                    const normalized = value.trim();
+                    if (!normalized) {
+                        return false;
+                    }
+
+                    const duplicateIndex = items.findIndex(
+                        (entry, entryIndex) => entryIndex !== index && entry === normalized,
+                    );
+
+                    if (duplicateIndex !== -1) {
+                        return false;
+                    }
+
+                    if (items[index] === normalized) {
+                        return true;
+                    }
+
+                    items = [
+                        ...items.slice(0, index),
+                        normalized,
+                        ...items.slice(index + 1),
+                    ];
+                    render();
+                    return true;
                 }
 
                 function render() {
@@ -473,16 +536,34 @@
 
                     items.forEach((url, index) => {
                         const col = document.createElement('div');
-                        col.className = 'col-6 col-md-4 col-lg-3';
+                        col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
+                        col.dataset.photoIndex = String(index);
+
+                        const safeUrl = String(url)
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#x27;');
+                        const inputId = `fotoEventoUrl${index}`;
+
                         col.innerHTML = `
-                            <div class="event-photo-card">
+                            <div class="event-photo-card d-flex flex-column h-100">
                                 <div class="event-photo-thumb">
-                                    <img src="${url}" alt="Foto do evento ${index + 1}">
+                                    <img src="${safeUrl}" alt="Foto do evento ${index + 1}">
                                 </div>
-                                <div class="event-photo-actions">
-                                    <a href="${url}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                                <div class="photo-url-field">
+                                    <label class="form-label" for="${inputId}">Link da foto</label>
+                                    <input type="url" class="form-control form-control-sm" id="${inputId}" value="${safeUrl}" data-photo-url-input>
+                                    <div class="form-text text-muted">Edite o link manualmente ou utilize o botão "Substituir".</div>
+                                </div>
+                                <div class="event-photo-actions flex-wrap mt-auto">
+                                    <a href="${safeUrl}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm flex-grow-1">
                                         <i class="bi bi-box-arrow-up-right me-1"></i>Ver
                                     </a>
+                                    <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" data-action="replace-photo">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Substituir
+                                    </button>
                                     <button type="button" class="btn btn-link btn-sm text-danger px-0" data-action="remove-photo">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -492,7 +573,80 @@
 
                         const removeButton = col.querySelector('[data-action="remove-photo"]');
                         if (removeButton) {
-                            removeButton.addEventListener('click', () => removeAt(index));
+                            removeButton.addEventListener('click', () => {
+                                if (removeAt(index)) {
+                                    setPhotoStatus('Foto removida.', 'muted', 3500);
+                                }
+                            });
+                        }
+
+                        const replaceButton = col.querySelector('[data-action="replace-photo"]');
+                        if (replaceButton) {
+                            replaceButton.addEventListener('click', () => {
+                                if (!photosReplaceInput) {
+                                    return;
+                                }
+                                photoReplacementIndex = index;
+                                photosReplaceInput.click();
+                            });
+                        }
+
+                        const urlInput = col.querySelector('[data-photo-url-input]');
+                        if (urlInput instanceof HTMLInputElement) {
+                            const commitUpdate = () => {
+                                const currentItems = getItems();
+                                const previousValue = currentItems[index] || '';
+                                const nextValue = urlInput.value.trim();
+
+                                if (!nextValue) {
+                                    setPhotoStatus('Informe um link válido para a foto.', 'danger', 5000);
+                                    urlInput.value = previousValue;
+                                    return;
+                                }
+
+                                if (nextValue === previousValue) {
+                                    urlInput.value = previousValue;
+                                    return;
+                                }
+
+                                if (
+                                    currentItems.some(
+                                        (entry, entryIndex) => entryIndex !== index && entry === nextValue,
+                                    )
+                                ) {
+                                    setPhotoStatus('Esta foto já foi adicionada.', 'danger', 5000);
+                                    urlInput.value = previousValue;
+                                    return;
+                                }
+
+                                const updated = updateAt(index, nextValue);
+                                if (updated) {
+                                    setPhotoStatus('Link da foto atualizado com sucesso.', 'success', 3500);
+                                    window.requestAnimationFrame(() => {
+                                        const refreshedInput = photosListEl.querySelector(
+                                            `[data-photo-index="${index}"] [data-photo-url-input]`,
+                                        );
+                                        if (refreshedInput instanceof HTMLInputElement) {
+                                            refreshedInput.focus({ preventScroll: true });
+                                            refreshedInput.setSelectionRange(
+                                                refreshedInput.value.length,
+                                                refreshedInput.value.length,
+                                            );
+                                        }
+                                    });
+                                } else {
+                                    setPhotoStatus('Não foi possível atualizar o link da foto.', 'danger', 5000);
+                                    urlInput.value = previousValue;
+                                }
+                            };
+
+                            urlInput.addEventListener('blur', commitUpdate);
+                            urlInput.addEventListener('keydown', (event) => {
+                                if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    commitUpdate();
+                                }
+                            });
                         }
 
                         photosListEl.appendChild(col);
@@ -510,14 +664,15 @@
 
                 function addItem(value) {
                     if (typeof value !== 'string') {
-                        return;
+                        return false;
                     }
                     const normalized = value.trim();
                     if (!normalized || items.includes(normalized)) {
-                        return;
+                        return false;
                     }
                     items = [...items, normalized];
                     render();
+                    return true;
                 }
 
                 function getItems() {
@@ -531,7 +686,7 @@
 
                 render();
 
-                return { setItems, addItem, removeAt, getItems, clear };
+                return { setItems, addItem, removeAt, updateAt, getItems, clear };
             })();
 
             const setPhotoStatus = (message = '', type = 'muted', timeoutMs = 0) => {
@@ -591,25 +746,59 @@
                 return data.image_url;
             };
 
-            const handlePhotoSelection = async (files) => {
-                for (const file of files) {
+            const handlePhotoSelection = async (files, targetIndex = null) => {
+                const fileList = Array.from(files).filter((item) => item instanceof File);
+
+                if (!fileList.length) {
+                    return;
+                }
+
+                if (targetIndex !== null) {
+                    fileList.splice(1);
+                }
+
+                for (const file of fileList) {
                     if (!(file instanceof File)) {
                         continue;
                     }
 
                     if (!file.type || !file.type.startsWith('image/')) {
                         setPhotoStatus(`O arquivo "${file.name}" não parece ser uma imagem válida.`, 'danger', 5000);
+                        if (targetIndex !== null) {
+                            break;
+                        }
                         continue;
                     }
 
                     try {
-                        setPhotoStatus(`Enviando "${file.name}"...`, 'muted');
+                        if (targetIndex === null) {
+                            setPhotoStatus(`Enviando "${file.name}"...`, 'muted');
+                        } else {
+                            setPhotoStatus(`Substituindo por "${file.name}"...`, 'muted');
+                        }
                         const imageUrl = await uploadPhoto(file);
-                        photosController.addItem(imageUrl);
-                        setPhotoStatus(`Foto "${file.name}" adicionada com sucesso.`, 'success', 3500);
+                        if (targetIndex === null) {
+                            const added = photosController.addItem(imageUrl);
+                            if (added) {
+                                setPhotoStatus(`Foto "${file.name}" adicionada com sucesso.`, 'success', 3500);
+                            } else {
+                                setPhotoStatus('A foto enviada já está presente na lista.', 'muted', 4000);
+                            }
+                        } else {
+                            const updated = photosController.updateAt(targetIndex, imageUrl);
+                            if (updated) {
+                                setPhotoStatus('Foto substituída com sucesso.', 'success', 3500);
+                            } else {
+                                setPhotoStatus('Não foi possível atualizar a foto selecionada.', 'danger', 5000);
+                            }
+                            break;
+                        }
                     } catch (error) {
                         const message = error instanceof Error ? error.message : 'Não foi possível enviar a foto.';
                         setPhotoStatus(message, 'danger');
+                        if (targetIndex !== null) {
+                            break;
+                        }
                     }
                 }
             };
@@ -623,6 +812,29 @@
                     const files = Array.from(photosInput.files);
                     handlePhotoSelection(files);
                     photosInput.value = '';
+                });
+            }
+
+            if (photosReplaceInput) {
+                photosReplaceInput.addEventListener('change', () => {
+                    const targetIndex = Number.isInteger(photoReplacementIndex) && photoReplacementIndex >= 0
+                        ? photoReplacementIndex
+                        : null;
+                    photoReplacementIndex = null;
+
+                    if (!photosReplaceInput.files || !photosReplaceInput.files.length) {
+                        photosReplaceInput.value = '';
+                        return;
+                    }
+
+                    if (targetIndex === null) {
+                        photosReplaceInput.value = '';
+                        return;
+                    }
+
+                    const file = photosReplaceInput.files[0];
+                    handlePhotoSelection([file], targetIndex);
+                    photosReplaceInput.value = '';
                 });
             }
 
