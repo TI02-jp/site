@@ -52,19 +52,28 @@
         <section class="courses-table-section">
             <div class="card shadow-sm border-0">
                 <div class="courses-table-actions d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3 border-bottom">
-                    <h2 class="courses-table-actions__title mb-0">Cursos cadastrados</h2>
-                    {% if can_manage_courses %}
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-outline-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseTagModal" data-action="open-tag-create">
-                            <i class="bi bi-tag me-2"></i>
-                            Adicionar tag
-                        </button>
-                        <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal" data-action="open-course-create">
-                            <i class="bi bi-plus-circle me-2"></i>
-                            Cadastrar curso
-                        </button>
+                    <h2 class="courses-table-actions__title mb-0 flex-grow-1">Cursos cadastrados</h2>
+                    <div class="courses-table-actions__controls d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                        <div class="courses-table-actions__search">
+                            <label for="course-search" class="visually-hidden">Pesquisar cursos</label>
+                            <input type="search" id="course-search" class="form-control courses-table-actions__search-input" placeholder="Pesquisar cursos" autocomplete="off" data-role="course-search" aria-label="Pesquisar cursos" />
+                            <span class="courses-table-actions__search-icon" aria-hidden="true">
+                                <i class="bi bi-search"></i>
+                            </span>
+                        </div>
+                        {% if can_manage_courses %}
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseTagModal" data-action="open-tag-create">
+                                <i class="bi bi-tag me-2"></i>
+                                Adicionar tag
+                            </button>
+                            <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal" data-action="open-course-create">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Cadastrar curso
+                            </button>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -405,6 +414,7 @@
         var tableBody = document.querySelector('.courses-table tbody');
         var tableRows = tableBody ? Array.prototype.slice.call(tableBody.querySelectorAll('.courses-table-row')) : [];
         var emptyStateRow = tableBody ? tableBody.querySelector('[data-empty-state-row]') : null;
+        var searchInput = document.querySelector('[data-role="course-search"]');
         var statusField = formEl.elements.namedItem('status');
         var participantSelectAll = formEl.querySelector('[data-role="participants-select-all"]');
         var participantCheckboxes = Array.prototype.slice.call(formEl.querySelectorAll('input[name="participants"]'));
@@ -418,6 +428,37 @@
             .filter(Boolean);
         var postponedStatusValue = '{{ CourseStatus.POSTPONED.value }}';
         var activeStatusFilter = null;
+        var searchTerm = '';
+
+        function computeRowSearchIndex(row) {
+            if (!row) {
+                return '';
+            }
+            var content = row.textContent || '';
+            return content.replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+
+        function filterRows() {
+            if (!tableRows.length) {
+                return;
+            }
+            var visibleCount = 0;
+            tableRows.forEach(function (row) {
+                if (!row.dataset.searchIndex) {
+                    row.dataset.searchIndex = computeRowSearchIndex(row);
+                }
+                var matchesStatus = !activeStatusFilter || row.dataset.status === activeStatusFilter;
+                var matchesSearch = !searchTerm || row.dataset.searchIndex.indexOf(searchTerm) !== -1;
+                var shouldShow = matchesStatus && matchesSearch;
+                row.classList.toggle('is-hidden', !shouldShow);
+                if (shouldShow) {
+                    visibleCount += 1;
+                }
+            });
+            if (emptyStateRow) {
+                emptyStateRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
 
         function resetTagFormState() {
             if (!tagFormEl) {
@@ -441,25 +482,6 @@
                 item.classList.toggle('is-active', isActive);
                 item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             });
-        }
-
-        function filterRowsByStatus() {
-            if (!tableRows.length) {
-                return;
-            }
-            var visibleCount = 0;
-            tableRows.forEach(function (row) {
-                var matches = !activeStatusFilter || row.dataset.status === activeStatusFilter;
-                if (matches) {
-                    row.classList.remove('is-hidden');
-                    visibleCount += 1;
-                } else {
-                    row.classList.add('is-hidden');
-                }
-            });
-            if (emptyStateRow) {
-                emptyStateRow.style.display = visibleCount === 0 ? '' : 'none';
-            }
         }
 
         function updateParticipantSelectAllState() {
@@ -541,7 +563,7 @@
         function applyStatusFilter(nextStatus) {
             activeStatusFilter = nextStatus;
             updateSummaryActiveState();
-            filterRowsByStatus();
+            filterRows();
             if (activeStatusFilter) {
                 document.addEventListener('click', handleDocumentClick);
             } else {
@@ -588,6 +610,19 @@
         if (summaryItems.length) {
             updateSummaryActiveState();
         }
+
+        if (searchInput) {
+            var initialSearchValue = searchInput.value.trim().toLowerCase();
+            if (initialSearchValue) {
+                searchTerm = initialSearchValue;
+            }
+            searchInput.addEventListener('input', function () {
+                searchTerm = searchInput.value.trim().toLowerCase();
+                filterRows();
+            });
+        }
+
+        filterRows();
 
         participantCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', updateParticipantSelectAllState);

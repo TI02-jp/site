@@ -420,6 +420,50 @@ Página de Cursos
     background: #fff;
 }
 
+.courses-table-actions__controls {
+    width: 100%;
+}
+
+.courses-table-actions__search {
+    position: relative;
+    flex: 1 1 220px;
+    width: 100%;
+    max-width: 360px;
+}
+
+.courses-table-actions__search-input {
+    padding-left: 2.4rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+}
+
+.courses-table-actions__search-icon {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+    font-size: 0.9rem;
+}
+
+.courses-table-actions__controls > * {
+    flex-shrink: 0;
+}
+
+.courses-table-actions__controls > .courses-table-actions__search {
+    flex-shrink: 1;
+}
+
+@media (min-width: 992px) {
+    .courses-table-actions__controls {
+        width: auto;
+    }
+    .courses-table-actions__search {
+        flex: 0 0 260px;
+    }
+}
+
 .courses-table-actions__button {
     display: inline-flex;
     align-items: center;
@@ -480,8 +524,11 @@ Página de Cursos
 }
 
 .courses-table-row {
-    cursor: pointer;
     transition: background-color 0.2s ease;
+}
+
+.courses-table-row[data-course] {
+    cursor: pointer;
 }
 
 .courses-table-row:hover {
