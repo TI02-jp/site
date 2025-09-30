@@ -36,6 +36,7 @@ from app.models.tables import (
     TaskNotification,
     AccessLink,
     Course,
+    CourseTag,
     DiretoriaEvent,
     GeneralCalendarEvent,
 )
@@ -59,6 +60,7 @@ from app.forms import (
     TaskForm,
     AccessLinkForm,
     CourseForm,
+    CourseTagForm,
 )
 import os, json, re, secrets
 import requests
@@ -907,6 +909,7 @@ def cursos():
     """Display the curated catalog of internal courses."""
 
     form = CourseForm()
+    tag_form = CourseTagForm(prefix="tag")
     can_manage_courses = current_user.role == "admin"
     sector_choices = [
         (sector.id, sector.nome)
@@ -918,104 +921,150 @@ def cursos():
     ]
     form.sectors.choices = sector_choices
     form.participants.choices = participant_choices
+    course_tags = CourseTag.query.order_by(CourseTag.name.asc()).all()
+    tag_choices = [(tag.id, tag.name) for tag in course_tags]
+    form.tags.choices = tag_choices
 
     sector_lookup = {value: label for value, label in sector_choices}
     participant_lookup = {value: label for value, label in participant_choices}
+    tag_lookup = {tag.id: tag for tag in course_tags}
 
     course_id_raw = (form.course_id.data or "").strip()
+    is_tag_submission = request.method == "POST" and "tag-submit" in request.form
 
-    if request.method == "POST" and not can_manage_courses:
-        flash("Apenas administradores podem cadastrar ou editar cursos.", "danger")
-        return redirect(url_for("cursos"))
-
-    if request.method == "POST" and form.submit_delete.data:
-        if not course_id_raw:
-            flash("Selecione um curso para excluir.", "danger")
+    if is_tag_submission:
+        if not can_manage_courses:
+            flash("Apenas administradores podem gerenciar as tags de cursos.", "danger")
             return redirect(url_for("cursos"))
 
-        try:
-            course_id = int(course_id_raw)
-        except ValueError:
-            flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+        if tag_form.validate_on_submit():
+            tag_name = tag_form.name.data or ""
+            existing_tag = db.session.execute(
+                sa.select(CourseTag).where(sa.func.lower(CourseTag.name) == sa.func.lower(tag_name))
+            ).scalar_one_or_none()
+            if existing_tag:
+                tag_form.name.errors.append("Já existe uma tag de curso com esse nome.")
+                flash("Já existe uma tag de curso com esse nome.", "warning")
+            else:
+                new_tag = CourseTag(name=tag_name)
+                db.session.add(new_tag)
+                db.session.commit()
+                flash("Tag de curso criada com sucesso!", "success")
+                return redirect(url_for("cursos"))
+        else:
+            flash(
+                "Não foi possível adicionar a tag. Verifique o nome informado e tente novamente.",
+                "danger",
+            )
+
+    if not is_tag_submission:
+        if request.method == "POST" and not can_manage_courses:
+            flash("Apenas administradores podem cadastrar ou editar cursos.", "danger")
             return redirect(url_for("cursos"))
 
-        existing_course_id = db.session.execute(
-            sa.select(Course.id).where(Course.id == course_id)
-        ).scalar_one_or_none()
-
-        if existing_course_id is None:
-            flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
-            return redirect(url_for("cursos"))
-
-        linked_meetings = Reuniao.query.filter_by(course_id=course_id).all()
-        for meeting in linked_meetings:
-            if not delete_meeting(meeting):
-                flash(
-                    "Não foi possível remover a reunião vinculada no calendário. Tente novamente em alguns instantes.",
-                    "danger",
-                )
+        if request.method == "POST" and form.submit_delete.data:
+            if not course_id_raw:
+                flash("Selecione um curso para excluir.", "danger")
                 return redirect(url_for("cursos"))
 
-        db.session.execute(sa.delete(Course).where(Course.id == course_id))
-        db.session.commit()
-        if linked_meetings:
-            flash(
-                "Curso e reuniões associadas excluídos com sucesso!",
-                "success",
-            )
-        else:
-            flash("Curso excluído com sucesso!", "success")
-        return redirect(url_for("cursos"))
-
-    if form.validate_on_submit():
-        course_id: int | None = None
-        if course_id_raw:
             try:
                 course_id = int(course_id_raw)
             except ValueError:
-                course_id = None
-
-        selected_sector_names = [
-            sector_lookup[sector_id]
-            for sector_id in form.sectors.data
-            if sector_id in sector_lookup
-        ]
-        selected_participant_names = [
-            participant_lookup[user_id]
-            for user_id in form.participants.data
-            if user_id in participant_lookup
-        ]
-        should_add_to_calendar = bool(form.submit_add_to_calendar.data)
-        meeting_query_params: dict[str, Any] = {}
-        if should_add_to_calendar:
-            meeting_query_params = {"course_calendar": "1"}
-            name_value = (form.name.data or "").strip()
-            if name_value:
-                meeting_query_params["subject"] = name_value
-            if form.start_date.data:
-                meeting_query_params["date"] = form.start_date.data.isoformat()
-            if form.schedule_start.data:
-                meeting_query_params["start"] = form.schedule_start.data.strftime("%H:%M")
-            if form.schedule_end.data:
-                meeting_query_params["end"] = form.schedule_end.data.strftime("%H:%M")
-            participant_ids = [str(user_id) for user_id in form.participants.data]
-            if participant_ids:
-                meeting_query_params["participants"] = participant_ids
-
-        success_message = ""
-        if course_id is not None:
-            existing_id = db.session.execute(
-                sa.select(Course.id).where(Course.id == course_id)
-            ).scalar_one_or_none()
-
-            if existing_id is None:
                 flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
                 return redirect(url_for("cursos"))
 
-            db.session.execute(
-                sa.update(Course)
-                .where(Course.id == course_id)
-                .values(
+            existing_course_id = db.session.execute(
+                sa.select(Course.id).where(Course.id == course_id)
+            ).scalar_one_or_none()
+
+            if existing_course_id is None:
+                flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+                return redirect(url_for("cursos"))
+
+            linked_meetings = Reuniao.query.filter_by(course_id=course_id).all()
+            for meeting in linked_meetings:
+                if not delete_meeting(meeting):
+                    flash(
+                        "Não foi possível remover a reunião vinculada no calendário. Tente novamente em alguns instantes.",
+                        "danger",
+                    )
+                    return redirect(url_for("cursos"))
+
+            db.session.execute(sa.delete(Course).where(Course.id == course_id))
+            db.session.commit()
+            if linked_meetings:
+                flash(
+                    "Curso e reuniões associadas excluídos com sucesso!",
+                    "success",
+                )
+            else:
+                flash("Curso excluído com sucesso!", "success")
+            return redirect(url_for("cursos"))
+
+        if form.validate_on_submit():
+            course_id: int | None = None
+            if course_id_raw:
+                try:
+                    course_id = int(course_id_raw)
+                except ValueError:
+                    course_id = None
+
+            selected_sector_names = [
+                sector_lookup[sector_id]
+                for sector_id in form.sectors.data
+                if sector_id in sector_lookup
+            ]
+            selected_participant_names = [
+                participant_lookup[user_id]
+                for user_id in form.participants.data
+                if user_id in participant_lookup
+            ]
+            selected_tags = [
+                tag_lookup[tag_id]
+                for tag_id in form.tags.data
+                if tag_id in tag_lookup
+            ]
+            should_add_to_calendar = bool(form.submit_add_to_calendar.data)
+            meeting_query_params: dict[str, Any] = {}
+            if should_add_to_calendar:
+                meeting_query_params = {"course_calendar": "1"}
+                name_value = (form.name.data or "").strip()
+                if name_value:
+                    meeting_query_params["subject"] = name_value
+                if form.start_date.data:
+                    meeting_query_params["date"] = form.start_date.data.isoformat()
+                if form.schedule_start.data:
+                    meeting_query_params["start"] = form.schedule_start.data.strftime("%H:%M")
+                if form.schedule_end.data:
+                    meeting_query_params["end"] = form.schedule_end.data.strftime("%H:%M")
+                participant_ids = [str(user_id) for user_id in form.participants.data]
+                if participant_ids:
+                    meeting_query_params["participants"] = participant_ids
+
+            success_message = ""
+            if course_id is not None:
+                course_obj = db.session.get(Course, course_id)
+
+                if course_obj is None:
+                    flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
+                    return redirect(url_for("cursos"))
+
+                course_obj.name = form.name.data.strip()
+                course_obj.instructor = form.instructor.data.strip()
+                course_obj.sectors = ", ".join(selected_sector_names)
+                course_obj.participants = ", ".join(selected_participant_names)
+                course_obj.workload = form.workload.data
+                course_obj.start_date = form.start_date.data
+                course_obj.schedule_start = form.schedule_start.data
+                course_obj.schedule_end = form.schedule_end.data
+                course_obj.completion_date = form.completion_date.data
+                course_obj.status = form.status.data
+                course_obj.observation = (form.observation.data or "").strip() or None
+                course_obj.tags = selected_tags
+                db.session.commit()
+                success_message = "Curso atualizado com sucesso!"
+            else:
+                course = Course(
                     name=form.name.data.strip(),
                     instructor=form.instructor.data.strip(),
                     sectors=", ".join(selected_sector_names),
@@ -1027,45 +1076,29 @@ def cursos():
                     completion_date=form.completion_date.data,
                     status=form.status.data,
                     observation=(form.observation.data or "").strip() or None,
+                    tags=selected_tags,
                 )
-            )
-            db.session.commit()
-            success_message = "Curso atualizado com sucesso!"
-        else:
-            course = Course(
-                name=form.name.data.strip(),
-                instructor=form.instructor.data.strip(),
-                sectors=", ".join(selected_sector_names),
-                participants=", ".join(selected_participant_names),
-                workload=form.workload.data,
-                start_date=form.start_date.data,
-                schedule_start=form.schedule_start.data,
-                schedule_end=form.schedule_end.data,
-                completion_date=form.completion_date.data,
-                status=form.status.data,
-                observation=(form.observation.data or "").strip() or None,
-            )
-            db.session.add(course)
-            db.session.commit()
-            course_id = course.id
-            success_message = "Curso cadastrado com sucesso!"
-        if success_message:
-            flash(success_message, "success")
-        if (
-            should_add_to_calendar
-            and meeting_query_params.get("subject")
-            and meeting_query_params.get("date")
-        ):
-            if course_id is not None:
-                meeting_query_params["course_id"] = str(course_id)
-            return redirect(url_for("sala_reunioes", **meeting_query_params))
-        return redirect(url_for("cursos"))
+                db.session.add(course)
+                db.session.commit()
+                course_id = course.id
+                success_message = "Curso cadastrado com sucesso!"
+            if success_message:
+                flash(success_message, "success")
+            if (
+                should_add_to_calendar
+                and meeting_query_params.get("subject")
+                and meeting_query_params.get("date")
+            ):
+                if course_id is not None:
+                    meeting_query_params["course_id"] = str(course_id)
+                return redirect(url_for("sala_reunioes", **meeting_query_params))
+            return redirect(url_for("cursos"))
 
-    elif request.method == "POST":
-        flash(
-            "Não foi possível salvar o curso. Verifique os campos destacados e tente novamente.",
-            "danger",
-        )
+        elif request.method == "POST":
+            flash(
+                "Não foi possível salvar o curso. Verifique os campos destacados e tente novamente.",
+                "danger",
+            )
 
     courses = get_courses_overview()
     status_counts = Counter(course.status for course in courses)
@@ -1083,6 +1116,8 @@ def cursos():
         status_classes=status_classes,
         CourseStatus=CourseStatus,
         form=form,
+        tag_form=tag_form,
+        course_tags=course_tags,
         editing_course_id=course_id_raw,
         can_manage_courses=can_manage_courses,
     )

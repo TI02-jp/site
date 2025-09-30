@@ -306,6 +306,21 @@ Página de Cursos
     font-weight: 700;
 }
 
+.courses-tags-section {
+    margin-top: 2rem;
+}
+
+.courses-tags-form label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.courses-tags-list {
+    min-height: 1.5rem;
+}
+
 .courses-table-section {
     margin-top: 2.5rem;
 }
@@ -504,6 +519,11 @@ Página de Cursos
 .courses-chip--participant {
     background: rgba(232, 116, 41, 0.15);
     color: #a3501b;
+}
+
+.courses-chip--tag {
+    background: rgba(111, 66, 193, 0.18);
+    color: #4b1d99;
 }
 
 .status-pill {

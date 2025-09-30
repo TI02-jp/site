@@ -49,6 +49,45 @@
             </div>
         </section>
 
+        {% if can_manage_courses %}
+        <section class="courses-tags-section">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Tags de cursos</h2>
+                            <p class="text-muted small mb-0">Cadastre tags reutilizáveis para organizar os cursos e selecione-as durante o cadastro.</p>
+                        </div>
+                        <form method="post" class="courses-tags-form d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-end">
+                            {{ tag_form.hidden_tag() }}
+                            <div class="flex-fill">
+                                <label class="form-label text-start mb-1" for="{{ tag_form.name.id }}">{{ tag_form.name.label }}</label>
+                                {{ tag_form.name(class="form-control" + (' is-invalid' if tag_form.name.errors else ''), placeholder="Ex.: Inteligência Artificial") }}
+                                {% if tag_form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ tag_form.name.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {{ tag_form.submit(class="btn btn-outline-primary flex-shrink-0") }}
+                        </form>
+                    </div>
+                    <div class="courses-tags-list">
+                        {% if course_tags %}
+                        <div class="courses-chip-group">
+                            {% for tag in course_tags %}
+                            <span class="courses-chip courses-chip--tag">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mb-0">Nenhuma tag cadastrada ainda. Utilize o formulário ao lado para criar a primeira tag.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
         <section class="courses-table-section">
             <div class="card shadow-sm border-0">
                 <div class="courses-table-actions d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3 border-bottom">
@@ -92,9 +131,21 @@
                                         "completion_date": course.completion_date_value,
                                         "status": course.status.value,
                                         "observation": course.observation or "",
+                                        "tags": course.tag_ids_list,
                                     } %}
                                     <tr class="courses-table-row" data-status="{{ course.status.value }}"{% if can_manage_courses %} data-course='{{ course_payload | tojson }}' tabindex="0" role="button" aria-label="Editar curso {{ course.name }}"{% endif %}>
-                                        <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
+                                        <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">
+                                            <div class="d-flex flex-column gap-1">
+                                                <span>{{ course.name }}</span>
+                                                {% if course.tags_list %}
+                                                <div class="courses-chip-group">
+                                                    {% for tag in course.tags_list %}
+                                                    <span class="courses-chip courses-chip--tag">{{ tag }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
                                         <td data-label="Nome do Instrutor">{{ course.instructor }}</td>
                                         <td data-label="Setores Participantes">
                                             <div class="courses-chip-group">
@@ -217,6 +268,26 @@
                             {% if form.participants.errors %}
                             <div class="invalid-feedback d-block">
                                 {{ form.participants.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 col-xl-6">
+                            <label class="form-label text-start">{{ form.tags.label.text }}</label>
+                            <div class="courses-checkbox-list {{ 'is-invalid' if form.tags.errors else '' }}">
+                                {% if form.tags.choices %}
+                                    {% for option in form.tags %}
+                                    <div class="form-check courses-checkbox-item">
+                                        {{ option(class="form-check-input", id=option.id) }}
+                                        <label class="form-check-label" for="{{ option.id }}">{{ option.label.text }}</label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <p class="text-muted small mb-0">Cadastre novas tags no painel acima para selecioná-las aqui.</p>
+                                {% endif %}
+                            </div>
+                            {% if form.tags.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.tags.errors[0] }}
                             </div>
                             {% endif %}
                         </div>
@@ -582,6 +653,7 @@
             formEl.reset();
             clearCheckboxGroup('sectors');
             clearCheckboxGroup('participants');
+            clearCheckboxGroup('tags');
             toggleRescheduleFields();
             syncRescheduleInputsFromFields();
         }
@@ -593,7 +665,8 @@
             formEl.querySelectorAll('input[name="' + name + '"]').forEach(function (input) {
                 var label = formEl.querySelector('label[for="' + input.id + '"]');
                 var labelText = label ? label.textContent.trim().toLowerCase() : '';
-                input.checked = normalized.indexOf(labelText) !== -1;
+                var inputValue = (input.value || '').toString().trim().toLowerCase();
+                input.checked = normalized.indexOf(inputValue) !== -1 || normalized.indexOf(labelText) !== -1;
             });
             if (name === 'participants') {
                 updateParticipantSelectAllState();
@@ -623,6 +696,7 @@
             });
             populateCheckboxGroup('sectors', data.sectors);
             populateCheckboxGroup('participants', data.participants);
+            populateCheckboxGroup('tags', data.tags);
             toggleRescheduleFields();
             syncRescheduleInputsFromFields();
         }

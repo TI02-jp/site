@@ -7,6 +7,7 @@ from datetime import date, datetime, time
 from enum import Enum
 
 import sqlalchemy as sa
+from sqlalchemy.orm import selectinload
 
 from app import db
 
@@ -38,6 +39,8 @@ class CourseRecord:
     status: CourseStatus
     completion_note: str | None = None
     observation: str | None = None
+    tags: tuple[str, ...] = tuple()
+    tag_ids: tuple[int, ...] = tuple()
 
     @property
     def start_date_label(self) -> str:
@@ -98,6 +101,18 @@ class CourseRecord:
         """Return the participants as a mutable list for template iteration."""
 
         return list(self.participants)
+
+    @property
+    def tags_list(self) -> list[str]:
+        """Return the tags as a mutable list for template iteration."""
+
+        return list(self.tags)
+
+    @property
+    def tag_ids_list(self) -> list[int]:
+        """Return the tag identifiers as a mutable list for serialization."""
+
+        return list(self.tag_ids)
 
     @property
     def workload_value(self) -> str:
@@ -207,44 +222,35 @@ def get_courses_overview() -> list[CourseRecord]:
     )
 
     stmt = (
-        sa.select(
-            Course.id,
-            Course.name,
-            Course.instructor,
-            Course.sectors,
-            Course.participants,
-            sa.cast(Course.workload, sa.String).label("workload"),
-            Course.start_date,
-            sa.cast(Course.schedule_start, sa.String).label("schedule_start"),
-            sa.cast(Course.schedule_end, sa.String).label("schedule_end"),
-            Course.completion_date,
-            Course.status,
-            Course.observation,
-        )
+        sa.select(Course)
+        .options(selectinload(Course.tags))
         .order_by(status_priority.asc(), most_recent_date.desc(), Course.id.desc())
     )
 
     records: list[CourseRecord] = []
-    for row in db.session.execute(stmt).mappings():
+    for course in db.session.execute(stmt).scalars():
         try:
-            status = CourseStatus(row["status"])
+            status = CourseStatus(course.status)
         except ValueError:
             status = CourseStatus.PLANNED
+        tags_sorted = sorted(course.tags, key=lambda tag: tag.name.lower())
         records.append(
             CourseRecord(
-                id=row["id"],
-                name=row["name"],
-                instructor=row["instructor"],
-                sectors=_split_values(row["sectors"]),
-                participants=_split_values(row["participants"]),
-                workload=_parse_time(row["workload"]),
-                start_date=row["start_date"],
-                schedule_start=_parse_time(row["schedule_start"]),
-                schedule_end=_parse_time(row["schedule_end"]),
-                completion_date=row["completion_date"],
+                id=course.id,
+                name=course.name,
+                instructor=course.instructor,
+                sectors=_split_values(course.sectors or ""),
+                participants=_split_values(course.participants or ""),
+                workload=_parse_time(course.workload),
+                start_date=course.start_date,
+                schedule_start=_parse_time(course.schedule_start),
+                schedule_end=_parse_time(course.schedule_end),
+                completion_date=course.completion_date,
                 completion_note=None,
                 status=status,
-                observation=row["observation"],
+                observation=course.observation,
+                tags=tuple(tag.name for tag in tags_sorted),
+                tag_ids=tuple(tag.id for tag in tags_sorted),
             )
         )
     return records

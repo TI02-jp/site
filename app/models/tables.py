@@ -42,6 +42,13 @@ user_tags = db.Table(
     db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True)
 )
 
+# Association table linking courses to course tag records
+course_tag_links = db.Table(
+    'course_tag_links',
+    db.Column('course_id', db.Integer, db.ForeignKey('courses.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('course_tags.id', ondelete='CASCADE'), primary_key=True),
+)
+
 class JsonString(TypeDecorator):
     """Store JSON as a serialized string."""
     impl = String
@@ -198,9 +205,33 @@ class Course(db.Model):
     completion_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="planejado")
     observation = db.Column(db.Text, nullable=True)
+    tags = db.relationship(
+        'CourseTag',
+        secondary='course_tag_links',
+        back_populates='courses',
+        lazy='selectin',
+    )
 
     def __repr__(self):
         return f"<Course {self.name} ({self.status})>"
+
+
+class CourseTag(db.Model):
+    """Represents a reusable tag for classifying courses."""
+
+    __tablename__ = 'course_tags'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(80), nullable=False, unique=True)
+
+    courses = db.relationship(
+        'Course',
+        secondary='course_tag_links',
+        back_populates='tags',
+    )
+
+    def __repr__(self):
+        return f"<CourseTag {self.name}>"
 
 
 class DiretoriaEvent(db.Model):
