@@ -651,6 +651,79 @@ def diretoria_eventos_editar(event_id: int):
     return render_template("diretoria/eventos.html", event_data=event_payload)
 
 
+@app.route("/diretoria/eventos/<int:event_id>/visualizar")
+@login_required
+def diretoria_eventos_visualizar(event_id: int):
+    """Display the details of a Diretoria JP event without editing it."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    event = DiretoriaEvent.query.options(joinedload(DiretoriaEvent.created_by)).get_or_404(
+        event_id
+    )
+
+    services = event.services if isinstance(event.services, dict) else {}
+
+    def to_decimal(value: Any) -> Decimal | None:
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, TypeError):
+            return None
+
+    categories: list[dict[str, Any]] = []
+    for key, label in EVENT_CATEGORY_LABELS.items():
+        raw_category = services.get(key, {}) if isinstance(services, dict) else {}
+        raw_items = raw_category.get("items", []) if isinstance(raw_category, dict) else []
+        category_total = to_decimal(raw_category.get("total") if isinstance(raw_category, dict) else None)
+
+        processed_items: list[dict[str, Any]] = []
+        if isinstance(raw_items, list):
+            for item in raw_items:
+                if not isinstance(item, dict):
+                    continue
+
+                item_name = (item.get("name") or "").strip()
+                if not item_name:
+                    continue
+
+                processed_items.append(
+                    {
+                        "name": item_name,
+                        "quantity": to_decimal(item.get("quantity")),
+                        "unit_value": to_decimal(item.get("unit_value")),
+                        "total": to_decimal(item.get("total")),
+                    }
+                )
+
+        categories.append(
+            {
+                "key": key,
+                "label": label,
+                "items": processed_items,
+                "total": category_total or Decimal("0.00"),
+            }
+        )
+
+    photo_urls = []
+    if isinstance(event.photos, list):
+        for photo in event.photos:
+            if not isinstance(photo, str):
+                continue
+            normalized = photo.strip()
+            if normalized:
+                photo_urls.append(normalized)
+
+    return render_template(
+        "diretoria/evento_visualizar.html",
+        event=event,
+        categories=categories,
+        photos=photo_urls,
+        event_type_labels=EVENT_TYPE_LABELS,
+        audience_labels=EVENT_AUDIENCE_LABELS,
+    )
+
+
 @app.route("/diretoria/eventos/lista")
 @login_required
 def diretoria_eventos_lista():

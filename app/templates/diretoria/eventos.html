@@ -529,7 +529,8 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-start gap-2 mt-4">
+        <div class="d-flex flex-wrap justify-content-start gap-2 mt-4">
+            <a href="{{ url_for('diretoria_eventos_lista') }}" class="btn btn-light border">Cancelar</a>
             <button type="reset" class="btn btn-outline-secondary">Limpar</button>
             <button type="submit" class="btn btn-primary">{{ 'Atualizar evento' if is_editing else 'Salvar estimativa' }}</button>
         </div>
