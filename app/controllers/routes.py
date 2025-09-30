@@ -101,7 +101,14 @@ GOOGLE_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/calendar",
+    "https://mail.google.com/",
+    "https://www.googleapis.com/auth/gmail.labels",
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.addons.current.message.action",
+    "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
 ]
+
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
@@ -1590,16 +1597,25 @@ def google_login():
     return redirect(authorization_url)
 
 
+def normalize_scopes(scopes):
+    """Converte escopos curtos do Google para equivalentes longos."""
+    fixed = []
+    for s in scopes:
+        if s == "email":
+            fixed.append("https://www.googleapis.com/auth/userinfo.email")
+        elif s == "profile":
+            fixed.append("https://www.googleapis.com/auth/userinfo.profile")
+        else:
+            fixed.append(s)
+    return fixed
+
+
 @app.route("/oauth2callback")
 def google_callback():
-    """Handle OAuth callback from Google."""
     error = request.args.get("error")
     if error:
         session.pop("oauth_state", None)
         session.pop("oauth_code_verifier", None)
-        current_app.logger.warning(
-            "Google OAuth callback returned error '%s'", error
-        )
         flash("O Google não autorizou o login solicitado.", "danger")
         return redirect(url_for("login"))
 
@@ -1610,12 +1626,10 @@ def google_callback():
         session.pop("oauth_code_verifier", None)
         flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
         return redirect(url_for("login"))
+
     flow = build_google_flow(state=state)
+
     try:
-        # ``request.url`` may reflect the internal HTTP scheme when the app is behind
-        # a reverse proxy performing TLS termination. Reconstruct the callback URL
-        # from the configured redirect URI so Google receives the same host and
-        # scheme that was originally registered.
         authorization_response = flow.redirect_uri or request.url
         if request.query_string:
             query_string = request.query_string.decode()
@@ -1623,26 +1637,19 @@ def google_callback():
             authorization_response = f"{authorization_response}{separator}{query_string}"
 
         callback_scope = request.args.get("scope")
-        if callback_scope and hasattr(flow, "oauth2session"):
-            callback_scopes = callback_scope.split()
-            requested_scopes = set(flow.oauth2session.scope or [])
-            returned_scopes = set(callback_scopes)
-            if requested_scopes and returned_scopes != requested_scopes:
-                current_app.logger.warning(
-                    "Escopos do Google retornados divergiram do solicitado. Solicitado: %s. Retornado: %s.",
-                    sorted(requested_scopes),
-                    sorted(returned_scopes),
-                )
-            flow.oauth2session.scope = callback_scopes
-
         fetch_kwargs = {"authorization_response": authorization_response}
+
         if callback_scope:
-            fetch_kwargs["scope"] = callback_scope
+            normalized = normalize_scopes(callback_scope.split())
+            fetch_kwargs["scope"] = normalized
+
         if code_verifier:
             fetch_kwargs["code_verifier"] = code_verifier
+
         flow.fetch_token(**fetch_kwargs)
-    except Exception:
-        current_app.logger.exception("Falha ao trocar código OAuth do Google por token")
+
+    except Exception as exc:
+        current_app.logger.exception(f"Falha no fetch_token: {exc}")
         flash("Não foi possível completar a autenticação com o Google.", "danger")
         return redirect(url_for("login"))
     finally:
