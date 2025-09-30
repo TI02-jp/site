@@ -299,6 +299,11 @@
 .task-actions {
   display: flex;
   gap: 0.25rem;
+  align-items: center;
+}
+
+.task-actions.compact {
+  gap: 0.2rem;
 }
 
 .task-actions .action {
@@ -314,6 +319,12 @@
   font-size: 0.95rem;
   box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-actions.compact .action {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.85rem;
 }
 
 .task-actions .action:hover {

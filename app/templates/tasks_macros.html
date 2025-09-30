@@ -35,7 +35,7 @@
       </div>
       {% endif %}
     </div>
-    <div class="task-actions">
+    <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}">
       <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
       {% if task.status == TaskStatus.PENDING %}
       <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
