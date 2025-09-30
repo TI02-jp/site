@@ -199,6 +199,20 @@ def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
     return os.path.join(current_app.root_path, safe_relative)
 
 
+def _format_event_timestamp(raw_dt: datetime | None) -> str:
+    """Return a São Paulo formatted timestamp for Diretoria JP views."""
+
+    if raw_dt is None:
+        return "—"
+
+    timestamp = raw_dt
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+    localized = timestamp.astimezone(SAO_PAULO_TZ)
+    return localized.strftime("%d/%m/%Y %H:%M")
+
+
 def _cleanup_diretoria_photo_uploads(
     photo_urls: Iterable[str], *, exclude_event_id: int | None = None
 ) -> None:
@@ -826,6 +840,7 @@ def diretoria_eventos_visualizar(event_id: int):
         photos=photo_urls,
         event_type_labels=EVENT_TYPE_LABELS,
         audience_labels=EVENT_AUDIENCE_LABELS,
+        updated_at_display=_format_event_timestamp(event.updated_at),
     )
 
 
@@ -1916,6 +1931,20 @@ def normalize_scopes(scopes):
     return fixed
 
 
+def _determine_post_login_redirect(user: User) -> str:
+    """Return the appropriate dashboard URL after authentication."""
+
+    if user.role == "admin":
+        return url_for("tasks_overview")
+
+    tags = getattr(user, "tags", None)
+    first_tag = tags[0] if tags else None
+    if first_tag:
+        return url_for("tasks_sector", tag_id=first_tag.id)
+
+    return url_for("home")
+
+
 @app.route("/oauth2callback")
 def google_callback():
     error = request.args.get("error")
@@ -2010,7 +2039,7 @@ def google_callback():
     )
     db.session.commit()
     flash("Login com Google bem-sucedido!", "success")
-    return redirect(url_for("home"))
+    return redirect(_determine_post_login_redirect(user))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -2047,12 +2076,7 @@ def login():
             )
             db.session.commit()
             flash("Login bem-sucedido!", "success")
-            if user.role == "admin":
-                return redirect(url_for("tasks_overview"))
-            first_tag = user.tags[0] if user.tags else None
-            if first_tag:
-                return redirect(url_for("tasks_sector", tag_id=first_tag.id))
-            return redirect(url_for("home"))
+            return redirect(_determine_post_login_redirect(user))
         else:
             flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form, google_enabled=google_enabled)
