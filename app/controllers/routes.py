@@ -1026,6 +1026,7 @@ def cursos():
                     schedule_end=form.schedule_end.data,
                     completion_date=form.completion_date.data,
                     status=form.status.data,
+                    observation=(form.observation.data or "").strip() or None,
                 )
             )
             db.session.commit()
@@ -1042,6 +1043,7 @@ def cursos():
                 schedule_end=form.schedule_end.data,
                 completion_date=form.completion_date.data,
                 status=form.status.data,
+                observation=(form.observation.data or "").strip() or None,
             )
             db.session.add(course)
             db.session.commit()
@@ -1071,6 +1073,8 @@ def cursos():
         CourseStatus.COMPLETED: "status-pill--completed",
         CourseStatus.PLANNED: "status-pill--planned",
         CourseStatus.DELAYED: "status-pill--delayed",
+        CourseStatus.POSTPONED: "status-pill--postponed",
+        CourseStatus.CANCELLED: "status-pill--cancelled",
     }
     return render_template(
         "cursos.html",

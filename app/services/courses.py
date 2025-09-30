@@ -17,6 +17,8 @@ class CourseStatus(str, Enum):
     COMPLETED = "concluído"
     PLANNED = "planejado"
     DELAYED = "atrasado"
+    POSTPONED = "adiada"
+    CANCELLED = "cancelada"
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,7 @@ class CourseRecord:
     completion_date: date | None
     status: CourseStatus
     completion_note: str | None = None
+    observation: str | None = None
 
     @property
     def start_date_label(self) -> str:
@@ -75,6 +78,12 @@ class CourseRecord:
         """Return a combined label with both start and end times."""
 
         return _format_time_range(self.schedule_start, self.schedule_end)
+
+    @property
+    def observation_label(self) -> str:
+        """Return the stored observation or a fallback placeholder."""
+
+        return (self.observation or "-").strip() or "-"
 
     @property
     def sectors_list(self) -> list[str]:
@@ -196,6 +205,7 @@ def get_courses_overview() -> list[CourseRecord]:
             sa.cast(Course.schedule_end, sa.String).label("schedule_end"),
             Course.completion_date,
             Course.status,
+            Course.observation,
         )
         .order_by(status_priority.asc(), most_recent_date.desc(), Course.id.desc())
     )
@@ -220,6 +230,7 @@ def get_courses_overview() -> list[CourseRecord]:
                 completion_date=row["completion_date"],
                 completion_note=None,
                 status=status,
+                observation=row["observation"],
             )
         )
     return records
