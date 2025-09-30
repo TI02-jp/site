@@ -49,62 +49,21 @@
             </div>
         </section>
 
-        {% if can_manage_courses %}
-        <section class="courses-tags-section">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
-                        <div>
-                            <h2 class="h5 mb-1">Tags de cursos</h2>
-                            <p class="text-muted small mb-0">Cadastre tags reutilizáveis para organizar os cursos e selecione-as durante o cadastro.</p>
-                        </div>
-                        <form method="post" class="courses-tags-form d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-end">
-                            {{ tag_form.hidden_tag() }}
-                            <div class="flex-fill">
-                                <label class="form-label text-start mb-1" for="{{ tag_form.name.id }}">{{ tag_form.name.label }}</label>
-                                {{ tag_form.name(class="form-control" + (' is-invalid' if tag_form.name.errors else ''), placeholder="Ex.: Inteligência Artificial") }}
-                                {% if tag_form.name.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ tag_form.name.errors[0] }}
-                                </div>
-                                {% endif %}
-                            </div>
-                            <button
-                                type="submit"
-                                name="{{ tag_form.submit.name }}"
-                                value="1"
-                                class="btn btn-primary courses-table-actions__button courses-tags-form__button"
-                            >
-                                <i class="bi bi-plus-circle me-2"></i>
-                                {{ tag_form.submit.label.text }}
-                            </button>
-                        </form>
-                    </div>
-                    <div class="courses-tags-list">
-                        {% if course_tags %}
-                        <div class="courses-chip-group">
-                            {% for tag in course_tags %}
-                            <span class="courses-chip courses-chip--tag">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <p class="text-muted small mb-0">Nenhuma tag cadastrada ainda. Utilize o formulário ao lado para criar a primeira tag.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </section>
-        {% endif %}
-
         <section class="courses-table-section">
             <div class="card shadow-sm border-0">
                 <div class="courses-table-actions d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3 border-bottom">
                     <h2 class="courses-table-actions__title mb-0">Cursos cadastrados</h2>
                     {% if can_manage_courses %}
-                    <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal" data-action="open-course-create">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Cadastrar curso
-                    </button>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseTagModal" data-action="open-tag-create">
+                            <i class="bi bi-tag me-2"></i>
+                            Adicionar tag
+                        </button>
+                        <button type="button" class="btn btn-primary courses-table-actions__button" data-bs-toggle="modal" data-bs-target="#courseModal" data-action="open-course-create">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Cadastrar curso
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
                 <div class="card-body p-0">
@@ -206,6 +165,35 @@
     </div>
 </div>
 
+<div class="modal fade" id="courseTagModal" tabindex="-1" aria-labelledby="courseTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" class="courses-tags-form" data-open-modal-on-load="{{ 'true' if tag_form.errors else 'false' }}">
+                {{ tag_form.hidden_tag() }}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="courseTagModalLabel">Cadastrar nova tag</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ tag_form.name.id }}">{{ tag_form.name.label }}</label>
+                        {{ tag_form.name(class="form-control" + (' is-invalid' if tag_form.name.errors else ''), placeholder="Ex.: Inteligência Artificial") }}
+                        {% if tag_form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ tag_form.name.errors[0] }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    {{ tag_form.submit(class="btn btn-primary courses-tags-form__button") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade courses-modal" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -290,7 +278,7 @@
                                     </div>
                                     {% endfor %}
                                 {% else %}
-                                <p class="text-muted small mb-0">Cadastre novas tags no painel acima para selecioná-las aqui.</p>
+                                <p class="text-muted small mb-0">Cadastre novas tags usando o botão "Adicionar tag" ao lado de "Cadastrar curso".</p>
                                 {% endif %}
                             </div>
                             {% if form.tags.errors %}
@@ -401,6 +389,12 @@
             return;
         }
 
+        var tagModalEl = document.getElementById('courseTagModal');
+        var tagModal = tagModalEl ? bootstrap.Modal.getOrCreateInstance(tagModalEl) : null;
+        var tagFormEl = tagModalEl ? tagModalEl.querySelector('form') : null;
+        var newTagButton = document.querySelector('[data-action="open-tag-create"]');
+        var tagNameFieldId = '{{ tag_form.name.id }}';
+
         var modalTitle = courseModalEl.querySelector('.modal-title');
         var submitPrimaryBtn = formEl.querySelector('[data-role="course-submit"]');
         var courseIdInput = formEl.querySelector('input[name="course_id"]');
@@ -424,6 +418,22 @@
             .filter(Boolean);
         var postponedStatusValue = '{{ CourseStatus.POSTPONED.value }}';
         var activeStatusFilter = null;
+
+        function resetTagFormState() {
+            if (!tagFormEl) {
+                return;
+            }
+            tagFormEl.reset();
+            var invalidInputs = tagFormEl.querySelectorAll('.is-invalid');
+            invalidInputs.forEach(function (input) {
+                input.classList.remove('is-invalid');
+            });
+            var feedbackNodes = tagFormEl.querySelectorAll('.invalid-feedback');
+            feedbackNodes.forEach(function (node) {
+                node.textContent = '';
+                node.style.display = 'none';
+            });
+        }
 
         function updateSummaryActiveState() {
             summaryItems.forEach(function (item) {
@@ -590,6 +600,25 @@
         }
 
         updateParticipantSelectAllState();
+
+        if (newTagButton && tagModal) {
+            newTagButton.addEventListener('click', function () {
+                resetTagFormState();
+                tagModal.show();
+            });
+        }
+
+        if (tagModalEl) {
+            tagModalEl.addEventListener('shown.bs.modal', function () {
+                if (!tagNameFieldId) {
+                    return;
+                }
+                var nameInput = document.getElementById(tagNameFieldId);
+                if (nameInput) {
+                    nameInput.focus();
+                }
+            });
+        }
 
         rescheduleInputs.forEach(function (input) {
             var syncHandler = function () {
@@ -772,6 +801,10 @@
                 }
             });
         });
+
+        if (tagFormEl && tagFormEl.dataset.openModalOnLoad === 'true' && tagModal) {
+            tagModal.show();
+        }
 
         if (formEl.dataset.openModalOnLoad === 'true') {
             if (formEl.dataset.editingCourseId) {
