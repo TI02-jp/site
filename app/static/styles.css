@@ -348,6 +348,8 @@ Página de Cursos
 
 .courses-modal .modal-body {
     padding: 1.5rem 2rem 1.75rem;
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
 }
 
 .courses-modal .modal-body .row {
@@ -377,6 +379,7 @@ Página de Cursos
 
 .courses-modal .courses-checkbox-list {
     max-height: 260px;
+    overflow-y: auto;
 }
 
 @media (max-width: 992px) {
