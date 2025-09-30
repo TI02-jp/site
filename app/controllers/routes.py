@@ -62,6 +62,7 @@ from app.forms import (
 )
 import os, json, re, secrets
 import requests
+from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String
@@ -164,6 +165,30 @@ EVENT_CATEGORY_LABELS = {
 }
 
 
+def _normalize_photo_entry(value: str) -> str | None:
+    """Return a sanitized photo reference or ``None`` when invalid."""
+
+    if not isinstance(value, str):
+        return None
+
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+
+    parsed = urlparse(trimmed)
+
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return parsed.geturl()
+
+    if not parsed.scheme and not parsed.netloc:
+        if trimmed.startswith("/"):
+            return "/" + trimmed.lstrip("/")
+        if trimmed.lower().startswith("static/"):
+            return "/" + trimmed.lstrip("/")
+
+    return None
+
+
 def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Validate and normalize Diretoria JP event data sent from the form."""
 
@@ -210,10 +235,7 @@ def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, An
     elif isinstance(photos_payload, list):
         seen_photos: set[str] = set()
         for entry in photos_payload:
-            if not isinstance(entry, str):
-                continue
-
-            normalized_url = entry.strip()
+            normalized_url = _normalize_photo_entry(entry)
             if not normalized_url or normalized_url in seen_photos:
                 continue
 
@@ -635,6 +657,13 @@ def diretoria_eventos_editar(event_id: int):
             }
         )
 
+    sanitized_photos = []
+    if isinstance(event.photos, list):
+        for photo in event.photos:
+            normalized = _normalize_photo_entry(photo)
+            if normalized:
+                sanitized_photos.append(normalized)
+
     event_payload = {
         "id": event.id,
         "name": event.name,
@@ -644,7 +673,7 @@ def diretoria_eventos_editar(event_id: int):
         "audience": event.audience,
         "participants": event.participants,
         "categories": event.services or {},
-        "photos": event.photos or [],
+        "photos": sanitized_photos,
         "submit_url": url_for("diretoria_eventos_editar", event_id=event.id),
     }
 
@@ -708,9 +737,7 @@ def diretoria_eventos_visualizar(event_id: int):
     photo_urls = []
     if isinstance(event.photos, list):
         for photo in event.photos:
-            if not isinstance(photo, str):
-                continue
-            normalized = photo.strip()
+            normalized = _normalize_photo_entry(photo)
             if normalized:
                 photo_urls.append(normalized)
 
