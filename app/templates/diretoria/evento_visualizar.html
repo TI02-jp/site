@@ -135,7 +135,7 @@
         }
 
         .event-view .photo-card {
-            display: block;
+            display: flex;
             position: relative;
             border-radius: 0.9rem;
             overflow: hidden;
@@ -143,6 +143,10 @@
             border: 1px solid rgba(13, 110, 253, 0.12);
             box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.12);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-height: 220px;
+            padding: 0.75rem;
+            align-items: center;
+            justify-content: center;
         }
 
         .event-view .photo-card:hover {
@@ -150,21 +154,29 @@
             box-shadow: 0 1rem 2.25rem rgba(13, 110, 253, 0.18);
         }
 
-        .event-view .photo-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
         .event-view .photo-thumb {
             position: relative;
             width: 100%;
-            padding-top: 65%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .event-view .photo-thumb img {
-            position: absolute;
-            inset: 0;
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.35rem 1rem rgba(13, 110, 253, 0.12);
+            transition: transform 0.25s ease;
+        }
+
+        .event-view .photo-card:hover .photo-thumb img {
+            transform: scale(1.03);
         }
 
         .event-view .photos-empty {
