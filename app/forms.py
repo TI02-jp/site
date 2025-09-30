@@ -223,6 +223,13 @@ class CourseForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
+    tags = SelectMultipleField(
+        "Tags do Curso",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
     workload = TimeField(
         "Carga Horária",
         format="%H:%M",
@@ -264,6 +271,17 @@ class CourseForm(FlaskForm):
     submit = SubmitField("Salvar curso")
     submit_add_to_calendar = SubmitField("Adicionar no calendário")
     submit_delete = SubmitField("Excluir curso")
+
+
+class CourseTagForm(FlaskForm):
+    """Formulário para cadastrar novas tags de cursos."""
+
+    name = StringField(
+        "Nome da tag",
+        validators=[DataRequired(), Length(max=80)],
+        filters=[lambda value: value.strip() if value else value],
+    )
+    submit = SubmitField("Adicionar tag")
 
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
