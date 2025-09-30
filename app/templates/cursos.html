@@ -71,8 +71,6 @@
                                     <th scope="col">Participantes</th>
                                     <th scope="col">Carga Horária</th>
                                     <th scope="col">Data de Início</th>
-                                    <th scope="col">Horário Início</th>
-                                    <th scope="col">Horário Fim</th>
                                     <th scope="col">Data de Conclusão</th>
                                     <th scope="col">Observação</th>
                                     <th scope="col">Status</th>
@@ -114,8 +112,6 @@
                                         </td>
                                         <td class="text-nowrap" data-label="Carga Horária">{{ course.workload_label }}</td>
                                         <td data-label="Data de Início">{{ course.start_date_label }}</td>
-                                        <td data-label="Horário Início">{{ course.schedule_start_label }}</td>
-                                        <td data-label="Horário Fim">{{ course.schedule_end_label }}</td>
                                         <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
                                         <td data-label="Observação">
                                             {% set observation_value = course.observation_label %}
@@ -135,11 +131,11 @@
                                     </tr>
                                     {% endfor %}
                                     <tr class="courses-table-empty" data-empty-state-row style="display: none;">
-                                        <td colspan="11" class="text-center py-4 text-muted">Nenhum curso encontrado para o filtro selecionado.</td>
+                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso encontrado para o filtro selecionado.</td>
                                     </tr>
                                 {% else %}
                                     <tr>
-                                        <td colspan="11" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
+                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
