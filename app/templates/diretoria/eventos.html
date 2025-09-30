@@ -226,10 +226,6 @@
             padding: 0.75rem 0.85rem;
         }
 
-        .eventos-form .photos-section .event-photo-card .photo-url-field.is-collapsed {
-            display: none;
-        }
-
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-label {
             font-size: 0.65rem;
             font-weight: 700;
@@ -508,8 +504,7 @@
         <div class="border-top pt-4 mt-4"></div>
 
         <div class="mb-5 photos-section">
-            <h2 class="h6 text-uppercase text-muted fw-semibold section-heading mb-3">Fotos do evento</h2>
-            <p class="text-muted small mb-3">Envie imagens para ilustrar o evento planejado. Elas poderão ser consultadas posteriormente na edição.</p>
+            <h2 class="h6 text-uppercase text-muted fw-semibold section-heading mb-3 text-start">Fotos do evento</h2>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-lg-6">
                     <label for="fotosEventoInput" class="form-label">Adicionar fotos</label>
@@ -603,7 +598,6 @@
 
             const photosController = (() => {
                 let items = [];
-                const expandedState = new Map();
 
                 const normalizePhotoValue = (value) => {
                     if (typeof value !== 'string') {
@@ -626,11 +620,7 @@
                     if (index < 0 || index >= items.length) {
                         return false;
                     }
-                    const target = items[index];
                     items = [...items.slice(0, index), ...items.slice(index + 1)];
-                    if (target) {
-                        expandedState.delete(target);
-                    }
                     render();
                     return true;
                 }
@@ -658,19 +648,11 @@
                         return true;
                     }
 
-                    const wasExpanded = previousValue ? expandedState.get(previousValue) === true : false;
-                    if (previousValue) {
-                        expandedState.delete(previousValue);
-                    }
-
                     items = [
                         ...items.slice(0, index),
                         normalized,
                         ...items.slice(index + 1),
                     ];
-                    if (wasExpanded) {
-                        expandedState.set(normalized, true);
-                    }
                     render();
                     return true;
                 }
@@ -693,13 +675,6 @@
                         photosEmptyState.classList.add('d-none');
                     }
 
-                    const currentUrls = new Set(items);
-                    Array.from(expandedState.keys()).forEach((key) => {
-                        if (!currentUrls.has(key)) {
-                            expandedState.delete(key);
-                        }
-                    });
-
                     items.forEach((url, index) => {
                         const col = document.createElement('div');
                         col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
@@ -713,11 +688,6 @@
                             .replace(/'/g, '&#x27;');
                         const inputId = `fotoEventoUrl${index}`;
                         const wrapperId = `fotoEventoUrlWrapper${index}`;
-                        const isExpanded = expandedState.get(url) === true;
-                        const toggleIcon = isExpanded ? 'bi-chevron-up' : 'bi-pencil-square';
-                        const toggleLabel = isExpanded ? 'Ocultar link' : 'Editar link';
-                        const urlFieldClass = isExpanded ? 'photo-url-field' : 'photo-url-field is-collapsed';
-
                         col.innerHTML = `
                             <div class="event-photo-card">
                                 <div class="event-photo-media">
@@ -738,12 +708,8 @@
                                         <button type="button" class="btn btn-soft-primary btn-sm" data-action="replace-photo">
                                             <i class="bi bi-arrow-repeat me-1"></i>Substituir
                                         </button>
-                                        <button type="button" class="btn btn-soft-secondary btn-sm" data-action="toggle-photo-url" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${wrapperId}">
-                                            <i class="bi ${toggleIcon} me-1" data-toggle-icon></i>
-                                            <span data-toggle-label>${toggleLabel}</span>
-                                        </button>
                                     </div>
-                                    <div class="${urlFieldClass}" id="${wrapperId}" data-photo-url-wrapper>
+                                    <div class="photo-url-field" id="${wrapperId}">
                                         <label class="form-label" for="${inputId}">Link da foto</label>
                                         <input type="url" class="form-control form-control-sm" id="${inputId}" value="${safeUrl}" data-photo-url-input>
                                         <div class="form-text">Edite o link manualmente ou utilize o botão "Substituir".</div>
@@ -772,38 +738,7 @@
                             });
                         }
 
-                        const urlWrapper = col.querySelector('[data-photo-url-wrapper]');
-                        const urlInput = urlWrapper
-                            ? urlWrapper.querySelector('[data-photo-url-input]')
-                            : col.querySelector('[data-photo-url-input]');
-                        const toggleButton = col.querySelector('[data-action="toggle-photo-url"]');
-                        const toggleLabelEl = toggleButton ? toggleButton.querySelector('[data-toggle-label]') : null;
-                        const toggleIconEl = toggleButton ? toggleButton.querySelector('[data-toggle-icon]') : null;
-
-                        if (toggleButton && urlWrapper) {
-                            toggleButton.addEventListener('click', () => {
-                                const currentlyExpanded = !urlWrapper.classList.contains('is-collapsed');
-                                const nextExpanded = !currentlyExpanded;
-                                urlWrapper.classList.toggle('is-collapsed', !nextExpanded);
-                                toggleButton.setAttribute('aria-expanded', String(nextExpanded));
-                                if (toggleLabelEl) {
-                                    toggleLabelEl.textContent = nextExpanded ? 'Ocultar link' : 'Editar link';
-                                }
-                                if (toggleIconEl) {
-                                    toggleIconEl.className = `bi ${nextExpanded ? 'bi-chevron-up' : 'bi-pencil-square'} me-1`;
-                                }
-                                if (nextExpanded) {
-                                    expandedState.set(url, true);
-                                    if (urlInput instanceof HTMLInputElement) {
-                                        urlInput.focus({ preventScroll: true });
-                                        urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length);
-                                    }
-                                } else {
-                                    expandedState.delete(url);
-                                }
-                            });
-                        }
-
+                        const urlInput = col.querySelector('[data-photo-url-input]');
                         if (urlInput instanceof HTMLInputElement) {
                             const commitUpdate = () => {
                                 const currentItems = getItems();
@@ -870,22 +805,15 @@
                 function setItems(values) {
                     if (!Array.isArray(values)) {
                         items = [];
-                        expandedState.clear();
                         render();
                         return;
                     }
-
-                    const previousState = new Map(expandedState);
-                    expandedState.clear();
 
                     const nextItems = [];
                     values.forEach((value) => {
                         const normalized = normalizePhotoValue(value);
                         if (normalized && !nextItems.includes(normalized)) {
                             nextItems.push(normalized);
-                            if (previousState.get(normalized) === true) {
-                                expandedState.set(normalized, true);
-                            }
                         }
                     });
 
@@ -909,7 +837,6 @@
 
                 function clear() {
                     items = [];
-                    expandedState.clear();
                     render();
                 }
 
