@@ -94,7 +94,7 @@ from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Iterable
 from urllib.parse import urlunsplit
 
 GOOGLE_OAUTH_SCOPES = [
@@ -187,6 +187,81 @@ def _normalize_photo_entry(value: str) -> str | None:
             return "/" + trimmed.lstrip("/")
 
     return None
+
+
+def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
+    """Return the filesystem path for a stored upload inside ``/static``."""
+
+    parsed = urlparse(normalized_photo_url)
+    path = parsed.path if parsed.scheme else normalized_photo_url
+    if not path:
+        return None
+
+    relative_path = path.lstrip("/")
+    if not relative_path.startswith("static/uploads/"):
+        return None
+
+    safe_relative = os.path.normpath(relative_path)
+    if not safe_relative.startswith("static/uploads/"):
+        return None
+
+    return os.path.join(current_app.root_path, safe_relative)
+
+
+def _cleanup_diretoria_photo_uploads(
+    photo_urls: Iterable[str], *, exclude_event_id: int | None = None
+) -> None:
+    """Delete unused Diretoria event photo files from the ``uploads`` folder."""
+
+    normalized_to_path: dict[str, str] = {}
+    for photo_url in photo_urls:
+        normalized = _normalize_photo_entry(photo_url)
+        if not normalized:
+            continue
+
+        file_path = _resolve_local_photo_path(normalized)
+        if not file_path:
+            continue
+
+        normalized_to_path[normalized] = file_path
+
+    if not normalized_to_path:
+        return
+
+    query = DiretoriaEvent.query
+    if exclude_event_id is not None:
+        query = query.filter(DiretoriaEvent.id != exclude_event_id)
+
+    still_in_use: set[str] = set()
+    for _, other_photos in query.with_entities(
+        DiretoriaEvent.id, DiretoriaEvent.photos
+    ):
+        if not isinstance(other_photos, list):
+            continue
+
+        for other_photo in other_photos:
+            normalized_other = _normalize_photo_entry(other_photo)
+            if normalized_other in normalized_to_path:
+                still_in_use.add(normalized_other)
+
+        if len(still_in_use) == len(normalized_to_path):
+            break
+
+    for normalized, file_path in normalized_to_path.items():
+        if normalized in still_in_use:
+            continue
+
+        if not os.path.exists(file_path):
+            continue
+
+        try:
+            os.remove(file_path)
+        except OSError:
+            current_app.logger.warning(
+                "Não foi possível remover o arquivo de foto não utilizado: %s",
+                file_path,
+                exc_info=True,
+            )
 
 
 def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -624,6 +699,13 @@ def diretoria_eventos_editar(event_id: int):
     event = DiretoriaEvent.query.get_or_404(event_id)
 
     if request.method == "POST":
+        previous_photos: list[str] = []
+        if isinstance(event.photos, list):
+            for photo in event.photos:
+                normalized_prev = _normalize_photo_entry(photo)
+                if normalized_prev:
+                    previous_photos.append(normalized_prev)
+
         payload = request.get_json(silent=True) or {}
         normalized, errors = parse_diretoria_event_payload(payload)
 
@@ -644,6 +726,11 @@ def diretoria_eventos_editar(event_id: int):
         event.photos = normalized["photos"]
 
         db.session.commit()
+
+        removed_photos = [
+            photo for photo in previous_photos if photo not in event.photos
+        ]
+        _cleanup_diretoria_photo_uploads(removed_photos, exclude_event_id=event.id)
 
         session["diretoria_event_feedback"] = {
             "message": f'Evento "{event.name}" atualizado com sucesso.',
@@ -797,9 +884,17 @@ def diretoria_eventos_excluir(event_id: int):
 
     event = DiretoriaEvent.query.get_or_404(event_id)
     event_name = event.name
+    event_photos: list[str] = []
+    if isinstance(event.photos, list):
+        for photo in event.photos:
+            normalized_photo = _normalize_photo_entry(photo)
+            if normalized_photo:
+                event_photos.append(normalized_photo)
 
     db.session.delete(event)
     db.session.commit()
+
+    _cleanup_diretoria_photo_uploads(event_photos)
 
     flash(f'Evento "{event_name}" removido com sucesso.', "success")
 
