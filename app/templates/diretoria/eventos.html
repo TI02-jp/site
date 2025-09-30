@@ -199,16 +199,36 @@
             align-items: center;
             justify-content: center;
             background-color: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(220, 53, 69, 0.12);
-            color: #dc3545;
-            box-shadow: 0 0.25rem 0.75rem rgba(220, 53, 69, 0.18);
-            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+            border: 1px solid rgba(13, 110, 253, 0.12);
+            color: #0d6efd;
+            box-shadow: 0 0.25rem 0.75rem rgba(13, 110, 253, 0.16);
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease,
+                box-shadow 0.2s ease;
         }
 
         .eventos-form .photos-section .event-photo-quick-actions .btn-icon:hover {
-            background-color: #dc3545;
+            background-color: #0d6efd;
             color: #fff;
             transform: translateY(-1px);
+            box-shadow: 0 0.35rem 1rem rgba(13, 110, 253, 0.25);
+        }
+
+        .eventos-form .photos-section .event-photo-quick-actions .btn-icon.is-active {
+            background-color: #0d6efd;
+            color: #fff;
+            box-shadow: 0 0.35rem 1rem rgba(13, 110, 253, 0.25);
+        }
+
+        .eventos-form .photos-section .event-photo-quick-actions .btn-icon[data-action="remove-photo"] {
+            border-color: rgba(220, 53, 69, 0.12);
+            color: #dc3545;
+            box-shadow: 0 0.25rem 0.75rem rgba(220, 53, 69, 0.18);
+        }
+
+        .eventos-form .photos-section .event-photo-quick-actions .btn-icon[data-action="remove-photo"]:hover {
+            background-color: #dc3545;
+            color: #fff;
+            box-shadow: 0 0.35rem 1rem rgba(220, 53, 69, 0.3);
         }
 
         .eventos-form .photos-section .event-photo-body {
@@ -224,6 +244,24 @@
             border: 1px dashed rgba(13, 110, 253, 0.2);
             border-radius: 0.85rem;
             padding: 0.75rem 0.85rem;
+            transition: opacity 0.2s ease, max-height 0.25s ease, margin-top 0.2s ease,
+                padding-top 0.2s ease, padding-bottom 0.2s ease, border-color 0.2s ease,
+                border-width 0.2s ease;
+            overflow: hidden;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field.is-collapsed {
+            opacity: 0;
+            max-height: 0;
+            margin-top: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-width: 0;
+            pointer-events: none;
+        }
+
+        .eventos-form .photos-section .event-photo-card .photo-url-field.is-collapsed > * {
+            opacity: 0;
         }
 
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-label {
@@ -710,6 +748,10 @@
                                         <img src="${safeUrl}" alt="Foto do evento ${index + 1}">
                                     </div>
                                     <div class="event-photo-quick-actions">
+                                        <button type="button" class="btn btn-icon" data-action="toggle-photo-link" aria-label="Editar link da foto"
+                                            aria-expanded="false" aria-controls="${wrapperId}">
+                                            <i class="bi bi-link-45deg"></i>
+                                        </button>
                                         <button type="button" class="btn btn-icon" data-action="remove-photo" aria-label="Remover foto">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -724,7 +766,7 @@
                                             <i class="bi bi-arrow-repeat me-1"></i>Substituir
                                         </button>
                                     </div>
-                                    <div class="photo-url-field" id="${wrapperId}">
+                                    <div class="photo-url-field is-collapsed" id="${wrapperId}" aria-hidden="true">
                                         <label class="form-label" for="${inputId}">Link da foto</label>
                                         <input type="text" inputmode="url" autocomplete="off" spellcheck="false" class="form-control form-control-sm" id="${inputId}" value="${safeUrl}" data-photo-url-input>
                                         <div class="form-text">Edite o link manualmente ou utilize o botão "Substituir".</div>
@@ -732,6 +774,45 @@
                                 </div>
                             </div>
                         `;
+
+                        const linkToggleButton = col.querySelector('[data-action="toggle-photo-link"]');
+                        const urlField = col.querySelector('.photo-url-field');
+                        const urlInput = col.querySelector('[data-photo-url-input]');
+
+                        const setLinkFieldExpanded = (expanded) => {
+                            if (!urlField || !linkToggleButton) {
+                                return;
+                            }
+
+                            if (expanded) {
+                                urlField.classList.remove('is-collapsed');
+                                urlField.setAttribute('aria-hidden', 'false');
+                                linkToggleButton.setAttribute('aria-expanded', 'true');
+                                linkToggleButton.classList.add('is-active');
+                            } else {
+                                urlField.classList.add('is-collapsed');
+                                urlField.setAttribute('aria-hidden', 'true');
+                                linkToggleButton.setAttribute('aria-expanded', 'false');
+                                linkToggleButton.classList.remove('is-active');
+                            }
+                        };
+
+                        if (linkToggleButton && urlField) {
+                            setLinkFieldExpanded(false);
+
+                            linkToggleButton.addEventListener('click', () => {
+                                const isExpanded = linkToggleButton.getAttribute('aria-expanded') === 'true';
+                                const nextExpanded = !isExpanded;
+                                setLinkFieldExpanded(nextExpanded);
+
+                                if (nextExpanded && urlInput instanceof HTMLInputElement) {
+                                    window.requestAnimationFrame(() => {
+                                        urlInput.focus();
+                                        urlInput.select();
+                                    });
+                                }
+                            });
+                        }
 
                         const removeButton = col.querySelector('[data-action="remove-photo"]');
                         if (removeButton) {
@@ -753,7 +834,6 @@
                             });
                         }
 
-                        const urlInput = col.querySelector('[data-photo-url-input]');
                         if (urlInput instanceof HTMLInputElement) {
                             const commitUpdate = () => {
                                 const currentItems = getItems();
@@ -787,6 +867,22 @@
                                 if (updated) {
                                     setPhotoStatus('Link da foto atualizado com sucesso.', 'success', 3500);
                                     window.requestAnimationFrame(() => {
+                                        const refreshedCard = photosListEl.querySelector(
+                                            `[data-photo-index="${index}"]`,
+                                        );
+                                        if (refreshedCard) {
+                                            const refreshedField = refreshedCard.querySelector('.photo-url-field');
+                                            const refreshedToggle = refreshedCard.querySelector(
+                                                '[data-action="toggle-photo-link"]',
+                                            );
+                                            if (refreshedField && refreshedToggle) {
+                                                refreshedField.classList.remove('is-collapsed');
+                                                refreshedField.setAttribute('aria-hidden', 'false');
+                                                refreshedToggle.setAttribute('aria-expanded', 'true');
+                                                refreshedToggle.classList.add('is-active');
+                                            }
+                                        }
+
                                         const refreshedInput = photosListEl.querySelector(
                                             `[data-photo-index="${index}"] [data-photo-url-input]`,
                                         );
