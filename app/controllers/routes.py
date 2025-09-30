@@ -174,6 +174,7 @@ def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, An
     audience = payload.get("audience")
     participants_raw = payload.get("participants")
     categories_payload = payload.get("categories") or {}
+    photos_payload = payload.get("photos")
 
     errors: list[str] = []
 
@@ -202,6 +203,24 @@ def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, An
 
     services_payload: dict[str, dict[str, object]] = {}
     total_event = Decimal("0.00")
+    photos: list[str] = []
+
+    if photos_payload is None:
+        photos = []
+    elif isinstance(photos_payload, list):
+        seen_photos: set[str] = set()
+        for entry in photos_payload:
+            if not isinstance(entry, str):
+                continue
+
+            normalized_url = entry.strip()
+            if not normalized_url or normalized_url in seen_photos:
+                continue
+
+            seen_photos.add(normalized_url)
+            photos.append(normalized_url)
+    else:
+        errors.append("Formato inválido ao enviar as fotos do evento.")
 
     for key in EVENT_CATEGORY_LABELS:
         category_data = (
@@ -265,6 +284,7 @@ def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, An
         "participants": participants,
         "services": services_payload,
         "total_cost": total_event,
+        "photos": photos,
     }
 
     return normalized, errors
@@ -599,6 +619,7 @@ def diretoria_eventos_editar(event_id: int):
         event.participants = normalized["participants"]
         event.services = normalized["services"]
         event.total_cost = normalized["total_cost"]
+        event.photos = normalized["photos"]
 
         db.session.commit()
 
@@ -623,6 +644,7 @@ def diretoria_eventos_editar(event_id: int):
         "audience": event.audience,
         "participants": event.participants,
         "categories": event.services or {},
+        "photos": event.photos or [],
         "submit_url": url_for("diretoria_eventos_editar", event_id=event.id),
     }
 
