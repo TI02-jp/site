@@ -20,10 +20,15 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             {% if current_user.role == 'admin' %}
-            <a class="btn btn-primary btn-sm" href="{{ url_for('acessos_novo') }}">
+            <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#novoAtalhoModal"
+            >
                 <i class="bi bi-plus-lg me-1"></i>
                 Adicionar atalho
-            </a>
+            </button>
             {% else %}
             <button class="btn btn-outline-secondary btn-sm" type="button" disabled>
                 <i class="bi bi-plus-lg me-1"></i>
@@ -67,7 +72,6 @@
                                     {% else %}
                                     <p class="text-muted small mb-0">Nenhum atalho cadastrado.</p>
                                     {% endfor %}
-
                                 </div>
                             </td>
                             {% endfor %}
@@ -78,4 +82,105 @@
         </div>
     </div>
 </div>
+
+{% if current_user.role == 'admin' and form %}
+<div
+    class="modal fade"
+    id="novoAtalhoModal"
+    tabindex="-1"
+    aria-labelledby="novoAtalhoModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex flex-column">
+                    <h2 class="modal-title h5 mb-0 text-start" id="novoAtalhoModalLabel">Novo atalho</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="post" action="{{ url_for('acessos_novo') }}" novalidate>
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.category.id }}">
+                                {{ form.category.label }}
+                            </label>
+                            {{ form.category(class='form-select form-select-sm' + (' is-invalid' if form.category.errors else '')) }}
+                            {% if form.category.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.category.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.label.id }}">
+                                {{ form.label.label }}
+                            </label>
+                            {{ form.label(class='form-control form-control-sm' + (' is-invalid' if form.label.errors else '')) }}
+                            {% if form.label.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.label.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.url.id }}">
+                                {{ form.url.label }}
+                            </label>
+                            {{ form.url(class='form-control form-control-sm' + (' is-invalid' if form.url.errors else ''), inputmode='url') }}
+                            {% if form.url.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.url.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.description.id }}">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description(class='form-control form-control-sm' + (' is-invalid' if form.description.errors else ''), rows=3) }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.description.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-end gap-2 pt-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg me-2"></i>
+                        Salvar atalho
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+{{ super() }}
+{% if current_user.role == 'admin' and form and open_modal %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalElement = document.getElementById('novoAtalhoModal');
+        if (!modalElement) {
+            return;
+        }
+        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
+        {% if form.errors %}
+        var firstInvalid = modalElement.querySelector('.is-invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+        }
+        {% endif %}
+    });
+</script>
+{% endif %}
+{% endblock %}
 {% endblock %}

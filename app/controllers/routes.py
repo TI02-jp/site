@@ -1112,10 +1112,12 @@ def cursos():
     )
 
 
-@app.route("/acessos")
-@login_required
-def acessos():
-    """Display the hub with the available access categories and saved shortcuts."""
+def _build_acessos_context(
+    form: "AccessLinkForm | None" = None,
+    *,
+    open_modal: bool = False,
+):
+    """Return the template data used by the access hub pages."""
 
     categoria_links = {
         slug: (
@@ -1125,11 +1127,35 @@ def acessos():
         )
         for slug in ACESSOS_CATEGORIES
     }
-    return render_template(
-        "acessos.html",
-        categorias=ACESSOS_CATEGORIES,
-        categoria_links=categoria_links,
-    )
+    return {
+        "categorias": ACESSOS_CATEGORIES,
+        "categoria_links": categoria_links,
+        "form": form,
+        "open_modal": open_modal,
+    }
+
+
+@app.route("/acessos")
+@login_required
+def acessos():
+    """Display the hub with the available access categories and saved shortcuts."""
+
+    open_modal = request.args.get("modal") == "novo"
+    preselected_category = request.args.get("category")
+
+    form: AccessLinkForm | None = None
+    if current_user.role == "admin":
+        form = AccessLinkForm()
+        form.category.choices = _access_category_choices()
+        if (
+            preselected_category
+            and preselected_category in ACESSOS_CATEGORIES
+            and not form.category.data
+        ):
+            form.category.data = preselected_category
+
+    context = _build_acessos_context(form=form, open_modal=open_modal)
+    return render_template("acessos.html", **context)
 
 
 def _access_category_choices() -> list[tuple[str, str]]:
@@ -1141,16 +1167,8 @@ def _access_category_choices() -> list[tuple[str, str]]:
     ]
 
 
-@app.route("/acessos/novo", methods=["GET", "POST"])
-@login_required
-def acessos_novo():
-    """Display and process the form to create a new shortcut for any category."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    form = AccessLinkForm()
-    form.category.choices = _access_category_choices()
+def _handle_access_shortcut_submission(form: "AccessLinkForm"):
+    """Persist a shortcut when valid or re-render the listing with errors."""
 
     if form.validate_on_submit():
         novo_link = AccessLink(
@@ -1165,12 +1183,24 @@ def acessos_novo():
         flash("Novo atalho criado com sucesso!", "success")
         return redirect(url_for("acessos"))
 
-    return render_template(
-        "acessos_categoria_novo.html",
-        categoria=None,
-        categoria_slug=None,
-        form=form,
-    )
+    context = _build_acessos_context(form=form, open_modal=True)
+    return render_template("acessos.html", **context)
+
+
+@app.route("/acessos/novo", methods=["GET", "POST"])
+@login_required
+def acessos_novo():
+    """Display and process the form to create a new shortcut for any category."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    if request.method == "GET":
+        return redirect(url_for("acessos", modal="novo"))
+
+    form = AccessLinkForm()
+    form.category.choices = _access_category_choices()
+    return _handle_access_shortcut_submission(form)
 
 
 @app.route("/acessos/<categoria_slug>")
@@ -1192,34 +1222,21 @@ def acessos_categoria_novo(categoria_slug: str):
     if current_user.role != "admin":
         abort(403)
 
-    categoria = ACESSOS_CATEGORIES.get(categoria_slug.lower())
+    categoria_slug = categoria_slug.lower()
+    categoria = ACESSOS_CATEGORIES.get(categoria_slug)
     if not categoria:
         abort(404)
 
+    if request.method == "GET":
+        return redirect(
+            url_for("acessos", modal="novo", category=categoria_slug)
+        )
+
     form = AccessLinkForm()
     form.category.choices = _access_category_choices()
-    if request.method == "GET":
-        form.category.data = categoria_slug.lower()
-
-    if form.validate_on_submit():
-        novo_link = AccessLink(
-            category=form.category.data,
-            label=form.label.data.strip(),
-            url=form.url.data.strip(),
-            description=(form.description.data or "").strip() or None,
-            created_by=current_user,
-        )
-        db.session.add(novo_link)
-        db.session.commit()
-        flash("Novo atalho criado com sucesso!", "success")
-        return redirect(url_for("acessos"))
-
-    return render_template(
-        "acessos_categoria_novo.html",
-        categoria=categoria,
-        categoria_slug=categoria_slug.lower(),
-        form=form,
-    )
+    if not form.category.data:
+        form.category.data = categoria_slug
+    return _handle_access_shortcut_submission(form)
 
 
 @app.route("/ping")
