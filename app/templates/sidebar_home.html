@@ -7,6 +7,15 @@
                 PARTICULARIDADES
             </a>
         </li>
+        {% if current_user.role == 'admin' %}
+        {% set user_nav_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint in user_nav_endpoints %} active{% endif %}" href="{{ url_for('list_users') }}">
+                <i class="bi bi-people"></i>
+                USUÁRIOS
+            </a>
+        </li>
+        {% endif %}
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('consultorias') }}">
                 <i class="bi bi-buildings"></i>

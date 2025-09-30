@@ -23,6 +23,12 @@
                         <i class="bi bi-kanban me-2"></i>
                         Particularidades
                     </a>
+                    {% if current_user.role == 'admin' %}
+                    <a class="btn btn-portal btn-portal--secondary" href="{{ url_for('list_users') }}">
+                        <i class="bi bi-people me-2"></i>
+                        USUÁRIOS
+                    </a>
+                    {% endif %}
                     <a class="btn btn-portal btn-portal--secondary" href="{{ url_for('consultorias') }}">
                         <i class="bi bi-briefcase me-2"></i>
                         Consultorias
