@@ -166,6 +166,7 @@ with app.app_context():
 
     try:
         inspector = sa.inspect(db.engine)
+
         meeting_columns = {col["name"] for col in inspector.get_columns("reunioes")}
         if "course_id" not in meeting_columns:
             with db.engine.begin() as conn:
@@ -184,7 +185,18 @@ with app.app_context():
                         """
                     )
                 )
+
+        diretoria_columns = {
+            col["name"] for col in inspector.get_columns("diretoria_events")
+        }
+        if "photos" not in diretoria_columns:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        "ALTER TABLE diretoria_events ADD COLUMN photos JSON NULL"
+                    )
+                )
     except SQLAlchemyError as exc:
         app.logger.warning(
-            "Não foi possível garantir a coluna course_id em reunioes: %s", exc
+            "Não foi possível garantir as colunas obrigatórias: %s", exc
         )
