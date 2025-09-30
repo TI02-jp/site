@@ -179,6 +179,11 @@ class DepartamentoFiscalForm(DepartamentoForm):
 class AccessLinkForm(FlaskForm):
     """Formulário para criar novos atalhos na central de acessos."""
 
+    category = SelectField(
+        "Categoria do atalho",
+        validators=[DataRequired()],
+        choices=[],
+    )
     label = StringField(
         "Nome do botão",
         validators=[DataRequired(), Length(max=100)],
