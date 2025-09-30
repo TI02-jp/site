@@ -581,6 +581,23 @@
             const photosController = (() => {
                 let items = [];
 
+                const normalizePhotoValue = (value) => {
+                    if (typeof value !== 'string') {
+                        return '';
+                    }
+
+                    const trimmed = value.trim();
+                    if (!trimmed) {
+                        return '';
+                    }
+
+                    try {
+                        return new URL(trimmed, window.location.origin).href;
+                    } catch (error) {
+                        return '';
+                    }
+                };
+
                 function removeAt(index) {
                     if (index < 0 || index >= items.length) {
                         return false;
@@ -595,11 +612,7 @@
                         return false;
                     }
 
-                    if (typeof value !== 'string') {
-                        return false;
-                    }
-
-                    const normalized = value.trim();
+                    const normalized = normalizePhotoValue(value);
                     if (!normalized) {
                         return false;
                     }
@@ -711,22 +724,24 @@
                             const commitUpdate = () => {
                                 const currentItems = getItems();
                                 const previousValue = currentItems[index] || '';
-                                const nextValue = urlInput.value.trim();
+                                const nextValue = urlInput.value;
+                                const normalizedNextValue = normalizePhotoValue(nextValue);
 
-                                if (!nextValue) {
+                                if (!normalizedNextValue) {
                                     setPhotoStatus('Informe um link válido para a foto.', 'danger', 5000);
                                     urlInput.value = previousValue;
                                     return;
                                 }
 
-                                if (nextValue === previousValue) {
+                                if (normalizedNextValue === previousValue) {
                                     urlInput.value = previousValue;
                                     return;
                                 }
 
                                 if (
                                     currentItems.some(
-                                        (entry, entryIndex) => entryIndex !== index && entry === nextValue,
+                                        (entry, entryIndex) =>
+                                            entryIndex !== index && entry === normalizedNextValue,
                                     )
                                 ) {
                                     setPhotoStatus('Esta foto já foi adicionada.', 'danger', 5000);
@@ -734,7 +749,7 @@
                                     return;
                                 }
 
-                                const updated = updateAt(index, nextValue);
+                                const updated = updateAt(index, normalizedNextValue);
                                 if (updated) {
                                     setPhotoStatus('Link da foto atualizado com sucesso.', 'success', 3500);
                                     window.requestAnimationFrame(() => {
@@ -769,19 +784,26 @@
                 }
 
                 function setItems(values) {
-                    items = Array.isArray(values)
-                        ? values
-                            .map((value) => (typeof value === 'string' ? value.trim() : ''))
-                            .filter((value) => value.length > 0)
-                        : [];
+                    if (!Array.isArray(values)) {
+                        items = [];
+                        render();
+                        return;
+                    }
+
+                    const nextItems = [];
+                    values.forEach((value) => {
+                        const normalized = normalizePhotoValue(value);
+                        if (normalized && !nextItems.includes(normalized)) {
+                            nextItems.push(normalized);
+                        }
+                    });
+
+                    items = nextItems;
                     render();
                 }
 
                 function addItem(value) {
-                    if (typeof value !== 'string') {
-                        return false;
-                    }
-                    const normalized = value.trim();
+                    const normalized = normalizePhotoValue(value);
                     if (!normalized || items.includes(normalized)) {
                         return false;
                     }
