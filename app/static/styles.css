@@ -274,12 +274,24 @@ Página de Cursos
     outline-offset: 2px;
 }
 
+.courses-summary__item--completed {
+    border-left-color: #8ce99a;
+}
+
 .courses-summary__item--planned {
     border-left-color: #ffe066;
 }
 
 .courses-summary__item--delayed {
     border-left-color: #ff8787;
+}
+
+.courses-summary__item--postponed {
+    border-left-color: #74c0fc;
+}
+
+.courses-summary__item--cancelled {
+    border-left-color: #ff6b6b;
 }
 
 .courses-summary__label {
@@ -523,6 +535,26 @@ Página de Cursos
 .status-pill--delayed {
     background: #ffe3e3;
     color: #c92a2a;
+}
+
+.status-pill--postponed {
+    background: #e7f5ff;
+    color: #1c7ed6;
+}
+
+.status-pill--cancelled {
+    background: #ffe3ed;
+    color: #c2255c;
+}
+
+.courses-checkbox-item--select-all {
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.courses-checkbox-item--select-all .form-check-label {
+    color: #0b288b;
 }
 
 @media (max-width: 992px) {

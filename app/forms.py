@@ -256,6 +256,11 @@ class CourseForm(FlaskForm):
         choices=[(status.value, status.value.capitalize()) for status in CourseStatus],
         validators=[DataRequired()],
     )
+    observation = TextAreaField(
+        "Observação",
+        validators=[Optional(), Length(max=2000)],
+        render_kw={"rows": 3},
+    )
     submit = SubmitField("Salvar curso")
     submit_add_to_calendar = SubmitField("Adicionar no calendário")
     submit_delete = SubmitField("Excluir curso")

@@ -19,7 +19,7 @@
                     </p>
                 </div>
                 <div class="courses-summary">
-                    <div class="courses-summary__item" data-status-filter="{{ CourseStatus.COMPLETED.value }}">
+                    <div class="courses-summary__item courses-summary__item--completed" data-status-filter="{{ CourseStatus.COMPLETED.value }}">
                         <span class="courses-summary__label">Concluídos</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.COMPLETED, 0) }}</strong>
                     </div>
@@ -30,6 +30,14 @@
                     <div class="courses-summary__item courses-summary__item--delayed" data-status-filter="{{ CourseStatus.DELAYED.value }}">
                         <span class="courses-summary__label">Atrasados</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.DELAYED, 0) }}</strong>
+                    </div>
+                    <div class="courses-summary__item courses-summary__item--postponed" data-status-filter="{{ CourseStatus.POSTPONED.value }}">
+                        <span class="courses-summary__label">Adiados</span>
+                        <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.POSTPONED, 0) }}</strong>
+                    </div>
+                    <div class="courses-summary__item courses-summary__item--cancelled" data-status-filter="{{ CourseStatus.CANCELLED.value }}">
+                        <span class="courses-summary__label">Cancelados</span>
+                        <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.CANCELLED, 0) }}</strong>
                     </div>
                 </div>
             </div>
@@ -66,6 +74,7 @@
                                     <th scope="col">Horário Início</th>
                                     <th scope="col">Horário Fim</th>
                                     <th scope="col">Data de Conclusão</th>
+                                    <th scope="col">Observação</th>
                                     <th scope="col">Status</th>
                                 </tr>
                             </thead>
@@ -84,6 +93,7 @@
                                         "schedule_end": course.schedule_end_value,
                                         "completion_date": course.completion_date_value,
                                         "status": course.status.value,
+                                        "observation": course.observation or "",
                                     } %}
                                     <tr class="courses-table-row" data-status="{{ course.status.value }}"{% if can_manage_courses %} data-course='{{ course_payload | tojson }}' tabindex="0" role="button" aria-label="Editar curso {{ course.name }}"{% endif %}>
                                         <td class="fw-semibold text-primary-emphasis" data-label="Curso Realizado">{{ course.name }}</td>
@@ -107,6 +117,14 @@
                                         <td data-label="Horário Início">{{ course.schedule_start_label }}</td>
                                         <td data-label="Horário Fim">{{ course.schedule_end_label }}</td>
                                         <td data-label="Data de Conclusão">{{ course.completion_label }}</td>
+                                        <td data-label="Observação">
+                                            {% set observation_value = course.observation_label %}
+                                            {% if observation_value != '-' %}
+                                            <span class="d-inline-block text-truncate" style="max-width: 220px;" title="{{ course.observation }}">{{ observation_value }}</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td data-label="Status">
                                             {% set status_class = status_classes.get(course.status) %}
                                             <span class="status-pill {{ status_class }}">
@@ -117,11 +135,11 @@
                                     </tr>
                                     {% endfor %}
                                     <tr class="courses-table-empty" data-empty-state-row style="display: none;">
-                                        <td colspan="10" class="text-center py-4 text-muted">Nenhum curso encontrado para o filtro selecionado.</td>
+                                        <td colspan="11" class="text-center py-4 text-muted">Nenhum curso encontrado para o filtro selecionado.</td>
                                     </tr>
                                 {% else %}
                                     <tr>
-                                        <td colspan="10" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
+                                        <td colspan="11" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -188,7 +206,11 @@
                         </div>
                         <div class="col-md-6 col-xl-6">
                             <label class="form-label text-start">{{ form.participants.label.text }}</label>
-                            <div class="courses-checkbox-list {{ 'is-invalid' if form.participants.errors else '' }}">
+                            <div class="courses-checkbox-list {{ 'is-invalid' if form.participants.errors else '' }}" data-role="participants-container">
+                                <div class="form-check courses-checkbox-item courses-checkbox-item--select-all">
+                                    <input type="checkbox" class="form-check-input" id="participants-select-all" data-role="participants-select-all">
+                                    <label class="form-check-label fw-semibold" for="participants-select-all">Selecionar todos os participantes</label>
+                                </div>
                                 {% for option in form.participants %}
                                 <div class="form-check courses-checkbox-item">
                                     {{ option(class="form-check-input", id=option.id) }}
@@ -256,6 +278,34 @@
                             </div>
                             {% endif %}
                         </div>
+                        <div class="col-12 d-none" data-role="reschedule-fields" aria-hidden="true">
+                            <div class="alert alert-info small mb-3" role="alert">
+                                Ajuste a nova data e horários sempre que o curso for marcado como <strong>Adiado</strong>.
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label text-start" for="reschedule-date">Nova data de início</label>
+                                    <input type="date" class="form-control" id="reschedule-date" data-target-field="{{ form.start_date.id }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-start" for="reschedule-start">Novo horário de início</label>
+                                    <input type="time" class="form-control" id="reschedule-start" step="300" data-target-field="{{ form.schedule_start.id }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-start" for="reschedule-end">Novo horário de fim</label>
+                                    <input type="time" class="form-control" id="reschedule-end" step="300" data-target-field="{{ form.schedule_end.id }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-start" for="{{ form.observation.id }}">{{ form.observation.label }}</label>
+                            {{ form.observation(class="form-control" + (' is-invalid' if form.observation.errors else '')) }}
+                            {% if form.observation.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.observation.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </form>
@@ -286,6 +336,18 @@
         var tableBody = document.querySelector('.courses-table tbody');
         var tableRows = tableBody ? Array.prototype.slice.call(tableBody.querySelectorAll('.courses-table-row')) : [];
         var emptyStateRow = tableBody ? tableBody.querySelector('[data-empty-state-row]') : null;
+        var statusField = formEl.elements.namedItem('status');
+        var participantSelectAll = formEl.querySelector('[data-role="participants-select-all"]');
+        var participantCheckboxes = Array.prototype.slice.call(formEl.querySelectorAll('input[name="participants"]'));
+        var rescheduleContainer = formEl.querySelector('[data-role="reschedule-fields"]');
+        var rescheduleInputs = rescheduleContainer ? Array.prototype.slice.call(rescheduleContainer.querySelectorAll('[data-target-field]')) : [];
+        var rescheduleTargets = rescheduleInputs
+            .map(function (input) {
+                var targetId = input.getAttribute('data-target-field');
+                return targetId ? formEl.querySelector('#' + targetId) : null;
+            })
+            .filter(Boolean);
+        var postponedStatusValue = '{{ CourseStatus.POSTPONED.value }}';
         var activeStatusFilter = null;
 
         function updateSummaryActiveState() {
@@ -312,6 +374,82 @@
             });
             if (emptyStateRow) {
                 emptyStateRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
+        function updateParticipantSelectAllState() {
+            if (!participantSelectAll) {
+                return;
+            }
+            var total = participantCheckboxes.length;
+            if (total === 0) {
+                participantSelectAll.checked = false;
+                participantSelectAll.indeterminate = false;
+                participantSelectAll.disabled = true;
+                return;
+            }
+            var checkedCount = 0;
+            participantCheckboxes.forEach(function (checkbox) {
+                if (checkbox.checked) {
+                    checkedCount += 1;
+                }
+            });
+            participantSelectAll.disabled = false;
+            participantSelectAll.indeterminate = checkedCount > 0 && checkedCount < total;
+            participantSelectAll.checked = checkedCount === total;
+        }
+
+        function setAllParticipantsChecked(checked) {
+            participantCheckboxes.forEach(function (checkbox) {
+                checkbox.checked = Boolean(checked);
+            });
+            updateParticipantSelectAllState();
+        }
+
+        function getRescheduleTarget(input) {
+            if (!input) {
+                return null;
+            }
+            var targetId = input.getAttribute('data-target-field');
+            if (!targetId) {
+                return null;
+            }
+            return formEl.querySelector('#' + targetId);
+        }
+
+        function syncRescheduleInputsFromFields() {
+            if (!rescheduleInputs.length) {
+                return;
+            }
+            rescheduleInputs.forEach(function (input) {
+                var target = getRescheduleTarget(input);
+                if (target) {
+                    input.value = target.value || '';
+                }
+            });
+        }
+
+        function applyRescheduleInputValue(input) {
+            var target = getRescheduleTarget(input);
+            if (!target) {
+                return;
+            }
+            if (target.value === input.value) {
+                return;
+            }
+            target.value = input.value || '';
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function toggleRescheduleFields() {
+            if (!rescheduleContainer) {
+                return;
+            }
+            var shouldShow = statusField && statusField.value === postponedStatusValue;
+            rescheduleContainer.classList.toggle('d-none', !shouldShow);
+            rescheduleContainer.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+            if (shouldShow) {
+                syncRescheduleInputsFromFields();
             }
         }
 
@@ -366,6 +504,42 @@
             updateSummaryActiveState();
         }
 
+        participantCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', updateParticipantSelectAllState);
+        });
+
+        if (participantSelectAll) {
+            participantSelectAll.addEventListener('change', function () {
+                setAllParticipantsChecked(participantSelectAll.checked);
+            });
+        }
+
+        updateParticipantSelectAllState();
+
+        rescheduleInputs.forEach(function (input) {
+            var syncHandler = function () {
+                applyRescheduleInputValue(input);
+            };
+            input.addEventListener('change', syncHandler);
+            input.addEventListener('input', syncHandler);
+        });
+
+        rescheduleTargets.forEach(function (target) {
+            target.addEventListener('change', function () {
+                if (rescheduleContainer && rescheduleContainer.classList.contains('d-none')) {
+                    return;
+                }
+                syncRescheduleInputsFromFields();
+            });
+        });
+
+        if (statusField) {
+            statusField.addEventListener('change', function () {
+                toggleRescheduleFields();
+            });
+            toggleRescheduleFields();
+        }
+
         function toggleDeleteButton(shouldShow) {
             if (!deleteButton) {
                 return;
@@ -399,15 +573,21 @@
         }
 
         function clearCheckboxGroup(name) {
-            formEl.querySelectorAll('input[name="' + name + '"]').forEach(function (input) {
+            var checkboxes = Array.prototype.slice.call(formEl.querySelectorAll('input[name="' + name + '"]'));
+            checkboxes.forEach(function (input) {
                 input.checked = false;
             });
+            if (name === 'participants') {
+                updateParticipantSelectAllState();
+            }
         }
 
         function resetFormInputs() {
             formEl.reset();
             clearCheckboxGroup('sectors');
             clearCheckboxGroup('participants');
+            toggleRescheduleFields();
+            syncRescheduleInputsFromFields();
         }
 
         function populateCheckboxGroup(name, values) {
@@ -419,6 +599,9 @@
                 var labelText = label ? label.textContent.trim().toLowerCase() : '';
                 input.checked = normalized.indexOf(labelText) !== -1;
             });
+            if (name === 'participants') {
+                updateParticipantSelectAllState();
+            }
         }
 
         function populateFormFields(data) {
@@ -433,7 +616,8 @@
                 'schedule_start',
                 'schedule_end',
                 'completion_date',
-                'status'
+                'status',
+                'observation'
             ];
             fieldNames.forEach(function (fieldName) {
                 var field = formEl.elements.namedItem(fieldName);
@@ -443,6 +627,8 @@
             });
             populateCheckboxGroup('sectors', data.sectors);
             populateCheckboxGroup('participants', data.participants);
+            toggleRescheduleFields();
+            syncRescheduleInputsFromFields();
         }
 
         function enterCreateMode() {

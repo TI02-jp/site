@@ -171,6 +171,7 @@ class Course(db.Model):
     schedule_end = db.Column(TolerantTime(), nullable=False)
     completion_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="planejado")
+    observation = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f"<Course {self.name} ({self.status})>"
