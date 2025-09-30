@@ -103,6 +103,32 @@ class TolerantTime(TypeDecorator):
     def process_result_value(self, value, dialect):  # type: ignore[override]
         return _coerce_time(value)
 
+    def result_processor(self, dialect, coltype):  # type: ignore[override]
+        """Return a processor resilient to raw string payloads from MySQL."""
+
+        impl_processor = super().result_processor(dialect, coltype)
+
+        def process(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                coerced = _coerce_time(value)
+                if coerced is not None:
+                    return coerced
+            if impl_processor is None:
+                return _coerce_time(value)
+            try:
+                processed = impl_processor(value)
+            except AttributeError:
+                # MySQL may attempt to treat raw strings as timedeltas.
+                coerced = _coerce_time(value)
+                if coerced is not None:
+                    return coerced
+                raise
+            return _coerce_time(processed)
+
+        return process
+
 class User(db.Model, UserMixin):
     """Application user account."""
     __tablename__ = "users"
