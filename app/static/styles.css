@@ -141,12 +141,13 @@ Botões e Ações
 Atalhos (Central de Acessos)
 ----------------------------- */
 .access-shortcut {
-    width: 100%;
+    width: min(100%, 16rem);
     min-height: 2.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     text-align: left;
     font-weight: 600;
+    align-self: flex-start;
 }
 
 .access-shortcut .bi {
