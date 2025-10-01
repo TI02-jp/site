@@ -219,8 +219,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    function cleanupModalArtifacts() {
+        if (document.querySelectorAll('.modal.show').length > 0) {
+            return;
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+            backdrop.remove();
+        });
+    }
+
     modalEl.addEventListener('hidden.bs.modal', function() {
         setMode('create', { preserveValues: true });
+        cleanupModalArtifacts();
     });
 
     {% if open_consultoria_modal %}

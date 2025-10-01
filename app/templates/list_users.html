@@ -369,13 +369,25 @@ document.addEventListener("DOMContentLoaded", function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    const shouldOpenTagsModal = {{ 'true' if open_tag_modal or tag_create_form.errors or tag_edit_form.errors else 'false' }};
-    if (shouldOpenTagsModal) {
-        const tagsModalEl = document.getElementById('tagsModal');
-        if (tagsModalEl) {
-            const tagsModal = new bootstrap.Modal(tagsModalEl);
-            tagsModal.show();
+    function cleanupModalArtifacts() {
+        if (document.querySelectorAll('.modal.show').length > 0) {
+            return;
         }
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+            backdrop.remove();
+        });
+    }
+
+    const tagsModalEl = document.getElementById('tagsModal');
+    const shouldOpenTagsModal = {{ 'true' if open_tag_modal or tag_create_form.errors or tag_edit_form.errors else 'false' }};
+    if (shouldOpenTagsModal && tagsModalEl) {
+        const tagsModal = new bootstrap.Modal(tagsModalEl);
+        tagsModal.show();
+    }
+    if (tagsModalEl) {
+        tagsModalEl.addEventListener('hidden.bs.modal', cleanupModalArtifacts);
     }
 
     const shouldOpenUserModal = {{ 'true' if open_user_modal or form.errors else 'false' }};
@@ -392,6 +404,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 firstInput.focus();
             }
         });
+        userModalEl.addEventListener('hidden.bs.modal', cleanupModalArtifacts);
     }
 
     const passwordField = document.getElementById('password');
