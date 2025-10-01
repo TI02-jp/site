@@ -19,7 +19,7 @@
             <span class="badge bg-primary ms-2">{{ setores|length }}</span>
         </h1>
         {% if current_user.role == 'admin' %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#setorModal">
+        <button type="button" class="btn btn-primary" data-setor-modal="create" data-bs-toggle="modal" data-bs-target="#setorModal">
             <i class="bi bi-plus-lg me-1"></i>Novo Setor
         </button>
         {% endif %}
@@ -30,9 +30,16 @@
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <div>{{ s.nome }}</div>
                 {% if current_user.role == 'admin' %}
-                <a href="{{ url_for('editar_setor', id=s.id) }}" class="btn btn-custom btn-sm" title="Editar">
+                <button type="button"
+                        class="btn btn-custom btn-sm"
+                        title="Editar"
+                        data-setor-modal="edit"
+                        data-bs-target="#setorModal"
+                        data-bs-toggle="modal"
+                        data-setor-id="{{ s.id }}"
+                        data-setor-nome="{{ s.nome|e }}">
                     <i class="bi bi-pencil"></i>
-                </a>
+                </button>
                 {% endif %}
             </li>
             {% else %}
@@ -51,12 +58,13 @@
         <div class="modal-content border-0 shadow-lg">
             <form method="POST" action="{{ url_for('setores') }}" novalidate>
                 {{ setor_form.hidden_tag() }}
-                <input type="hidden" name="form_name" value="setor_create">
+                <input type="hidden" name="form_name" id="setorFormName" value="{{ 'setor_update' if editing_setor else 'setor_create' }}">
+                <input type="hidden" name="setor_id" id="setorIdField" value="{{ editing_setor.id if editing_setor else '' }}">
                 <div class="modal-header border-0 pb-0 px-4 pt-4">
                     <div class="w-100 d-flex justify-content-between align-items-start">
                         <h5 class="modal-title d-flex align-items-center gap-2" id="setorModalLabel">
                             <i class="bi bi-diagram-3"></i>
-                            Novo Setor
+                            <span id="setorModalTitle">{{ 'Editar Setor' if editing_setor else 'Novo Setor' }}</span>
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
@@ -75,7 +83,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Cancelar
                     </button>
-                    {{ setor_form.submit(class="btn btn-primary") }}
+                    {{ setor_form.submit(class="btn btn-primary", id="setorModalSubmit") }}
                 </div>
             </form>
         </div>
@@ -86,15 +94,81 @@
 
 {% block scripts %}
 {{ super() }}
-{% if open_setor_modal %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var modalEl = document.getElementById('setorModal');
-    if (modalEl) {
-        var setorModal = new bootstrap.Modal(modalEl);
-        setorModal.show();
+    if (!modalEl) {
+        return;
     }
+
+    var setorModal = new bootstrap.Modal(modalEl);
+    var formNameInput = document.getElementById('setorFormName');
+    var setorIdInput = document.getElementById('setorIdField');
+    var titleWrapper = document.getElementById('setorModalTitle');
+    var submitButton = document.getElementById('setorModalSubmit');
+    var nomeField = document.getElementById('{{ setor_form.nome.id }}');
+
+    function setMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            formNameInput.value = 'setor_update';
+            titleWrapper.textContent = 'Editar Setor';
+            if (submitButton) {
+                submitButton.value = 'Atualizar';
+            }
+            if ('id' in data) {
+                setorIdInput.value = data.id || '';
+            }
+            if (data.nome !== undefined && nomeField) {
+                nomeField.value = data.nome;
+            }
+        } else {
+            formNameInput.value = 'setor_create';
+            setorIdInput.value = '';
+            titleWrapper.textContent = 'Novo Setor';
+            if (submitButton) {
+                submitButton.value = 'Salvar';
+            }
+            if (!data.preserveValues && nomeField) {
+                nomeField.value = '';
+            }
+        }
+    }
+
+    document.querySelectorAll('[data-setor-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setMode('create', { preserveValues: false });
+        });
+    });
+
+    document.querySelectorAll('[data-setor-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            setMode('edit', {
+                id: target.getAttribute('data-setor-id'),
+                nome: target.getAttribute('data-setor-nome') || ''
+            });
+            setorModal.show();
+        });
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        setMode('create', { preserveValues: true });
+    });
+
+    {% if open_setor_modal %}
+    {% if editing_setor %}
+    setMode('edit', {
+        id: '{{ editing_setor.id }}',
+        nome: {{ editing_setor.nome|tojson }}
+    });
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+    setorModal.show();
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
 });
 </script>
-{% endif %}
 {% endblock %}

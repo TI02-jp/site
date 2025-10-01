@@ -19,7 +19,7 @@
             <span class="badge bg-primary ms-2">{{ consultorias|length }}</span>
         </h1>
         {% if current_user.role == 'admin' %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#consultoriaModal">
+        <button type="button" class="btn btn-primary" data-consultoria-modal="create" data-bs-toggle="modal" data-bs-target="#consultoriaModal">
             <i class="bi bi-plus-lg me-1"></i>Nova Consultoria
         </button>
         {% endif %}
@@ -46,9 +46,18 @@
                             <td class="text-start">{{ c.senha }}</td>
                             {% if current_user.role == 'admin' %}
                             <td class="text-end">
-                                <a href="{{ url_for('editar_consultoria_cadastro', id=c.id) }}" class="btn btn-custom btn-sm" title="Editar">
+                                <button type="button"
+                                        class="btn btn-custom btn-sm"
+                                        title="Editar"
+                                        data-consultoria-modal="edit"
+                                        data-bs-target="#consultoriaModal"
+                                        data-bs-toggle="modal"
+                                        data-consultoria-id="{{ c.id }}"
+                                        data-consultoria-nome="{{ c.nome|e }}"
+                                        data-consultoria-usuario="{{ c.usuario|e }}"
+                                        data-consultoria-senha="{{ (c.senha or '')|e }}">
                                     <i class="bi bi-pencil"></i>
-                                </a>
+                                </button>
                             </td>
                             {% endif %}
                         </tr>
@@ -74,12 +83,13 @@
         <div class="modal-content border-0 shadow-lg">
             <form method="POST" action="{{ url_for('consultorias') }}" novalidate>
                 {{ consultoria_form.hidden_tag() }}
-                <input type="hidden" name="form_name" value="consultoria_create">
+                <input type="hidden" name="form_name" id="consultoriaFormName" value="{{ 'consultoria_update' if editing_consultoria else 'consultoria_create' }}">
+                <input type="hidden" name="consultoria_id" id="consultoriaIdField" value="{{ editing_consultoria.id if editing_consultoria else '' }}">
                 <div class="modal-header border-0 pb-0 px-4 pt-4">
                     <div class="w-100 d-flex justify-content-between align-items-start">
                         <h5 class="modal-title d-flex align-items-center gap-2" id="consultoriaModalLabel">
                             <i class="bi bi-building-add"></i>
-                            Nova Consultoria
+                            <span id="consultoriaModalTitle">{{ 'Editar Consultoria' if editing_consultoria else 'Nova Consultoria' }}</span>
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
@@ -122,7 +132,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Cancelar
                     </button>
-                    {{ consultoria_form.submit(class="btn btn-primary") }}
+                    {{ consultoria_form.submit(class="btn btn-primary", id="consultoriaModalSubmit") }}
                 </div>
             </form>
         </div>
@@ -133,15 +143,101 @@
 
 {% block scripts %}
 {{ super() }}
-{% if open_consultoria_modal %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var modalEl = document.getElementById('consultoriaModal');
-    if (modalEl) {
-        var consultoriaModal = new bootstrap.Modal(modalEl);
-        consultoriaModal.show();
+    if (!modalEl) {
+        return;
     }
+
+    var consultoriaModal = new bootstrap.Modal(modalEl);
+    var formNameInput = document.getElementById('consultoriaFormName');
+    var consultoriaIdInput = document.getElementById('consultoriaIdField');
+    var titleWrapper = document.getElementById('consultoriaModalTitle');
+    var submitButton = document.getElementById('consultoriaModalSubmit');
+    var nomeField = document.getElementById('{{ consultoria_form.nome.id }}');
+    var usuarioField = document.getElementById('{{ consultoria_form.usuario.id }}');
+    var senhaField = document.getElementById('{{ consultoria_form.senha.id }}');
+
+    function setMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            formNameInput.value = 'consultoria_update';
+            titleWrapper.textContent = 'Editar Consultoria';
+            if (submitButton) {
+                submitButton.value = 'Atualizar';
+            }
+            if ('id' in data) {
+                consultoriaIdInput.value = data.id || '';
+            }
+            if (data.nome !== undefined && nomeField) {
+                nomeField.value = data.nome;
+            }
+            if (data.usuario !== undefined && usuarioField) {
+                usuarioField.value = data.usuario;
+            }
+            if (data.senha !== undefined && senhaField) {
+                senhaField.value = data.senha;
+            }
+        } else {
+            formNameInput.value = 'consultoria_create';
+            consultoriaIdInput.value = '';
+            titleWrapper.textContent = 'Nova Consultoria';
+            if (submitButton) {
+                submitButton.value = 'Salvar';
+            }
+            if (!data.preserveValues) {
+                if (nomeField) {
+                    nomeField.value = '';
+                }
+                if (usuarioField) {
+                    usuarioField.value = '';
+                }
+                if (senhaField) {
+                    senhaField.value = '';
+                }
+            }
+        }
+    }
+
+    document.querySelectorAll('[data-consultoria-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setMode('create', { preserveValues: false });
+        });
+    });
+
+    document.querySelectorAll('[data-consultoria-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            setMode('edit', {
+                id: target.getAttribute('data-consultoria-id'),
+                nome: target.getAttribute('data-consultoria-nome') || '',
+                usuario: target.getAttribute('data-consultoria-usuario') || '',
+                senha: target.getAttribute('data-consultoria-senha') || ''
+            });
+            consultoriaModal.show();
+        });
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        setMode('create', { preserveValues: true });
+    });
+
+    {% if open_consultoria_modal %}
+    {% if editing_consultoria %}
+    setMode('edit', {
+        id: '{{ editing_consultoria.id }}',
+        nome: {{ editing_consultoria.nome|tojson }},
+        usuario: {{ editing_consultoria.usuario|tojson }},
+        senha: {{ (editing_consultoria.senha or '')|tojson }}
+    });
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+    consultoriaModal.show();
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
 });
 </script>
-{% endif %}
 {% endblock %}
