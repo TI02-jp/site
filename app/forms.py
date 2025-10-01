@@ -31,6 +31,7 @@ from wtforms.validators import (
 import re
 
 from app.services.courses import CourseStatus
+from app.models.tables import ReuniaoStatus
 
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
@@ -371,6 +372,15 @@ class MeetingForm(FlaskForm):
     subject = StringField("Assunto", validators=[DataRequired()], render_kw={"placeholder": "Assunto"})
     description = TextAreaField(
         "Descrição (opcional)", validators=[Optional()], render_kw={"placeholder": "Detalhes", "rows": 3}
+    )
+    status = SelectField(
+        "Status",
+        choices=[
+            (ReuniaoStatus.AGENDADA.value, "Agendada"),
+            (ReuniaoStatus.ADIADA.value, "Adiada"),
+            (ReuniaoStatus.CANCELADA.value, "Cancelada"),
+        ],
+        default=ReuniaoStatus.AGENDADA.value,
     )
     create_meet = BooleanField("Gerar sala no Google Meet")
     notify_attendees = BooleanField(
