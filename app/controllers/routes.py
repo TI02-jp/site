@@ -2964,31 +2964,38 @@ def list_users():
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
+    open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
 
     if request.method == "POST":
         form_name = request.form.get("form_name")
 
-        if form_name == "user" and form.validate_on_submit():
-            existing_user = User.query.filter(
-                (User.username == form.username.data)
-                | (User.email == form.email.data)
-            ).first()
-            if existing_user:
-                flash("Usuário ou email já cadastrado.", "warning")
-            else:
-                user = User(
-                    username=form.username.data,
-                    email=form.email.data,
-                    name=form.name.data,
-                    role=form.role.data,
-                )
-                user.set_password(form.password.data)
-                if form.tags.data:
-                    user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
-                db.session.add(user)
-                db.session.commit()
-                flash("Novo usuário cadastrado com sucesso!", "success")
-            return redirect(url_for("list_users"))
+        if form_name == "user":
+            open_user_modal = True
+            if form.validate_on_submit():
+                existing_user = User.query.filter(
+                    (User.username == form.username.data)
+                    | (User.email == form.email.data)
+                ).first()
+                if existing_user:
+                    if existing_user.username == form.username.data:
+                        form.username.errors.append("Usuário já cadastrado.")
+                    if existing_user.email == form.email.data:
+                        form.email.errors.append("Email já cadastrado.")
+                    flash("Usuário ou email já cadastrado.", "warning")
+                else:
+                    user = User(
+                        username=form.username.data,
+                        email=form.email.data,
+                        name=form.name.data,
+                        role=form.role.data,
+                    )
+                    user.set_password(form.password.data)
+                    if form.tags.data:
+                        user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
+                    db.session.add(user)
+                    db.session.commit()
+                    flash("Novo usuário cadastrado com sucesso!", "success")
+                    return redirect(url_for("list_users"))
 
         if form_name == "tag":
             open_tag_modal = True
@@ -3021,6 +3028,7 @@ def list_users():
         tag_list=tag_list,
         show_inactive=show_inactive,
         open_tag_modal=open_tag_modal,
+        open_user_modal=open_user_modal,
     )
 
 
@@ -3038,33 +3046,11 @@ def online_users():
     return render_template("admin/online_users.html", users=users)
 
 
-@app.route("/novo_usuario", methods=["GET", "POST"])
+@app.route("/novo_usuario", methods=["GET"])
 @admin_required
 def novo_usuario():
-    """Create a new user from the admin interface."""
-    form = RegistrationForm()
-    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
-    if form.validate_on_submit():
-        existing_user = User.query.filter(
-            (User.username == form.username.data) | (User.email == form.email.data)
-        ).first()
-        if existing_user:
-            flash("Usuário ou email já cadastrado.", "warning")
-        else:
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                name=form.name.data,
-                role=form.role.data,
-            )
-            user.set_password(form.password.data)
-            if form.tags.data:
-                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
-            db.session.add(user)
-            db.session.commit()
-            flash("Novo usuário cadastrado com sucesso!", "success")
-            return redirect(url_for("list_users"))
-    return render_template("admin/novo_usuario.html", form=form)
+    """Redirect to the user list with the registration modal open."""
+    return redirect(url_for("list_users", open_user_modal="1"))
 
 
 @app.route("/user/edit/<int:user_id>", methods=["GET", "POST"])

@@ -157,7 +157,7 @@
                     <h5 class="mb-3"><i class="bi bi-bookmark-star me-2"></i>Acesso Rápido</h5>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         {% if current_user.role == 'admin' %}
-                        <a href="{{ url_for('novo_usuario') }}" class="btn btn-outline-primary btn-sm">
+                        <a href="{{ url_for('list_users', open_user_modal='1') }}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-person-plus me-1"></i>Novo Usuário
                         </a>
                         {% endif %}

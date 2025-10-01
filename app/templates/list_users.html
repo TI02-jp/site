@@ -27,9 +27,9 @@
                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tagsModal">
                         <i class="bi bi-tags me-1"></i>Tags
                     </button>
-                    <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
                         <i class="bi bi-person-plus me-1"></i>Novo Usuário
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -108,9 +108,9 @@
                                     <i class="bi bi-person-slash fs-1 d-block mb-3"></i>
                                     <h5>Nenhum usuário cadastrado</h5>
                                     <p class="mb-3">Comece cadastrando o primeiro usuário</p>
-                                    <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
                                         <i class="bi bi-person-plus me-2"></i>Cadastrar Primeiro Usuário
-                                    </a>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -124,67 +124,134 @@
 
 <!-- Modal de Novo Usuário -->
 <div class="modal fade" id="novoUsuarioModal" tabindex="-1" aria-labelledby="novoUsuarioModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form method="POST" action="{{ url_for('list_users') }}">
-      <input type="hidden" name="form_name" value="user">
-      {{ form.csrf_token }}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="novoUsuarioModalLabel">Cadastrar Novo Usuário</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <form method="POST" action="{{ url_for('list_users') }}" novalidate>
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="form_name" value="user">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="novoUsuarioModalLabel">
+            <i class="bi bi-person-plus-fill"></i>
+            Cadastrar Novo Usuário
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control") }}
-          </div>
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", id="modal_password") }}
-          </div>
-          <div class="mb-3">
-            {{ form.confirm_password.label(class="form-label") }}
-            {{ form.confirm_password(class="form-control", id="modal_confirm_password") }}
-          </div>
-          <div class="mb-3">
-            {{ form.role.label(class="form-label") }}
-            {{ form.role(class="form-select") }}
-          </div>
-          <div class="mb-3">
-            <div class="d-flex align-items-center">
-              {{ form.tags.label(class="form-label mb-0") }}
-              <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
-                <i class="bi bi-plus-lg"></i>
-              </a>
-            </div>
-            {% if form.tags.choices %}
-            <div class="mt-2">
-              {% for tag in form.tags %}
-                <div class="form-check form-check-inline">
-                  {{ tag(class="form-check-input") }}
-                  {{ tag.label(class="form-check-label") }}
+        <div class="modal-body py-4">
+          <div class="container-fluid">
+            <div class="row g-4 align-items-end">
+              <div class="col-12">
+                <h6 class="text-uppercase text-muted fw-semibold mb-0">Perfil e contato</h6>
+              </div>
+              <div class="col-lg-5 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                  {{ form.name(class="form-control", placeholder="Nome completo") }}
                 </div>
-              {% endfor %}
+                {% for error in form.name.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.email.id }}">{{ form.email.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                  {{ form.email(class="form-control", placeholder="E-mail") }}
+                </div>
+                {% for error in form.email.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.role.id }}">{{ form.role.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                  {{ form.role(class="form-select") }}
+                </div>
+                {% for error in form.role.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 pt-2 border-top">
+                <h6 class="text-uppercase text-muted fw-semibold mb-0">Acesso</h6>
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.username.id }}">{{ form.username.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-person"></i></span>
+                  {{ form.username(class="form-control", placeholder="Usuário de acesso") }}
+                </div>
+                {% for error in form.username.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.password.id }}">{{ form.password.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                  {{ form.password(class="form-control", placeholder="Senha", type="password") }}
+                </div>
+                {% for error in form.password.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ form.confirm_password.id }}">{{ form.confirm_password.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                  {{ form.confirm_password(class="form-control", placeholder="Confirmar senha", type="password") }}
+                </div>
+                {% for error in form.confirm_password.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 pt-2 border-top">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0">Tags de usuário</h6>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Organize o usuário com tags</span>
+                    {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary" title="Nova Tag">
+                      <i class="bi bi-plus-lg"></i>
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                {% if form.tags.choices %}
+                  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+                    {% for tag in form.tags %}
+                      <div class="col">
+                        <div class="form-check">
+                          {{ tag(class="form-check-input") }}
+                          {{ tag.label(class="form-check-label") }}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-muted mb-0">Nenhuma tag disponível no momento.</p>
+                {% endif %}
+                {% for error in form.tags.errors %}
+                  <div class="form-text text-danger mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
             </div>
-            {% else %}
-              <p class="text-muted">Nenhuma tag disponível</p>
-            {% endif %}
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Cadastrar</button>
+        <div class="modal-footer d-flex flex-wrap justify-content-between gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-person-check me-1"></i>{{ form.submit.label.text }}
+          </button>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -281,6 +348,84 @@ document.addEventListener("DOMContentLoaded", function () {
             const tagsModal = new bootstrap.Modal(tagsModalEl);
             tagsModal.show();
         }
+    }
+
+    const shouldOpenUserModal = {{ 'true' if open_user_modal or form.errors else 'false' }};
+    const userModalEl = document.getElementById('novoUsuarioModal');
+    if (shouldOpenUserModal && userModalEl) {
+        const userModal = new bootstrap.Modal(userModalEl);
+        userModal.show();
+    }
+
+    if (userModalEl) {
+        userModalEl.addEventListener('shown.bs.modal', function () {
+            const firstInput = userModalEl.querySelector('input:not([type="hidden"])');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        });
+    }
+
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    function validatePasswordMatch() {
+        if (!passwordField || !confirmPasswordField) {
+            return;
+        }
+        const password = passwordField.value;
+        const confirmPassword = confirmPasswordField.value;
+        if (!confirmPassword) {
+            confirmPasswordField.classList.remove('is-valid', 'is-invalid');
+            return;
+        }
+        if (password === confirmPassword) {
+            confirmPasswordField.classList.add('is-valid');
+            confirmPasswordField.classList.remove('is-invalid');
+        } else {
+            confirmPasswordField.classList.add('is-invalid');
+            confirmPasswordField.classList.remove('is-valid');
+        }
+    }
+    if (passwordField && confirmPasswordField) {
+        passwordField.addEventListener('input', validatePasswordMatch);
+        confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
+
+    const usernameField = document.getElementById('username');
+    if (usernameField) {
+        usernameField.addEventListener('input', function () {
+            const username = this.value.trim();
+            if (!username) {
+                this.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            if (username.length >= 3) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
+    }
+
+    const emailField = document.getElementById('email');
+    if (emailField) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        emailField.addEventListener('input', function () {
+            const email = this.value.trim();
+            if (!email) {
+                this.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            if (emailRegex.test(email)) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
     }
 });
 
