@@ -136,6 +136,23 @@
                                         {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors[0] }}</div>{% endif %}
                                     </div>
                                 </div>
+                                <div class="row g-3 mb-1 d-none" id="postponedFieldsGroup">
+                                    <div class="col-md-4">
+                                        {{ form.postponed_date.label(class="form-label mb-1") }}
+                                        {{ form.postponed_date(class="form-control", type="date", id="postponed_date") }}
+                                        {% if form.postponed_date.errors %}<div class="text-danger small mt-1">{{ form.postponed_date.errors[0] }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.postponed_start_time.label(class="form-label mb-1") }}
+                                        {{ form.postponed_start_time(class="form-control", type="time", id="postponed_start_time") }}
+                                        {% if form.postponed_start_time.errors %}<div class="text-danger small mt-1">{{ form.postponed_start_time.errors[0] }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.postponed_end_time.label(class="form-label mb-1") }}
+                                        {{ form.postponed_end_time(class="form-control", type="time", id="postponed_end_time") }}
+                                        {% if form.postponed_end_time.errors %}<div class="text-danger small mt-1">{{ form.postponed_end_time.errors[0] }}</div>{% endif %}
+                                    </div>
+                                </div>
                                 <div class="meeting-options d-flex flex-wrap align-items-center mb-3">
                                     <div class="form-check form-check-inline">
                                         {{ form.create_meet(class="form-check-input", id="create_meet") }}
@@ -297,6 +314,13 @@
     var meetingIdInput = document.getElementById('meeting_id');
     var statusGroup = document.getElementById('meetingStatusGroup');
     var statusSelect = document.getElementById('meeting_status');
+    var postponedGroup = document.getElementById('postponedFieldsGroup');
+    var postponedDateInput = document.getElementById('postponed_date');
+    var postponedStartInput = document.getElementById('postponed_start_time');
+    var postponedEndInput = document.getElementById('postponed_end_time');
+    var baseDateInput = document.getElementById('date');
+    var baseStartInput = document.getElementById('start_time');
+    var baseEndInput = document.getElementById('end_time');
     var statusDefault = '';
     if (statusSelect) {
         var attrValue = statusSelect.getAttribute('data-default');
@@ -479,6 +503,7 @@
         }
         if (!applied && statusSelect.options.length) {
             statusSelect.selectedIndex = 0;
+            valueToApply = statusSelect.value;
         }
         if (isEditing) {
             statusGroup.classList.remove('d-none');
@@ -486,6 +511,50 @@
         } else {
             statusGroup.classList.add('d-none');
             statusSelect.disabled = true;
+        }
+        togglePostponedFields(valueToApply, { preserveValues: true });
+    }
+
+    function togglePostponedFields(statusCode, options) {
+        if (!postponedGroup) {
+            return;
+        }
+        var shouldShow = statusCode === 'adiada';
+        var preserveValues = options && options.preserveValues;
+        if (shouldShow) {
+            postponedGroup.classList.remove('d-none');
+            if (postponedDateInput) { postponedDateInput.required = true; }
+            if (postponedStartInput) { postponedStartInput.required = true; }
+            if (postponedEndInput) { postponedEndInput.required = true; }
+        } else {
+            postponedGroup.classList.add('d-none');
+            if (postponedDateInput) {
+                postponedDateInput.required = false;
+                if (!preserveValues) { postponedDateInput.value = ''; }
+            }
+            if (postponedStartInput) {
+                postponedStartInput.required = false;
+                if (!preserveValues) { postponedStartInput.value = ''; }
+            }
+            if (postponedEndInput) {
+                postponedEndInput.required = false;
+                if (!preserveValues) { postponedEndInput.value = ''; }
+            }
+        }
+    }
+
+    function syncPostponedToBase() {
+        if (!statusSelect || statusSelect.value !== 'adiada') {
+            return;
+        }
+        if (postponedDateInput && baseDateInput) {
+            baseDateInput.value = postponedDateInput.value;
+        }
+        if (postponedStartInput && baseStartInput) {
+            baseStartInput.value = postponedStartInput.value;
+        }
+        if (postponedEndInput && baseEndInput) {
+            baseEndInput.value = postponedEndInput.value;
         }
     }
 
@@ -510,6 +579,38 @@
     } else {
         setStatusFieldState(false, statusDefault);
     }
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            var currentValue = statusSelect.value;
+            if (currentValue === 'adiada') {
+                if (postponedDateInput && baseDateInput) {
+                    postponedDateInput.value = baseDateInput.value;
+                }
+                if (postponedStartInput && baseStartInput) {
+                    postponedStartInput.value = baseStartInput.value;
+                }
+                if (postponedEndInput && baseEndInput) {
+                    postponedEndInput.value = baseEndInput.value;
+                }
+                togglePostponedFields(currentValue);
+                syncPostponedToBase();
+            } else {
+                togglePostponedFields(currentValue);
+            }
+        });
+    }
+    if (postponedDateInput) {
+        postponedDateInput.addEventListener('change', syncPostponedToBase);
+        postponedDateInput.addEventListener('input', syncPostponedToBase);
+    }
+    if (postponedStartInput) {
+        postponedStartInput.addEventListener('change', syncPostponedToBase);
+        postponedStartInput.addEventListener('input', syncPostponedToBase);
+    }
+    if (postponedEndInput) {
+        postponedEndInput.addEventListener('change', syncPostponedToBase);
+        postponedEndInput.addEventListener('input', syncPostponedToBase);
+    }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
         form.reset();
@@ -524,6 +625,7 @@
             courseInput.value = '';
         }
         setStatusFieldState(false, statusDefault);
+        togglePostponedFields(statusDefault);
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
@@ -726,6 +828,20 @@
         form.description.value = currentEvent.extendedProps.description || '';
         var statusCode = currentEvent.extendedProps.status_code || '';
         setStatusFieldState(true, statusCode);
+        if (statusCode === 'adiada') {
+            if (postponedDateInput) {
+                postponedDateInput.value = form.date.value;
+            }
+            if (postponedStartInput) {
+                postponedStartInput.value = form.start_time.value;
+            }
+            if (postponedEndInput) {
+                postponedEndInput.value = form.end_time.value;
+            }
+            syncPostponedToBase();
+        } else {
+            togglePostponedFields(statusCode);
+        }
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
         }
