@@ -71,7 +71,9 @@
             <div class="mb-3">
                 <span class="badge bg-warning text-dark me-2">Agendada</span>
                 <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger">Realizada</span>
+                <span class="badge bg-danger me-2">Realizada</span>
+                <span class="badge badge-status-postponed me-2">Adiada</span>
+                <span class="badge badge-status-cancelled">Cancelada</span>
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -125,6 +127,13 @@
                                     <div class="col-lg-6">
                                         {{ form.description.label(class="form-label mb-1") }}
                                         {{ form.description(class="form-control", rows=2) }}
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-1 d-none" id="meetingStatusGroup">
+                                    <div class="col-lg-4">
+                                        {{ form.status.label(class="form-label mb-1") }}
+                                        {{ form.status(class="form-select", id="meeting_status", data_default=(form.status.default or form.status.data or '')) }}
+                                        {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors[0] }}</div>{% endif %}
                                     </div>
                                 </div>
                                 <div class="meeting-options d-flex flex-wrap align-items-center mb-3">
@@ -242,11 +251,17 @@
 .tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
 .tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
 .tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
+.tooltip-postponed .tooltip-inner{background-color:#fd7e14;color:#fff;}
+.tooltip-cancelled .tooltip-inner{background-color:#6f42c1;color:#fff;}
 .tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
 .tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
 .tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
+.tooltip-postponed .tooltip-arrow::before{border-top-color:#fd7e14;border-bottom-color:#fd7e14;border-left-color:#fd7e14;border-right-color:#fd7e14;}
+.tooltip-cancelled .tooltip-arrow::before{border-top-color:#6f42c1;border-bottom-color:#6f42c1;border-left-color:#6f42c1;border-right-color:#6f42c1;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
+.badge-status-postponed{background-color:#fd7e14;color:#fff;}
+.badge-status-cancelled{background-color:#6f42c1;color:#fff;}
     </style>
 {% endblock %}
 {% block scripts %}
@@ -279,6 +294,35 @@
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');
     var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
+    var meetingIdInput = document.getElementById('meeting_id');
+    var statusGroup = document.getElementById('meetingStatusGroup');
+    var statusSelect = document.getElementById('meeting_status');
+    var statusDefault = '';
+    if (statusSelect) {
+        var attrValue = statusSelect.getAttribute('data-default');
+        if (attrValue) {
+            statusDefault = attrValue;
+        } else if (statusSelect.options.length) {
+            statusDefault = statusSelect.options[0].value;
+        }
+    }
+
+    function resolveTooltipClass(color) {
+        switch (color) {
+            case '#ffc107':
+                return 'tooltip-warning';
+            case '#198754':
+                return 'tooltip-success';
+            case '#dc3545':
+                return 'tooltip-danger';
+            case '#fd7e14':
+                return 'tooltip-postponed';
+            case '#6f42c1':
+                return 'tooltip-cancelled';
+            default:
+                return '';
+        }
+    }
 
     function renumberAdditionalDates() {
         if (!additionalDatesContainer) {
@@ -415,6 +459,36 @@
         }
     }
 
+    function setStatusFieldState(isEditing, statusCode) {
+        if (!statusSelect || !statusGroup) {
+            return;
+        }
+        var valueToApply = statusCode;
+        if (!valueToApply) {
+            valueToApply = statusDefault;
+        }
+        var applied = false;
+        if (valueToApply) {
+            for (var i = 0; i < statusSelect.options.length; i++) {
+                if (statusSelect.options[i].value === valueToApply) {
+                    statusSelect.value = valueToApply;
+                    applied = true;
+                    break;
+                }
+            }
+        }
+        if (!applied && statusSelect.options.length) {
+            statusSelect.selectedIndex = 0;
+        }
+        if (isEditing) {
+            statusGroup.classList.remove('d-none');
+            statusSelect.disabled = false;
+        } else {
+            statusGroup.classList.add('d-none');
+            statusSelect.disabled = true;
+        }
+    }
+
     if (additionalDatesContainer) {
         renumberAdditionalDates();
         additionalDatesContainer.querySelectorAll('.remove-additional-date').forEach(attachRemoveHandler);
@@ -431,6 +505,11 @@
         applyMoreDaysCheckbox.addEventListener('change', toggleAdditionalDates);
         toggleAdditionalDates();
     }
+    if (meetingIdInput && meetingIdInput.value) {
+        setStatusFieldState(true, statusSelect ? statusSelect.value : statusDefault);
+    } else {
+        setStatusFieldState(false, statusDefault);
+    }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
         form.reset();
@@ -444,6 +523,7 @@
         if (courseInput) {
             courseInput.value = '';
         }
+        setStatusFieldState(false, statusDefault);
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
@@ -483,10 +563,7 @@
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
-            var cls = '';
-            if(color === '#ffc107'){cls='tooltip-warning';}
-            else if(color === '#198754'){cls='tooltip-success';}
-            else if(color === '#dc3545'){cls='tooltip-danger';}
+            var cls = resolveTooltipClass(color);
             info.el.setAttribute('data-bs-toggle', 'tooltip');
             info.el.setAttribute('data-bs-html', 'true');
             info.el.setAttribute('data-bs-custom-class', cls);
@@ -511,13 +588,14 @@
             document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
             document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
             var statusText = e.extendedProps.status || '';
+            var statusCode = e.extendedProps.status_code || '';
             document.getElementById('detailStatus').textContent = statusText;
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
             var linkContainer = document.getElementById('meetLinkContainer');
             var linkEl = document.getElementById('detailMeetLink');
             var copyBtn = document.getElementById('copyMeetLink');
-            if (e.extendedProps.meet_link) {
+            if (e.extendedProps.meet_link && statusCode !== 'cancelada') {
                 linkEl.textContent = e.extendedProps.meet_link;
                 linkContainer.classList.remove('d-none');
                 if (statusText === 'Realizada') {
@@ -539,6 +617,10 @@
                 }
             } else {
                 linkContainer.classList.add('d-none');
+                linkEl.removeAttribute('href');
+                linkEl.textContent = '';
+                copyBtn.classList.add('d-none');
+                copyBtn.onclick = null;
             }
             var editBtn = document.getElementById('editEventBtn');
             var deleteBtn = document.getElementById('deleteEventBtn');
@@ -578,6 +660,9 @@
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
                         }
+                        if (existing.extendedProps.status_code !== evData.status_code) {
+                            existing.setExtendedProp('status_code', evData.status_code);
+                        }
                         if (existing.extendedProps.can_edit !== evData.can_edit) {
                             existing.setExtendedProp('can_edit', evData.can_edit);
                         }
@@ -587,8 +672,9 @@
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
                         }
-                        if (existing.extendedProps.meet_link !== evData.meet_link) {
-                            existing.setExtendedProp('meet_link', evData.meet_link);
+                        var newLink = (typeof evData.meet_link === 'undefined' ? null : evData.meet_link);
+                        if (existing.extendedProps.meet_link !== newLink) {
+                            existing.setExtendedProp('meet_link', newLink);
                         }
                         if (existing.extendedProps.creator !== evData.creator) {
                             existing.setExtendedProp('creator', evData.creator);
@@ -603,10 +689,7 @@
                             if (tip) { tip.dispose(); }
                             var time = existing.allDay ? '' : existing.startStr.substring(11,16);
                             var color = existing.backgroundColor || existing.borderColor;
-                            var cls = '';
-                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
-                            else if (color === '#198754') { cls = 'tooltip-success'; }
-                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
+                            var cls = resolveTooltipClass(color);
                             el.setAttribute('data-bs-custom-class', cls);
                             el.setAttribute('title', time + ' ' + existing.title);
                             new bootstrap.Tooltip(el);
@@ -641,6 +724,8 @@
         form.start_time.value = start.slice(11,16);
         form.end_time.value = end ? end.slice(11,16) : '';
         form.description.value = currentEvent.extendedProps.description || '';
+        var statusCode = currentEvent.extendedProps.status_code || '';
+        setStatusFieldState(true, statusCode);
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
         }

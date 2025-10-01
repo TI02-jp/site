@@ -396,6 +396,8 @@ class ReuniaoStatus(str, Enum):
     AGENDADA = "agendada"
     EM_ANDAMENTO = "em andamento"
     REALIZADA = "realizada"
+    ADIADA = "adiada"
+    CANCELADA = "cancelada"
 
 
 class Reuniao(db.Model):

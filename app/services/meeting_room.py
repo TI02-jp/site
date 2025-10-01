@@ -26,6 +26,21 @@ CALENDAR_TZ = get_calendar_timezone()
 MIN_GAP = timedelta(minutes=2)
 
 
+STATUS_METADATA: dict[ReuniaoStatus, tuple[str, str]] = {
+    ReuniaoStatus.AGENDADA: ("Agendada", "#ffc107"),
+    ReuniaoStatus.EM_ANDAMENTO: ("Em Andamento", "#198754"),
+    ReuniaoStatus.REALIZADA: ("Realizada", "#dc3545"),
+    ReuniaoStatus.ADIADA: ("Adiada", "#fd7e14"),
+    ReuniaoStatus.CANCELADA: ("Cancelada", "#6f42c1"),
+}
+
+
+def _get_status_metadata(status: ReuniaoStatus) -> tuple[str, str]:
+    """Return display label and color for the provided status."""
+
+    return STATUS_METADATA.get(status, STATUS_METADATA[ReuniaoStatus.AGENDADA])
+
+
 def _parse_course_id(form) -> int | None:
     """Return the course identifier associated with the form submission."""
 
@@ -230,7 +245,8 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     description = form.description.data or ""
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
-    description += "\nStatus: Agendada"
+    status_label, _ = _get_status_metadata(ReuniaoStatus.AGENDADA)
+    description += f"\nStatus: {status_label}"
     notify_attendees = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_attendees.data) if notify_attendees else False
     if form.create_meet.data:
@@ -308,6 +324,13 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     :func:`create_meeting_and_event`.
     """
     course_id_value = _parse_course_id(form)
+    status_field = getattr(form, "status", None)
+    status_value = meeting.status
+    if status_field and status_field.data:
+        try:
+            status_value = ReuniaoStatus(status_field.data)
+        except ValueError:
+            status_value = meeting.status
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
     )
@@ -349,6 +372,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.assunto = form.subject.data
     meeting.descricao = form.description.data
     meeting.course_id = course_id_value
+    meeting.status = status_value
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
@@ -358,9 +382,14 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     description = form.description.data or ""
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
-    description += "\nStatus: Agendada"
+    status_label, _ = _get_status_metadata(status_value)
+    description += f"\nStatus: {status_label}"
     notify_field = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_field.data) if notify_field else False
+    create_meet_field = getattr(form, "create_meet", None)
+    should_create_meet = bool(create_meet_field.data) if create_meet_field else False
+    if status_value == ReuniaoStatus.CANCELADA:
+        should_create_meet = False
     if meeting.google_event_id:
         updated_event = update_event(
             meeting.google_event_id,
@@ -369,12 +398,14 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             end_dt,
             description,
             participant_emails,
-            create_meet=form.create_meet.data,
+            create_meet=should_create_meet,
             notify_attendees=should_notify,
         )
-        meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
+        meeting.meet_link = (
+            updated_event.get("hangoutLink") if should_create_meet else None
+        )
     else:
-        if form.create_meet.data:
+        if should_create_meet:
             updated_event = create_meet_event(
                 form.subject.data,
                 start_dt,
@@ -392,7 +423,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
                 participant_emails,
                 notify_attendees=should_notify,
             )
-        meeting.meet_link = updated_event.get("hangoutLink")
+        meeting.meet_link = updated_event.get("hangoutLink") if should_create_meet else None
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
@@ -435,22 +466,23 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         start_dt = r.inicio.astimezone(CALENDAR_TZ)
         end_dt = r.fim.astimezone(CALENDAR_TZ)
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
-        if now < start_dt:
-            status = ReuniaoStatus.AGENDADA
-            status_label = "Agendada"
-            color = "#ffc107"
-        elif start_dt <= now <= end_dt:
-            status = ReuniaoStatus.EM_ANDAMENTO
-            status_label = "Em Andamento"
-            color = "#198754"
-        else:
-            status = ReuniaoStatus.REALIZADA
-            status_label = "Realizada"
-            color = "#dc3545"
-        if r.status != status:
-            r.status = status
-            updated = True
-        can_edit = r.criador_id == current_user_id and status == ReuniaoStatus.AGENDADA
+        status = r.status
+        if status not in (ReuniaoStatus.ADIADA, ReuniaoStatus.CANCELADA):
+            if now < start_dt:
+                derived_status = ReuniaoStatus.AGENDADA
+            elif start_dt <= now <= end_dt:
+                derived_status = ReuniaoStatus.EM_ANDAMENTO
+            else:
+                derived_status = ReuniaoStatus.REALIZADA
+            if status != derived_status:
+                r.status = derived_status
+                status = derived_status
+                updated = True
+        status_label, color = _get_status_metadata(status)
+        can_edit = (
+            r.criador_id == current_user_id
+            and status not in (ReuniaoStatus.EM_ANDAMENTO, ReuniaoStatus.REALIZADA)
+        )
         can_delete = can_edit or is_admin
         event_data = {
             "id": r.id,
@@ -460,6 +492,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "color": color,
             "description": r.descricao,
             "status": status_label,
+            "status_code": status.value,
             "creator": r.criador.username,
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
@@ -468,7 +501,9 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "can_delete": can_delete,
             "course_id": r.course_id,
         }
-        if r.meet_link:
+        if status == ReuniaoStatus.CANCELADA:
+            event_data["meet_link"] = None
+        elif r.meet_link:
             event_data["meet_link"] = r.meet_link
         events.append(event_data)
         seen_keys.add(key)
@@ -528,10 +563,12 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
                 "status": status_label,
+                "status_code": "",
                 "participants": attendees,
                 "creator": creator_name,
                 "can_edit": False,
                 "can_delete": False,
+                "course_id": None,
             }
         )
         seen_keys.add(key)
