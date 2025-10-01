@@ -331,11 +331,24 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             status_value = ReuniaoStatus(status_field.data)
         except ValueError:
             status_value = meeting.status
+    postponed_date_field = getattr(form, "postponed_date", None)
+    postponed_start_field = getattr(form, "postponed_start_time", None)
+    postponed_end_field = getattr(form, "postponed_end_time", None)
+    effective_date = form.date.data
+    effective_start_time = form.start_time.data
+    effective_end_time = form.end_time.data
+    if status_value == ReuniaoStatus.ADIADA:
+        if postponed_date_field and postponed_date_field.data:
+            effective_date = postponed_date_field.data
+        if postponed_start_field and postponed_start_field.data:
+            effective_start_time = postponed_start_field.data
+        if postponed_end_field and postponed_end_field.data:
+            effective_end_time = postponed_end_field.data
     start_dt = datetime.combine(
-        form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
+        effective_date, effective_start_time, tzinfo=CALENDAR_TZ
     )
     end_dt = datetime.combine(
-        form.date.data, form.end_time.data, tzinfo=CALENDAR_TZ
+        effective_date, effective_end_time, tzinfo=CALENDAR_TZ
     )
     duration = end_dt - start_dt
     intervals: list[tuple[datetime, datetime]] = []
@@ -365,6 +378,13 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         form.date.data = adjusted_start.date()
         form.start_time.data = adjusted_start.time()
         form.end_time.data = adjusted_end.time()
+        if status_value == ReuniaoStatus.ADIADA:
+            if postponed_date_field:
+                postponed_date_field.data = adjusted_start.date()
+            if postponed_start_field:
+                postponed_start_field.data = adjusted_start.time()
+            if postponed_end_field:
+                postponed_end_field.data = adjusted_end.time()
         flash(f"{' '.join(messages)} Horário ajustado para o próximo horário livre.", "warning")
         return False, None
     meeting.inicio = start_dt

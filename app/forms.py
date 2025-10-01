@@ -382,6 +382,24 @@ class MeetingForm(FlaskForm):
         ],
         default=ReuniaoStatus.AGENDADA.value,
     )
+    postponed_date = DateField(
+        "Nova data (adiamento)",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+        render_kw={"placeholder": "Selecione a nova data"},
+    )
+    postponed_start_time = TimeField(
+        "Novo início",
+        format="%H:%M",
+        validators=[Optional()],
+        render_kw={"placeholder": "Nova hora de início"},
+    )
+    postponed_end_time = TimeField(
+        "Novo fim",
+        format="%H:%M",
+        validators=[Optional()],
+        render_kw={"placeholder": "Nova hora de término"},
+    )
     create_meet = BooleanField("Gerar sala no Google Meet")
     notify_attendees = BooleanField(
         "Notificar participantes por e-mail",
@@ -429,6 +447,40 @@ class MeetingForm(FlaskForm):
                     )
                 return False
             if has_error:
+                return False
+        status_raw = self.status.data or ReuniaoStatus.AGENDADA.value
+        try:
+            status_enum = ReuniaoStatus(status_raw)
+        except ValueError:
+            status_enum = ReuniaoStatus.AGENDADA
+        if status_enum == ReuniaoStatus.ADIADA:
+            postpone_valid = True
+            if not self.postponed_date.data:
+                self.postponed_date.errors.append(
+                    "Informe a nova data da reunião adiada."
+                )
+                postpone_valid = False
+            if not self.postponed_start_time.data:
+                self.postponed_start_time.errors.append(
+                    "Informe o novo horário de início."
+                )
+                postpone_valid = False
+            if not self.postponed_end_time.data:
+                self.postponed_end_time.errors.append(
+                    "Informe o novo horário de término."
+                )
+                postpone_valid = False
+            if (
+                postpone_valid
+                and self.postponed_start_time.data
+                and self.postponed_end_time.data
+                and self.postponed_end_time.data <= self.postponed_start_time.data
+            ):
+                self.postponed_end_time.errors.append(
+                    "O horário de término deve ser posterior ao de início."
+                )
+                postpone_valid = False
+            if not postpone_valid:
                 return False
         return True
 
