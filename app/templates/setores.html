@@ -19,9 +19,9 @@
             <span class="badge bg-primary ms-2">{{ setores|length }}</span>
         </h1>
         {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('cadastro_setor') }}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#setorModal">
             <i class="bi bi-plus-lg me-1"></i>Novo Setor
-        </a>
+        </button>
         {% endif %}
     </div>
     <div class="card shadow-sm">
@@ -44,4 +44,57 @@
         </ul>
     </div>
 </div>
+{% if current_user.role == 'admin' %}
+<!-- Modal de Novo Setor -->
+<div class="modal fade" id="setorModal" tabindex="-1" aria-labelledby="setorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('setores') }}" novalidate>
+                {{ setor_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="setor_create">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="w-100 d-flex justify-content-between align-items-start">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="setorModalLabel">
+                            <i class="bi bi-diagram-3"></i>
+                            Novo Setor
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <label for="{{ setor_form.nome.id }}" class="form-label fw-semibold">{{ setor_form.nome.label.text }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                        {{ setor_form.nome(class="form-control", placeholder="Nome do setor") }}
+                    </div>
+                    {% for error in setor_form.nome.errors %}
+                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ setor_form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if open_setor_modal %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalEl = document.getElementById('setorModal');
+    if (modalEl) {
+        var setorModal = new bootstrap.Modal(modalEl);
+        setorModal.show();
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

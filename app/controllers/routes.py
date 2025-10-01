@@ -1374,12 +1374,55 @@ def mark_all_notifications_read():
     return jsonify({"success": True, "updated": updated or 0})
 
 
-@app.route("/consultorias")
+@app.route("/consultorias", methods=["GET", "POST"])
 @login_required
 def consultorias():
-    """List registered consultorias."""
-    consultorias = Consultoria.query.all()
-    return render_template("consultorias.html", consultorias=consultorias)
+    """List registered consultorias and handle modal-based creation."""
+
+    consultoria_form = ConsultoriaForm(prefix="consultoria")
+    consultoria_form.submit.label.text = "Salvar"
+    consultoria_form.senha.render_kw = {"autocomplete": "off", **(consultoria_form.senha.render_kw or {})}
+    consultorias = Consultoria.query.order_by(Consultoria.nome).all()
+    open_consultoria_modal = request.args.get("open_consultoria_modal") in ("1", "true", "True")
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+        if form_name == "consultoria_create":
+            open_consultoria_modal = True
+            if current_user.role != "admin":
+                abort(403)
+            if consultoria_form.validate_on_submit():
+                nome = (consultoria_form.nome.data or "").strip()
+                usuario = (consultoria_form.usuario.data or "").strip()
+                senha = (consultoria_form.senha.data or "").strip()
+                consultoria_form.nome.data = nome
+                consultoria_form.usuario.data = usuario
+                consultoria_form.senha.data = senha
+                duplicate = (
+                    Consultoria.query.filter(
+                        db.func.lower(Consultoria.nome) == nome.lower()
+                    ).first()
+                    if nome
+                    else None
+                )
+                if duplicate:
+                    consultoria_form.nome.errors.append(
+                        "Já existe uma consultoria com esse nome."
+                    )
+                    flash("Já existe uma consultoria com esse nome.", "warning")
+                else:
+                    consultoria = Consultoria(nome=nome, usuario=usuario, senha=senha)
+                    db.session.add(consultoria)
+                    db.session.commit()
+                    flash("Consultoria registrada com sucesso.", "success")
+                    return redirect(url_for("consultorias"))
+
+    return render_template(
+        "consultorias.html",
+        consultorias=consultorias,
+        consultoria_form=consultoria_form,
+        open_consultoria_modal=open_consultoria_modal,
+    )
 
 
 @app.route("/calendario-colaboradores", methods=["GET", "POST"])
@@ -1558,19 +1601,24 @@ def delete_reuniao(meeting_id):
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_consultoria():
-    """Render and handle the Cadastro de Consultoria page."""
-    form = ConsultoriaForm()
-    if form.validate_on_submit():
-        consultoria = Consultoria(
-            nome=form.nome.data,
-            usuario=form.usuario.data,
-            senha=form.senha.data,
-        )
-        db.session.add(consultoria)
-        db.session.commit()
-        flash("Consultoria registrada com sucesso.", "success")
-        return redirect(url_for("consultorias"))
-    return render_template("cadastro_consultoria.html", form=form)
+    """Preserve legacy route by redirecting to the modal experience."""
+
+    if request.method == "POST":
+        form = ConsultoriaForm()
+        if form.validate_on_submit():
+            consultoria = Consultoria(
+                nome=(form.nome.data or "").strip(),
+                usuario=(form.usuario.data or "").strip(),
+                senha=(form.senha.data or "").strip(),
+            )
+            db.session.add(consultoria)
+            db.session.commit()
+            flash("Consultoria registrada com sucesso.", "success")
+            return redirect(url_for("consultorias"))
+        for errors in form.errors.values():
+            for error in errors:
+                flash(error, "warning")
+    return redirect(url_for("consultorias", open_consultoria_modal="1"))
 
 
 @app.route("/consultorias/editar/<int:id>", methods=["GET", "POST"])
@@ -1591,26 +1639,74 @@ def editar_consultoria_cadastro(id):
     )
 
 
-@app.route("/consultorias/setores")
+@app.route("/consultorias/setores", methods=["GET", "POST"])
 @login_required
 def setores():
-    """List registered setores."""
-    setores = Setor.query.all()
-    return render_template("setores.html", setores=setores)
+    """List registered setores and handle modal-based creation."""
+
+    setor_form = SetorForm(prefix="setor")
+    setor_form.submit.label.text = "Salvar"
+    setores = Setor.query.order_by(Setor.nome).all()
+    open_setor_modal = request.args.get("open_setor_modal") in ("1", "true", "True")
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+        if form_name == "setor_create":
+            open_setor_modal = True
+            if current_user.role != "admin":
+                abort(403)
+            if setor_form.validate_on_submit():
+                nome = (setor_form.nome.data or "").strip()
+                setor_form.nome.data = nome
+                duplicate = (
+                    Setor.query.filter(db.func.lower(Setor.nome) == nome.lower()).first()
+                    if nome
+                    else None
+                )
+                if duplicate:
+                    setor_form.nome.errors.append("Já existe um setor com esse nome.")
+                    flash("Já existe um setor com esse nome.", "warning")
+                else:
+                    setor = Setor(nome=nome)
+                    db.session.add(setor)
+                    db.session.commit()
+                    flash("Setor registrado com sucesso.", "success")
+                    return redirect(url_for("setores"))
+
+    return render_template(
+        "setores.html",
+        setores=setores,
+        setor_form=setor_form,
+        open_setor_modal=open_setor_modal,
+    )
 
 
 @app.route("/consultorias/setores/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_setor():
-    """Render and handle the Cadastro de Setor page."""
-    form = SetorForm()
-    if form.validate_on_submit():
-        setor = Setor(nome=form.nome.data)
-        db.session.add(setor)
-        db.session.commit()
-        flash("Setor registrado com sucesso.", "success")
-        return redirect(url_for("setores"))
-    return render_template("cadastro_setor.html", form=form)
+    """Maintain legacy setor creation route by redirecting to the modal UI."""
+
+    if request.method == "POST":
+        form = SetorForm()
+        if form.validate_on_submit():
+            nome = (form.nome.data or "").strip()
+            duplicate = (
+                Setor.query.filter(db.func.lower(Setor.nome) == nome.lower()).first()
+                if nome
+                else None
+            )
+            if duplicate:
+                flash("Já existe um setor com esse nome.", "warning")
+            else:
+                setor = Setor(nome=nome)
+                db.session.add(setor)
+                db.session.commit()
+                flash("Setor registrado com sucesso.", "success")
+                return redirect(url_for("setores"))
+        for errors in form.errors.values():
+            for error in errors:
+                flash(error, "warning")
+    return redirect(url_for("setores", open_setor_modal="1"))
 
 
 @app.route("/consultorias/setores/editar/<int:id>", methods=["GET", "POST"])
