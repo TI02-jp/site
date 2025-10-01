@@ -324,8 +324,8 @@
                   {% endfor %}
                 </div>
                 <div class="d-flex justify-content-between gap-2">
-                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary">Cancelar edição</a>
-                  {{ tag_edit_form.submit(class="btn btn-primary") }}
+                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary btn-sm">Cancelar edição</a>
+                  {{ tag_edit_form.submit(class="btn btn-primary btn-sm") }}
                 </div>
               </form>
               {% else %}
