@@ -13,7 +13,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="text-primary mb-2">
+                    <h1 class="mb-2">
                         <i class="bi bi-people me-3"></i>Usuários
                         <span class="badge bg-primary ms-2">{{ users|length }}</span>
                     </h1>
@@ -129,18 +129,20 @@
       <form method="POST" action="{{ url_for('list_users') }}" novalidate>
         {{ form.hidden_tag() }}
         <input type="hidden" name="form_name" value="user">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title d-flex align-items-center gap-2" id="novoUsuarioModalLabel">
-            <i class="bi bi-person-plus-fill"></i>
-            Cadastrar Novo Usuário
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
+          <div class="w-100 d-flex align-items-start justify-content-between">
+            <h5 class="modal-title d-flex align-items-center gap-2 text-dark" id="novoUsuarioModalLabel">
+              <i class="bi bi-person-plus-fill me-2"></i>
+              Cadastrar Novo Usuário
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
         </div>
-        <div class="modal-body py-4">
-          <div class="container-fluid">
+        <div class="modal-body px-4 pb-4 text-start">
+          <div class="container-fluid px-0">
             <div class="row g-4 align-items-end">
               <div class="col-12">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0">Perfil e contato</h6>
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Perfil e contato</h6>
               </div>
               <div class="col-lg-5 col-md-6">
                 <label class="form-label fw-semibold" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
@@ -174,7 +176,7 @@
               </div>
 
               <div class="col-12 pt-2 border-top">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0">Acesso</h6>
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Acesso</h6>
               </div>
               <div class="col-lg-4 col-md-6">
                 <label class="form-label fw-semibold" for="{{ form.username.id }}">{{ form.username.label.text }}</label>
@@ -209,13 +211,13 @@
 
               <div class="col-12 pt-2 border-top">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                  <h6 class="text-uppercase text-muted fw-semibold mb-0">Tags de usuário</h6>
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Tags de usuário</h6>
                   <div class="d-flex align-items-center gap-2">
                     <span class="text-muted small">Organize o usuário com tags</span>
                     {% if current_user.role == 'admin' %}
-                    <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary" title="Nova Tag">
+                    <button type="button" class="btn btn-sm btn-outline-primary" title="Gerenciar tags" data-bs-toggle="modal" data-bs-target="#tagsModal">
                       <i class="bi bi-plus-lg"></i>
-                    </a>
+                    </button>
                     {% endif %}
                   </div>
                 </div>
@@ -242,7 +244,7 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer d-flex flex-wrap justify-content-between gap-2">
+        <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="bi bi-x-circle me-1"></i>Cancelar
           </button>
@@ -259,21 +261,23 @@
 <div class="modal fade" id="tagsModal" tabindex="-1" aria-labelledby="tagsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="tagsModalLabel"><i class="bi bi-tags me-2"></i>Tags de Usuários</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
+        <div class="w-100 d-flex align-items-start justify-content-between">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tagsModalLabel"><i class="bi bi-tags me-2"></i>Tags de Usuários</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
       </div>
-      <div class="modal-body">
+      <div class="modal-body px-4 pb-4">
         <div class="row g-4">
           <div class="col-lg-6">
-            <h6 class="text-uppercase text-muted small">Tags cadastradas</h6>
+            <h6 class="text-uppercase text-muted small text-start">Tags cadastradas</h6>
             <div class="border rounded-3 p-3 bg-light-subtle">
               {% if tag_list %}
                 <ul class="list-unstyled mb-0">
                   {% for tag in tag_list %}
                   <li class="d-flex justify-content-between align-items-center py-2 border-bottom{% if loop.last %} border-bottom-0{% endif %}">
-                    <span class="fw-semibold text-primary">{{ tag.nome }}</span>
-                    <a href="{{ url_for('editar_tag', id=tag.id) }}" class="btn btn-sm btn-outline-primary">
+                    <span class="fw-semibold text-body">{{ tag.nome }}</span>
+                    <a href="{{ url_for('list_users', open_tag_modal='1', edit_tag_id=tag.id) }}" class="btn btn-sm btn-outline-primary">
                       <i class="bi bi-pencil"></i>
                     </a>
                   </li>
@@ -288,22 +292,46 @@
             </div>
           </div>
           <div class="col-lg-6">
-            <h6 class="text-uppercase text-muted small">Adicionar nova tag</h6>
-            <form method="POST" action="{{ url_for('list_users') }}" novalidate>
-              {{ tag_form.hidden_tag() }}
-              <input type="hidden" name="form_name" value="tag">
-              <div class="mb-3">
-                {{ tag_form.nome.label(class="form-label") }}
-                {{ tag_form.nome(class="form-control", placeholder="Nome da tag") }}
-                {% for error in tag_form.nome.errors %}
-                  <div class="text-danger small">{{ error }}</div>
-                {% endfor %}
-              </div>
-              <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                {{ tag_form.submit(class="btn btn-primary") }}
-              </div>
-            </form>
+            <div class="border rounded-3 p-3 h-100">
+              <h6 class="text-uppercase text-muted small text-start">Adicionar nova tag</h6>
+              <form method="POST" action="{{ url_for('list_users') }}" novalidate class="mt-2">
+                {{ tag_create_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="tag_create">
+                <div class="mb-3">
+                  {{ tag_create_form.nome.label(class="form-label") }}
+                  {{ tag_create_form.nome(class="form-control", placeholder="Nome da tag") }}
+                  {% for error in tag_create_form.nome.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  {{ tag_create_form.submit(class="btn btn-primary") }}
+                </div>
+              </form>
+              <hr class="text-muted">
+              <h6 class="text-uppercase text-muted small text-start">Editar tag</h6>
+              {% if edit_tag %}
+              <form method="POST" action="{{ url_for('list_users') }}" novalidate class="mt-2">
+                {{ tag_edit_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="tag_edit">
+                <input type="hidden" name="tag_id" value="{{ edit_tag.id }}">
+                <div class="mb-3">
+                  {{ tag_edit_form.nome.label(class="form-label") }}
+                  {{ tag_edit_form.nome(class="form-control", placeholder="Nome da tag") }}
+                  {% for error in tag_edit_form.nome.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="d-flex justify-content-between gap-2">
+                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary">Cancelar edição</a>
+                  {{ tag_edit_form.submit(class="btn btn-primary") }}
+                </div>
+              </form>
+              {% else %}
+              <p class="text-muted small mt-2 mb-0">Selecione uma tag na lista ao lado para editar.</p>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -341,7 +369,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    const shouldOpenTagsModal = {{ 'true' if open_tag_modal or tag_form.errors else 'false' }};
+    const shouldOpenTagsModal = {{ 'true' if open_tag_modal or tag_create_form.errors or tag_edit_form.errors else 'false' }};
     if (shouldOpenTagsModal) {
         const tagsModalEl = document.getElementById('tagsModal');
         if (tagsModalEl) {

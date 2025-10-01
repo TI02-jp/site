@@ -1652,15 +1652,25 @@ def cadastro_tag():
 @app.route("/tags/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
 def editar_tag(id):
-    """Edit a registered tag."""
+    """Redirect tag editing to the suspended user list modal."""
     tag = Tag.query.get_or_404(id)
-    form = TagForm(obj=tag)
-    if form.validate_on_submit():
-        tag.nome = form.nome.data
-        db.session.commit()
-        flash("Tag atualizada com sucesso.", "success")
-        return redirect(url_for("tags"))
-    return render_template("cadastro_tag.html", form=form, tag=tag)
+    if request.method == "POST":
+        form = TagForm()
+        if form.validate_on_submit():
+            new_name = (form.nome.data or "").strip()
+            if new_name:
+                duplicate = (
+                    Tag.query.filter(db.func.lower(Tag.nome) == new_name.lower(), Tag.id != tag.id).first()
+                )
+                if duplicate:
+                    flash("Já existe uma tag com esse nome.", "warning")
+                else:
+                    tag.nome = new_name
+                    db.session.commit()
+                    flash("Tag atualizada com sucesso!", "success")
+            else:
+                flash("Informe um nome válido para a tag.", "warning")
+    return redirect(url_for("list_users", open_tag_modal="1", edit_tag_id=tag.id))
 
 
 @app.route("/consultorias/relatorios")
@@ -2957,14 +2967,25 @@ def logout():
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
-    tag_form = TagForm()
-    tag_form.submit.label.text = "Adicionar"
+    tag_create_form = TagForm(prefix="tag_create")
+    tag_create_form.submit.label.text = "Adicionar"
+    tag_edit_form = TagForm(prefix="tag_edit")
+    tag_edit_form.submit.label.text = "Salvar alterações"
     tag_query = Tag.query.order_by(Tag.nome)
     tag_list = tag_query.all()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
     open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
+    edit_tag = None
+    edit_tag_id_arg = request.args.get("edit_tag_id", type=int)
+    if edit_tag_id_arg:
+        open_tag_modal = True
+        edit_tag = Tag.query.get(edit_tag_id_arg)
+        if not edit_tag:
+            flash("Tag não encontrada.", "warning")
+        elif request.method == "GET":
+            tag_edit_form.nome.data = edit_tag.nome
 
     if request.method == "POST":
         form_name = request.form.get("form_name")
@@ -2997,17 +3018,17 @@ def list_users():
                     flash("Novo usuário cadastrado com sucesso!", "success")
                     return redirect(url_for("list_users"))
 
-        if form_name == "tag":
+        if form_name == "tag_create":
             open_tag_modal = True
-            if tag_form.validate_on_submit():
-                tag_name = (tag_form.nome.data or "").strip()
+            if tag_create_form.validate_on_submit():
+                tag_name = (tag_create_form.nome.data or "").strip()
                 existing_tag = (
                     Tag.query.filter(db.func.lower(Tag.nome) == tag_name.lower()).first()
                     if tag_name
                     else None
                 )
                 if existing_tag:
-                    tag_form.nome.errors.append("Já existe uma tag com esse nome.")
+                    tag_create_form.nome.errors.append("Já existe uma tag com esse nome.")
                     flash("Já existe uma tag com esse nome.", "warning")
                 elif tag_name:
                     tag = Tag(nome=tag_name)
@@ -3015,6 +3036,36 @@ def list_users():
                     db.session.commit()
                     flash("Tag cadastrada com sucesso!", "success")
                     return redirect(url_for("list_users", open_tag_modal="1"))
+
+        if form_name == "tag_edit":
+            open_tag_modal = True
+            tag_id_raw = request.form.get("tag_id")
+            try:
+                tag_id = int(tag_id_raw) if tag_id_raw is not None else None
+            except (TypeError, ValueError):
+                tag_id = None
+            if tag_id is not None:
+                edit_tag = Tag.query.get(tag_id)
+            if not edit_tag:
+                flash("Tag não encontrada.", "warning")
+            elif tag_edit_form.validate_on_submit():
+                new_name = (tag_edit_form.nome.data or "").strip()
+                if not new_name:
+                    tag_edit_form.nome.errors.append("Informe um nome para a tag.")
+                else:
+                    duplicate = (
+                        Tag.query.filter(
+                            db.func.lower(Tag.nome) == new_name.lower(), Tag.id != edit_tag.id
+                        ).first()
+                    )
+                    if duplicate:
+                        tag_edit_form.nome.errors.append("Já existe uma tag com esse nome.")
+                        flash("Já existe uma tag com esse nome.", "warning")
+                    else:
+                        edit_tag.nome = new_name
+                        db.session.commit()
+                        flash("Tag atualizada com sucesso!", "success")
+                        return redirect(url_for("list_users", open_tag_modal="1"))
 
     users_query = User.query
     if not show_inactive:
@@ -3024,7 +3075,9 @@ def list_users():
         "list_users.html",
         users=users,
         form=form,
-        tag_form=tag_form,
+        tag_create_form=tag_create_form,
+        tag_edit_form=tag_edit_form,
+        edit_tag=edit_tag,
         tag_list=tag_list,
         show_inactive=show_inactive,
         open_tag_modal=open_tag_modal,
