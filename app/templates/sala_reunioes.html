@@ -218,8 +218,12 @@
                         </div>
                         <div class="modal-body text-start">
                             <ul class="list-group text-start">
-                                <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
+                                <li class="list-group-item text-start d-none" id="originalScheduleRow">
+                                    <div><strong>Data inicial:</strong> <span id="detailOriginalDate"></span></div>
+                                    <div><strong>Hora inicial:</strong> <span id="detailOriginalStart"></span> - <span id="detailOriginalEnd"></span></div>
+                                </li>
+                                <li class="list-group-item text-start"><strong id="detailDateLabel">Data:</strong> <span id="detailDate"></span></li>
+                                <li class="list-group-item text-start"><strong id="detailTimeLabel">Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
                                 <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
                                 <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
@@ -346,6 +350,33 @@
             default:
                 return '';
         }
+    }
+
+    function formatDateFromISO(isoString) {
+        if (!isoString) {
+            return '';
+        }
+        var date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        var day = String(date.getDate()).padStart(2, '0');
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var year = date.getFullYear();
+        return day + '/' + month + '/' + year;
+    }
+
+    function formatTimeFromISO(isoString) {
+        if (!isoString) {
+            return '';
+        }
+        var date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        return hours + ':' + minutes;
     }
 
     function renumberAdditionalDates() {
@@ -685,13 +716,61 @@
                 creatorEl.textContent = '';
                 creatorEl.classList.add('d-none');
             }
-            var dateParts = e.startStr.slice(0,10).split('-');
-            document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
-            document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
-            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
+            var startIso = e.startStr;
+            var endIso = e.endStr;
+            document.getElementById('detailDate').textContent = formatDateFromISO(startIso);
+            document.getElementById('detailStart').textContent = formatTimeFromISO(startIso);
+            document.getElementById('detailEnd').textContent = formatTimeFromISO(endIso);
             var statusText = e.extendedProps.status || '';
             var statusCode = e.extendedProps.status_code || '';
             document.getElementById('detailStatus').textContent = statusText;
+            var originalRow = document.getElementById('originalScheduleRow');
+            var originalDateEl = document.getElementById('detailOriginalDate');
+            var originalStartEl = document.getElementById('detailOriginalStart');
+            var originalEndEl = document.getElementById('detailOriginalEnd');
+            var dateLabelEl = document.getElementById('detailDateLabel');
+            var timeLabelEl = document.getElementById('detailTimeLabel');
+            var originalStartIso = e.extendedProps.original_start;
+            var originalEndIso = e.extendedProps.original_end;
+            if (statusCode === 'adiada' && originalStartIso) {
+                if (originalRow) {
+                    originalRow.classList.remove('d-none');
+                }
+                if (originalDateEl) {
+                    originalDateEl.textContent = formatDateFromISO(originalStartIso);
+                }
+                if (originalStartEl) {
+                    originalStartEl.textContent = formatTimeFromISO(originalStartIso);
+                }
+                if (originalEndEl) {
+                    originalEndEl.textContent = formatTimeFromISO(originalEndIso);
+                }
+                if (dateLabelEl) {
+                    dateLabelEl.textContent = 'Nova data:';
+                }
+                if (timeLabelEl) {
+                    timeLabelEl.textContent = 'Novo horário:';
+                }
+            } else {
+                if (originalRow) {
+                    originalRow.classList.add('d-none');
+                }
+                if (originalDateEl) {
+                    originalDateEl.textContent = '';
+                }
+                if (originalStartEl) {
+                    originalStartEl.textContent = '';
+                }
+                if (originalEndEl) {
+                    originalEndEl.textContent = '';
+                }
+                if (dateLabelEl) {
+                    dateLabelEl.textContent = 'Data:';
+                }
+                if (timeLabelEl) {
+                    timeLabelEl.textContent = 'Hora:';
+                }
+            }
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
             var linkContainer = document.getElementById('meetLinkContainer');
@@ -781,6 +860,14 @@
                         if (existing.extendedProps.creator !== evData.creator) {
                             existing.setExtendedProp('creator', evData.creator);
                         }
+                        var nextOriginalStart = (typeof evData.original_start === 'undefined') ? null : evData.original_start;
+                        if (existing.extendedProps.original_start !== nextOriginalStart) {
+                            existing.setExtendedProp('original_start', nextOriginalStart);
+                        }
+                        var nextOriginalEnd = (typeof evData.original_end === 'undefined') ? null : evData.original_end;
+                        if (existing.extendedProps.original_end !== nextOriginalEnd) {
+                            existing.setExtendedProp('original_end', nextOriginalEnd);
+                        }
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
@@ -797,6 +884,12 @@
                             new bootstrap.Tooltip(el);
                         }
                     } else {
+                        if (typeof evData.original_start === 'undefined') {
+                            evData.original_start = null;
+                        }
+                        if (typeof evData.original_end === 'undefined') {
+                            evData.original_end = null;
+                        }
                         calendar.addEvent(evData);
                     }
                 });

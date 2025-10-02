@@ -326,6 +326,9 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     course_id_value = _parse_course_id(form)
     status_field = getattr(form, "status", None)
     status_value = meeting.status
+    previous_status = meeting.status
+    previous_start = meeting.inicio
+    previous_end = meeting.fim
     if status_field and status_field.data:
         try:
             status_value = ReuniaoStatus(status_field.data)
@@ -393,6 +396,13 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.descricao = form.description.data
     meeting.course_id = course_id_value
     meeting.status = status_value
+    if status_value == ReuniaoStatus.ADIADA:
+        if previous_status != ReuniaoStatus.ADIADA or meeting.postponed_from_start is None:
+            meeting.postponed_from_start = previous_start
+            meeting.postponed_from_end = previous_end
+    else:
+        meeting.postponed_from_start = None
+        meeting.postponed_from_end = None
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
@@ -504,6 +514,19 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             and status not in (ReuniaoStatus.EM_ANDAMENTO, ReuniaoStatus.REALIZADA)
         )
         can_delete = can_edit or is_admin
+        original_start = (
+            r.postponed_from_start.astimezone(CALENDAR_TZ).isoformat()
+            if r.postponed_from_start
+            else None
+        )
+        original_end = (
+            r.postponed_from_end.astimezone(CALENDAR_TZ).isoformat()
+            if r.postponed_from_end
+            else None
+        )
+        if status != ReuniaoStatus.ADIADA:
+            original_start = None
+            original_end = None
         event_data = {
             "id": r.id,
             "title": r.assunto,
@@ -520,6 +543,8 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "can_edit": can_edit,
             "can_delete": can_delete,
             "course_id": r.course_id,
+            "original_start": original_start,
+            "original_end": original_end,
         }
         if status == ReuniaoStatus.CANCELADA:
             event_data["meet_link"] = None
@@ -589,6 +614,8 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "can_edit": False,
                 "can_delete": False,
                 "course_id": None,
+                "original_start": None,
+                "original_end": None,
             }
         )
         seen_keys.add(key)
