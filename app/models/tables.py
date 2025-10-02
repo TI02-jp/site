@@ -416,6 +416,8 @@ class Reuniao(db.Model):
         db.ForeignKey('courses.id', ondelete='SET NULL'),
         nullable=True,
     )
+    postponed_from_start = db.Column(db.DateTime(timezone=True))
+    postponed_from_end = db.Column(db.DateTime(timezone=True))
     status = db.Column(
         db.Enum(ReuniaoStatus, name="reuniao_status"),
         nullable=False,
