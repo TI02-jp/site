@@ -287,7 +287,7 @@
                 </div>
                 {% endif %}
               </div>
-              <div class="text-body-secondary announcement-snippet text-start">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+              <div class="text-body-secondary text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
               {% if image_count == 1 %}
               <div class="ratio ratio-4x3 rounded overflow-hidden">
                 <img src="{{ url_for('static', filename=image_attachments[0].file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100">
