@@ -32,6 +32,7 @@ import re
 
 from app.services.courses import CourseStatus
 from app.models.tables import ReuniaoStatus
+from app.services.meeting_room import MANUAL_STATUS_CHOICES
 
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
@@ -375,11 +376,7 @@ class MeetingForm(FlaskForm):
     )
     status = SelectField(
         "Status",
-        choices=[
-            (ReuniaoStatus.AGENDADA.value, "Agendada"),
-            (ReuniaoStatus.ADIADA.value, "Adiada"),
-            (ReuniaoStatus.CANCELADA.value, "Cancelada"),
-        ],
+        choices=MANUAL_STATUS_CHOICES,
         default=ReuniaoStatus.AGENDADA.value,
     )
     postponed_date = DateField(

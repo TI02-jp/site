@@ -69,11 +69,9 @@
                 </div>
             </div>
             <div class="mb-3">
-                <span class="badge bg-warning text-dark me-2">Agendada</span>
-                <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger me-2">Realizada</span>
-                <span class="badge badge-status-postponed me-2">Adiada</span>
-                <span class="badge badge-status-cancelled">Cancelada</span>
+                {% for status in status_metadata %}
+                    <span class="badge badge-status-{{ status.slug }}{% if not loop.last %} me-2{% endif %}">{{ status.label }}</span>
+                {% endfor %}
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -269,20 +267,13 @@
     </div>
     <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
-.tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
-.tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
-.tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
-.tooltip-postponed .tooltip-inner{background-color:#fd7e14;color:#fff;}
-.tooltip-cancelled .tooltip-inner{background-color:#6f42c1;color:#fff;}
-.tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
-.tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
-.tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
-.tooltip-postponed .tooltip-arrow::before{border-top-color:#fd7e14;border-bottom-color:#fd7e14;border-left-color:#fd7e14;border-right-color:#fd7e14;}
-.tooltip-cancelled .tooltip-arrow::before{border-top-color:#6f42c1;border-bottom-color:#6f42c1;border-left-color:#6f42c1;border-right-color:#6f42c1;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
-.badge-status-postponed{background-color:#fd7e14;color:#fff;}
-.badge-status-cancelled{background-color:#6f42c1;color:#fff;}
+{% for status in status_metadata %}
+.badge-status-{{ status.slug }}{background-color:{{ status.color }};color:{{ status.text_color }};}
+.{{ status.tooltip_class }} .tooltip-inner{background-color:{{ status.color }};color:{{ status.tooltip_text_color }};}
+.{{ status.tooltip_class }} .tooltip-arrow::before{border-top-color:{{ status.color }};border-bottom-color:{{ status.color }};border-left-color:{{ status.color }};border-right-color:{{ status.color }};}
+{% endfor %}
     </style>
 {% endblock %}
 {% block scripts %}
@@ -326,6 +317,7 @@
     var baseStartInput = document.getElementById('start_time');
     var baseEndInput = document.getElementById('end_time');
     var statusDefault = '';
+    var tooltipByColor = {{ status_tooltip_map|tojson }};
     if (statusSelect) {
         var attrValue = statusSelect.getAttribute('data-default');
         if (attrValue) {
@@ -336,20 +328,11 @@
     }
 
     function resolveTooltipClass(color) {
-        switch (color) {
-            case '#ffc107':
-                return 'tooltip-warning';
-            case '#198754':
-                return 'tooltip-success';
-            case '#dc3545':
-                return 'tooltip-danger';
-            case '#fd7e14':
-                return 'tooltip-postponed';
-            case '#6f42c1':
-                return 'tooltip-cancelled';
-            default:
-                return '';
+        if (!color) {
+            return '';
         }
+        var mapped = tooltipByColor[color.toLowerCase()];
+        return mapped || '';
     }
 
     function formatDateFromISO(isoString) {

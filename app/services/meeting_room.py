@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from flask import flash
 from markupsafe import Markup
 from dateutil.parser import isoparse
+from typing import TypedDict
 
 from app import db
 from app.models.tables import (
@@ -26,19 +27,89 @@ CALENDAR_TZ = get_calendar_timezone()
 MIN_GAP = timedelta(minutes=2)
 
 
-STATUS_METADATA: dict[ReuniaoStatus, tuple[str, str]] = {
-    ReuniaoStatus.AGENDADA: ("Agendada", "#ffc107"),
-    ReuniaoStatus.EM_ANDAMENTO: ("Em Andamento", "#198754"),
-    ReuniaoStatus.REALIZADA: ("Realizada", "#dc3545"),
-    ReuniaoStatus.ADIADA: ("Adiada", "#fd7e14"),
-    ReuniaoStatus.CANCELADA: ("Cancelada", "#6f42c1"),
+class _StatusConfig(TypedDict):
+    label: str
+    color: str
+    text_color: str
+    tooltip_text_color: str
+
+
+STATUS_CONFIG: dict[ReuniaoStatus, _StatusConfig] = {
+    ReuniaoStatus.AGENDADA: {
+        "label": "Agendada",
+        "color": "#ffc107",
+        "text_color": "#212529",
+        "tooltip_text_color": "#000000",
+    },
+    ReuniaoStatus.EM_ANDAMENTO: {
+        "label": "Em Andamento",
+        "color": "#198754",
+        "text_color": "#ffffff",
+        "tooltip_text_color": "#ffffff",
+    },
+    ReuniaoStatus.REALIZADA: {
+        "label": "Realizada",
+        "color": "#dc3545",
+        "text_color": "#ffffff",
+        "tooltip_text_color": "#ffffff",
+    },
+    ReuniaoStatus.ADIADA: {
+        "label": "Adiada",
+        "color": "#fd7e14",
+        "text_color": "#ffffff",
+        "tooltip_text_color": "#ffffff",
+    },
+    ReuniaoStatus.CANCELADA: {
+        "label": "Cancelada",
+        "color": "#6f42c1",
+        "text_color": "#ffffff",
+        "tooltip_text_color": "#ffffff",
+    },
 }
+
+
+STATUS_ORDER: tuple[ReuniaoStatus, ...] = (
+    ReuniaoStatus.AGENDADA,
+    ReuniaoStatus.EM_ANDAMENTO,
+    ReuniaoStatus.REALIZADA,
+    ReuniaoStatus.ADIADA,
+    ReuniaoStatus.CANCELADA,
+)
+
+
+MANUAL_STATUS_CHOICES = [
+    (ReuniaoStatus.AGENDADA.value, STATUS_CONFIG[ReuniaoStatus.AGENDADA]["label"]),
+    (ReuniaoStatus.ADIADA.value, STATUS_CONFIG[ReuniaoStatus.ADIADA]["label"]),
+    (ReuniaoStatus.CANCELADA.value, STATUS_CONFIG[ReuniaoStatus.CANCELADA]["label"]),
+]
+
+
+def get_status_metadata_for_template() -> list[dict[str, str]]:
+    """Return ordered status metadata for the meeting room template."""
+
+    metadata: list[dict[str, str]] = []
+    for status in STATUS_ORDER:
+        config = STATUS_CONFIG[status]
+        slug = status.value.replace(" ", "-")
+        metadata.append(
+            {
+                "code": status.value,
+                "label": config["label"],
+                "color": config["color"],
+                "text_color": config["text_color"],
+                "tooltip_text_color": config["tooltip_text_color"],
+                "slug": slug,
+                "tooltip_class": f"tooltip-{slug}",
+            }
+        )
+    return metadata
 
 
 def _get_status_metadata(status: ReuniaoStatus) -> tuple[str, str]:
     """Return display label and color for the provided status."""
 
-    return STATUS_METADATA.get(status, STATUS_METADATA[ReuniaoStatus.AGENDADA])
+    config = STATUS_CONFIG.get(status, STATUS_CONFIG[ReuniaoStatus.AGENDADA])
+    return config["label"], config["color"]
 
 
 def _parse_course_id(form) -> int | None:
