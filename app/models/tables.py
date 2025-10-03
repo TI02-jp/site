@@ -1,6 +1,7 @@
 """Database models used by the application."""
 
 import json
+import os
 from datetime import datetime, time, timedelta, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
@@ -228,6 +229,21 @@ class Announcement(db.Model):
             return False
         lowered = self.attachment_path.lower()
         return lowered.endswith(".png") or lowered.endswith(".jpg") or lowered.endswith(".jpeg")
+
+    @property
+    def attachment_extension(self) -> str:
+        """Return the lower-case file extension for the stored attachment."""
+
+        if not self.attachment_path:
+            return ""
+        _, extension = os.path.splitext(self.attachment_path)
+        return extension.lower()
+
+    @property
+    def attachment_is_pdf(self) -> bool:
+        """Return ``True`` when the stored attachment is a PDF document."""
+
+        return self.attachment_extension == ".pdf"
 
 
 class Course(db.Model):
