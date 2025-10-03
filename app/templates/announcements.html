@@ -32,6 +32,16 @@
     text-align: left;
   }
 
+  .announcement-card-actions .btn {
+    border-radius: 0.65rem;
+    font-size: var(--font-sm);
+    padding: 0.25rem 0.65rem;
+  }
+
+  .announcement-card-actions .btn i {
+    font-size: var(--font-base);
+  }
+
   .announcement-snippet {
     max-height: 4.5rem;
     overflow: hidden;
@@ -245,7 +255,7 @@
   <div class="d-flex flex-column flex-md-row align-items-start justify-content-between gap-2 mb-3">
     <h1 class="h4 mb-0 fw-semibold text-uppercase"><i class="bi bi-megaphone me-2"></i>Mural de Comunicados</h1>
     {% if current_user.role == 'admin' %}
-    <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#newAnnouncementModal">
+    <button type="button" class="btn btn-primary d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#newAnnouncementModal">
       <i class="bi bi-plus-circle"></i>
       <span>Novo comunicado</span>
     </button>
@@ -274,14 +284,16 @@
                   <h3 class="mb-0 text-dark">{{ announcement.subject }}</h3>
                 </div>
                 {% if current_user.role == 'admin' %}
-                <div class="d-flex align-items-center gap-1" data-stop-propagation="true">
-                  <button type="button" class="btn btn-link text-muted p-0" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
+                <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
+                  <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
                     <i class="bi bi-pencil-square"></i>
+                    <span>Editar</span>
                   </button>
-                  <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
+                  <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-link text-danger p-0" title="Excluir comunicado">
+                    <button type="submit" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" title="Excluir comunicado">
                       <i class="bi bi-trash"></i>
+                      <span>Excluir</span>
                     </button>
                   </form>
                 </div>
