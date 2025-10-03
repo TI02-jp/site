@@ -1600,7 +1600,10 @@ def sala_reunioes():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
             if meeting and meeting.criador_id == current_user.id:
-                if meeting.status != ReuniaoStatus.AGENDADA:
+                if meeting.status in (
+                    ReuniaoStatus.EM_ANDAMENTO,
+                    ReuniaoStatus.REALIZADA,
+                ):
                     flash(
                         "Reuniões em andamento ou realizadas não podem ser editadas.",
                         "danger",
@@ -1647,7 +1650,10 @@ def delete_reuniao(meeting_id):
         if meeting.criador_id != current_user.id:
             flash("Você só pode excluir reuniões que você criou.", "danger")
             return redirect(url_for("sala_reunioes"))
-        if meeting.status != ReuniaoStatus.AGENDADA:
+        if meeting.status in (
+            ReuniaoStatus.EM_ANDAMENTO,
+            ReuniaoStatus.REALIZADA,
+        ):
             flash(
                 "Reuniões em andamento ou realizadas não podem ser excluídas.",
                 "danger",
