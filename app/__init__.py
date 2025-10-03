@@ -198,6 +198,35 @@ with app.app_context():
                         "ALTER TABLE diretoria_events ADD COLUMN photos JSON NULL"
                     )
                 )
+
+        if inspector.has_table("announcements"):
+            announcement_columns = {
+                col["name"] for col in inspector.get_columns("announcements")
+            }
+            if "content" not in announcement_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE announcements ADD COLUMN content TEXT NULL"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "UPDATE announcements SET content = '' WHERE content IS NULL"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE announcements MODIFY COLUMN content TEXT NOT NULL"
+                        )
+                    )
+            if "attachment_name" not in announcement_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE announcements ADD COLUMN attachment_name VARCHAR(255) NULL"
+                        )
+                    )
     except SQLAlchemyError as exc:
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc
