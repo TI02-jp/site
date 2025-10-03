@@ -3,7 +3,7 @@
 from datetime import date
 
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from flask_wtf.file import MultipleFileField
 from wtforms import (
     StringField,
     RadioField,
@@ -238,17 +238,30 @@ class AnnouncementForm(FlaskForm):
         },
         filters=[lambda value: value.strip() if value else value],
     )
-    attachment = FileField(
-        "Anexo",
-        validators=[
-            Optional(),
-            FileAllowed(
-                ANNOUNCEMENT_FILE_EXTENSIONS,
-                "Formato de arquivo não permitido.",
-            ),
-        ],
+    attachments = MultipleFileField(
+        "Anexos",
+        validators=[Optional()],
+        render_kw={"multiple": True},
     )
-    submit = SubmitField("Salvar Comunicado")
+    submit = SubmitField("Salvar")
+
+    def validate_attachments(self, field):
+        """Ensure every uploaded attachment uses an allowed extension."""
+
+        if not field.data:
+            return
+
+        for storage in field.data:
+            if not storage or not storage.filename:
+                continue
+
+            filename = storage.filename.lower()
+            if "." not in filename:
+                raise ValidationError("Formato de arquivo não permitido.")
+
+            extension = filename.rsplit(".", 1)[-1]
+            if extension not in ANNOUNCEMENT_FILE_EXTENSIONS:
+                raise ValidationError("Formato de arquivo não permitido.")
 
 
 class CourseForm(FlaskForm):

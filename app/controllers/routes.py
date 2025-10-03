@@ -40,6 +40,7 @@ from app.models.tables import (
     DiretoriaEvent,
     GeneralCalendarEvent,
     Announcement,
+    AnnouncementAttachment,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -100,6 +101,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 from urllib.parse import urlunsplit
+from mimetypes import guess_type
 
 GOOGLE_OAUTH_SCOPES = [
     "openid",
@@ -217,6 +219,47 @@ def _remove_announcement_attachment(attachment_path: str | None) -> None:
         os.remove(file_path)
     except FileNotFoundError:
         return
+
+
+def _remove_announcement_attachments(paths: Iterable[str | None]) -> None:
+    """Remove multiple stored announcement attachments from disk."""
+
+    seen: set[str] = set()
+    for path in paths:
+        if not path:
+            continue
+        normalized = path.replace("\\", "/")
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        _remove_announcement_attachment(normalized)
+
+
+def _save_announcement_file(uploaded_file) -> dict[str, str | None]:
+    """Persist an uploaded file and return its storage metadata."""
+
+    original_name = secure_filename(uploaded_file.filename or "")
+    extension = os.path.splitext(original_name)[1].lower()
+    unique_name = f"{uuid4().hex}{extension}"
+
+    upload_directory = os.path.join(
+        current_app.root_path, "static", ANNOUNCEMENTS_UPLOAD_SUBDIR
+    )
+    os.makedirs(upload_directory, exist_ok=True)
+
+    stored_path = os.path.join(upload_directory, unique_name)
+    uploaded_file.save(stored_path)
+
+    relative_path = os.path.join(ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name).replace(
+        "\\", "/"
+    )
+    mime_type = uploaded_file.mimetype or guess_type(original_name)[0]
+
+    return {
+        "path": relative_path,
+        "name": original_name or None,
+        "mime_type": mime_type,
+    }
 
 
 def _format_event_timestamp(raw_dt: datetime | None) -> str:
@@ -680,7 +723,10 @@ def announcements():
     form = AnnouncementForm()
 
     announcements_query = (
-        Announcement.query.options(joinedload(Announcement.created_by))
+        Announcement.query.options(
+            joinedload(Announcement.created_by),
+            joinedload(Announcement.attachments),
+        )
         .order_by(Announcement.date.desc(), Announcement.created_at.desc())
     )
     announcement_items = announcements_query.all()
@@ -690,39 +736,36 @@ def announcements():
             abort(403)
 
         if form.validate_on_submit():
-            attachment_path: str | None = None
-            uploaded_file = form.attachment.data
-
-            attachment_name: str | None = None
-
-            if uploaded_file:
-                original_name = secure_filename(uploaded_file.filename or "")
-                extension = os.path.splitext(original_name)[1].lower()
-                unique_name = f"{uuid4().hex}{extension}"
-
-                upload_directory = os.path.join(
-                    current_app.root_path, "static", ANNOUNCEMENTS_UPLOAD_SUBDIR
-                )
-                os.makedirs(upload_directory, exist_ok=True)
-
-                stored_path = os.path.join(upload_directory, unique_name)
-                uploaded_file.save(stored_path)
-
-                attachment_path = os.path.join(
-                    ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name
-                ).replace("\\", "/")
-                attachment_name = original_name or None
-
             announcement = Announcement(
                 date=form.date.data,
                 subject=form.subject.data,
                 content=form.content.data,
-                attachment_path=attachment_path,
-                attachment_name=attachment_name,
                 created_by=current_user,
             )
 
             db.session.add(announcement)
+            db.session.flush()
+
+            uploaded_files = [
+                storage
+                for storage in (form.attachments.data or [])
+                if storage and storage.filename
+            ]
+
+            for uploaded_file in uploaded_files:
+                saved = _save_announcement_file(uploaded_file)
+                db.session.add(
+                    AnnouncementAttachment(
+                        announcement=announcement,
+                        file_path=saved["path"],
+                        original_name=saved["name"],
+                        mime_type=saved["mime_type"],
+                    )
+                )
+
+            db.session.flush()
+            announcement.sync_legacy_attachment_fields()
+
             db.session.commit()
 
             flash("Comunicado criado com sucesso.", "success")
@@ -733,28 +776,113 @@ def announcements():
             "danger",
         )
 
+    edit_forms: dict[int, AnnouncementForm] = {}
+    if current_user.role == "admin":
+        for item in announcement_items:
+            edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
+            edit_form.date.data = item.date
+            edit_form.subject.data = item.subject
+            edit_form.content.data = item.content
+            edit_forms[item.id] = edit_form
+
     return render_template(
         "announcements.html",
         form=form,
         announcements=announcement_items,
+        edit_forms=edit_forms,
     )
+
+
+@app.route("/announcements/<int:announcement_id>/update", methods=["POST"])
+@login_required
+def update_announcement(announcement_id: int):
+    """Update an announcement's content and manage its attachments."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    announcement = (
+        Announcement.query.options(joinedload(Announcement.attachments))
+        .get_or_404(announcement_id)
+    )
+
+    form = AnnouncementForm(prefix=f"edit-{announcement_id}")
+
+    if form.validate_on_submit():
+        announcement.date = form.date.data
+        announcement.subject = form.subject.data
+        announcement.content = form.content.data
+
+        remove_ids = {
+            int(attachment_id)
+            for attachment_id in request.form.getlist("remove_attachment_ids")
+            if attachment_id.isdigit()
+        }
+
+        if remove_ids:
+            attachments_to_remove = [
+                attachment
+                for attachment in announcement.attachments
+                if attachment.id in remove_ids
+            ]
+            for attachment in attachments_to_remove:
+                _remove_announcement_attachment(attachment.file_path)
+                db.session.delete(attachment)
+
+        new_files = [
+            storage
+            for storage in (form.attachments.data or [])
+            if storage and storage.filename
+        ]
+
+        for uploaded_file in new_files:
+            saved = _save_announcement_file(uploaded_file)
+            db.session.add(
+                AnnouncementAttachment(
+                    announcement=announcement,
+                    file_path=saved["path"],
+                    original_name=saved["name"],
+                    mime_type=saved["mime_type"],
+                )
+            )
+
+        db.session.flush()
+        announcement.sync_legacy_attachment_fields()
+
+        db.session.commit()
+        flash("Comunicado atualizado com sucesso.", "success")
+        return redirect(url_for("announcements"))
+
+    flash(
+        "Não foi possível atualizar o comunicado. Verifique os dados informados.",
+        "danger",
+    )
+    return redirect(url_for("announcements"))
 
 
 @app.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
 @login_required
 def delete_announcement(announcement_id: int):
-    """Remove an existing announcement and its attachment."""
+    """Remove an existing announcement and its attachments."""
 
     if current_user.role != "admin":
         abort(403)
 
-    announcement = Announcement.query.get_or_404(announcement_id)
-    attachment_path = announcement.attachment_path
+    announcement = (
+        Announcement.query.options(joinedload(Announcement.attachments))
+        .get_or_404(announcement_id)
+    )
+
+    attachment_paths = [
+        attachment.file_path for attachment in announcement.attachments if attachment.file_path
+    ]
+    if announcement.attachment_path:
+        attachment_paths.append(announcement.attachment_path)
 
     db.session.delete(announcement)
     db.session.commit()
 
-    _remove_announcement_attachment(attachment_path)
+    _remove_announcement_attachments(attachment_paths)
 
     flash("Comunicado removido com sucesso.", "success")
     return redirect(url_for("announcements"))
