@@ -571,7 +571,7 @@
                       <h3 class="h5 mb-0" id="preview-subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
                     </div>
                     <div id="preview-content" class="text-body-secondary" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
-                    <div class="d-grid gap-3">
+                    <div id="preview-attachments-section" class="d-grid gap-3 d-none">
                       <div id="preview-attachments-empty" class="text-muted small">Nenhum anexo selecionado.</div>
                       <div id="preview-attachment-list" class="d-grid gap-2"></div>
                     </div>
@@ -611,6 +611,7 @@
     const previewDate = document.getElementById('preview-date');
     const previewSubject = document.getElementById('preview-subject');
     const previewContent = document.getElementById('preview-content');
+    const previewAttachmentsSection = document.getElementById('preview-attachments-section');
     const previewAttachmentList = document.getElementById('preview-attachment-list');
     const previewAttachmentsEmpty = document.getElementById('preview-attachments-empty');
 
@@ -665,10 +666,12 @@
       previewAttachmentList.innerHTML = '';
 
       if (!selectedFiles.length) {
+        previewAttachmentsSection?.classList.add('d-none');
         previewAttachmentsEmpty?.classList.remove('d-none');
         return;
       }
 
+      previewAttachmentsSection?.classList.remove('d-none');
       previewAttachmentsEmpty?.classList.add('d-none');
 
       selectedFiles.forEach((file, index) => {
