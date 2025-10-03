@@ -8,13 +8,20 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .notifications-header .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
   }
 
   @media (min-width: 768px) {
     .notifications-header {
       flex-direction: row;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 1rem;
     }
   }
 
@@ -32,6 +39,11 @@
   .notification-card .list-group-item .flex-grow-1,
   .notification-card .list-group-item .d-flex {
     text-align: left;
+  }
+
+  .notification-actions .btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
   }
 
   .notification-row-unread {
@@ -55,18 +67,20 @@
 {% block content %}
 <div class="container py-4">
   <div class="notifications-header mb-4">
-    <div>
+    <div class="text-start">
       <h1 class="h3 mb-1">Notificações</h1>
       <p class="text-muted mb-0">Acompanhe as tarefas e avisos atribuídos para você.</p>
     </div>
+    {% if current_user.role == 'admin' %}
     <button
-      class="btn btn-outline-primary align-self-start align-self-md-start"
+      class="btn btn-sm btn-outline-primary"
       id="markAllNotifications"
       type="button"
       {% if unread_total == 0 %}disabled{% endif %}
     >
       Marcar todas como lidas
     </button>
+    {% endif %}
   </div>
 
   {% if notifications %}
@@ -81,7 +95,7 @@
           <div class="fw-semibold">{{ notification.message }}</div>
           <div class="text-muted small">{{ notification.created_at_display }}</div>
         </div>
-        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-start">
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-start notification-actions">
           {% if notification.url %}
           <a class="btn btn-sm btn-outline-secondary" href="{{ notification.url }}">
             {{ notification.action_label or 'Abrir' }}
