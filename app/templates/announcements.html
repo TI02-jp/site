@@ -26,6 +26,12 @@
     font-size: 0.95rem;
   }
 
+  .announcement-card .text-body-secondary,
+  .announcement-card .announcement-snippet,
+  .announcement-card .announcement-meta {
+    text-align: left;
+  }
+
   .announcement-snippet {
     max-height: 4.5rem;
     overflow: hidden;
@@ -56,21 +62,91 @@
     font-size: 0.85rem;
   }
 
+  .announcement-card-gallery {
+    display: grid;
+    gap: 0.35rem;
+    border-radius: 0.65rem;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .announcement-card-gallery.gallery-count-2,
+  .announcement-card-gallery.gallery-count-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .announcement-card-gallery .gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.6rem;
+    background: #000;
+  }
+
+  .announcement-card-gallery.gallery-count-2 .gallery-item,
+  .announcement-card-gallery.gallery-count-3 .gallery-item {
+    aspect-ratio: 4 / 3;
+  }
+
+  .announcement-card-gallery.gallery-count-3 .gallery-item:first-child {
+    grid-column: span 2;
+    aspect-ratio: 4 / 2.6;
+  }
+
+  .announcement-card-gallery .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .announcement-card-gallery .gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
   .preview-attachment {
     background: #fff;
+    border: 1px solid rgba(13, 110, 253, 0.12);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    flex-wrap: nowrap;
   }
 
   .preview-attachment img {
-    width: 3rem;
-    height: 3rem;
+    width: 4rem;
+    height: 3.25rem;
     object-fit: cover;
-    border-radius: 0.4rem;
+    border-radius: 0.6rem;
+    box-shadow: 0 0.35rem 0.85rem rgba(13, 110, 253, 0.12);
   }
 
   .preview-attachment .attachment-icon {
     width: 3rem;
     height: 3rem;
-    border-radius: 0.4rem;
+    border-radius: 0.6rem;
+  }
+
+  .preview-attachment .attachment-details {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .preview-attachment .attachment-details .fw-semibold {
+    font-size: 0.82rem;
+  }
+
+  .preview-attachment .attachment-details .text-muted {
+    font-size: 0.7rem;
   }
 
   .announcement-view-modal .modal-content,
@@ -104,6 +180,28 @@
     background: #e8edf7;
     color: #1f5fbf;
     font-size: 1.2rem;
+  }
+
+  .preview-attachment .attachment-remove-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .preview-attachment .attachment-remove-btn:hover {
+    background: #dc3545;
+    color: #fff;
+  }
+
+  .preview-attachment .attachment-remove-btn i {
+    font-size: 0.95rem;
   }
 
   .btn-xs {
@@ -153,7 +251,8 @@
       <div class="row g-2 row-cols-1 row-cols-md-2 row-cols-lg-3">
         {% for announcement in announcements %}
         {% set attachments = announcement.attachments_for_display %}
-        {% set primary_attachment = announcement.primary_attachment %}
+        {% set image_attachments = attachments | selectattr('is_image') | list %}
+        {% set image_count = image_attachments | length %}
         {% set created_at_local = announcement.created_at_sao_paulo %}
         <div class="col">
           <article class="card h-100 border-0 shadow-sm announcement-card" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#announcementModal-{{ announcement.id }}">
@@ -177,10 +276,22 @@
                 </div>
                 {% endif %}
               </div>
-              <div class="text-body-secondary announcement-snippet">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
-              {% if primary_attachment and primary_attachment.is_image %}
+              <div class="text-body-secondary announcement-snippet text-start">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+              {% if image_count == 1 %}
               <div class="ratio ratio-4x3 rounded overflow-hidden">
-                <img src="{{ url_for('static', filename=primary_attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100">
+                <img src="{{ url_for('static', filename=image_attachments[0].file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100">
+              </div>
+              {% elif image_count > 1 %}
+              {% set gallery_display_count = [image_count, 3]|min %}
+              <div class="announcement-card-gallery gallery-count-{{ gallery_display_count }}">
+                {% for attachment in image_attachments[:gallery_display_count] %}
+                <div class="gallery-item">
+                  <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" loading="lazy">
+                  {% if loop.last and image_count > gallery_display_count %}
+                  <span class="gallery-overlay">+{{ image_count - gallery_display_count }}</span>
+                  {% endif %}
+                </div>
+                {% endfor %}
               </div>
               {% endif %}
               {% if attachments %}
@@ -229,8 +340,8 @@
               </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <div class="modal-body d-grid gap-2">
-              <div class="text-body-secondary">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+            <div class="modal-body d-grid gap-2 text-start">
+              <div class="text-body-secondary text-start">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
               {% if attachments %}
               <div class="d-grid gap-2">
                 {% for attachment in attachments %}
@@ -530,12 +641,13 @@
 
       selectedFiles.forEach((file, index) => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'preview-attachment border rounded p-2 d-flex align-items-center gap-2 flex-wrap';
+        wrapper.className = 'preview-attachment';
         wrapper.dataset.index = String(index);
 
         let previewElement;
         if (file.type.startsWith('image/')) {
           previewElement = document.createElement('img');
+          previewElement.classList.add('flex-shrink-0');
           const reader = new FileReader();
           reader.onload = (event) => {
             previewElement.src = event.target?.result || '';
@@ -543,7 +655,7 @@
           reader.readAsDataURL(file);
         } else {
           previewElement = document.createElement('span');
-          previewElement.className = 'attachment-icon';
+          previewElement.className = 'attachment-icon flex-shrink-0';
           const icon = document.createElement('i');
           if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
             icon.className = 'bi bi-file-earmark-pdf';
@@ -556,23 +668,24 @@
         }
 
         const infoWrapper = document.createElement('div');
-        infoWrapper.className = 'flex-grow-1';
+        infoWrapper.className = 'attachment-details';
         const nameElement = document.createElement('div');
         nameElement.className = 'fw-semibold text-truncate';
         nameElement.textContent = file.name || 'Arquivo sem nome';
         const metaElement = document.createElement('div');
-        metaElement.className = 'text-muted small';
+        metaElement.className = 'text-muted';
         metaElement.textContent = file.type || 'Formato desconhecido';
         infoWrapper.append(nameElement, metaElement);
 
         const actionsWrapper = document.createElement('div');
-        actionsWrapper.className = 'ms-auto';
+        actionsWrapper.className = 'd-flex align-items-center gap-2';
         if (supportsDataTransfer) {
           const removeButton = document.createElement('button');
           removeButton.type = 'button';
-          removeButton.className = 'btn btn-link text-danger btn-sm p-0';
+          removeButton.className = 'attachment-remove-btn';
           removeButton.dataset.removeIndex = String(index);
-          removeButton.textContent = 'Remover';
+          removeButton.setAttribute('aria-label', `Remover ${file.name || 'arquivo'}`);
+          removeButton.innerHTML = '<i class="bi bi-trash"></i>';
           actionsWrapper.appendChild(removeButton);
         }
 
