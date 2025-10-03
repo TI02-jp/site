@@ -28,6 +28,12 @@
     padding: 1.25rem;
   }
 
+  .notification-card .list-group-item,
+  .notification-card .list-group-item .flex-grow-1,
+  .notification-card .list-group-item .d-flex {
+    text-align: left;
+  }
+
   .notification-row-unread {
     background: #fff7f0;
   }
@@ -54,7 +60,7 @@
       <p class="text-muted mb-0">Acompanhe as tarefas e avisos atribuídos para você.</p>
     </div>
     <button
-      class="btn btn-outline-primary align-self-start align-self-md-center"
+      class="btn btn-outline-primary align-self-start align-self-md-start"
       id="markAllNotifications"
       type="button"
       {% if unread_total == 0 %}disabled{% endif %}
@@ -68,14 +74,14 @@
     <ul class="list-group list-group-flush" id="notificationsList">
       {% for notification in notifications %}
       <li
-        class="list-group-item d-flex flex-column flex-lg-row gap-3 align-items-lg-center notification-row{% if not notification.is_read %} notification-row-unread{% endif %}"
+        class="list-group-item d-flex flex-column flex-lg-row gap-3 align-items-lg-start notification-row{% if not notification.is_read %} notification-row-unread{% endif %}"
         data-id="{{ notification.id }}"
       >
         <div class="flex-grow-1">
           <div class="fw-semibold">{{ notification.message }}</div>
           <div class="text-muted small">{{ notification.created_at_display }}</div>
         </div>
-        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-start">
           {% if notification.url %}
           <a class="btn btn-sm btn-outline-secondary" href="{{ notification.url }}">
             {{ notification.action_label or 'Abrir' }}
