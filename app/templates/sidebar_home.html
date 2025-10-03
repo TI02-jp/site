@@ -79,7 +79,7 @@
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="false" aria-controls="tasksMenu">
                 <i class="bi bi-list-task"></i>
-                MURAL
+                TAREFAS
             </a>
             <div class="collapse" id="tasksMenu">
                 <ul class="nav flex-column ms-3">
@@ -95,6 +95,12 @@
                     {% endfor %}
                 </ul>
             </div>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'announcements' %} active{% endif %}" href="{{ url_for('announcements') }}">
+                <i class="bi bi-megaphone"></i>
+                MURAL
+            </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'notifications_center' %}active{% endif %}" href="{{ url_for('notifications_center') }}">

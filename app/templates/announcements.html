@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Mural de Comunicados{% endblock %}
+
+{% block sidebar_nav %}
+{% include "sidebar_home.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-megaphone me-2"></i>Mural de Comunicados</h1>
+    <p class="text-muted mb-0">
+      Todos os usuários podem visualizar os comunicados. Somente administradores podem criar e remover itens.
+    </p>
+  </div>
+
+  {% if current_user.role == 'admin' %}
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <h2 class="h5 mb-0">Novo Comunicado</h2>
+    </div>
+    <div class="card-body">
+      <form method="POST" enctype="multipart/form-data" class="row g-3">
+        {{ form.hidden_tag() }}
+        <div class="col-md-3">
+          {{ form.date.label(class="form-label") }}
+          {{ form.date(class="form-control", type="date") }}
+          {% for error in form.date.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-5">
+          {{ form.subject.label(class="form-label") }}
+          {{ form.subject(class="form-control") }}
+          {% for error in form.subject.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-4">
+          {{ form.attachment.label(class="form-label") }}
+          {{ form.attachment(class="form-control") }}
+          <div class="form-text">Formatos aceitos: pdf, doc, docx, xls, xlsx, ppt, pptx, png, jpg, jpeg.</div>
+          {% for error in form.attachment.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header bg-white d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+      <h2 class="h5 mb-0">Comunicados</h2>
+      <span class="text-muted small">{{ announcements|length }} registro{{ announcements|length != 1 and 's' or '' }}</span>
+    </div>
+    {% if announcements %}
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col" style="min-width: 140px;">Data</th>
+            <th scope="col">Assunto</th>
+            <th scope="col" style="min-width: 160px;">Anexo</th>
+            <th scope="col" style="min-width: 160px;">Criado por</th>
+            {% if current_user.role == 'admin' %}
+            <th scope="col" class="text-end" style="width: 120px;">Ações</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for announcement in announcements %}
+          <tr>
+            <td>{{ announcement.date.strftime('%d/%m/%Y') }}</td>
+            <td class="fw-semibold">{{ announcement.subject }}</td>
+            <td>
+              {% if announcement.attachment_path %}
+              <a class="btn btn-outline-primary btn-sm" href="{{ url_for('static', filename=announcement.attachment_path) }}" target="_blank" rel="noopener">
+                <i class="bi bi-paperclip me-1"></i>Download
+              </a>
+              {% else %}
+              <span class="text-muted">Sem anexo</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-circle text-primary"></i>
+                <div class="small">
+                  <div class="fw-semibold">{{ announcement.created_by.name }}</div>
+                  <div class="text-muted">{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                </div>
+              </div>
+            </td>
+            {% if current_user.role == 'admin' %}
+            <td class="text-end">
+              <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir este comunicado?');">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-info-circle display-6 d-block mb-3"></i>
+        Ainda não há comunicados cadastrados.
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

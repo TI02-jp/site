@@ -3,6 +3,7 @@
 from datetime import date
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField,
     RadioField,
@@ -31,6 +32,19 @@ from wtforms.validators import (
 import re
 
 from app.services.courses import CourseStatus
+
+ANNOUNCEMENT_FILE_EXTENSIONS = (
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "png",
+    "jpg",
+    "jpeg",
+)
 
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
@@ -200,6 +214,33 @@ class AccessLinkForm(FlaskForm):
         render_kw={"rows": 2},
     )
     submit = SubmitField("Criar atalho")
+
+
+class AnnouncementForm(FlaskForm):
+    """Formulário para criação de comunicados internos."""
+
+    date = DateField(
+        "Data",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        default=date.today,
+    )
+    subject = StringField(
+        "Assunto",
+        validators=[DataRequired(), Length(min=1, max=255)],
+        render_kw={"placeholder": "Informe o assunto do comunicado"},
+    )
+    attachment = FileField(
+        "Anexo",
+        validators=[
+            Optional(),
+            FileAllowed(
+                ANNOUNCEMENT_FILE_EXTENSIONS,
+                "Formato de arquivo não permitido.",
+            ),
+        ],
+    )
+    submit = SubmitField("Salvar Comunicado")
 
 
 class CourseForm(FlaskForm):
