@@ -30,6 +30,23 @@ Navbar (fixa com sombra leve)
     z-index: 1020;
     background-color: #ffffff !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 0.35rem 1rem;
+    font-size: 0.95rem;
+}
+
+.navbar .navbar-brand {
+    font-size: 1rem;
+    padding: 0.25rem 0;
+}
+
+.navbar .nav-link {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
+}
+
+.navbar .dropdown-menu {
+    font-size: 0.9rem;
 }
 
 /* -----------------------------
@@ -45,6 +62,8 @@ Barra de navegação fixa na visualização da empresa
 
 .company-nav .btn {
     box-shadow: none;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
 }
 
 .btn-company-nav {
@@ -62,6 +81,16 @@ Barra de navegação fixa na visualização da empresa
 .company-nav .btn.active {
     background-color: rgba(255, 255, 255, 0.2);
     color: #fff;
+}
+
+.nav-tabs .nav-link {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: 600;
 }
 
 .company-nav.fixed {
