@@ -69,9 +69,9 @@
                 </div>
             </div>
             <div class="mb-3">
-                <span class="badge bg-warning text-dark me-2">Agendada</span>
-                <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger">Realizada</span>
+                {% for status in status_metadata %}
+                    <span class="badge badge-status-{{ status.slug }}{% if not loop.last %} me-2{% endif %}">{{ status.label }}</span>
+                {% endfor %}
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -125,6 +125,30 @@
                                     <div class="col-lg-6">
                                         {{ form.description.label(class="form-label mb-1") }}
                                         {{ form.description(class="form-control", rows=2) }}
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-1 d-none" id="meetingStatusGroup">
+                                    <div class="col-lg-4">
+                                        {{ form.status.label(class="form-label mb-1") }}
+                                        {{ form.status(class="form-select", id="meeting_status", data_default=(form.status.default or form.status.data or '')) }}
+                                        {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors[0] }}</div>{% endif %}
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-1 d-none" id="postponedFieldsGroup">
+                                    <div class="col-md-4">
+                                        {{ form.postponed_date.label(class="form-label mb-1") }}
+                                        {{ form.postponed_date(class="form-control", type="date", id="postponed_date") }}
+                                        {% if form.postponed_date.errors %}<div class="text-danger small mt-1">{{ form.postponed_date.errors[0] }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.postponed_start_time.label(class="form-label mb-1") }}
+                                        {{ form.postponed_start_time(class="form-control", type="time", id="postponed_start_time") }}
+                                        {% if form.postponed_start_time.errors %}<div class="text-danger small mt-1">{{ form.postponed_start_time.errors[0] }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.postponed_end_time.label(class="form-label mb-1") }}
+                                        {{ form.postponed_end_time(class="form-control", type="time", id="postponed_end_time") }}
+                                        {% if form.postponed_end_time.errors %}<div class="text-danger small mt-1">{{ form.postponed_end_time.errors[0] }}</div>{% endif %}
                                     </div>
                                 </div>
                                 <div class="meeting-options d-flex flex-wrap align-items-center mb-3">
@@ -192,8 +216,12 @@
                         </div>
                         <div class="modal-body text-start">
                             <ul class="list-group text-start">
-                                <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
+                                <li class="list-group-item text-start d-none" id="originalScheduleRow">
+                                    <div><strong>Data inicial:</strong> <span id="detailOriginalDate"></span></div>
+                                    <div><strong>Hora inicial:</strong> <span id="detailOriginalStart"></span> - <span id="detailOriginalEnd"></span></div>
+                                </li>
+                                <li class="list-group-item text-start"><strong id="detailDateLabel">Data:</strong> <span id="detailDate"></span></li>
+                                <li class="list-group-item text-start"><strong id="detailTimeLabel">Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
                                 <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
                                 <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
@@ -239,14 +267,13 @@
     </div>
     <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
-.tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
-.tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
-.tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
-.tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
-.tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
-.tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
+{% for status in status_metadata %}
+.badge-status-{{ status.slug }}{background-color:{{ status.color }};color:{{ status.text_color }};}
+.{{ status.tooltip_class }} .tooltip-inner{background-color:{{ status.color }};color:{{ status.tooltip_text_color }};}
+.{{ status.tooltip_class }} .tooltip-arrow::before{border-top-color:{{ status.color }};border-bottom-color:{{ status.color }};border-left-color:{{ status.color }};border-right-color:{{ status.color }};}
+{% endfor %}
     </style>
 {% endblock %}
 {% block scripts %}
@@ -279,6 +306,61 @@
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');
     var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
+    var meetingIdInput = document.getElementById('meeting_id');
+    var statusGroup = document.getElementById('meetingStatusGroup');
+    var statusSelect = document.getElementById('meeting_status');
+    var postponedGroup = document.getElementById('postponedFieldsGroup');
+    var postponedDateInput = document.getElementById('postponed_date');
+    var postponedStartInput = document.getElementById('postponed_start_time');
+    var postponedEndInput = document.getElementById('postponed_end_time');
+    var baseDateInput = document.getElementById('date');
+    var baseStartInput = document.getElementById('start_time');
+    var baseEndInput = document.getElementById('end_time');
+    var statusDefault = '';
+    var tooltipByColor = {{ status_tooltip_map|tojson }};
+    if (statusSelect) {
+        var attrValue = statusSelect.getAttribute('data-default');
+        if (attrValue) {
+            statusDefault = attrValue;
+        } else if (statusSelect.options.length) {
+            statusDefault = statusSelect.options[0].value;
+        }
+    }
+
+    function resolveTooltipClass(color) {
+        if (!color) {
+            return '';
+        }
+        var mapped = tooltipByColor[color.toLowerCase()];
+        return mapped || '';
+    }
+
+    function formatDateFromISO(isoString) {
+        if (!isoString) {
+            return '';
+        }
+        var date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        var day = String(date.getDate()).padStart(2, '0');
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var year = date.getFullYear();
+        return day + '/' + month + '/' + year;
+    }
+
+    function formatTimeFromISO(isoString) {
+        if (!isoString) {
+            return '';
+        }
+        var date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        return hours + ':' + minutes;
+    }
 
     function renumberAdditionalDates() {
         if (!additionalDatesContainer) {
@@ -415,6 +497,81 @@
         }
     }
 
+    function setStatusFieldState(isEditing, statusCode) {
+        if (!statusSelect || !statusGroup) {
+            return;
+        }
+        var valueToApply = statusCode;
+        if (!valueToApply) {
+            valueToApply = statusDefault;
+        }
+        var applied = false;
+        if (valueToApply) {
+            for (var i = 0; i < statusSelect.options.length; i++) {
+                if (statusSelect.options[i].value === valueToApply) {
+                    statusSelect.value = valueToApply;
+                    applied = true;
+                    break;
+                }
+            }
+        }
+        if (!applied && statusSelect.options.length) {
+            statusSelect.selectedIndex = 0;
+            valueToApply = statusSelect.value;
+        }
+        if (isEditing) {
+            statusGroup.classList.remove('d-none');
+            statusSelect.disabled = false;
+        } else {
+            statusGroup.classList.add('d-none');
+            statusSelect.disabled = true;
+        }
+        togglePostponedFields(valueToApply, { preserveValues: true });
+    }
+
+    function togglePostponedFields(statusCode, options) {
+        if (!postponedGroup) {
+            return;
+        }
+        var shouldShow = statusCode === 'adiada';
+        var preserveValues = options && options.preserveValues;
+        if (shouldShow) {
+            postponedGroup.classList.remove('d-none');
+            if (postponedDateInput) { postponedDateInput.required = true; }
+            if (postponedStartInput) { postponedStartInput.required = true; }
+            if (postponedEndInput) { postponedEndInput.required = true; }
+        } else {
+            postponedGroup.classList.add('d-none');
+            if (postponedDateInput) {
+                postponedDateInput.required = false;
+                if (!preserveValues) { postponedDateInput.value = ''; }
+            }
+            if (postponedStartInput) {
+                postponedStartInput.required = false;
+                if (!preserveValues) { postponedStartInput.value = ''; }
+            }
+            if (postponedEndInput) {
+                postponedEndInput.required = false;
+                if (!preserveValues) { postponedEndInput.value = ''; }
+            }
+        }
+    }
+
+    function syncPostponedToBase() {
+        if (!statusSelect || statusSelect.value !== 'adiada') {
+            return;
+        }
+        if (postponedDateInput && baseDateInput) {
+            baseDateInput.value = postponedDateInput.value;
+        }
+        if (postponedStartInput && baseStartInput) {
+            baseStartInput.value = postponedStartInput.value;
+        }
+        if (postponedEndInput && baseEndInput) {
+            baseEndInput.value = postponedEndInput.value;
+        }
+    }
+
     if (additionalDatesContainer) {
         renumberAdditionalDates();
         additionalDatesContainer.querySelectorAll('.remove-additional-date').forEach(attachRemoveHandler);
@@ -431,6 +588,43 @@
         applyMoreDaysCheckbox.addEventListener('change', toggleAdditionalDates);
         toggleAdditionalDates();
     }
+    if (meetingIdInput && meetingIdInput.value) {
+        setStatusFieldState(true, statusSelect ? statusSelect.value : statusDefault);
+    } else {
+        setStatusFieldState(false, statusDefault);
+    }
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            var currentValue = statusSelect.value;
+            if (currentValue === 'adiada') {
+                if (postponedDateInput && baseDateInput) {
+                    postponedDateInput.value = baseDateInput.value;
+                }
+                if (postponedStartInput && baseStartInput) {
+                    postponedStartInput.value = baseStartInput.value;
+                }
+                if (postponedEndInput && baseEndInput) {
+                    postponedEndInput.value = baseEndInput.value;
+                }
+                togglePostponedFields(currentValue);
+                syncPostponedToBase();
+            } else {
+                togglePostponedFields(currentValue);
+            }
+        });
+    }
+    if (postponedDateInput) {
+        postponedDateInput.addEventListener('change', syncPostponedToBase);
+        postponedDateInput.addEventListener('input', syncPostponedToBase);
+    }
+    if (postponedStartInput) {
+        postponedStartInput.addEventListener('change', syncPostponedToBase);
+        postponedStartInput.addEventListener('input', syncPostponedToBase);
+    }
+    if (postponedEndInput) {
+        postponedEndInput.addEventListener('change', syncPostponedToBase);
+        postponedEndInput.addEventListener('input', syncPostponedToBase);
+    }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
         form.reset();
@@ -444,6 +638,8 @@
         if (courseInput) {
             courseInput.value = '';
         }
+        setStatusFieldState(false, statusDefault);
+        togglePostponedFields(statusDefault);
         if (dateStr) { form.date.value = dateStr; }
         document.querySelector('#meetingModal .modal-title').textContent = 'Agendar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Agendar';
@@ -483,10 +679,7 @@
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
-            var cls = '';
-            if(color === '#ffc107'){cls='tooltip-warning';}
-            else if(color === '#198754'){cls='tooltip-success';}
-            else if(color === '#dc3545'){cls='tooltip-danger';}
+            var cls = resolveTooltipClass(color);
             info.el.setAttribute('data-bs-toggle', 'tooltip');
             info.el.setAttribute('data-bs-html', 'true');
             info.el.setAttribute('data-bs-custom-class', cls);
@@ -506,18 +699,67 @@
                 creatorEl.textContent = '';
                 creatorEl.classList.add('d-none');
             }
-            var dateParts = e.startStr.slice(0,10).split('-');
-            document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
-            document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
-            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
+            var startIso = e.startStr;
+            var endIso = e.endStr;
+            document.getElementById('detailDate').textContent = formatDateFromISO(startIso);
+            document.getElementById('detailStart').textContent = formatTimeFromISO(startIso);
+            document.getElementById('detailEnd').textContent = formatTimeFromISO(endIso);
             var statusText = e.extendedProps.status || '';
+            var statusCode = e.extendedProps.status_code || '';
             document.getElementById('detailStatus').textContent = statusText;
+            var originalRow = document.getElementById('originalScheduleRow');
+            var originalDateEl = document.getElementById('detailOriginalDate');
+            var originalStartEl = document.getElementById('detailOriginalStart');
+            var originalEndEl = document.getElementById('detailOriginalEnd');
+            var dateLabelEl = document.getElementById('detailDateLabel');
+            var timeLabelEl = document.getElementById('detailTimeLabel');
+            var originalStartIso = e.extendedProps.original_start;
+            var originalEndIso = e.extendedProps.original_end;
+            if (statusCode === 'adiada' && originalStartIso) {
+                if (originalRow) {
+                    originalRow.classList.remove('d-none');
+                }
+                if (originalDateEl) {
+                    originalDateEl.textContent = formatDateFromISO(originalStartIso);
+                }
+                if (originalStartEl) {
+                    originalStartEl.textContent = formatTimeFromISO(originalStartIso);
+                }
+                if (originalEndEl) {
+                    originalEndEl.textContent = formatTimeFromISO(originalEndIso);
+                }
+                if (dateLabelEl) {
+                    dateLabelEl.textContent = 'Nova data:';
+                }
+                if (timeLabelEl) {
+                    timeLabelEl.textContent = 'Novo horário:';
+                }
+            } else {
+                if (originalRow) {
+                    originalRow.classList.add('d-none');
+                }
+                if (originalDateEl) {
+                    originalDateEl.textContent = '';
+                }
+                if (originalStartEl) {
+                    originalStartEl.textContent = '';
+                }
+                if (originalEndEl) {
+                    originalEndEl.textContent = '';
+                }
+                if (dateLabelEl) {
+                    dateLabelEl.textContent = 'Data:';
+                }
+                if (timeLabelEl) {
+                    timeLabelEl.textContent = 'Hora:';
+                }
+            }
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
             var linkContainer = document.getElementById('meetLinkContainer');
             var linkEl = document.getElementById('detailMeetLink');
             var copyBtn = document.getElementById('copyMeetLink');
-            if (e.extendedProps.meet_link) {
+            if (e.extendedProps.meet_link && statusCode !== 'cancelada') {
                 linkEl.textContent = e.extendedProps.meet_link;
                 linkContainer.classList.remove('d-none');
                 if (statusText === 'Realizada') {
@@ -539,6 +781,10 @@
                 }
             } else {
                 linkContainer.classList.add('d-none');
+                linkEl.removeAttribute('href');
+                linkEl.textContent = '';
+                copyBtn.classList.add('d-none');
+                copyBtn.onclick = null;
             }
             var editBtn = document.getElementById('editEventBtn');
             var deleteBtn = document.getElementById('deleteEventBtn');
@@ -578,6 +824,9 @@
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
                         }
+                        if (existing.extendedProps.status_code !== evData.status_code) {
+                            existing.setExtendedProp('status_code', evData.status_code);
+                        }
                         if (existing.extendedProps.can_edit !== evData.can_edit) {
                             existing.setExtendedProp('can_edit', evData.can_edit);
                         }
@@ -587,11 +836,20 @@
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
                         }
-                        if (existing.extendedProps.meet_link !== evData.meet_link) {
-                            existing.setExtendedProp('meet_link', evData.meet_link);
+                        var newLink = (typeof evData.meet_link === 'undefined' ? null : evData.meet_link);
+                        if (existing.extendedProps.meet_link !== newLink) {
+                            existing.setExtendedProp('meet_link', newLink);
                         }
                         if (existing.extendedProps.creator !== evData.creator) {
                             existing.setExtendedProp('creator', evData.creator);
+                        }
+                        var nextOriginalStart = (typeof evData.original_start === 'undefined') ? null : evData.original_start;
+                        if (existing.extendedProps.original_start !== nextOriginalStart) {
+                            existing.setExtendedProp('original_start', nextOriginalStart);
+                        }
+                        var nextOriginalEnd = (typeof evData.original_end === 'undefined') ? null : evData.original_end;
+                        if (existing.extendedProps.original_end !== nextOriginalEnd) {
+                            existing.setExtendedProp('original_end', nextOriginalEnd);
                         }
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
@@ -603,15 +861,18 @@
                             if (tip) { tip.dispose(); }
                             var time = existing.allDay ? '' : existing.startStr.substring(11,16);
                             var color = existing.backgroundColor || existing.borderColor;
-                            var cls = '';
-                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
-                            else if (color === '#198754') { cls = 'tooltip-success'; }
-                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
+                            var cls = resolveTooltipClass(color);
                             el.setAttribute('data-bs-custom-class', cls);
                             el.setAttribute('title', time + ' ' + existing.title);
                             new bootstrap.Tooltip(el);
                         }
                     } else {
+                        if (typeof evData.original_start === 'undefined') {
+                            evData.original_start = null;
+                        }
+                        if (typeof evData.original_end === 'undefined') {
+                            evData.original_end = null;
+                        }
                         calendar.addEvent(evData);
                     }
                 });
@@ -641,6 +902,22 @@
         form.start_time.value = start.slice(11,16);
         form.end_time.value = end ? end.slice(11,16) : '';
         form.description.value = currentEvent.extendedProps.description || '';
+        var statusCode = currentEvent.extendedProps.status_code || '';
+        setStatusFieldState(true, statusCode);
+        if (statusCode === 'adiada') {
+            if (postponedDateInput) {
+                postponedDateInput.value = form.date.value;
+            }
+            if (postponedStartInput) {
+                postponedStartInput.value = form.start_time.value;
+            }
+            if (postponedEndInput) {
+                postponedEndInput.value = form.end_time.value;
+            }
+            syncPostponedToBase();
+        } else {
+            togglePostponedFields(statusCode);
+        }
         if (form.create_meet) {
             form.create_meet.checked = !!currentEvent.extendedProps.meet_link;
         }

@@ -83,6 +83,7 @@ from app.services.meeting_room import (
     update_meeting,
     combine_events,
     delete_meeting,
+    get_status_metadata_for_template,
 )
 from app.services.general_calendar import (
     populate_event_participants as populate_general_event_participants,
@@ -1600,7 +1601,10 @@ def sala_reunioes():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
             if meeting and meeting.criador_id == current_user.id:
-                if meeting.status != ReuniaoStatus.AGENDADA:
+                if meeting.status in (
+                    ReuniaoStatus.EM_ANDAMENTO,
+                    ReuniaoStatus.REALIZADA,
+                ):
                     flash(
                         "Reuniões em andamento ou realizadas não podem ser editadas.",
                         "danger",
@@ -1629,12 +1633,18 @@ def sala_reunioes():
     if request.method == "POST":
         show_modal = True
     meet_popup_link = session.pop("meet_link", None)
+    status_metadata = get_status_metadata_for_template()
+    status_tooltip_map = {
+        item["color"].lower(): item["tooltip_class"] for item in status_metadata
+    }
     return render_template(
         "sala_reunioes.html",
         form=form,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
         meet_popup_link=meet_popup_link,
+        status_metadata=status_metadata,
+        status_tooltip_map=status_tooltip_map,
     )
 
 
@@ -1647,7 +1657,10 @@ def delete_reuniao(meeting_id):
         if meeting.criador_id != current_user.id:
             flash("Você só pode excluir reuniões que você criou.", "danger")
             return redirect(url_for("sala_reunioes"))
-        if meeting.status != ReuniaoStatus.AGENDADA:
+        if meeting.status in (
+            ReuniaoStatus.EM_ANDAMENTO,
+            ReuniaoStatus.REALIZADA,
+        ):
             flash(
                 "Reuniões em andamento ou realizadas não podem ser excluídas.",
                 "danger",
