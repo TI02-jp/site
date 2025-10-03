@@ -75,6 +75,23 @@
             <div id="preview-image-wrapper" class="ratio ratio-16x9 d-none">
               <img id="preview-image" src="" alt="Pré-visualização do anexo" class="w-100 h-100 object-fit-cover rounded">
             </div>
+            <div id="preview-document-wrapper" class="d-none">
+              <div class="border rounded p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                  <i class="bi bi-file-earmark-text text-primary fs-3"></i>
+                  <div>
+                    <div class="fw-semibold" id="preview-document-name">Nenhum documento</div>
+                    <div class="text-muted small" id="preview-document-type"></div>
+                  </div>
+                </div>
+                <div id="preview-document-frame" class="ratio ratio-4x3 mt-3 d-none">
+                  <iframe class="w-100 h-100 border rounded" title="Pré-visualização do documento" allowfullscreen></iframe>
+                </div>
+                <div id="preview-document-placeholder" class="small text-muted mt-3 d-none">
+                  Pré-visualização indisponível para este formato. O arquivo será anexado normalmente.
+                </div>
+              </div>
+            </div>
             <div id="preview-attachment" class="small text-muted">Nenhum anexo selecionado.</div>
           </article>
         </div>
@@ -116,10 +133,17 @@
                   <img src="{{ url_for('static', filename=announcement.attachment_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100 object-fit-cover rounded">
                 </div>
                 {% endif %}
+              {% endif %}
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#announcementModal-{{ announcement.id }}">
+                  <i class="bi bi-eye me-1"></i>Visualizar
+                </button>
+                {% if announcement.attachment_path %}
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('static', filename=announcement.attachment_path) }}" target="_blank" rel="noopener">
                   <i class="bi bi-paperclip me-1"></i>{{ announcement.attachment_name or 'Ver anexo' }}
                 </a>
-              {% endif %}
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center gap-2 small text-muted pt-3 border-top">
                 <i class="bi bi-person-circle text-primary"></i>
                 <div>
@@ -132,6 +156,58 @@
         </div>
         {% endfor %}
       </div>
+      {% for announcement in announcements %}
+      <div class="modal fade" id="announcementModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="announcementModalLabel-{{ announcement.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <p class="small text-muted text-uppercase fw-semibold mb-1" id="announcementModalLabel-{{ announcement.id }}">
+                  {{ announcement.date.strftime('%d/%m/%Y') }}
+                </p>
+                <h2 class="h5 mb-0">{{ announcement.subject }}</h2>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body d-grid gap-3">
+              <div class="text-body-secondary">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+              {% if announcement.attachment_path %}
+                {% if announcement.attachment_is_image %}
+                <div class="ratio ratio-16x9">
+                  <img src="{{ url_for('static', filename=announcement.attachment_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100 object-fit-cover rounded">
+                </div>
+                {% elif announcement.attachment_is_pdf %}
+                <div class="ratio ratio-4x3">
+                  <iframe src="{{ url_for('static', filename=announcement.attachment_path) }}" title="Pré-visualização do anexo" class="w-100 h-100 border rounded" allowfullscreen></iframe>
+                </div>
+                {% else %}
+                <div class="alert alert-light border d-flex align-items-center gap-3 mb-0">
+                  <i class="bi bi-file-earmark-text fs-4 text-primary"></i>
+                  <div>
+                    <div class="fw-semibold mb-1">{{ announcement.attachment_name or 'Anexo disponível' }}</div>
+                    <div class="small text-muted mb-0">Utilize o botão abaixo para abrir o arquivo anexado.</div>
+                  </div>
+                </div>
+                {% endif %}
+                <a class="btn btn-primary" href="{{ url_for('static', filename=announcement.attachment_path) }}" target="_blank" rel="noopener">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>Abrir anexo
+                </a>
+              {% endif %}
+            </div>
+            <div class="modal-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div class="d-flex align-items-center gap-2 text-muted small">
+                <i class="bi bi-person-circle text-primary fs-5"></i>
+                <div>
+                  <div class="fw-semibold text-dark">{{ announcement.created_by.name }}</div>
+                  <div>{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-info-circle display-6 d-block mb-3"></i>
@@ -159,6 +235,14 @@
     const previewAttachment = document.getElementById('preview-attachment');
     const previewImageWrapper = document.getElementById('preview-image-wrapper');
     const previewImage = document.getElementById('preview-image');
+    const previewDocumentWrapper = document.getElementById('preview-document-wrapper');
+    const previewDocumentName = document.getElementById('preview-document-name');
+    const previewDocumentType = document.getElementById('preview-document-type');
+    const previewDocumentFrameWrapper = document.getElementById('preview-document-frame');
+    const previewDocumentFrame = previewDocumentFrameWrapper ? previewDocumentFrameWrapper.querySelector('iframe') : null;
+    const previewDocumentPlaceholder = document.getElementById('preview-document-placeholder');
+
+    let documentObjectUrl;
 
     const formatDate = (value) => {
       if (!value) {
@@ -192,8 +276,40 @@
       }
     };
 
+    const resetDocumentPreview = () => {
+      if (documentObjectUrl) {
+        URL.revokeObjectURL(documentObjectUrl);
+        documentObjectUrl = undefined;
+      }
+      if (previewDocumentWrapper) {
+        previewDocumentWrapper.classList.add('d-none');
+      }
+      if (previewDocumentName) {
+        previewDocumentName.textContent = 'Nenhum documento';
+      }
+      if (previewDocumentType) {
+        previewDocumentType.textContent = '';
+      }
+      if (previewDocumentFrameWrapper) {
+        previewDocumentFrameWrapper.classList.add('d-none');
+      }
+      if (previewDocumentFrame) {
+        previewDocumentFrame.removeAttribute('src');
+      }
+      if (previewDocumentPlaceholder) {
+        previewDocumentPlaceholder.classList.add('d-none');
+      }
+    };
+
     const updateAttachmentPreview = () => {
+      if (!attachmentInput) {
+        return;
+      }
+
       const [file] = attachmentInput.files;
+
+      resetDocumentPreview();
+
       if (!file) {
         previewAttachment.textContent = 'Nenhum anexo selecionado.';
         previewImageWrapper.classList.add('d-none');
@@ -203,6 +319,10 @@
       }
 
       const isImage = file.type.startsWith('image/');
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const isText = file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt') || file.name.toLowerCase().endsWith('.md');
+      const fileExtension = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.') + 1) : '';
+
       previewAttachment.textContent = `Anexo selecionado: ${file.name}`;
 
       if (isImage) {
@@ -217,6 +337,32 @@
         previewImageWrapper.classList.add('d-none');
         previewImage.removeAttribute('src');
         previewImage.removeAttribute('alt');
+
+        if (previewDocumentWrapper) {
+          previewDocumentWrapper.classList.remove('d-none');
+        }
+        if (previewDocumentName) {
+          previewDocumentName.textContent = file.name;
+        }
+        if (previewDocumentType) {
+          const descriptor = file.type || (fileExtension ? fileExtension.toUpperCase() : 'Formato desconhecido');
+          previewDocumentType.textContent = `Formato: ${descriptor}`;
+        }
+
+        if (isPdf || isText) {
+          documentObjectUrl = URL.createObjectURL(file);
+          if (previewDocumentFrameWrapper) {
+            previewDocumentFrameWrapper.classList.remove('d-none');
+          }
+          if (previewDocumentFrame) {
+            previewDocumentFrame.src = documentObjectUrl;
+          }
+          if (previewDocumentPlaceholder) {
+            previewDocumentPlaceholder.classList.add('d-none');
+          }
+        } else if (previewDocumentPlaceholder) {
+          previewDocumentPlaceholder.classList.remove('d-none');
+        }
       }
     };
 
@@ -235,6 +381,10 @@
 
     updateTextPreview();
     updateAttachmentPreview();
+
+    window.addEventListener('beforeunload', () => {
+      resetDocumentPreview();
+    });
   });
 </script>
 {% endif %}
