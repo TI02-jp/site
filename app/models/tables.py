@@ -196,7 +196,9 @@ class Announcement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
     subject = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
     attachment_path = db.Column(db.String(255))
+    attachment_name = db.Column(db.String(255))
     created_by_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
@@ -217,6 +219,15 @@ class Announcement(db.Model):
 
     def __repr__(self) -> str:
         return f"<Announcement {self.subject!r} on {self.date:%Y-%m-%d}>"
+
+    @property
+    def attachment_is_image(self) -> bool:
+        """Return ``True`` when the stored attachment is an image."""
+
+        if not self.attachment_path:
+            return False
+        lowered = self.attachment_path.lower()
+        return lowered.endswith(".png") or lowered.endswith(".jpg") or lowered.endswith(".jpeg")
 
 
 class Course(db.Model):

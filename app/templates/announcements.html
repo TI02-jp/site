@@ -16,108 +16,226 @@
   </div>
 
   {% if current_user.role == 'admin' %}
-  <div class="card mb-4">
-    <div class="card-header bg-white">
-      <h2 class="h5 mb-0">Novo Comunicado</h2>
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-white">
+          <h2 class="h5 mb-0">Novo Comunicado</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data" class="d-grid gap-3">
+            {{ form.hidden_tag() }}
+            <div>
+              {{ form.date.label(class="form-label") }}
+              {{ form.date(class="form-control", type="date") }}
+              {% for error in form.date.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div>
+              {{ form.subject.label(class="form-label") }}
+              {{ form.subject(class="form-control") }}
+              {% for error in form.subject.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div>
+              {{ form.content.label(class="form-label") }}
+              {{ form.content(class="form-control") }}
+              {% for error in form.content.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div>
+              {{ form.attachment.label(class="form-label") }}
+              {{ form.attachment(class="form-control") }}
+              <div class="form-text">Formatos aceitos: pdf, doc, docx, xls, xlsx, ppt, pptx, png, jpg, jpeg.</div>
+              {% for error in form.attachment.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end">
+              {{ form.submit(class="btn btn-primary") }}
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-      <form method="POST" enctype="multipart/form-data" class="row g-3">
-        {{ form.hidden_tag() }}
-        <div class="col-md-3">
-          {{ form.date.label(class="form-label") }}
-          {{ form.date(class="form-control", type="date") }}
-          {% for error in form.date.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
+    <div class="col-lg-6">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+          <h2 class="h5 mb-0">Pré-visualização</h2>
+          <span class="badge bg-light text-muted text-uppercase">Visualização</span>
         </div>
-        <div class="col-md-5">
-          {{ form.subject.label(class="form-label") }}
-          {{ form.subject(class="form-control") }}
-          {% for error in form.subject.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
+        <div class="card-body">
+          <article class="d-grid gap-3">
+            <div class="text-uppercase small text-muted fw-semibold" id="preview-date" data-placeholder="Data do comunicado">Data do comunicado</div>
+            <h3 class="h5 mb-0" id="preview-subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
+            <div id="preview-content" class="text-body-secondary" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
+            <div id="preview-image-wrapper" class="ratio ratio-16x9 d-none">
+              <img id="preview-image" src="" alt="Pré-visualização do anexo" class="w-100 h-100 object-fit-cover rounded">
+            </div>
+            <div id="preview-attachment" class="small text-muted">Nenhum anexo selecionado.</div>
+          </article>
         </div>
-        <div class="col-md-4">
-          {{ form.attachment.label(class="form-label") }}
-          {{ form.attachment(class="form-control") }}
-          <div class="form-text">Formatos aceitos: pdf, doc, docx, xls, xlsx, ppt, pptx, png, jpg, jpeg.</div>
-          {% for error in form.attachment.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-        <div class="col-12 d-flex justify-content-end">
-          {{ form.submit(class="btn btn-primary") }}
-        </div>
-      </form>
+      </div>
     </div>
   </div>
   {% endif %}
 
-  <div class="card">
+  <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
       <h2 class="h5 mb-0">Comunicados</h2>
       <span class="text-muted small">{{ announcements|length }} registro{{ announcements|length != 1 and 's' or '' }}</span>
     </div>
-    {% if announcements %}
-    <div class="table-responsive">
-      <table class="table align-middle mb-0">
-        <thead>
-          <tr>
-            <th scope="col" style="min-width: 140px;">Data</th>
-            <th scope="col">Assunto</th>
-            <th scope="col" style="min-width: 160px;">Anexo</th>
-            <th scope="col" style="min-width: 160px;">Criado por</th>
-            {% if current_user.role == 'admin' %}
-            <th scope="col" class="text-end" style="width: 120px;">Ações</th>
-            {% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for announcement in announcements %}
-          <tr>
-            <td>{{ announcement.date.strftime('%d/%m/%Y') }}</td>
-            <td class="fw-semibold">{{ announcement.subject }}</td>
-            <td>
+    <div class="card-body">
+      {% if announcements %}
+      <div class="row g-4 row-cols-1 row-cols-lg-2">
+        {% for announcement in announcements %}
+        <div class="col">
+          <article class="card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column gap-3">
+              <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                  <div class="text-uppercase small text-muted fw-semibold">{{ announcement.date.strftime('%d/%m/%Y') }}</div>
+                  <h3 class="h5 mb-0">{{ announcement.subject }}</h3>
+                </div>
+                {% if current_user.role == 'admin' %}
+                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Excluir comunicado">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+              <div class="text-body-secondary">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
               {% if announcement.attachment_path %}
-              <a class="btn btn-outline-primary btn-sm" href="{{ url_for('static', filename=announcement.attachment_path) }}" target="_blank" rel="noopener">
-                <i class="bi bi-paperclip me-1"></i>Download
-              </a>
-              {% else %}
-              <span class="text-muted">Sem anexo</span>
+                {% if announcement.attachment_is_image %}
+                <div class="ratio ratio-16x9">
+                  <img src="{{ url_for('static', filename=announcement.attachment_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100 object-fit-cover rounded">
+                </div>
+                {% endif %}
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('static', filename=announcement.attachment_path) }}" target="_blank" rel="noopener">
+                  <i class="bi bi-paperclip me-1"></i>{{ announcement.attachment_name or 'Ver anexo' }}
+                </a>
               {% endif %}
-            </td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
+              <div class="d-flex align-items-center gap-2 small text-muted pt-3 border-top">
                 <i class="bi bi-person-circle text-primary"></i>
-                <div class="small">
-                  <div class="fw-semibold">{{ announcement.created_by.name }}</div>
-                  <div class="text-muted">{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                <div>
+                  <div class="fw-semibold text-dark">{{ announcement.created_by.name }}</div>
+                  <div>{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
                 </div>
               </div>
-            </td>
-            {% if current_user.role == 'admin' %}
-            <td class="text-end">
-              <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir este comunicado?');">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
-            </td>
-            {% endif %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="card-body">
+            </div>
+          </article>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-info-circle display-6 d-block mb-3"></i>
         Ainda não há comunicados cadastrados.
       </div>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if current_user.role == 'admin' %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('{{ form.date.id }}');
+    const subjectInput = document.getElementById('{{ form.subject.id }}');
+    const contentInput = document.getElementById('{{ form.content.id }}');
+    const attachmentInput = document.getElementById('{{ form.attachment.id }}');
+
+    const previewDate = document.getElementById('preview-date');
+    const previewSubject = document.getElementById('preview-subject');
+    const previewContent = document.getElementById('preview-content');
+    const previewAttachment = document.getElementById('preview-attachment');
+    const previewImageWrapper = document.getElementById('preview-image-wrapper');
+    const previewImage = document.getElementById('preview-image');
+
+    const formatDate = (value) => {
+      if (!value) {
+        return previewDate.dataset.placeholder;
+      }
+      const [year, month, day] = value.split('-').map(Number);
+      if (!year || !month || !day) {
+        return previewDate.dataset.placeholder;
+      }
+      const formatted = new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    };
+
+    const updateTextPreview = () => {
+      previewDate.textContent = formatDate(dateInput.value);
+
+      const subject = subjectInput.value.trim();
+      previewSubject.textContent = subject || previewSubject.dataset.placeholder;
+
+      const content = contentInput.value.trim();
+      if (content) {
+        previewContent.innerHTML = content.replace(/\n/g, '<br>');
+        previewContent.classList.remove('text-body-secondary');
+      } else {
+        previewContent.textContent = previewContent.dataset.placeholder;
+        previewContent.classList.add('text-body-secondary');
+      }
+    };
+
+    const updateAttachmentPreview = () => {
+      const [file] = attachmentInput.files;
+      if (!file) {
+        previewAttachment.textContent = 'Nenhum anexo selecionado.';
+        previewImageWrapper.classList.add('d-none');
+        previewImage.removeAttribute('src');
+        previewImage.removeAttribute('alt');
+        return;
+      }
+
+      const isImage = file.type.startsWith('image/');
+      previewAttachment.textContent = `Anexo selecionado: ${file.name}`;
+
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          previewImageWrapper.classList.remove('d-none');
+          previewImage.src = event.target?.result || '';
+          previewImage.alt = `Pré-visualização do anexo ${file.name}`;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewImageWrapper.classList.add('d-none');
+        previewImage.removeAttribute('src');
+        previewImage.removeAttribute('alt');
+      }
+    };
+
+    if (dateInput) {
+      dateInput.addEventListener('change', updateTextPreview);
+    }
+    if (subjectInput) {
+      subjectInput.addEventListener('input', updateTextPreview);
+    }
+    if (contentInput) {
+      contentInput.addEventListener('input', updateTextPreview);
+    }
+    if (attachmentInput) {
+      attachmentInput.addEventListener('change', updateAttachmentPreview);
+    }
+
+    updateTextPreview();
+    updateAttachmentPreview();
+  });
+</script>
+{% endif %}
 {% endblock %}

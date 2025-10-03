@@ -693,6 +693,8 @@ def announcements():
             attachment_path: str | None = None
             uploaded_file = form.attachment.data
 
+            attachment_name: str | None = None
+
             if uploaded_file:
                 original_name = secure_filename(uploaded_file.filename or "")
                 extension = os.path.splitext(original_name)[1].lower()
@@ -709,11 +711,14 @@ def announcements():
                 attachment_path = os.path.join(
                     ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name
                 ).replace("\\", "/")
+                attachment_name = original_name or None
 
             announcement = Announcement(
                 date=form.date.data,
-                subject=form.subject.data.strip(),
+                subject=form.subject.data,
+                content=form.content.data,
                 attachment_path=attachment_path,
+                attachment_name=attachment_name,
                 created_by=current_user,
             )
 
