@@ -716,7 +716,14 @@
 
       const selectedFiles = [];
 
-      const hasExistingPreviews = () => Boolean(previewExistingList && previewExistingList.children.length);
+      const hasExistingPreviews = () => {
+        if (!previewExistingList) {
+          return false;
+        }
+        return Array.from(previewExistingList.querySelectorAll('[data-existing-preview]')).some(
+          (element) => !element.classList.contains('is-marked-for-removal')
+        );
+      };
 
       const updateAttachmentsVisibility = () => {
         const shouldShow = hasExistingPreviews() || selectedFiles.length > 0;
@@ -909,6 +916,7 @@
           modal.querySelectorAll(`[data-existing-preview='${previewId}'], [data-existing-attachment='${previewId}']`).forEach((element) => {
             element.classList.toggle('is-marked-for-removal', input.checked);
           });
+          updateAttachmentsVisibility();
         });
       });
 
