@@ -318,6 +318,60 @@ with app.app_context():
                             "created_at": row["created_at"],
                         },
                     )
+
+        if inspector.has_table("task_notifications"):
+            notification_columns = {
+                col["name"] for col in inspector.get_columns("task_notifications")
+            }
+            if "type" not in notification_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE task_notifications ADD COLUMN type VARCHAR(20) "
+                            "NOT NULL DEFAULT 'task'"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "UPDATE task_notifications SET type = 'task' WHERE type IS NULL"
+                        )
+                    )
+            if "announcement_id" not in notification_columns and inspector.has_table(
+                "announcements"
+            ):
+                existing_fks = inspector.get_foreign_keys("task_notifications")
+                has_announcement_fk = any(
+                    fk.get("constrained_columns") == ["announcement_id"]
+                    for fk in existing_fks
+                )
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE task_notifications ADD COLUMN announcement_id INTEGER NULL"
+                        )
+                    )
+                    if not has_announcement_fk:
+                        conn.execute(
+                            sa.text(
+                                """
+                                ALTER TABLE task_notifications
+                                ADD CONSTRAINT fk_task_notifications_announcement_id_announcements
+                                FOREIGN KEY (announcement_id) REFERENCES announcements (id)
+                                ON DELETE CASCADE
+                                """
+                            )
+                        )
+            task_id_column = next(
+                (col for col in inspector.get_columns("task_notifications") if col["name"] == "task_id"),
+                None,
+            )
+            if task_id_column and not task_id_column.get("nullable", True):
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE task_notifications MODIFY COLUMN task_id INTEGER NULL"
+                        )
+                    )
     except SQLAlchemyError as exc:
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc
