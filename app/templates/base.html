@@ -28,12 +28,20 @@
         --danger-hover: #c82333;
         --footer-bg: #333333;
         --sidebar-width: 220px;
+        --font-base: 0.8rem;
+        --font-sm: 0.7rem;
+        --font-xs: 0.62rem;
+        --font-lg: 0.95rem;
+        --font-xl: 1.08rem;
+        --font-2xl: 1.25rem;
+        --font-display: 1.45rem;
       }
 
       body, html {
         height: 100%;
         margin: 0;
         background-color: #f8f9fa;
+        font-size: var(--font-base);
       }
 
       .wrapper {
@@ -74,7 +82,7 @@
       .sidebar-header h4 {
         font-weight: 700;
         margin: 0;
-        font-size: 1.05rem;
+        font-size: var(--font-xl);
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -82,7 +90,7 @@
 
       .sidebar-header .user-info {
         margin-top: 0.5rem;
-        font-size: 0.75rem;
+        font-size: var(--font-sm);
         opacity: 0.9;
         display: flex;
         align-items: center;
@@ -94,7 +102,7 @@
         top: 1.1rem;
         right: 1rem;
         color: inherit;
-        font-size: 1.1rem;
+        font-size: var(--font-xl);
         text-decoration: none;
         opacity: 0.8;
       }
@@ -108,7 +116,7 @@
         top: 1.1rem;
         right: 2.4rem;
         color: inherit;
-        font-size: 1.1rem;
+        font-size: var(--font-xl);
         text-decoration: none;
         opacity: 0.8;
       }
@@ -126,7 +134,7 @@
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        font-size: 0.7rem;
+        font-size: var(--font-xs);
       }
 
       /* Navegação */
@@ -141,7 +149,7 @@
       }
 
       .nav-section-title {
-        font-size: 0.65rem;
+        font-size: var(--font-xs);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -161,7 +169,7 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-size: 0.82rem;
+        font-size: var(--font-base);
         line-height: 1.2;
         text-decoration: none;
         position: relative;
@@ -183,7 +191,7 @@
       }
 
       .sidebar .nav-link i {
-        font-size: 0.95rem;
+        font-size: var(--font-lg);
         width: 18px;
         text-align: center;
       }
@@ -192,7 +200,7 @@
       .nav-badge {
         background: var(--accent);
         color: white;
-        font-size: 0.6rem;
+        font-size: var(--font-xs);
         padding: 0.15rem 0.45rem;
         border-radius: 1rem;
         margin-left: auto;
@@ -232,7 +240,7 @@
         background: white;
         border-top: 1px solid var(--border-color);
         color: var(--text-muted);
-        font-size: 0.85rem;
+        font-size: var(--font-base);
         padding: 1rem 0;
       }
 
@@ -266,16 +274,16 @@
         }
 
         .sidebar-header h4 {
-          font-size: 0.95rem;
+          font-size: var(--font-lg);
         }
 
         .user-info {
-          font-size: 0.72rem;
+          font-size: var(--font-sm);
         }
 
         .sidebar .nav-link {
           padding: 0.75rem 1rem;
-          font-size: 0.88rem;
+          font-size: var(--font-base);
           gap: 0.6rem;
         }
       }

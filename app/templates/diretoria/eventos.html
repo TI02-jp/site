@@ -6,12 +6,12 @@
     {{ super() }}
     <style>
         .eventos-form .section-heading {
-            font-size: 0.9rem;
+            font-size: var(--font-base);
             letter-spacing: 0.01em;
         }
 
         .eventos-form .form-label {
-            font-size: 0.7rem;
+            font-size: var(--font-sm);
             font-weight: 600;
             letter-spacing: 0.02em;
             color: #495057;
@@ -21,7 +21,7 @@
 
         .eventos-form .form-control,
         .eventos-form .form-select {
-            font-size: 0.775rem;
+            font-size: var(--font-base);
             padding: 0.35rem 0.65rem;
         }
 
@@ -30,16 +30,16 @@
         }
 
         .eventos-form .category-item .form-control {
-            font-size: 0.72rem;
+            font-size: var(--font-sm);
         }
 
         .eventos-form .category-item .form-label {
-            font-size: 0.62rem;
+            font-size: var(--font-xs);
             text-align: left;
         }
 
         .eventos-form .category-item [data-item-total] {
-            font-size: 0.65rem;
+            font-size: var(--font-xs);
         }
 
         .eventos-form .event-category {
@@ -81,7 +81,7 @@
         }
 
         .eventos-form .event-category .toggle-wrapper {
-            font-size: 0.68rem;
+            font-size: var(--font-xs);
         }
 
         .eventos-form .event-category .toggle-wrapper .form-check {
@@ -105,7 +105,7 @@
         }
 
         .eventos-form .category-item button[data-action="remove-item"] {
-            font-size: 0.7rem;
+            font-size: var(--font-sm);
             padding: 0.2rem 0.45rem;
         }
 
@@ -120,7 +120,7 @@
         }
 
         .eventos-form .totals-row .form-control {
-            font-size: 0.8rem;
+            font-size: var(--font-base);
         }
 
         .eventos-form .totals-row .form-label {
@@ -265,7 +265,7 @@
         }
 
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-label {
-            font-size: 0.65rem;
+            font-size: var(--font-xs);
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -273,7 +273,7 @@
         }
 
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-control {
-            font-size: 0.72rem;
+            font-size: var(--font-sm);
             padding: 0.35rem 0.55rem;
             border-radius: 0.5rem;
             border-color: rgba(13, 110, 253, 0.25);
@@ -286,7 +286,7 @@
         }
 
         .eventos-form .photos-section .event-photo-card .photo-url-field .form-text {
-            font-size: 0.6rem;
+            font-size: var(--font-xs);
             color: #a0a6ad;
         }
 
@@ -307,7 +307,7 @@
             border-radius: 999px;
             border: 1px solid transparent;
             font-weight: 600;
-            font-size: 0.72rem;
+            font-size: var(--font-sm);
             padding: 0.35rem 0.75rem;
             transition: all 0.2s ease;
         }
@@ -344,7 +344,7 @@
             border: 1px dashed rgba(13, 110, 253, 0.3);
             border-radius: 1rem;
             padding: 2rem 1.5rem;
-            font-size: 0.85rem;
+            font-size: var(--font-base);
             background: rgba(13, 110, 253, 0.04);
             display: flex;
             flex-direction: column;
@@ -353,7 +353,7 @@
         }
 
         .eventos-form .photos-section .empty-state .bi {
-            font-size: 2rem;
+            font-size: calc(var(--font-display) * 1.1);
             color: rgba(13, 110, 253, 0.6);
         }
 
