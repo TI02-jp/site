@@ -39,6 +39,7 @@ from app.models.tables import (
     CourseTag,
     DiretoriaEvent,
     GeneralCalendarEvent,
+    Announcement,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -61,6 +62,7 @@ from app.forms import (
     AccessLinkForm,
     CourseForm,
     CourseTagForm,
+    AnnouncementForm,
 )
 import os, json, re, secrets
 import requests
@@ -115,6 +117,9 @@ GOOGLE_OAUTH_SCOPES = [
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
+
+
+ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
 
 
 ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
@@ -197,6 +202,21 @@ def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
         return None
 
     return os.path.join(current_app.root_path, safe_relative)
+
+
+def _remove_announcement_attachment(attachment_path: str | None) -> None:
+    """Delete an announcement attachment from disk if it exists."""
+
+    if not attachment_path or not has_request_context():
+        return
+
+    static_root = os.path.join(current_app.root_path, "static")
+    file_path = os.path.join(static_root, attachment_path)
+
+    try:
+        os.remove(file_path)
+    except FileNotFoundError:
+        return
 
 
 def _format_event_timestamp(raw_dt: datetime | None) -> str:
@@ -650,6 +670,89 @@ def index():
 def home():
     """Render the authenticated home page."""
     return render_template("home.html")
+
+
+@app.route("/announcements", methods=["GET", "POST"])
+@login_required
+def announcements():
+    """List internal announcements and allow admins to create new ones."""
+
+    form = AnnouncementForm()
+
+    announcements_query = (
+        Announcement.query.options(joinedload(Announcement.created_by))
+        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
+    )
+    announcement_items = announcements_query.all()
+
+    if request.method == "POST":
+        if current_user.role != "admin":
+            abort(403)
+
+        if form.validate_on_submit():
+            attachment_path: str | None = None
+            uploaded_file = form.attachment.data
+
+            if uploaded_file:
+                original_name = secure_filename(uploaded_file.filename or "")
+                extension = os.path.splitext(original_name)[1].lower()
+                unique_name = f"{uuid4().hex}{extension}"
+
+                upload_directory = os.path.join(
+                    current_app.root_path, "static", ANNOUNCEMENTS_UPLOAD_SUBDIR
+                )
+                os.makedirs(upload_directory, exist_ok=True)
+
+                stored_path = os.path.join(upload_directory, unique_name)
+                uploaded_file.save(stored_path)
+
+                attachment_path = os.path.join(
+                    ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name
+                ).replace("\\", "/")
+
+            announcement = Announcement(
+                date=form.date.data,
+                subject=form.subject.data.strip(),
+                attachment_path=attachment_path,
+                created_by=current_user,
+            )
+
+            db.session.add(announcement)
+            db.session.commit()
+
+            flash("Comunicado criado com sucesso.", "success")
+            return redirect(url_for("announcements"))
+
+        flash(
+            "Não foi possível criar o comunicado. Verifique os dados informados.",
+            "danger",
+        )
+
+    return render_template(
+        "announcements.html",
+        form=form,
+        announcements=announcement_items,
+    )
+
+
+@app.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
+@login_required
+def delete_announcement(announcement_id: int):
+    """Remove an existing announcement and its attachment."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    announcement = Announcement.query.get_or_404(announcement_id)
+    attachment_path = announcement.attachment_path
+
+    db.session.delete(announcement)
+    db.session.commit()
+
+    _remove_announcement_attachment(attachment_path)
+
+    flash("Comunicado removido com sucesso.", "success")
+    return redirect(url_for("announcements"))
 
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])

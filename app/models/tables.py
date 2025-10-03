@@ -188,6 +188,37 @@ class AccessLink(db.Model):
         return f"<AccessLink {self.category}:{self.label}>"
 
 
+class Announcement(db.Model):
+    """Internal announcement shared with all authenticated users."""
+
+    __tablename__ = "announcements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    attachment_path = db.Column(db.String(255))
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    created_by = db.relationship(
+        "User",
+        backref=db.backref("announcements", lazy=True, cascade="all, delete-orphan"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<Announcement {self.subject!r} on {self.date:%Y-%m-%d}>"
+
+
 class Course(db.Model):
     """Internal training course available in the knowledge hub."""
 

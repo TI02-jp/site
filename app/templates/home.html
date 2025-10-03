@@ -144,17 +144,17 @@
                         {% if current_user.role == 'admin' %}
                         <a class="home-journey__link" href="{{ url_for('tasks_overview') }}">
                             <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
-                            Mural e atividades do time
+                            Tarefas e atividades do time
                         </a>
                         {% elif primeiro_setor %}
                         <a class="home-journey__link" href="{{ url_for('tasks_sector', tag_id=primeiro_setor.id) }}">
                             <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
-                            Mural e atividades do time
+                            Tarefas e atividades do time
                         </a>
                         {% else %}
                         <a class="home-journey__link" href="{{ url_for('tasks_history') }}">
                             <span class="home-journey__link-icon"><i class="bi bi-list-task"></i></span>
-                            Mural e atividades do time
+                            Tarefas e atividades do time
                         </a>
                         {% endif %}
                     </div>

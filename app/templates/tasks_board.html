@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Mural - {{ tag.nome }}{% endblock %}
+{% block title %}Tarefas - {{ tag.nome }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
@@ -13,7 +13,7 @@
 {% block content %}
 <section class="kanban">
   <div class="kanban-header">
-    <h2><i class="bi bi-kanban"></i>Mural - {{ tag.nome }}</h2>
+    <h2><i class="bi bi-kanban"></i>Tarefas - {{ tag.nome }}</h2>
     <div class="kanban-actions">
       <form method="get" action="{{ url_for('tasks_sector', tag_id=tag.id) }}" class="assigned-filter" id="assigned-to-me-form">
         <label for="assigned-to-me-checkbox">
