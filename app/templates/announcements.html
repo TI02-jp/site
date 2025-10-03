@@ -46,15 +46,26 @@
 
   .announcement-attachment-chips {
     font-size: 0.72rem;
+    gap: 0.35rem;
   }
 
-  .attachment-chip {
-    max-width: 100%;
+  .attachment-chip-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.65rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .attachment-chip-icon i {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  .attachment-chip-extra {
     padding: 0.2rem 0.5rem;
-  }
-
-  .attachment-chip i {
-    font-size: 0.85rem;
   }
 
   .announcement-preview {
@@ -295,18 +306,18 @@
               </div>
               {% endif %}
               {% if attachments %}
-              <div class="d-flex flex-wrap gap-1 announcement-attachment-chips">
+              <div class="d-flex flex-wrap announcement-attachment-chips">
                 {% for attachment in attachments %}
                   {% if loop.index0 < 3 %}
-                  <a class="badge rounded-pill text-bg-light text-decoration-none text-truncate attachment-chip" href="{{ url_for('static', filename=attachment.file_path) }}" target="_blank" rel="noopener" data-stop-propagation="true">
-                    <i class="bi {% if attachment.is_image %}bi-image{% elif attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %} me-1"></i>
-                    {{ attachment.display_name }}
+                  <a class="badge rounded-pill text-bg-light text-decoration-none attachment-chip-icon" href="{{ url_for('static', filename=attachment.file_path) }}" target="_blank" rel="noopener" data-stop-propagation="true" title="{{ attachment.display_name }}">
+                    <i class="bi {% if attachment.is_image %}bi-image{% elif attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
+                    <span class="visually-hidden">{{ attachment.display_name }}</span>
                   </a>
                   {% endif %}
                 {% endfor %}
                 {% if attachments|length > 3 %}
                 {% set extra_attachments = attachments|length - 3 %}
-                <span class="badge rounded-pill text-bg-light attachment-chip">+{{ extra_attachments }} arquivo{{ 's' if extra_attachments != 1 else '' }}</span>
+                <span class="badge rounded-pill text-bg-light attachment-chip-extra">+{{ extra_attachments }} arquivo{{ 's' if extra_attachments != 1 else '' }}</span>
                 {% endif %}
               </div>
               {% endif %}
