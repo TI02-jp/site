@@ -8,7 +8,64 @@ body {
     color: #333;
     margin: 0;
     padding: 0;
-    text-align: center;
+    text-align: left;
+    font-size: var(--font-base);
+    line-height: 1.45;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: 'Inter', sans-serif;
+    font-size: var(--font-base);
+}
+
+p,
+span,
+a,
+li,
+label,
+.table,
+.table td,
+.table th,
+.form-control,
+.form-select,
+.form-label,
+.btn {
+    font-size: var(--font-base);
+}
+
+small,
+.small,
+.form-text,
+.text-muted {
+    font-size: var(--font-sm);
+}
+
+h1,
+.h1 {
+    font-size: var(--font-2xl);
+}
+
+h2,
+.h2 {
+    font-size: var(--font-xl);
+}
+
+h3,
+.h3 {
+    font-size: var(--font-lg);
+}
+
+h4,
+h5,
+h6,
+.h4,
+.h5,
+.h6 {
+    font-size: var(--font-base);
 }
 
 /* -----------------------------
@@ -18,7 +75,7 @@ header {
     background-color: var(--primary);
     color: white;
     padding: 20px;
-    font-size: 2em;
+    font-size: var(--font-display);
 }
 
 /* -----------------------------
@@ -31,22 +88,22 @@ Navbar (fixa com sombra leve)
     background-color: #ffffff !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     padding: 0.35rem 1rem;
-    font-size: 0.95rem;
+    font-size: var(--font-base);
 }
 
 .navbar .navbar-brand {
-    font-size: 1rem;
+    font-size: var(--font-lg);
     padding: 0.25rem 0;
 }
 
 .navbar .nav-link {
     padding: 0.35rem 0.65rem;
-    font-size: 0.95rem;
+    font-size: var(--font-base);
     line-height: 1.2;
 }
 
 .navbar .dropdown-menu {
-    font-size: 0.9rem;
+    font-size: var(--font-sm);
 }
 
 /* -----------------------------
@@ -63,7 +120,7 @@ Barra de navegação fixa na visualização da empresa
 .company-nav .btn {
     box-shadow: none;
     padding: 0.35rem 0.75rem;
-    font-size: 0.85rem;
+    font-size: var(--font-sm);
 }
 
 .btn-company-nav {
@@ -85,7 +142,7 @@ Barra de navegação fixa na visualização da empresa
 
 .nav-tabs .nav-link {
     padding: 0.35rem 0.75rem;
-    font-size: 0.85rem;
+    font-size: var(--font-sm);
     line-height: 1.2;
 }
 
@@ -121,11 +178,11 @@ Seção Introdução
 
 .intro h2 {
     color: var(--primary);
-    font-size: 1.8em;
+    font-size: var(--font-2xl);
 }
 
 .intro p {
-    font-size: 1.2em;
+    font-size: var(--font-lg);
     color: #555;
 }
 
@@ -142,7 +199,7 @@ Botões e Ações
 
 .btn, .btn-custom, .submit-btn {
     padding: 12px 20px;
-    font-size: 1.1em;
+    font-size: var(--font-base);
     color: white;
     background-color: var(--accent);
     text-decoration: none;
@@ -181,7 +238,7 @@ Atalhos (Central de Acessos)
 
 .access-shortcut .bi {
     flex-shrink: 0;
-    font-size: 1rem;
+    font-size: var(--font-lg);
 }
 
 /* -----------------------------
@@ -237,19 +294,19 @@ Página de Cursos
 .courses-hero__eyebrow {
     letter-spacing: 2px;
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: var(--font-sm);
     font-weight: 600;
     opacity: 0.85;
 }
 
 .courses-hero__title {
-    font-size: 2.25rem;
+    font-size: calc(var(--font-display) * 1.2);
     font-weight: 700;
     margin: 0;
 }
 
 .courses-hero__subtitle {
-    font-size: 1.05rem;
+    font-size: var(--font-xl);
     margin: 0;
     max-width: 540px;
     opacity: 0.92;
@@ -279,7 +336,7 @@ Página de Cursos
     justify-content: center;
     background: #fff;
     color: var(--primary);
-    font-size: 1.5rem;
+    font-size: var(--font-display);
     box-shadow: 0 12px 20px rgba(9, 32, 109, 0.25);
 }
 
@@ -342,14 +399,14 @@ Página de Cursos
 }
 
 .courses-summary__label {
-    font-size: 0.8rem;
+    font-size: var(--font-base);
     text-transform: uppercase;
     letter-spacing: 1px;
     opacity: 0.8;
 }
 
 .courses-summary__value {
-    font-size: 1.6rem;
+    font-size: calc(var(--font-display) * 1.05);
     font-weight: 700;
 }
 
@@ -358,7 +415,7 @@ Página de Cursos
 }
 
 .courses-tags-form label {
-    font-size: 0.75rem;
+    font-size: var(--font-sm);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -424,18 +481,18 @@ Página de Cursos
 
 
 .courses-modal .modal-title {
-    font-size: 1.15rem;
+    font-size: var(--font-xl);
 }
 
 .courses-modal .form-label,
 .courses-modal .form-check-label {
-    font-size: 0.8rem;
+    font-size: var(--font-base);
 }
 
 .courses-modal .form-control,
 .courses-modal .form-select,
 .courses-modal .form-check-input {
-    font-size: 0.82rem;
+    font-size: var(--font-base);
 }
 
 .courses-modal .form-control,
@@ -481,7 +538,7 @@ Página de Cursos
 .courses-table-actions__search-input {
     padding-left: 2.4rem;
     border-radius: 999px;
-    font-size: 0.85rem;
+    font-size: var(--font-base);
 }
 
 .courses-table-actions__search-icon {
@@ -491,7 +548,7 @@ Página de Cursos
     transform: translateY(-50%);
     color: #6c757d;
     pointer-events: none;
-    font-size: 0.9rem;
+    font-size: var(--font-base);
 }
 
 .courses-table-actions__controls > * {
@@ -515,7 +572,7 @@ Página de Cursos
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    font-size: 0.82rem;
+    font-size: var(--font-base);
     border-radius: 999px;
     padding: 0.45rem 0.9rem;
 }
@@ -541,7 +598,7 @@ Página de Cursos
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.78rem;
+    font-size: var(--font-base);
 }
 
 .courses-checkbox-item .form-check-input {
@@ -551,7 +608,7 @@ Página de Cursos
 }
 
 .courses-table-actions__title {
-    font-size: 1rem;
+    font-size: var(--font-lg);
     font-weight: 600;
     color: #0b288b;
 }
@@ -559,7 +616,7 @@ Página de Cursos
 .courses-table thead th {
     background: #0b288b;
     color: #fff;
-    font-size: 0.6rem;
+    font-size: var(--font-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 0;
@@ -590,7 +647,7 @@ Página de Cursos
 .courses-table tbody td {
     padding: 0.65rem;
     vertical-align: middle;
-    font-size: 0.7rem;
+    font-size: var(--font-sm);
 }
 
 .courses-chip-group {
@@ -604,7 +661,7 @@ Página de Cursos
     align-items: center;
     padding: 0.22rem 0.5rem;
     border-radius: 999px;
-    font-size: 0.66rem;
+    font-size: var(--font-xs);
     font-weight: 600;
     letter-spacing: 0.3px;
 }
@@ -622,7 +679,7 @@ Página de Cursos
 .courses-chip--tag {
     background: rgba(111, 66, 193, 0.18);
     color: #4b1d99;
-    font-size: 0.550rem;
+    font-size: var(--font-xs);
     padding: 0.18rem 0.38rem;
 }
 
@@ -633,7 +690,7 @@ Página de Cursos
     padding: 0.28rem 0.62rem;
     border-radius: 999px;
     font-weight: 600;
-    font-size: 0.68rem;
+    font-size: var(--font-xs);
     text-transform: capitalize;
 }
 
@@ -697,7 +754,7 @@ Página de Cursos
     }
 
     .courses-table-actions__title {
-        font-size: 0.95rem;
+        font-size: var(--font-base);
     }
 
     .courses-table-actions__button {
@@ -728,7 +785,7 @@ Página de Cursos
         content: attr(data-label);
         font-weight: 600;
         color: #495057;
-        font-size: 0.75rem;
+        font-size: var(--font-sm);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -793,7 +850,7 @@ Botões personalizados
     color: white;
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 0.9em;
+    font-size: var(--font-base);
     transition: background-color 0.3s ease;
     border: none;
     cursor: pointer;
@@ -805,7 +862,7 @@ Botões personalizados
 
 .btn-danger {
     padding: 6px 12px;
-    font-size: 0.9em;
+    font-size: var(--font-base);
 }
 
 /* -----------------------------
@@ -846,7 +903,7 @@ Formulários
 
 label {
     display: block;
-    font-size: 0.9rem;
+    font-size: var(--font-base);
     margin-bottom: 0.3rem;
     color: #444;
 }
@@ -858,7 +915,7 @@ input[type="password"] {
     padding: 0.8rem;
     border: 1px solid #ccc;
     border-radius: 5px;
-    font-size: 1rem;
+    font-size: var(--font-lg);
     transition: border-color 0.3s ease;
 }
 
@@ -908,7 +965,7 @@ body.login-page {
     color: #343a40;
     margin-bottom: 1.5rem;
     text-align: center;
-    font-size: 1.5rem;
+    font-size: var(--font-display);
 }
 
 /* Labels específicos do login */
@@ -984,12 +1041,12 @@ body.login-page {
 
 /* Textos de erro no login */
 .login-container .text-danger {
-    font-size: 0.875rem;
+    font-size: var(--font-base);
 }
 
 /* Label do checkbox "Lembrar-me" */
 .login-container .form-check-label {
-    font-size: 0.9rem;
+    font-size: var(--font-base);
     color: #6c757d;
 }
 
@@ -1028,7 +1085,7 @@ Home vibrante
     display: inline-block;
     text-transform: uppercase;
     letter-spacing: 2px;
-    font-size: 0.8rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.85);
     background: rgba(255, 255, 255, 0.12);
@@ -1111,7 +1168,7 @@ Home vibrante
     display: inline-flex;
     align-items: center;
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: var(--font-base);
     color: var(--primary);
     background: rgba(11, 40, 139, 0.1);
     padding: 0.4rem 0.85rem;
@@ -1169,7 +1226,7 @@ Home vibrante
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
+    font-size: calc(var(--font-display) * 1.05);
     margin-bottom: 1.5rem;
 }
 
@@ -1197,7 +1254,7 @@ Home vibrante
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: var(--font-display);
     box-shadow: 0 12px 28px rgba(11, 40, 139, 0.15);
 }
 
@@ -1241,7 +1298,7 @@ Home vibrante
     align-items: center;
     justify-content: center;
     color: var(--accent);
-    font-size: 1.1rem;
+    font-size: var(--font-xl);
     box-shadow: 0 8px 18px rgba(11, 40, 139, 0.1);
 }
 
@@ -1287,7 +1344,7 @@ Home vibrante
     }
 
     .login-container h2 {
-        font-size: 1.3rem;
+        font-size: var(--font-2xl);
     }
 }
 
@@ -1513,7 +1570,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
 
 /* Badges de status */
 .badge {
-    font-size: 0.75rem;
+    font-size: var(--font-sm);
     padding: 0.375rem 0.5rem;
 }
 
@@ -1549,7 +1606,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
     }
     
     .container-fluid h1 {
-        font-size: 1.5rem;
+        font-size: var(--font-display);
     }
     
     .col-lg-4 {
@@ -1565,7 +1622,7 @@ PÁGINA DE RELATÓRIOS - ESTILOS ESPECÍFICOS
     }
     
     .card-title {
-        font-size: 1.1rem;
+        font-size: var(--font-xl);
     }
 }
 
@@ -1618,7 +1675,7 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 .info-label {
     font-weight: 600;
     color: var(--primary);
-    font-size: 0.9rem;
+    font-size: var(--font-base);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
@@ -1627,7 +1684,7 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 
 /* Valores dos campos de informação */
 .info-value {
-    font-size: 1rem;
+    font-size: var(--font-lg);
     color: #212529;
     line-height: 1.4;
 }
@@ -1704,11 +1761,11 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
     }
     
     .info-label {
-        font-size: 0.8rem;
+        font-size: var(--font-base);
     }
     
     .info-value {
-        font-size: 0.9rem;
+        font-size: var(--font-base);
     }
 }
 
@@ -1717,7 +1774,7 @@ Mensagens de erro
 ----------------------------- */
 .error {
     color: #e74c3c;
-    font-size: 0.85rem;
+    font-size: var(--font-base);
     margin-top: 0.3rem;
 }
 
@@ -1743,7 +1800,7 @@ Responsividade
     }
 
     .btn, .btn-custom, .submit-btn {
-        font-size: 1em;
+        font-size: var(--font-lg);
         padding: 10px 16px;
     }
 }
@@ -1772,7 +1829,7 @@ Responsividade
 /* Botões com apenas ícones, mais compactos */
 .acao-col .btn {
     padding: 0.375rem 0.5rem;
-    font-size: 1rem;
+    font-size: var(--font-lg);
 }
 
 /* Responsividade para telas pequenas - empilha os botões */
@@ -1795,7 +1852,7 @@ Responsividade
 
 /* Badge do contador no título */
 .badge.bg-primary {
-    font-size: 0.6em;
+    font-size: var(--font-xs);
     font-weight: normal;
     vertical-align: middle;
     padding: 0.35em 0.65em;
@@ -1815,14 +1872,14 @@ Responsividade
 /* Ajuste para botões pequenos com apenas ícones */
 .btn-custom.btn-sm {
     padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-base);
     line-height: 1;
 }
 
 /* Formatação de CNPJ */
 .cnpj-formatted {
     letter-spacing: 0.5px;
-    font-size: 0.9rem;
+    font-size: var(--font-base);
 }
 
 /* Ajuste da largura da coluna CNPJ para comportar o formato completo */
@@ -1850,12 +1907,12 @@ Responsividade
     
     /* Título menor em mobile */
     h1.text-primary {
-        font-size: 1.5rem;
+        font-size: var(--font-display);
     }
     
     /* Badge do contador menor */
     h1 .badge {
-        font-size: 0.5em;
+        font-size: var(--font-xs);
     }
 }
 
@@ -1875,7 +1932,7 @@ Responsividade
     
     /* Texto menor em mobile */
     .table-empresas {
-        font-size: 0.875rem;
+        font-size: var(--font-base);
     }
     
     /* Esconde o ícone do building em mobile para economizar espaço */
@@ -1886,7 +1943,7 @@ Responsividade
 
 /* Badge do contador no título */
 .badge.bg-primary {
-    font-size: 0.6em;
+    font-size: var(--font-xs);
     font-weight: normal;
     vertical-align: middle;
     padding: 0.35em 0.65em;
@@ -1906,14 +1963,14 @@ Responsividade
 /* Ajuste para botões pequenos com apenas ícones */
 .btn-custom.btn-sm {
     padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-base);
     line-height: 1;
 }
 
 /* Formatação de CNPJ */
 .cnpj-formatted {
     letter-spacing: 0.5px;
-    font-size: 0.9rem;
+    font-size: var(--font-base);
     white-space: nowrap;  /* Impede quebra de linha */
 }
 
@@ -1930,7 +1987,7 @@ Responsividade
     }
     
     .cnpj-formatted {
-        font-size: 0.85rem;  /* Reduz um pouco o tamanho em telas menores */
+        font-size: var(--font-base);  /* Reduz um pouco o tamanho em telas menores */
     }
 }
 
@@ -1972,12 +2029,12 @@ Responsividade
     
     /* Título menor em mobile */
     h1.text-primary {
-        font-size: 1.5rem;
+        font-size: var(--font-display);
     }
     
     /* Badge do contador menor */
     h1 .badge {
-        font-size: 0.5em;
+        font-size: var(--font-xs);
     }
 }
 
@@ -1997,7 +2054,7 @@ Responsividade
     
     /* Texto menor em mobile */
     .table-empresas {
-        font-size: 0.875rem;
+        font-size: var(--font-base);
     }
     
     /* Esconde o ícone do building em mobile para economizar espaço */
@@ -2135,7 +2192,7 @@ Flash Messages
 
 .flash-container .alert {
     padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    font-size: var(--font-base);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     pointer-events: auto;
     display: flex;

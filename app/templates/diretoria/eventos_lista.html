@@ -10,7 +10,7 @@
     {{ super() }}
     <style>
         .eventos-list .form-label {
-            font-size: 0.8rem;
+            font-size: var(--font-base);
             font-weight: 600;
             color: #495057;
             text-align: left;
@@ -21,7 +21,7 @@
         }
 
         .eventos-list .table thead th {
-            font-size: 0.7rem;
+            font-size: var(--font-sm);
             letter-spacing: 0.02em;
             text-transform: uppercase;
             color: #6c757d;
@@ -29,11 +29,11 @@
 
         .eventos-list .table tbody td {
             vertical-align: middle;
-            font-size: 0.8rem;
+            font-size: var(--font-base);
         }
 
         .eventos-list .table tbody td .small {
-            font-size: 0.7rem;
+            font-size: var(--font-sm);
             color: #6c757d;
         }
 

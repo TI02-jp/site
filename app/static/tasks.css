@@ -48,7 +48,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   font-weight: 500;
   color: #0f172a;
   cursor: pointer;
@@ -65,13 +65,13 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.5rem;
+  font-size: var(--font-display);
   font-weight: 600;
   color: var(--primary);
 }
 
 .kanban-header h2 i {
-  font-size: 1.3rem;
+  font-size: var(--font-2xl);
   margin: 0;
 }
 
@@ -81,7 +81,7 @@
   padding: 0.45rem 0.9rem;
   border-radius: 8px;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   font-weight: 600;
   border: none;
   box-shadow: 0 12px 24px rgba(11, 40, 139, 0.18);
@@ -102,7 +102,7 @@
   padding: 0.45rem 0.9rem;
   border-radius: 8px;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   font-weight: 600;
   border: 1px solid rgba(11, 40, 139, 0.2);
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
@@ -153,7 +153,7 @@
   align-items: center;
   gap: 0.4rem;
   text-align: left;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   margin: 0;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.3);
@@ -163,7 +163,7 @@
 }
 
 .kanban-column h3 i {
-  font-size: 1.1rem;
+  font-size: var(--font-xl);
 }
 
 .kanban-list {
@@ -239,7 +239,7 @@
   font-weight: 600;
   margin: 0;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: var(--font-base);
   line-height: 1.25;
 }
 
@@ -247,7 +247,7 @@
   background: rgba(11, 40, 139, 0.12);
   color: var(--primary);
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: var(--font-sm);
   padding: 0.1rem 0.45rem;
   margin-left: 0.4rem;
 }
@@ -256,7 +256,7 @@
   display: flex;
   align-items: baseline;
   gap: 0.25rem;
-  font-size: 0.7rem;
+  font-size: var(--font-sm);
   color: #64748b;
   line-height: 1.3;
   width: 100%;
@@ -269,13 +269,13 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #0f172a;
-  font-size: 0.58rem;
+  font-size: var(--font-xs);
   white-space: nowrap;
 }
 
 .task-meta .meta-value {
   color: #475569;
-  font-size: 0.7rem;
+  font-size: var(--font-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -316,7 +316,7 @@
   justify-content: center;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: var(--font-base);
   box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -324,7 +324,7 @@
 .task-actions.compact .action {
   width: 1.25rem;
   height: 1.25rem;
-  font-size: 0.8rem;
+  font-size: var(--font-base);
 }
 
 .task-actions .action:hover {
@@ -464,7 +464,7 @@
 }
 
 .task-detail .detail-label {
-  font-size: 0.62rem;
+  font-size: var(--font-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.045em;
@@ -474,7 +474,7 @@
 }
 
 .task-detail .detail-value {
-  font-size: 0.75rem;
+  font-size: var(--font-sm);
   color: #1f2937;
   line-height: 1.25;
   text-align: left;
@@ -558,7 +558,7 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  font-size: 1.1rem;
+  font-size: var(--font-xl);
 }
 
 .new-task-form textarea {
@@ -604,7 +604,7 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--primary);
-  font-size: 1.4rem;
+  font-size: var(--font-display);
   font-weight: 600;
 }
 
@@ -635,7 +635,7 @@
 }
 
 .history-item .meta {
-  font-size: 0.85rem;
+  font-size: var(--font-base);
   color: #64748b;
 }
 
@@ -711,7 +711,7 @@
   padding: 0.7rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: var(--font-lg);
   box-shadow: 0 2px 8px rgba(15,23,42,0.04);
   transition: border 0.2s;
 }
