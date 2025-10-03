@@ -229,6 +229,16 @@ class AnnouncementForm(FlaskForm):
         "Assunto",
         validators=[DataRequired(), Length(min=1, max=255)],
         render_kw={"placeholder": "Informe o assunto do comunicado"},
+        filters=[lambda value: value.strip() if value else value],
+    )
+    content = TextAreaField(
+        "Mensagem",
+        validators=[DataRequired(), Length(min=1, max=2000)],
+        render_kw={
+            "placeholder": "Escreva o comunicado que será exibido no mural",
+            "rows": 5,
+        },
+        filters=[lambda value: value.strip() if value else value],
     )
     attachment = FileField(
         "Anexo",
