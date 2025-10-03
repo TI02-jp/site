@@ -778,6 +778,26 @@ def announcements():
             "danger",
         )
 
+    announcement_reads: dict[int, bool] = {}
+    read_rows = (
+        TaskNotification.query.with_entities(
+            TaskNotification.announcement_id, TaskNotification.read_at
+        )
+        .filter(
+            TaskNotification.user_id == current_user.id,
+            TaskNotification.announcement_id.isnot(None),
+        )
+        .all()
+    )
+
+    for announcement_id, read_at in read_rows:
+        if announcement_id is None:
+            continue
+        if read_at:
+            announcement_reads[announcement_id] = True
+        elif announcement_id not in announcement_reads:
+            announcement_reads[announcement_id] = False
+
     edit_forms: dict[int, AnnouncementForm] = {}
     if current_user.role == "admin":
         for item in announcement_items:
@@ -792,6 +812,7 @@ def announcements():
         form=form,
         announcements=announcement_items,
         edit_forms=edit_forms,
+        announcement_reads=announcement_reads,
     )
 
 
@@ -896,6 +917,36 @@ def delete_announcement(announcement_id: int):
 
     flash("Comunicado removido com sucesso.", "success")
     return redirect(url_for("announcements"))
+
+
+@app.route("/announcements/<int:announcement_id>/read", methods=["POST"])
+@login_required
+def mark_announcement_read(announcement_id: int):
+    """Mark the current user's notification for an announcement as read."""
+
+    announcement = Announcement.query.get_or_404(announcement_id)
+
+    notifications = TaskNotification.query.filter(
+        TaskNotification.announcement_id == announcement.id,
+        TaskNotification.user_id == current_user.id,
+    ).all()
+
+    now = datetime.utcnow()
+    updated = 0
+    already_read = False
+
+    for notification in notifications:
+        if notification.read_at:
+            already_read = True
+            continue
+        notification.read_at = now
+        updated += 1
+
+    db.session.commit()
+
+    read = bool(updated or already_read or not notifications)
+
+    return jsonify({"status": "ok", "read": read})
 
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])
