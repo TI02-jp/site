@@ -303,7 +303,7 @@
 }
 
 .task-actions.compact {
-  gap: 0.15rem;
+  gap: 0.08rem;
 }
 
 .task-actions .action {
@@ -322,9 +322,9 @@
 }
 
 .task-actions.compact .action {
-  width: 1.25rem;
-  height: 1.25rem;
-  font-size: var(--font-base);
+  width: 1.05rem;
+  height: 1.05rem;
+  font-size: 0.85rem;
 }
 
 .task-actions .action:hover {

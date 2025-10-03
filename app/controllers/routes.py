@@ -815,6 +815,7 @@ def update_announcement(announcement_id: int):
         announcement.subject = form.subject.data
         announcement.content = form.content.data
 
+        attachments_modified = False
         remove_ids = {
             int(attachment_id)
             for attachment_id in request.form.getlist("remove_attachment_ids")
@@ -830,6 +831,7 @@ def update_announcement(announcement_id: int):
             for attachment in attachments_to_remove:
                 _remove_announcement_attachment(attachment.file_path)
                 db.session.delete(attachment)
+            attachments_modified = True
 
         new_files = [
             storage
@@ -847,9 +849,12 @@ def update_announcement(announcement_id: int):
                     mime_type=saved["mime_type"],
                 )
             )
+        if new_files:
+            attachments_modified = True
 
-        db.session.flush()
-        announcement.sync_legacy_attachment_fields()
+        if attachments_modified:
+            db.session.flush()
+            announcement.sync_legacy_attachment_fields()
 
         db.session.commit()
         flash("Comunicado atualizado com sucesso.", "success")
