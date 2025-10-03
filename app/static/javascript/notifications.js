@@ -112,6 +112,9 @@
         const link = document.createElement('a');
         link.href = item.url || '#';
         link.dataset.id = String(item.id);
+        if (item.type) {
+          link.dataset.type = String(item.type);
+        }
         link.dataset.url = item.url || '';
         link.innerHTML = `
           <span class="notification-title">${escapeHtml(item.message)}</span>

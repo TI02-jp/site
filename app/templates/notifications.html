@@ -78,7 +78,7 @@
         <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
           {% if notification.url %}
           <a class="btn btn-sm btn-outline-secondary" href="{{ notification.url }}">
-            Abrir tarefa
+            {{ notification.action_label or 'Abrir' }}
           </a>
           {% endif %}
           {% if not notification.is_read %}

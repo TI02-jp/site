@@ -34,6 +34,7 @@ from app.models.tables import (
     TaskPriority,
     TaskStatusHistory,
     TaskNotification,
+    NotificationType,
     AccessLink,
     Course,
     CourseTag,
@@ -766,6 +767,7 @@ def announcements():
             db.session.flush()
             announcement.sync_legacy_attachment_fields()
 
+            _broadcast_announcement_notification(announcement)
             db.session.commit()
 
             flash("Comunicado criado com sucesso.", "success")
@@ -879,6 +881,9 @@ def delete_announcement(announcement_id: int):
     if announcement.attachment_path:
         attachment_paths.append(announcement.attachment_path)
 
+    TaskNotification.query.filter_by(
+        announcement_id=announcement.id
+    ).delete(synchronize_session=False)
     db.session.delete(announcement)
     db.session.commit()
 
@@ -1503,7 +1508,10 @@ def _get_user_notification_items(limit: int | None = 20):
 
     notifications_query = (
         TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
-        .options(joinedload(TaskNotification.task).joinedload(Task.tag))
+        .options(
+            joinedload(TaskNotification.task).joinedload(Task.tag),
+            joinedload(TaskNotification.announcement),
+        )
         .order_by(TaskNotification.created_at.desc())
     )
     if limit is not None:
@@ -1516,22 +1524,46 @@ def _get_user_notification_items(limit: int | None = 20):
 
     items = []
     for notification in notifications:
-        task = notification.task
-        task_url = None
-        tag_name = None
-        task_title = None
-        if task:
-            task_title = task.title
-            tag_name = task.tag.nome if task.tag else None
-            task_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
-        message = notification.message
-        if not message:
-            if task_title and tag_name:
-                message = f"Tarefa \"{task_title}\" atribuída no setor {tag_name}."
-            elif task_title:
-                message = f"Tarefa \"{task_title}\" atribuída a você."
+        raw_type = notification.type or NotificationType.TASK.value
+        try:
+            notification_type = NotificationType(raw_type)
+        except ValueError:
+            notification_type = NotificationType.TASK
+
+        message = (notification.message or "").strip() or None
+        action_label = None
+        target_url = None
+
+        if notification_type is NotificationType.ANNOUNCEMENT:
+            announcement = notification.announcement
+            if announcement:
+                if not message:
+                    subject = (announcement.subject or "").strip()
+                    if subject:
+                        message = f"Novo comunicado: {subject}"
+                    else:
+                        message = "Novo comunicado publicado."
+                target_url = url_for("announcements") + f"#announcement-{announcement.id}"
             else:
-                message = "Nova tarefa atribuída a você."
+                if not message:
+                    message = "Comunicado removido."
+            action_label = "Abrir comunicado" if target_url else None
+        else:
+            task = notification.task
+            task_title = None
+            tag_name = None
+            if task:
+                task_title = task.title
+                tag_name = task.tag.nome if task.tag else None
+                target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
+            if not message:
+                if task_title and tag_name:
+                    message = f"Tarefa \"{task_title}\" atribuída no setor {tag_name}."
+                elif task_title:
+                    message = f"Tarefa \"{task_title}\" atribuída a você."
+                else:
+                    message = "Nova tarefa atribuída a você."
+            action_label = "Abrir tarefa" if target_url else None
 
         created_at = notification.created_at
         if created_at.tzinfo is None:
@@ -1544,21 +1576,57 @@ def _get_user_notification_items(limit: int | None = 20):
         items.append(
             {
                 "id": notification.id,
+                "type": notification_type.value,
                 "message": message,
                 "created_at": created_at_iso,
                 "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
                 "is_read": notification.is_read,
-                "url": task_url,
+                "url": target_url,
+                "action_label": action_label,
             }
         )
 
     return items, unread_total
 
 
+def _broadcast_announcement_notification(announcement: Announcement) -> None:
+    """Emit a notification about ``announcement`` for every active user."""
+
+    active_user_rows = (
+        User.query.with_entities(User.id)
+        .filter(User.ativo.is_(True))
+        .all()
+    )
+    if not active_user_rows:
+        return
+
+    now = datetime.utcnow()
+    subject = (announcement.subject or "").strip()
+    if subject:
+        base_message = f"Novo comunicado: {subject}"
+    else:
+        base_message = "Novo comunicado publicado."
+    truncated_message = base_message[:255]
+
+    notifications = [
+        TaskNotification(
+            user_id=user_id,
+            announcement_id=announcement.id,
+            task_id=None,
+            type=NotificationType.ANNOUNCEMENT.value,
+            message=truncated_message,
+            created_at=now,
+        )
+        for (user_id,) in active_user_rows
+    ]
+
+    db.session.bulk_save_objects(notifications)
+
+
 @app.route("/notifications", methods=["GET"])
 @login_required
 def list_notifications():
-    """Return the most recent task notifications for the user."""
+    """Return the most recent notifications for the user."""
 
     items, unread_total = _get_user_notification_items(limit=20)
     return jsonify({"notifications": items, "unread": unread_total})

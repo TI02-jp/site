@@ -298,6 +298,13 @@ class AnnouncementAttachment(db.Model):
         return self.original_name or os.path.basename(self.file_path or "")
 
 
+class NotificationType(str, Enum):
+    """Type of notification stored in :class:`TaskNotification`."""
+
+    TASK = "task"
+    ANNOUNCEMENT = "announcement"
+
+
 class Announcement(db.Model):
     """Internal announcement shared with all authenticated users."""
 
@@ -835,7 +842,7 @@ class TaskStatusHistory(db.Model):
 
 
 class TaskNotification(db.Model):
-    """Notification emitted when a task is assigned to a user."""
+    """Notification emitted for tasks or announcements."""
 
     __tablename__ = "task_notifications"
 
@@ -844,7 +851,18 @@ class TaskNotification(db.Model):
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     task_id = db.Column(
-        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True
+    )
+    announcement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("announcements.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    type = db.Column(
+        db.String(20),
+        nullable=False,
+        default=NotificationType.TASK.value,
+        server_default=NotificationType.TASK.value,
     )
     message = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -852,6 +870,7 @@ class TaskNotification(db.Model):
 
     user = db.relationship("User")
     task = db.relationship("Task")
+    announcement = db.relationship("Announcement")
 
     @property
     def is_read(self) -> bool:
@@ -860,7 +879,10 @@ class TaskNotification(db.Model):
         return self.read_at is not None
 
     def __repr__(self):
-        return f"<TaskNotification task={self.task_id} user={self.user_id}>"
+        return (
+            f"<TaskNotification type={self.type} task={self.task_id} "
+            f"announcement={self.announcement_id} user={self.user_id}>"
+        )
 
 
 def _get_assignment_context(connection, task: Task) -> tuple[str, str | None]:
@@ -901,6 +923,7 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
         TaskNotification.__table__.insert().values(
             user_id=assignee_id,
             task_id=task.id,
+            type=NotificationType.TASK.value,
             message=(message[:255] if message else None),
             created_at=datetime.utcnow(),
         )
