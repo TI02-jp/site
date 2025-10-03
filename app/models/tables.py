@@ -398,18 +398,25 @@ class Announcement(db.Model):
         return _to_sao_paulo(self.created_at)
 
     def sync_legacy_attachment_fields(self) -> None:
-        """Keep legacy attachment columns aligned with the first attachment."""
+        """Keep legacy attachment columns aligned with the stored attachments."""
 
-        primary = self.primary_attachment
+        active_attachments = [
+            attachment
+            for attachment in self.attachments
+            if not inspect(attachment).deleted
+        ]
+
+        primary = active_attachments[0] if active_attachments else None
         if primary:
             self.attachment_path = getattr(primary, "file_path", None)
             display_name = getattr(primary, "original_name", None) or getattr(
                 primary, "display_name", None
             )
             self.attachment_name = display_name
-        else:
-            self.attachment_path = None
-            self.attachment_name = None
+            return
+
+        self.attachment_path = None
+        self.attachment_name = None
 
 
 class Course(db.Model):
