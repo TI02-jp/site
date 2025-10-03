@@ -2313,7 +2313,7 @@ Announcement creation modal
     letter-spacing: 0.08em;
 }
 
-#preview-content {
+.announcement-preview [data-preview-target="content"] {
     line-height: 1.6;
     font-size: 1rem;
 }
@@ -2322,11 +2322,23 @@ Announcement creation modal
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
+    width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
     border: 1px solid rgba(15, 23, 42, 0.08);
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(6px);
+}
+
+.preview-attachment.is-marked-for-removal {
+    border-color: rgba(var(--bs-danger-rgb), 0.35);
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    opacity: 0.85;
+}
+
+.preview-attachment.is-marked-for-removal .attachment-details .fw-semibold {
+    text-decoration: line-through;
 }
 
 .preview-attachment .attachment-icon {

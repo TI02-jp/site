@@ -409,84 +409,143 @@
       {% set edit_form = edit_forms.get(announcement.id) %}
       {% if edit_form %}
       <div class="modal fade announcement-edit-modal" id="editAnnouncementModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="editAnnouncementModalLabel-{{ announcement.id }}" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
-            <form method="POST" action="{{ url_for('update_announcement', announcement_id=announcement.id) }}" enctype="multipart/form-data" class="small">
+            <form method="POST" action="{{ url_for('update_announcement', announcement_id=announcement.id) }}" enctype="multipart/form-data" class="announcement-form">
               {{ edit_form.hidden_tag() }}
               <div class="modal-header">
                 <div class="text-start">
-                  <h2 class="h6 mb-0" id="editAnnouncementModalLabel-{{ announcement.id }}">Editar comunicado</h2>
-                  <p class="text-muted mb-0">Atualize o conteúdo ou os anexos deste comunicado.</p>
+                  <p class="text-uppercase text-muted fw-semibold small mb-1">Atualizar comunicado</p>
+                  <h2 class="h4 mb-0" id="editAnnouncementModalLabel-{{ announcement.id }}">Editar comunicado</h2>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
               </div>
               <div class="modal-body">
-                <div class="row g-3">
-                  <div class="col-lg-5 d-grid gap-2">
-                    <div class="d-grid gap-1">
-                      {{ edit_form.date.label(class="form-label small text-uppercase text-muted mb-0") }}
-                      {{ edit_form.date(class="form-control form-control-sm", type="date") }}
-                      {% for error in edit_form.date.errors %}
-                      <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    </div>
-                    <div class="d-grid gap-1">
-                      {{ edit_form.subject.label(class="form-label small text-uppercase text-muted mb-0") }}
-                      {{ edit_form.subject(class="form-control form-control-sm") }}
-                      {% for error in edit_form.subject.errors %}
-                      <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    </div>
-                    <div class="d-grid gap-1">
-                      {{ edit_form.content.label(class="form-label small text-uppercase text-muted mb-0") }}
-                      {{ edit_form.content(class="form-control form-control-sm", rows="4") }}
-                      {% for error in edit_form.content.errors %}
-                      <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    </div>
-                  </div>
-                  <div class="col-lg-7 d-grid gap-2">
-                    <div class="d-grid gap-1 announcement-edit-attachments">
-                      <span class="form-label small text-uppercase text-muted mb-0">Anexos atuais</span>
-                      {% if attachments %}
-                      <div class="d-grid gap-2">
-                        {% for attachment in attachments %}
-                        <div class="border rounded p-2 d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                          <div class="d-flex align-items-center gap-2">
-                            <span class="attachment-icon">
-                              <i class="bi {% if attachment.is_image %}bi-image{% elif attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
-                            </span>
-                            <div class="attachment-name text-truncate">{{ attachment.display_name }}</div>
-                          </div>
-                          {% if attachment.id %}
-                          <div class="form-check m-0">
-                            <input class="form-check-input" type="checkbox" name="remove_attachment_ids" value="{{ attachment.id }}" id="removeAttachment{{ announcement.id }}-{{ loop.index }}">
-                            <label class="form-check-label small" for="removeAttachment{{ announcement.id }}-{{ loop.index }}">Remover</label>
-                          </div>
-                          {% else %}
-                          <span class="badge text-bg-light">Anexo legado</span>
-                          {% endif %}
+                <div class="row g-4">
+                  <div class="col-lg-6">
+                    <div class="announcement-form-card h-100 d-grid gap-4">
+                      <div class="d-grid gap-3">
+                        <div class="d-grid gap-2">
+                          <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Data</span>
+                          {{ edit_form.date.label(class="visually-hidden") }}
+                          {{ edit_form.date(class="form-control", type="date") }}
+                          {% for error in edit_form.date.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                          {% endfor %}
                         </div>
+                        <div class="d-grid gap-2">
+                          <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Assunto</span>
+                          {{ edit_form.subject.label(class="visually-hidden") }}
+                          {{ edit_form.subject(class="form-control") }}
+                          {% for error in edit_form.subject.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                          {% endfor %}
+                        </div>
+                        <div class="d-grid gap-2">
+                          <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Mensagem</span>
+                          {{ edit_form.content.label(class="visually-hidden") }}
+                          {{ edit_form.content(class="form-control", rows="6") }}
+                          <small class="text-muted">Use parágrafos curtos para facilitar a leitura.</small>
+                          {% for error in edit_form.content.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                      <div class="d-grid gap-2">
+                        <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Novos anexos</span>
+                        {{ edit_form.attachments.label(class="visually-hidden") }}
+                        <label class="upload-dropzone{% if edit_form.attachments.errors %} is-invalid{% endif %}" for="{{ edit_form.attachments.id }}" role="button" tabindex="0" data-dropzone>
+                          <span class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                          <span class="fw-semibold">Adicionar arquivos</span>
+                          <span class="text-muted">Arraste e solte ou clique para selecionar (máx. 2 MB cada).</span>
+                        </label>
+                        {{ edit_form.attachments(class="form-control d-none") }}
+                        {% for error in edit_form.attachments.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                       </div>
-                      {% else %}
-                      <div class="text-muted small border rounded p-2">Nenhum anexo cadastrado.</div>
-                      {% endif %}
+                      <div class="d-grid gap-2">
+                        <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Anexos atuais</span>
+                        {% if attachments %}
+                        <div class="d-grid gap-2" data-existing-attachment-list>
+                          {% for attachment in attachments %}
+                          <div class="preview-attachment flex-wrap" data-existing-attachment="{{ attachment.id or loop.index }}">
+                            {% if attachment.is_image %}
+                            <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Prévia do anexo {{ attachment.display_name }}" class="flex-shrink-0">
+                            {% else %}
+                            <span class="attachment-icon flex-shrink-0">
+                              <i class="bi {% if attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
+                            </span>
+                            {% endif %}
+                            <div class="attachment-details">
+                              <div class="fw-semibold text-truncate">{{ attachment.display_name }}</div>
+                              <div class="text-muted">{{ attachment.extension and attachment.extension[1:]|upper or 'ARQ' }}</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                              {% if attachment.id %}
+                              <div class="form-check m-0">
+                                <input class="form-check-input" type="checkbox" name="remove_attachment_ids" value="{{ attachment.id }}" id="removeAttachment{{ announcement.id }}-{{ loop.index }}" data-preview-remove="{{ attachment.id }}">
+                                <label class="form-check-label small" for="removeAttachment{{ announcement.id }}-{{ loop.index }}">Remover</label>
+                              </div>
+                              {% else %}
+                              <span class="badge text-bg-light">Anexo legado</span>
+                              {% endif %}
+                            </div>
+                          </div>
+                          {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-muted small border rounded p-3" data-existing-attachment-empty>Nenhum anexo cadastrado.</div>
+                        {% endif %}
+                      </div>
                     </div>
-                    <div class="d-grid gap-1">
-                      {{ edit_form.attachments.label(class="form-label small text-uppercase text-muted mb-0") }}
-                      {{ edit_form.attachments(class="form-control form-control-sm") }}
-                      <small class="text-muted">Adicione novos arquivos (máx. 2 MB cada).</small>
-                      {% for error in edit_form.attachments.errors %}
-                      <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="announcement-preview card border-0 shadow-sm h-100">
+                      <div class="card-body d-grid gap-3">
+                        <div class="d-flex flex-column gap-1">
+                          <span class="badge rounded-pill text-bg-primary align-self-start">Prévia em tempo real</span>
+                          <p class="text-uppercase text-muted fw-semibold small mb-0" data-preview-target="date" data-placeholder="Data do comunicado">{{ edit_form.date.data.strftime('%d de %B de %Y') if edit_form.date.data else 'Data do comunicado' }}</p>
+                          <h3 class="h5 mb-0" data-preview-target="subject" data-placeholder="Assunto do comunicado">{{ edit_form.subject.data or 'Assunto do comunicado' }}</h3>
+                        </div>
+                        <div class="text-body-secondary" data-preview-target="content" data-placeholder="Escreva o comunicado para visualizar a prévia.">
+                          {% if edit_form.content.data %}
+                          {{ edit_form.content.data.replace('\n', '<br>') | safe }}
+                          {% else %}
+                          Escreva o comunicado para visualizar a prévia.
+                          {% endif %}
+                        </div>
+                        <div class="d-grid gap-3{% if attachments %}{% else %} d-none{% endif %}" data-preview-target="attachments-section">
+                          {% if attachments %}
+                          <div class="d-grid gap-2" data-preview-target="existing-attachment-preview-list">
+                            {% for attachment in attachments %}
+                            <div class="preview-attachment" data-existing-preview="{{ attachment.id or loop.index }}">
+                              {% if attachment.is_image %}
+                              <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Prévia do anexo {{ attachment.display_name }}" class="flex-shrink-0">
+                              {% else %}
+                              <span class="attachment-icon flex-shrink-0">
+                                <i class="bi {% if attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
+                              </span>
+                              {% endif %}
+                              <div class="attachment-details">
+                                <div class="fw-semibold text-truncate">{{ attachment.display_name }}</div>
+                                <div class="text-muted">{{ attachment.extension and attachment.extension[1:]|upper or 'ARQ' }}</div>
+                              </div>
+                            </div>
+                            {% endfor %}
+                          </div>
+                          {% endif %}
+                          <div class="text-muted small{% if attachments %} d-none{% endif %}" data-preview-target="attachments-empty">Nenhum anexo selecionado.</div>
+                          <div class="d-grid gap-2" data-preview-target="attachment-list"></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
               <div class="modal-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-                <small class="text-muted">As alterações ficam visíveis imediatamente.</small>
-                {{ edit_form.submit(class="btn btn-primary btn-sm px-3", value="Salvar alterações") }}
+                <small class="text-muted">As alterações ficam visíveis imediatamente após salvar.</small>
+                {{ edit_form.submit(class="btn btn-primary px-4", value="Salvar alterações") }}
               </div>
             </form>
           </div>
@@ -550,7 +609,7 @@
                   <div class="d-grid gap-2">
                     <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Anexos</span>
                     {{ form.attachments.label(class="visually-hidden") }}
-                    <label class="upload-dropzone{% if form.attachments.errors %} is-invalid{% endif %}" for="{{ form.attachments.id }}" role="button" tabindex="0">
+                    <label class="upload-dropzone{% if form.attachments.errors %} is-invalid{% endif %}" for="{{ form.attachments.id }}" role="button" tabindex="0" data-dropzone>
                       <span class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></span>
                       <span class="fw-semibold">Adicionar arquivos</span>
                       <span class="text-muted">Arraste e solte ou clique para selecionar (máx. 2 MB cada).</span>
@@ -567,13 +626,13 @@
                   <div class="card-body d-grid gap-3">
                     <div class="d-flex flex-column gap-1">
                       <span class="badge rounded-pill text-bg-primary align-self-start">Prévia em tempo real</span>
-                      <p class="text-uppercase text-muted fw-semibold small mb-0" id="preview-date" data-placeholder="Data do comunicado">Data do comunicado</p>
-                      <h3 class="h5 mb-0" id="preview-subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
+                      <p class="text-uppercase text-muted fw-semibold small mb-0" data-preview-target="date" data-placeholder="Data do comunicado">Data do comunicado</p>
+                      <h3 class="h5 mb-0" data-preview-target="subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
                     </div>
-                    <div id="preview-content" class="text-body-secondary" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
-                    <div id="preview-attachments-section" class="d-grid gap-3 d-none">
-                      <div id="preview-attachments-empty" class="text-muted small">Nenhum anexo selecionado.</div>
-                      <div id="preview-attachment-list" class="d-grid gap-2"></div>
+                    <div class="text-body-secondary" data-preview-target="content" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
+                    <div class="d-grid gap-3 d-none" data-preview-target="attachments-section">
+                      <div class="text-muted small" data-preview-target="attachments-empty">Nenhum anexo selecionado.</div>
+                      <div class="d-grid gap-2" data-preview-target="attachment-list"></div>
                     </div>
                   </div>
                 </div>
@@ -597,36 +656,21 @@
 {% if current_user.role == 'admin' %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const announcementModal = document.getElementById('newAnnouncementModal');
-    if (!announcementModal) {
-      return;
-    }
-
-    const dateInput = announcementModal.querySelector('#{{ form.date.id }}');
-    const subjectInput = announcementModal.querySelector('#{{ form.subject.id }}');
-    const contentInput = announcementModal.querySelector('#{{ form.content.id }}');
-    const attachmentInput = announcementModal.querySelector('#{{ form.attachments.id }}');
-    const dropzone = announcementModal.querySelector('.upload-dropzone');
-
-    const previewDate = document.getElementById('preview-date');
-    const previewSubject = document.getElementById('preview-subject');
-    const previewContent = document.getElementById('preview-content');
-    const previewAttachmentsSection = document.getElementById('preview-attachments-section');
-    const previewAttachmentList = document.getElementById('preview-attachment-list');
-    const previewAttachmentsEmpty = document.getElementById('preview-attachments-empty');
-
-    const selectedFiles = [];
     const supportsDataTransfer = typeof DataTransfer !== 'undefined';
 
-    const formatDate = (value) => {
+    const formatDate = (value, placeholder) => {
       if (!value) {
-        return previewDate.dataset.placeholder;
+        return placeholder;
       }
       const [year, month, day] = value.split('-').map(Number);
       if (!year || !month || !day) {
-        return previewDate.dataset.placeholder;
+        return placeholder;
       }
-      const formatted = new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
+      const parsedDate = new Date(year, month - 1, day);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return placeholder;
+      }
+      const formatted = parsedDate.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
@@ -634,202 +678,266 @@
       return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     };
 
-    const updateTextPreview = () => {
-      previewDate.textContent = formatDate(dateInput.value);
-
-      const subject = subjectInput.value.trim();
-      previewSubject.textContent = subject || previewSubject.dataset.placeholder;
-
-      const content = contentInput.value.trim();
-      if (content) {
-        previewContent.innerHTML = content.replace(/\n/g, '<br>');
-        previewContent.classList.remove('text-body-secondary');
-      } else {
-        previewContent.textContent = previewContent.dataset.placeholder;
-        previewContent.classList.add('text-body-secondary');
-      }
-    };
-
-    const refreshAttachmentInput = () => {
-      if (!supportsDataTransfer || !attachmentInput) {
-        return;
-      }
-      const dataTransfer = new DataTransfer();
-      selectedFiles.forEach((file) => dataTransfer.items.add(file));
-      attachmentInput.files = dataTransfer.files;
-    };
-
-    const renderAttachments = () => {
-      if (!previewAttachmentList) {
-        return;
-      }
-      previewAttachmentList.innerHTML = '';
-
-      if (!selectedFiles.length) {
-        previewAttachmentsSection?.classList.add('d-none');
-        previewAttachmentsEmpty?.classList.remove('d-none');
+    const setupAnnouncementModal = (modal) => {
+      if (!modal) {
         return;
       }
 
-      previewAttachmentsSection?.classList.remove('d-none');
-      previewAttachmentsEmpty?.classList.add('d-none');
+      const form = modal.querySelector('form');
+      if (!form) {
+        return;
+      }
 
-      selectedFiles.forEach((file, index) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'preview-attachment';
-        wrapper.dataset.index = String(index);
+      const dateInput = form.querySelector('input[name="date"]');
+      const subjectInput = form.querySelector('[name="subject"]');
+      const contentInput = form.querySelector('[name="content"]');
+      const attachmentInput = form.querySelector('input[type="file"][name="attachments"]');
+      const dropzone = modal.querySelector('[data-dropzone]');
 
-        let previewElement;
-        if (file.type.startsWith('image/')) {
-          previewElement = document.createElement('img');
-          previewElement.classList.add('flex-shrink-0');
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            previewElement.src = event.target?.result || '';
-          };
-          reader.readAsDataURL(file);
-        } else {
-          previewElement = document.createElement('span');
-          previewElement.className = 'attachment-icon flex-shrink-0';
-          const icon = document.createElement('i');
-          if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-            icon.className = 'bi bi-file-earmark-pdf';
-          } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt')) {
-            icon.className = 'bi bi-filetype-txt';
+      const previewDate = modal.querySelector('[data-preview-target="date"]');
+      const previewSubject = modal.querySelector('[data-preview-target="subject"]');
+      const previewContent = modal.querySelector('[data-preview-target="content"]');
+      const previewAttachmentsSection = modal.querySelector('[data-preview-target="attachments-section"]');
+      const previewAttachmentList = modal.querySelector('[data-preview-target="attachment-list"]');
+      const previewAttachmentsEmpty = modal.querySelector('[data-preview-target="attachments-empty"]');
+      const previewExistingList = modal.querySelector('[data-preview-target="existing-attachment-preview-list"]');
+
+      const selectedFiles = [];
+
+      const hasExistingPreviews = () => Boolean(previewExistingList && previewExistingList.children.length);
+
+      const updateAttachmentsVisibility = () => {
+        const shouldShow = hasExistingPreviews() || selectedFiles.length > 0;
+        if (previewAttachmentsSection) {
+          previewAttachmentsSection.classList.toggle('d-none', !shouldShow);
+        }
+        if (previewAttachmentsEmpty) {
+          previewAttachmentsEmpty.classList.toggle('d-none', shouldShow);
+        }
+      };
+
+      const updateTextPreview = () => {
+        if (previewDate) {
+          const placeholder = previewDate.dataset.placeholder || previewDate.textContent || '';
+          const formatted = dateInput ? formatDate(dateInput.value, placeholder) : placeholder;
+          previewDate.textContent = formatted || placeholder;
+        }
+
+        if (previewSubject) {
+          const placeholder = previewSubject.dataset.placeholder || '';
+          const value = subjectInput ? subjectInput.value.trim() : '';
+          previewSubject.textContent = value || placeholder;
+        }
+
+        if (previewContent) {
+          const placeholder = previewContent.dataset.placeholder || '';
+          const value = contentInput ? contentInput.value.trim() : '';
+          if (value) {
+            previewContent.innerHTML = value.replace(/\n/g, '<br>');
+            previewContent.classList.remove('text-body-secondary');
           } else {
-            icon.className = 'bi bi-paperclip';
+            previewContent.textContent = placeholder;
+            previewContent.classList.add('text-body-secondary');
           }
-          previewElement.appendChild(icon);
+        }
+      };
+
+      const refreshAttachmentInput = () => {
+        if (!supportsDataTransfer || !attachmentInput) {
+          return;
+        }
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach((file) => dataTransfer.items.add(file));
+        attachmentInput.files = dataTransfer.files;
+      };
+
+      const renderAttachments = () => {
+        if (!previewAttachmentList) {
+          updateAttachmentsVisibility();
+          return;
         }
 
-        const infoWrapper = document.createElement('div');
-        infoWrapper.className = 'attachment-details';
-        const nameElement = document.createElement('div');
-        nameElement.className = 'fw-semibold text-truncate';
-        nameElement.textContent = file.name || 'Arquivo sem nome';
-        const metaElement = document.createElement('div');
-        metaElement.className = 'text-muted';
-        metaElement.textContent = file.type || 'Formato desconhecido';
-        infoWrapper.append(nameElement, metaElement);
+        previewAttachmentList.innerHTML = '';
 
-        const actionsWrapper = document.createElement('div');
-        actionsWrapper.className = 'd-flex align-items-center gap-2';
-        if (supportsDataTransfer) {
-          const removeButton = document.createElement('button');
-          removeButton.type = 'button';
-          removeButton.className = 'attachment-remove-btn';
-          removeButton.dataset.removeIndex = String(index);
-          removeButton.setAttribute('aria-label', `Remover ${file.name || 'arquivo'}`);
-          removeButton.innerHTML = '<i class="bi bi-trash"></i>';
-          actionsWrapper.appendChild(removeButton);
+        selectedFiles.forEach((file, index) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'preview-attachment';
+
+          let previewElement;
+          if (file.type.startsWith('image/')) {
+            previewElement = document.createElement('img');
+            previewElement.classList.add('flex-shrink-0');
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              previewElement.src = event.target?.result || '';
+            };
+            reader.readAsDataURL(file);
+          } else {
+            previewElement = document.createElement('span');
+            previewElement.className = 'attachment-icon flex-shrink-0';
+            const icon = document.createElement('i');
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+              icon.className = 'bi bi-file-earmark-pdf';
+            } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt')) {
+              icon.className = 'bi bi-filetype-txt';
+            } else {
+              icon.className = 'bi bi-paperclip';
+            }
+            previewElement.appendChild(icon);
+          }
+
+          const infoWrapper = document.createElement('div');
+          infoWrapper.className = 'attachment-details';
+          const nameElement = document.createElement('div');
+          nameElement.className = 'fw-semibold text-truncate';
+          nameElement.textContent = file.name || 'Arquivo sem nome';
+          const metaElement = document.createElement('div');
+          metaElement.className = 'text-muted';
+          metaElement.textContent = file.type || 'Formato desconhecido';
+          infoWrapper.append(nameElement, metaElement);
+
+          const actionsWrapper = document.createElement('div');
+          actionsWrapper.className = 'd-flex align-items-center gap-2';
+          if (supportsDataTransfer) {
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'attachment-remove-btn';
+            removeButton.dataset.removeIndex = String(index);
+            removeButton.setAttribute('aria-label', `Remover ${file.name || 'arquivo'}`);
+            removeButton.innerHTML = '<i class="bi bi-trash"></i>';
+            actionsWrapper.appendChild(removeButton);
+          }
+
+          wrapper.append(previewElement, infoWrapper, actionsWrapper);
+          previewAttachmentList.appendChild(wrapper);
+        });
+
+        updateAttachmentsVisibility();
+      };
+
+      const addFiles = (files) => {
+        const fileList = Array.from(files || []);
+        if (!fileList.length) {
+          return;
         }
-
-        wrapper.append(previewElement, infoWrapper, actionsWrapper);
-        previewAttachmentList.appendChild(wrapper);
-      });
-    };
-
-    const addFiles = (files) => {
-      const fileList = Array.from(files || []);
-      if (!fileList.length) {
-        return;
-      }
-      if (!supportsDataTransfer) {
-        selectedFiles.splice(0, selectedFiles.length, ...fileList);
-      } else {
-        fileList.forEach((file) => selectedFiles.push(file));
-        if (attachmentInput) {
-          attachmentInput.value = '';
+        if (!supportsDataTransfer) {
+          selectedFiles.splice(0, selectedFiles.length, ...fileList);
+        } else {
+          fileList.forEach((file) => selectedFiles.push(file));
+          if (attachmentInput) {
+            attachmentInput.value = '';
+          }
         }
-      }
-      refreshAttachmentInput();
-      renderAttachments();
-    };
+        refreshAttachmentInput();
+        renderAttachments();
+      };
 
-    if (attachmentInput) {
-      attachmentInput.addEventListener('change', (event) => {
+      attachmentInput?.addEventListener('change', (event) => {
         addFiles(event.target.files || []);
       });
-    }
 
-    if (dropzone) {
-      dropzone.addEventListener('click', () => {
-        attachmentInput?.click();
-      });
-
-      dropzone.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
+      if (dropzone) {
+        dropzone.addEventListener('click', () => {
           attachmentInput?.click();
-        }
-      });
+        });
 
-      dropzone.addEventListener('dragover', (event) => {
-        event.preventDefault();
-        dropzone.classList.add('is-dragover');
-      });
+        dropzone.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            attachmentInput?.click();
+          }
+        });
 
-      ['dragleave', 'dragend'].forEach((eventName) => {
-        dropzone.addEventListener(eventName, () => {
+        dropzone.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          dropzone.classList.add('is-dragover');
+        });
+
+        ['dragleave', 'dragend'].forEach((eventName) => {
+          dropzone.addEventListener(eventName, () => {
+            dropzone.classList.remove('is-dragover');
+          });
+        });
+
+        dropzone.addEventListener('drop', (event) => {
+          event.preventDefault();
           dropzone.classList.remove('is-dragover');
+          if (!event.dataTransfer) {
+            return;
+          }
+          addFiles(event.dataTransfer.files || []);
+        });
+      }
+
+      previewAttachmentList?.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-remove-index]');
+        if (!target) {
+          return;
+        }
+        const index = Number.parseInt(target.dataset.removeIndex || '', 10);
+        if (Number.isNaN(index)) {
+          return;
+        }
+        selectedFiles.splice(index, 1);
+        refreshAttachmentInput();
+        renderAttachments();
+      });
+
+      dateInput?.addEventListener('change', updateTextPreview);
+      subjectInput?.addEventListener('input', updateTextPreview);
+      contentInput?.addEventListener('input', updateTextPreview);
+
+      const removalInputs = form.querySelectorAll('[data-preview-remove]');
+      removalInputs.forEach((input) => {
+        input.addEventListener('change', () => {
+          const previewId = input.dataset.previewRemove;
+          if (!previewId) {
+            return;
+          }
+          modal.querySelectorAll(`[data-existing-preview='${previewId}'], [data-existing-attachment='${previewId}']`).forEach((element) => {
+            element.classList.toggle('is-marked-for-removal', input.checked);
+          });
         });
       });
 
-      dropzone.addEventListener('drop', (event) => {
-        event.preventDefault();
-        dropzone.classList.remove('is-dragover');
-        if (!event.dataTransfer) {
-          return;
-        }
-        addFiles(event.dataTransfer.files || []);
+      modal.addEventListener('shown.bs.modal', () => {
+        updateTextPreview();
+        renderAttachments();
+        updateAttachmentsVisibility();
+        subjectInput?.focus();
       });
-    }
 
-    previewAttachmentList?.addEventListener('click', (event) => {
-      const target = event.target.closest('[data-remove-index]');
-      if (!target) {
-        return;
-      }
-      const index = Number.parseInt(target.dataset.removeIndex || '', 10);
-      if (Number.isNaN(index)) {
-        return;
-      }
-      selectedFiles.splice(index, 1);
-      refreshAttachmentInput();
-      renderAttachments();
-    });
-
-    if (dateInput) {
-      dateInput.addEventListener('change', updateTextPreview);
-    }
-    if (subjectInput) {
-      subjectInput.addEventListener('input', updateTextPreview);
-    }
-    if (contentInput) {
-      contentInput.addEventListener('input', updateTextPreview);
-    }
-
-    announcementModal.addEventListener('shown.bs.modal', () => {
-      updateTextPreview();
-      renderAttachments();
-      if (subjectInput) {
-        subjectInput.focus();
-      }
-    });
-
-    announcementModal.addEventListener('hidden.bs.modal', () => {
-      const form = announcementModal.querySelector('form');
-      if (form) {
+      modal.addEventListener('hidden.bs.modal', () => {
         form.reset();
-      }
-      selectedFiles.splice(0, selectedFiles.length);
-      refreshAttachmentInput();
-      renderAttachments();
-      updateTextPreview();
-    });
+        removalInputs.forEach((input) => {
+          const previewId = input.dataset.previewRemove;
+          if (!previewId) {
+            return;
+          }
+          modal.querySelectorAll(`[data-existing-preview='${previewId}'], [data-existing-attachment='${previewId}']`).forEach((element) => {
+            element.classList.remove('is-marked-for-removal');
+          });
+        });
+        selectedFiles.splice(0, selectedFiles.length);
+        refreshAttachmentInput();
+        renderAttachments();
+        updateTextPreview();
+        updateAttachmentsVisibility();
+      });
 
-    updateTextPreview();
-    renderAttachments();
+      updateTextPreview();
+      renderAttachments();
+      updateAttachmentsVisibility();
+    };
+
+    const newAnnouncementModal = document.getElementById('newAnnouncementModal');
+    if (newAnnouncementModal) {
+      setupAnnouncementModal(newAnnouncementModal);
+    }
+
+    document.querySelectorAll('.announcement-edit-modal').forEach((modal) => {
+      setupAnnouncementModal(modal);
+    });
   });
 </script>
 {% endif %}
