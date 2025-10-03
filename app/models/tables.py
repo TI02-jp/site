@@ -245,6 +245,12 @@ class Announcement(db.Model):
 
         return self.attachment_extension == ".pdf"
 
+    @property
+    def created_at_sao_paulo(self) -> datetime | None:
+        """Return the creation timestamp converted to the São Paulo timezone."""
+
+        return _to_sao_paulo(self.created_at)
+
 
 class Course(db.Model):
     """Internal training course available in the knowledge hub."""
