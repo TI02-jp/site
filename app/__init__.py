@@ -227,6 +227,97 @@ with app.app_context():
                             "ALTER TABLE announcements ADD COLUMN attachment_name VARCHAR(255) NULL"
                         )
                     )
+
+        attachments_table_exists = inspector.has_table("announcement_attachments")
+        if not attachments_table_exists and inspector.has_table("announcements"):
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        """
+                        CREATE TABLE announcement_attachments (
+                            id INTEGER NOT NULL AUTO_INCREMENT,
+                            announcement_id INTEGER NOT NULL,
+                            file_path VARCHAR(255) NOT NULL,
+                            original_name VARCHAR(255) NULL,
+                            mime_type VARCHAR(128) NULL,
+                            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (id),
+                            CONSTRAINT fk_announcement_attachments_announcement_id_announcements
+                                FOREIGN KEY (announcement_id) REFERENCES announcements (id)
+                                ON DELETE CASCADE
+                        )
+                        """
+                    )
+                )
+            attachments_table_exists = True
+
+        if attachments_table_exists:
+            attachment_columns = {
+                col["name"] for col in inspector.get_columns("announcement_attachments")
+            }
+            if "mime_type" not in attachment_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE announcement_attachments ADD COLUMN mime_type VARCHAR(128) NULL"
+                        )
+                    )
+            if "created_at" not in attachment_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            """
+                            ALTER TABLE announcement_attachments
+                            ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            """
+                        )
+                    )
+
+        if attachments_table_exists and inspector.has_table("announcements"):
+            with db.engine.begin() as conn:
+                legacy_attachments = conn.execute(
+                    sa.text(
+                        """
+                        SELECT a.id AS announcement_id,
+                               a.attachment_path AS file_path,
+                               a.attachment_name AS original_name,
+                               a.created_at AS created_at
+                        FROM announcements AS a
+                        WHERE a.attachment_path IS NOT NULL
+                          AND NOT EXISTS (
+                              SELECT 1 FROM announcement_attachments aa
+                              WHERE aa.announcement_id = a.id
+                          )
+                        """
+                    )
+                )
+
+                for row in legacy_attachments.mappings():
+                    conn.execute(
+                        sa.text(
+                            """
+                            INSERT INTO announcement_attachments (
+                                announcement_id,
+                                file_path,
+                                original_name,
+                                mime_type,
+                                created_at
+                            ) VALUES (
+                                :announcement_id,
+                                :file_path,
+                                :original_name,
+                                NULL,
+                                COALESCE(:created_at, NOW())
+                            )
+                            """
+                        ),
+                        {
+                            "announcement_id": row["announcement_id"],
+                            "file_path": row["file_path"],
+                            "original_name": row["original_name"],
+                            "created_at": row["created_at"],
+                        },
+                    )
     except SQLAlchemyError as exc:
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc

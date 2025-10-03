@@ -2,6 +2,7 @@
 
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime, time, timedelta, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
@@ -13,6 +14,57 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
 from app.services.google_calendar import get_calendar_timezone
+
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
+TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".log"}
+
+
+@dataclass(frozen=True)
+class LegacyAnnouncementAttachment:
+    """Simple wrapper exposing attachment attributes for legacy rows."""
+
+    file_path: str
+    original_name: str | None = None
+    mime_type: str | None = None
+    id: int | None = None
+
+    @property
+    def extension(self) -> str:
+        """Return the lower-case extension for the stored file."""
+
+        _, extension = os.path.splitext(self.file_path or "")
+        return extension.lower()
+
+    @property
+    def is_image(self) -> bool:
+        """Return ``True`` when the attachment is an image."""
+
+        if self.mime_type and self.mime_type.startswith("image/"):
+            return True
+        return self.extension in IMAGE_EXTENSIONS
+
+    @property
+    def is_pdf(self) -> bool:
+        """Return ``True`` when the attachment is a PDF."""
+
+        if self.mime_type:
+            return self.mime_type == "application/pdf"
+        return self.extension == ".pdf"
+
+    @property
+    def is_text(self) -> bool:
+        """Return ``True`` when the attachment is a plain-text file."""
+
+        if self.mime_type and self.mime_type.startswith("text/"):
+            return True
+        return self.extension in TEXT_EXTENSIONS
+
+    @property
+    def display_name(self) -> str:
+        """Return a human friendly name for the attachment."""
+
+        return self.original_name or os.path.basename(self.file_path or "")
 
 # Timezone for timestamp fields
 # Default application timezone
@@ -189,6 +241,63 @@ class AccessLink(db.Model):
         return f"<AccessLink {self.category}:{self.label}>"
 
 
+class AnnouncementAttachment(db.Model):
+    """Attachment stored for an :class:`Announcement`."""
+
+    __tablename__ = "announcement_attachments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    announcement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("announcements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    file_path = db.Column(db.String(255), nullable=False)
+    original_name = db.Column(db.String(255))
+    mime_type = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<AnnouncementAttachment {self.original_name or self.file_path}>"
+
+    @property
+    def extension(self) -> str:
+        """Return the lower-case file extension for the attachment."""
+
+        _, extension = os.path.splitext(self.file_path or "")
+        return extension.lower()
+
+    @property
+    def is_image(self) -> bool:
+        """Return ``True`` when the attachment is an image."""
+
+        if self.mime_type and self.mime_type.startswith("image/"):
+            return True
+        return self.extension in IMAGE_EXTENSIONS
+
+    @property
+    def is_pdf(self) -> bool:
+        """Return ``True`` when the attachment is a PDF document."""
+
+        if self.mime_type:
+            return self.mime_type == "application/pdf"
+        return self.extension == ".pdf"
+
+    @property
+    def is_text(self) -> bool:
+        """Return ``True`` when the attachment is a plain-text document."""
+
+        if self.mime_type and self.mime_type.startswith("text/"):
+            return True
+        return self.extension in TEXT_EXTENSIONS
+
+    @property
+    def display_name(self) -> str:
+        """Return a user-friendly attachment name."""
+
+        return self.original_name or os.path.basename(self.file_path or "")
+
+
 class Announcement(db.Model):
     """Internal announcement shared with all authenticated users."""
 
@@ -217,39 +326,83 @@ class Announcement(db.Model):
         "User",
         backref=db.backref("announcements", lazy=True, cascade="all, delete-orphan"),
     )
+    attachments = db.relationship(
+        "AnnouncementAttachment",
+        backref="announcement",
+        cascade="all, delete-orphan",
+        order_by="AnnouncementAttachment.created_at.asc()",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         return f"<Announcement {self.subject!r} on {self.date:%Y-%m-%d}>"
 
     @property
-    def attachment_is_image(self) -> bool:
-        """Return ``True`` when the stored attachment is an image."""
+    def attachments_for_display(self) -> list[AnnouncementAttachment | LegacyAnnouncementAttachment]:
+        """Return attachments to render, including legacy single files."""
 
-        if not self.attachment_path:
-            return False
-        lowered = self.attachment_path.lower()
-        return lowered.endswith(".png") or lowered.endswith(".jpg") or lowered.endswith(".jpeg")
+        if self.attachments:
+            return list(self.attachments)
+        if self.attachment_path:
+            return [
+                LegacyAnnouncementAttachment(
+                    file_path=self.attachment_path,
+                    original_name=self.attachment_name,
+                )
+            ]
+        return []
+
+    @property
+    def primary_attachment(self) -> AnnouncementAttachment | LegacyAnnouncementAttachment | None:
+        """Return the first attachment available for quick previews."""
+
+        attachments = self.attachments_for_display
+        if attachments:
+            return attachments[0]
+        return None
+
+    @property
+    def attachment_is_image(self) -> bool:
+        """Return ``True`` when the stored primary attachment is an image."""
+
+        primary = self.primary_attachment
+        return bool(primary and getattr(primary, "is_image", False))
 
     @property
     def attachment_extension(self) -> str:
-        """Return the lower-case file extension for the stored attachment."""
+        """Return the lower-case file extension for the primary attachment."""
 
-        if not self.attachment_path:
+        primary = self.primary_attachment
+        if not primary:
             return ""
-        _, extension = os.path.splitext(self.attachment_path)
-        return extension.lower()
+        return getattr(primary, "extension", "")
 
     @property
     def attachment_is_pdf(self) -> bool:
-        """Return ``True`` when the stored attachment is a PDF document."""
+        """Return ``True`` when the stored primary attachment is a PDF document."""
 
-        return self.attachment_extension == ".pdf"
+        primary = self.primary_attachment
+        return bool(primary and getattr(primary, "is_pdf", False))
 
     @property
     def created_at_sao_paulo(self) -> datetime | None:
         """Return the creation timestamp converted to the São Paulo timezone."""
 
         return _to_sao_paulo(self.created_at)
+
+    def sync_legacy_attachment_fields(self) -> None:
+        """Keep legacy attachment columns aligned with the first attachment."""
+
+        primary = self.primary_attachment
+        if primary:
+            self.attachment_path = getattr(primary, "file_path", None)
+            display_name = getattr(primary, "original_name", None) or getattr(
+                primary, "display_name", None
+            )
+            self.attachment_name = display_name
+        else:
+            self.attachment_path = None
+            self.attachment_name = None
 
 
 class Course(db.Model):
