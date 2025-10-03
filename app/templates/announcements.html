@@ -5,31 +5,116 @@
 {% block extra_css %}
 {{ super() }}
 <style>
+  .announcement-board {
+    position: relative;
+    display: grid;
+    gap: 1.75rem;
+    padding-left: 0.5rem;
+  }
+
+  .announcement-board::before {
+    content: "";
+    position: absolute;
+    left: 1.25rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background: linear-gradient(
+      180deg,
+      rgba(13, 110, 253, 0.35),
+      rgba(13, 110, 253, 0)
+    );
+  }
+
   .announcement-card {
+    position: relative;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    padding-left: 3.25rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(13, 110, 253, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+    box-shadow: 0 1.5rem 3rem -2.25rem rgba(13, 110, 253, 0.65);
+  }
+
+  .announcement-card.is-unread {
+    border-color: rgba(13, 110, 253, 0.22);
+    box-shadow: 0 1.75rem 3.75rem -2rem rgba(13, 110, 253, 0.6);
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, #ffffff 55%, #f8faff 100%);
   }
 
   .announcement-card:focus,
   .announcement-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 1.5rem 3.5rem -2rem rgba(13, 110, 253, 0.5);
     outline: none;
+  }
+
+  .announcement-card::before {
+    content: "";
+    position: absolute;
+    left: 1.4rem;
+    top: 1.75rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    background: #adb5bd;
+    box-shadow: 0 0 0 6px rgba(173, 181, 189, 0.2);
+  }
+
+  .announcement-card.is-unread::before {
+    background: #0d6efd;
+    box-shadow: 0 0 0 6px rgba(13, 110, 253, 0.25);
+  }
+
+  .announcement-card:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 1.8rem;
+    top: calc(1.75rem + 0.85rem);
+    bottom: -1.75rem;
+    width: 2px;
+    background: rgba(13, 110, 253, 0.12);
   }
 
   .announcement-card .card-body {
     font-size: var(--font-base);
-    gap: 0.75rem !important;
+    gap: 1rem !important;
   }
 
   .announcement-card h3 {
-    font-size: var(--font-base);
+    font-size: var(--font-lg);
+    font-weight: 600;
   }
 
   .announcement-card .text-body-secondary,
   .announcement-card .announcement-snippet,
   .announcement-card .announcement-meta {
     text-align: left;
+  }
+
+  .announcement-card-content {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .announcement-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(13, 110, 253, 0.12);
+    color: #0b5ed7;
+  }
+
+  .announcement-card:not(.is-unread) .announcement-date-badge {
+    background: rgba(108, 117, 125, 0.18);
+    color: #495057;
   }
 
   .announcement-card-actions .btn {
@@ -52,6 +137,8 @@
 
   .announcement-meta {
     font-size: var(--font-sm);
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(13, 110, 253, 0.15);
   }
 
   .announcement-attachment-chips {
@@ -76,6 +163,17 @@
 
   .attachment-chip-extra {
     padding: 0.2rem 0.5rem;
+  }
+
+  .mark-announcement-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .mark-announcement-read.is-loading {
+    pointer-events: none;
   }
 
   .announcement-preview {
@@ -241,6 +339,13 @@
   @media (max-width: 767.98px) {
     .announcement-card {
       cursor: default;
+      padding-left: 1.25rem;
+    }
+
+    .announcement-board::before,
+    .announcement-card::before,
+    .announcement-card::after {
+      display: none;
     }
   }
 </style>
@@ -269,36 +374,40 @@
     </div>
     <div class="card-body py-2">
       {% if announcements %}
-      <div class="row g-2 row-cols-1 row-cols-md-2 row-cols-lg-3">
+      <div class="announcement-board">
         {% for announcement in announcements %}
         {% set attachments = announcement.attachments_for_display %}
         {% set image_attachments = attachments | selectattr('is_image') | list %}
         {% set image_count = image_attachments | length %}
         {% set created_at_local = announcement.created_at_sao_paulo %}
-        <div class="col">
-          <article id="announcement-{{ announcement.id }}" class="card h-100 border-0 shadow-sm announcement-card" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#announcementModal-{{ announcement.id }}">
-            <div class="card-body d-flex flex-column">
-              <div class="d-flex align-items-start justify-content-between gap-2">
-                <div class="d-grid gap-1 text-start">
-                  <div class="text-uppercase text-muted fw-semibold small">{{ announcement.date.strftime('%d/%m/%Y') }}</div>
-                  <h3 class="mb-0 text-dark">{{ announcement.subject }}</h3>
-                </div>
-                {% if current_user.role == 'admin' %}
-                <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
-                  <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
-                    <i class="bi bi-pencil-square"></i>
-                    <span>Editar</span>
-                  </button>
-                  <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" title="Excluir comunicado">
-                      <i class="bi bi-trash"></i>
-                      <span>Excluir</span>
-                    </button>
-                  </form>
-                </div>
-                {% endif %}
+        {% set is_read = announcement_reads.get(announcement.id, False) %}
+        <article id="announcement-{{ announcement.id }}" class="card announcement-card border-0 shadow-sm{% if not is_read %} is-unread{% else %} is-read{% endif %}" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#announcementModal-{{ announcement.id }}">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+              <div class="d-grid gap-2 text-start">
+                <span class="announcement-date-badge">
+                  <i class="bi bi-calendar-event"></i>
+                  <span>{{ announcement.date.strftime('%d/%m/%Y') }}</span>
+                </span>
+                <h3 class="mb-0 text-dark">{{ announcement.subject }}</h3>
               </div>
+              {% if current_user.role == 'admin' %}
+              <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
+                <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
+                  <i class="bi bi-pencil-square"></i>
+                  <span>Editar</span>
+                </button>
+                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" title="Excluir comunicado">
+                    <i class="bi bi-trash"></i>
+                    <span>Excluir</span>
+                  </button>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+            <div class="announcement-card-content">
               <div class="text-body-secondary text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
               {% if image_count == 1 %}
               <div class="ratio ratio-4x3 rounded overflow-hidden">
@@ -333,35 +442,42 @@
                 {% endif %}
               </div>
               {% endif %}
-              <div class="d-flex align-items-center gap-2 text-muted pt-2 border-top announcement-meta">
-                <i class="bi bi-person-circle text-primary"></i>
-                <div>
-                  <div class="fw-semibold text-dark">{{ announcement.created_by.name }}</div>
-                  {% if created_at_local %}
-                  <div>{{ created_at_local.strftime('%d/%m/%Y %H:%M') }}</div>
-                  {% endif %}
-                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 text-muted announcement-meta">
+              <i class="bi bi-person-circle text-primary"></i>
+              <div>
+                <div class="fw-semibold text-dark">{{ announcement.created_by.name }}</div>
+                {% if created_at_local %}
+                <div>{{ created_at_local.strftime('%d/%m/%Y %H:%M') }}</div>
+                {% endif %}
               </div>
             </div>
-          </article>
-        </div>
+          </div>
+        </article>
         {% endfor %}
       </div>
 
       {% for announcement in announcements %}
       {% set attachments = announcement.attachments_for_display %}
       {% set created_at_local = announcement.created_at_sao_paulo %}
+      {% set is_read = announcement_reads.get(announcement.id, False) %}
       <div class="modal fade announcement-view-modal" id="announcementModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="announcementModalLabel-{{ announcement.id }}" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
-            <div class="modal-header">
-              <div class="text-start">
+            <div class="modal-header align-items-start gap-2 flex-wrap">
+              <div class="text-start me-auto">
                 <p class="small text-muted text-uppercase fw-semibold mb-1" id="announcementModalLabel-{{ announcement.id }}">
                   {{ announcement.date.strftime('%d/%m/%Y') }}
                 </p>
                 <h2 class="h6 mb-0">{{ announcement.subject }}</h2>
               </div>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm {% if is_read %}btn-success{% else %}btn-outline-primary{% endif %} mark-announcement-read" data-announcement-mark-read="true" data-announcement-id="{{ announcement.id }}" data-announcement-read="{{ 'true' if is_read else 'false' }}"{% if is_read %} disabled{% endif %}>
+                  <i class="bi {% if is_read %}bi-check2-circle{% else %}bi-envelope-open{% endif %}"></i>
+                  <span>{% if is_read %}Lido{% else %}Marcar como lido{% endif %}</span>
+                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+              </div>
             </div>
             <div class="modal-body d-grid gap-2 text-start">
               <div class="text-body-secondary text-start">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
@@ -989,6 +1105,80 @@
           }
           const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
           modalInstance.show();
+        }
+      });
+    });
+
+    const csrfToken = window.csrfToken || '';
+    const markReadButtons = document.querySelectorAll('[data-announcement-mark-read]');
+
+    const renderSuccessState = (button) => {
+      button.innerHTML = '<i class="bi bi-check2-circle"></i><span>Lido</span>';
+      button.classList.remove('btn-outline-primary');
+      button.classList.add('btn-success');
+      button.classList.remove('is-loading');
+      button.disabled = true;
+      button.dataset.announcementRead = 'true';
+    };
+
+    const renderIdleState = (button, idleHtml) => {
+      button.innerHTML = idleHtml;
+      button.classList.remove('btn-success');
+      if (!button.classList.contains('btn-outline-primary')) {
+        button.classList.add('btn-outline-primary');
+      }
+      button.classList.remove('is-loading');
+      button.disabled = false;
+      button.dataset.announcementRead = 'false';
+    };
+
+    markReadButtons.forEach((button) => {
+      const announcementId = button.dataset.announcementId;
+      if (!announcementId) {
+        return;
+      }
+
+      const idleHtml = button.innerHTML;
+
+      if (button.dataset.announcementRead === 'true') {
+        renderSuccessState(button);
+        return;
+      }
+
+      button.addEventListener('click', async () => {
+        if (button.dataset.announcementRead === 'true') {
+          return;
+        }
+
+        button.disabled = true;
+        button.classList.add('is-loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span>Marcando...</span>';
+
+        try {
+          const response = await fetch(`/announcements/${announcementId}/read`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({}),
+          });
+
+          if (!response.ok) {
+            throw new Error('Falha ao marcar comunicado como lido.');
+          }
+
+          renderSuccessState(button);
+
+          const card = document.getElementById(`announcement-${announcementId}`);
+          if (card) {
+            card.classList.remove('is-unread');
+            card.classList.add('is-read');
+          }
+        } catch (error) {
+          console.error(error);
+          renderIdleState(button, idleHtml);
         }
       });
     });
