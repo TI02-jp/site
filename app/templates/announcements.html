@@ -504,65 +504,85 @@
   </div>
 
   {% if current_user.role == 'admin' %}
-  <div class="modal fade" id="newAnnouncementModal" tabindex="-1" aria-labelledby="newAnnouncementModalLabel" aria-hidden="true">
+  <div class="modal fade announcement-modal" id="newAnnouncementModal" tabindex="-1" aria-labelledby="newAnnouncementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
-        <form method="POST" enctype="multipart/form-data" class="small">
+        <form method="POST" enctype="multipart/form-data" class="announcement-form">
           {{ form.hidden_tag() }}
           <div class="modal-header">
             <div class="text-start">
-              <h2 class="h6 mb-0" id="newAnnouncementModalLabel">Novo comunicado</h2>
-              <p class="text-muted mb-0">Preencha os campos e visualize antes de publicar.</p>
+              <p class="text-uppercase text-muted fw-semibold small mb-1">Publicar comunicado</p>
+              <h2 class="h4 mb-0" id="newAnnouncementModalLabel">Novo comunicado</h2>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
           </div>
           <div class="modal-body">
-            <div class="row g-3">
-              <div class="col-lg-5 d-grid gap-2">
-                <div class="d-grid gap-1">
-                  {{ form.date.label(class="form-label small text-uppercase text-muted mb-0") }}
-                  {{ form.date(class="form-control form-control-sm", type="date") }}
-                  {% for error in form.date.errors %}
-                  <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                </div>
-                <div class="d-grid gap-1">
-                  {{ form.subject.label(class="form-label small text-uppercase text-muted mb-0") }}
-                  {{ form.subject(class="form-control form-control-sm") }}
-                  {% for error in form.subject.errors %}
-                  <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                </div>
-                <div class="d-grid gap-1">
-                  {{ form.content.label(class="form-label small text-uppercase text-muted mb-0") }}
-                  {{ form.content(class="form-control form-control-sm", rows="4") }}
-                  {% for error in form.content.errors %}
-                  <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                </div>
-                <div class="d-grid gap-1">
-                  {{ form.attachments.label(class="form-label small text-uppercase text-muted mb-0") }}
-                  {{ form.attachments(class="form-control form-control-sm") }}
-                  <small class="text-muted">Selecione um ou mais arquivos (máx. 2 MB cada).</small>
-                  {% for error in form.attachments.errors %}
-                  <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <div class="announcement-form-card h-100 d-grid gap-4">
+                  <div class="d-grid gap-3">
+                    <div class="d-grid gap-2">
+                      <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Data</span>
+                      {{ form.date.label(class="visually-hidden") }}
+                      {{ form.date(class="form-control", type="date", placeholder="Selecione a data") }}
+                      {% for error in form.date.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                      {% endfor %}
+                    </div>
+                    <div class="d-grid gap-2">
+                      <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Assunto</span>
+                      {{ form.subject.label(class="visually-hidden") }}
+                      {{ form.subject(class="form-control", placeholder="Qual é o título do comunicado?") }}
+                      {% for error in form.subject.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                      {% endfor %}
+                    </div>
+                    <div class="d-grid gap-2">
+                      <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Mensagem</span>
+                      {{ form.content.label(class="visually-hidden") }}
+                      {{ form.content(class="form-control", rows="6", placeholder="Compartilhe os detalhes importantes do comunicado...") }}
+                      <small class="text-muted">Use parágrafos curtos para facilitar a leitura.</small>
+                      {% for error in form.content.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  <div class="d-grid gap-2">
+                    <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Anexos</span>
+                    {{ form.attachments.label(class="visually-hidden") }}
+                    <label class="upload-dropzone{% if form.attachments.errors %} is-invalid{% endif %}" for="{{ form.attachments.id }}" role="button" tabindex="0">
+                      <span class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                      <span class="fw-semibold">Adicionar arquivos</span>
+                      <span class="text-muted">Arraste e solte ou clique para selecionar (máx. 2 MB cada).</span>
+                    </label>
+                    {{ form.attachments(class="form-control d-none") }}
+                    {% for error in form.attachments.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                  </div>
                 </div>
               </div>
-              <div class="col-lg-7">
-                <div class="border rounded p-3 h-100 d-grid gap-2 announcement-preview">
-                  <p class="text-uppercase text-muted fw-semibold mb-0" id="preview-date" data-placeholder="Data do comunicado">Data do comunicado</p>
-                  <h3 class="h6 mb-0" id="preview-subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
-                  <div id="preview-content" class="text-body-secondary" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
-                  <div id="preview-attachments-empty" class="text-muted small">Nenhum anexo selecionado.</div>
-                  <div id="preview-attachment-list" class="d-grid gap-2"></div>
+              <div class="col-lg-6">
+                <div class="announcement-preview card border-0 shadow-sm h-100">
+                  <div class="card-body d-grid gap-3">
+                    <div class="d-flex flex-column gap-1">
+                      <span class="badge rounded-pill text-bg-primary align-self-start">Prévia em tempo real</span>
+                      <p class="text-uppercase text-muted fw-semibold small mb-0" id="preview-date" data-placeholder="Data do comunicado">Data do comunicado</p>
+                      <h3 class="h5 mb-0" id="preview-subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
+                    </div>
+                    <div id="preview-content" class="text-body-secondary" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
+                    <div class="d-grid gap-3">
+                      <div id="preview-attachments-empty" class="text-muted small">Nenhum anexo selecionado.</div>
+                      <div id="preview-attachment-list" class="d-grid gap-2"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div class="modal-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-            <small class="text-muted">O comunicado ficará visível imediatamente para todos os usuários.</small>
-            {{ form.submit(class="btn btn-primary btn-sm px-3", value="Publicar agora") }}
+            <small class="text-muted">Revise os detalhes antes de publicar. Você pode editar a qualquer momento.</small>
+            {{ form.submit(class="btn btn-primary px-4", value="Publicar agora") }}
           </div>
         </form>
       </div>
@@ -586,6 +606,7 @@
     const subjectInput = announcementModal.querySelector('#{{ form.subject.id }}');
     const contentInput = announcementModal.querySelector('#{{ form.content.id }}');
     const attachmentInput = announcementModal.querySelector('#{{ form.attachments.id }}');
+    const dropzone = announcementModal.querySelector('.upload-dropzone');
 
     const previewDate = document.getElementById('preview-date');
     const previewSubject = document.getElementById('preview-subject');
@@ -705,20 +726,59 @@
       });
     };
 
-    if (attachmentInput) {
-      attachmentInput.addEventListener('change', (event) => {
-        const files = Array.from(event.target.files || []);
-        if (!files.length) {
-          return;
-        }
-        if (!supportsDataTransfer) {
-          selectedFiles.splice(0, selectedFiles.length, ...files);
-        } else {
-          files.forEach((file) => selectedFiles.push(file));
+    const addFiles = (files) => {
+      const fileList = Array.from(files || []);
+      if (!fileList.length) {
+        return;
+      }
+      if (!supportsDataTransfer) {
+        selectedFiles.splice(0, selectedFiles.length, ...fileList);
+      } else {
+        fileList.forEach((file) => selectedFiles.push(file));
+        if (attachmentInput) {
           attachmentInput.value = '';
         }
-        refreshAttachmentInput();
-        renderAttachments();
+      }
+      refreshAttachmentInput();
+      renderAttachments();
+    };
+
+    if (attachmentInput) {
+      attachmentInput.addEventListener('change', (event) => {
+        addFiles(event.target.files || []);
+      });
+    }
+
+    if (dropzone) {
+      dropzone.addEventListener('click', () => {
+        attachmentInput?.click();
+      });
+
+      dropzone.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          attachmentInput?.click();
+        }
+      });
+
+      dropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        dropzone.classList.add('is-dragover');
+      });
+
+      ['dragleave', 'dragend'].forEach((eventName) => {
+        dropzone.addEventListener(eventName, () => {
+          dropzone.classList.remove('is-dragover');
+        });
+      });
+
+      dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropzone.classList.remove('is-dragover');
+        if (!event.dataTransfer) {
+          return;
+        }
+        addFiles(event.dataTransfer.files || []);
       });
     }
 

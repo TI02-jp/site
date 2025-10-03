@@ -2215,3 +2215,191 @@ Flash Messages
     color: #842029;
     border-color: #f5c2c7;
 }
+
+/* -----------------------------
+Announcement creation modal
+----------------------------- */
+.announcement-modal .modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.18);
+}
+
+.announcement-modal .modal-header,
+.announcement-modal .modal-footer {
+    border: none;
+    padding: 1.75rem 2rem;
+}
+
+.announcement-modal .modal-body {
+    background: var(--bs-body-tertiary);
+    padding: 2rem;
+}
+
+.announcement-form {
+    font-size: 1rem;
+}
+
+.announcement-form-card {
+    background: var(--bs-body-bg);
+    border-radius: 1rem;
+    border: 1px solid var(--bs-border-color);
+    padding: 1.5rem;
+    box-shadow: 0 2.5rem 3rem -2.5rem rgba(15, 23, 42, 0.45);
+}
+
+.announcement-form-card .form-control {
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+
+.announcement-form-card .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
+.upload-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.75rem;
+    border: 1.5px dashed var(--bs-border-color);
+    border-radius: 0.875rem;
+    background: var(--bs-body-bg);
+    color: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upload-dropzone .dropzone-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--bs-primary);
+}
+
+.upload-dropzone span.text-muted {
+    font-size: 0.875rem;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.is-dragover {
+    border-color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.12);
+}
+
+.upload-dropzone:focus-visible {
+    outline: none;
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.upload-dropzone.is-invalid {
+    border-color: var(--bs-danger);
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-danger-rgb), 0.12);
+}
+
+.announcement-preview {
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.1), rgba(var(--bs-primary-rgb), 0.03));
+    backdrop-filter: blur(4px);
+}
+
+.announcement-preview .badge {
+    letter-spacing: 0.08em;
+}
+
+#preview-content {
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.preview-attachment {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(6px);
+}
+
+.preview-attachment .attachment-icon {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    font-size: 1.25rem;
+}
+
+.preview-attachment img {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.75rem 1.5rem -1rem rgba(15, 23, 42, 0.4);
+}
+
+.preview-attachment .attachment-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-attachment .attachment-details .text-muted {
+    font-size: 0.75rem;
+}
+
+.attachment-remove-btn {
+    border: none;
+    background: transparent;
+    color: var(--bs-danger);
+    font-size: 1.1rem;
+    padding: 0.25rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.attachment-remove-btn:hover,
+.attachment-remove-btn:focus {
+    color: var(--bs-danger);
+    transform: scale(1.1);
+}
+
+.attachment-remove-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-danger-rgb), 0.25);
+    border-radius: 999px;
+}
+
+@media (max-width: 991.98px) {
+    .announcement-modal .modal-dialog {
+        margin: 1rem;
+    }
+
+    .announcement-modal .modal-body {
+        padding: 1.5rem;
+    }
+
+    .announcement-form-card {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .announcement-modal .modal-header,
+    .announcement-modal .modal-footer {
+        padding: 1.5rem;
+    }
+
+    .upload-dropzone {
+        padding: 1.25rem;
+    }
+}
