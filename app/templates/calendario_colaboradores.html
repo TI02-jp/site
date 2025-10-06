@@ -218,6 +218,16 @@
     document.addEventListener('DOMContentLoaded', function() {
         var canManage = {{ 'true' if can_manage else 'false' }};
         var currentEvent = null;
+        var currentEventOriginalId = null;
+        function parseUTCDate(value) {
+            if (!value) { return null; }
+            var parts = value.split('-').map(function(part) { return parseInt(part, 10); });
+            if (parts.length !== 3 || parts.some(isNaN)) { return null; }
+            return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+        }
+        function formatUTCDate(date) {
+            return date.toISOString().split('T')[0];
+        }
         var calendarEl = document.getElementById('calendar');
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
@@ -256,6 +266,7 @@
             eventClick: function(info) {
                 info.jsEvent.preventDefault();
                 currentEvent = info.event;
+                currentEventOriginalId = currentEvent.extendedProps.originalId || currentEvent.id;
                 document.getElementById('detailTitle').textContent = currentEvent.title;
                 var creatorEl = document.getElementById('detailCreator');
                 if (currentEvent.extendedProps.creator) {
@@ -302,7 +313,7 @@
                     }
                     if (currentEvent.extendedProps.can_delete) {
                         deleteBtn.classList.remove('d-none');
-                        deleteForm.action = '/calendario-eventos/' + currentEvent.id + '/delete';
+                        deleteForm.action = '/calendario-eventos/' + currentEventOriginalId + '/delete';
                     } else {
                         deleteBtn.classList.add('d-none');
                     }
@@ -386,22 +397,62 @@
         if (startDateInput) { startDateInput.addEventListener('change', updateTimeFieldsVisibility); }
         if (endDateInput) { endDateInput.addEventListener('change', updateTimeFieldsVisibility); }
 
+        function cloneEvent(ev) {
+            var clone = Object.assign({}, ev);
+            if (Array.isArray(ev.participants)) {
+                clone.participants = ev.participants.slice();
+            }
+            if (Array.isArray(ev.participant_ids)) {
+                clone.participant_ids = ev.participant_ids.slice();
+            }
+            return clone;
+        }
+
         function loadEvents() {
             fetch('/api/calendario-eventos')
                 .then(function(resp) { return resp.json(); })
                 .then(function(data) {
                     calendar.removeAllEvents();
                     data.forEach(function(ev) {
-                        if (ev.allDay) {
-                            var hasEnd = Boolean(ev.end);
-                            if (!hasEnd || ev.end === ev.start) {
-                                var endDate = new Date(ev.start);
-                                endDate.setDate(endDate.getDate() + 1);
-                                ev.end = endDate.toISOString().split('T')[0];
+                        if (ev.allDay && ev.start_date && ev.end_date) {
+                            var startDate = parseUTCDate(ev.start_date);
+                            var endDate = parseUTCDate(ev.end_date);
+                            if (!startDate || !endDate) {
+                                if (!ev.display) { ev.display = 'block'; }
+                                calendar.addEvent(ev);
+                                return;
                             }
-                            ev.display = 'block';
+                            var segmentIndex = 0;
+                            for (var cursor = new Date(startDate.getTime()); cursor <= endDate; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+                                var segment = cloneEvent(ev);
+                                segment.originalId = ev.id;
+                                if (segmentIndex === 0) {
+                                    segment.id = ev.id;
+                                } else {
+                                    segment.id = ev.id + '-seg-' + segmentIndex;
+                                }
+                                var segmentEnd = new Date(cursor.getTime());
+                                segmentEnd.setUTCDate(segmentEnd.getUTCDate() + 1);
+                                segment.start = formatUTCDate(cursor);
+                                segment.end = formatUTCDate(segmentEnd);
+                                segment.display = 'block';
+                                calendar.addEvent(segment);
+                                segmentIndex += 1;
+                            }
+                        } else {
+                            if (ev.allDay) {
+                                var hasEnd = Boolean(ev.end);
+                                if (!hasEnd || ev.end === ev.start) {
+                                    var fallbackEnd = parseUTCDate(ev.start);
+                                    if (fallbackEnd) {
+                                        fallbackEnd.setUTCDate(fallbackEnd.getUTCDate() + 1);
+                                        ev.end = formatUTCDate(fallbackEnd);
+                                    }
+                                }
+                                ev.display = 'block';
+                            }
+                            calendar.addEvent(ev);
                         }
-                        calendar.addEvent(ev);
                     });
                 });
         }
@@ -440,7 +491,8 @@
             var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
             detailModal.hide();
             var form = document.querySelector('#calendarEventModal form');
-            document.getElementById('event_id').value = currentEvent.id || '';
+            var targetId = currentEventOriginalId || currentEvent.id || '';
+            document.getElementById('event_id').value = targetId;
             form.title.value = currentEvent.title;
             form.start_date.value = currentEvent.extendedProps.start_date;
             form.end_date.value = currentEvent.extendedProps.end_date;
