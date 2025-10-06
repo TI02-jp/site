@@ -17,7 +17,6 @@ from app.models.tables import (
 )
 
 
-DEFAULT_EVENT_COLOR = "#0d6efd"
 _TIME_COLUMNS_VERIFIED = False
 
 
@@ -213,7 +212,6 @@ def serialize_events_for_calendar(
                     for p in event.participants
                 ],
                 "participant_ids": [p.user_id for p in event.participants],
-                "color": DEFAULT_EVENT_COLOR,
                 "can_edit": can_edit,
                 "can_delete": can_delete,
             }
