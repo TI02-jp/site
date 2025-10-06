@@ -192,6 +192,16 @@ def serialize_events_for_calendar(
             start_iso = datetime.combine(event.start_date, event.start_time).isoformat()
             end_iso = datetime.combine(event.end_date, event.end_time).isoformat()
             all_day = False
+        participants = [
+            p.user.username if p.user else p.user_name
+            for p in event.participants
+        ]
+        creator_username = event.created_by.username if event.created_by else None
+        is_tadeu_event = any(
+            username and username.lower() == "tadeu"
+            for username in participants + ([creator_username] if creator_username else [])
+        )
+
         events.append(
             {
                 "id": event.id,
@@ -204,16 +214,21 @@ def serialize_events_for_calendar(
                 "start_time": event.start_time.strftime("%H:%M") if event.start_time else None,
                 "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
                 "description": event.description,
-                "creator": (
-                    event.created_by.username if event.created_by else None
-                ),
-                "participants": [
-                    p.user.username if p.user else p.user_name
-                    for p in event.participants
-                ],
+                "creator": creator_username,
+                "participants": participants,
                 "participant_ids": [p.user_id for p in event.participants],
                 "can_edit": can_edit,
                 "can_delete": can_delete,
+                "is_tadeu_event": is_tadeu_event,
             }
         )
+
+    events.sort(
+        key=lambda data: (
+            0 if data.get("is_tadeu_event") else 1,
+            data.get("start_date"),
+            data.get("start_time") or "",
+            (data.get("title") or "").lower(),
+        )
+    )
     return events
