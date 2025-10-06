@@ -19,14 +19,16 @@
         padding: 0;
         border: none;
         background: transparent;
+        width: 100%;
     }
     .fc .fc-daygrid-event { font-size: 0.75rem; }
     .fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 0; }
     .fc .fc-daygrid-event .fc-event-main,
     .fc .fc-timegrid-event .fc-event-main {
         position: relative;
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-content: flex-start;
         gap: 0.35rem;
         padding: 2px 6px;
         border-radius: 999px;
@@ -34,11 +36,12 @@
         color: #fff;
         line-height: 1;
         white-space: nowrap;
-        max-width: 100%;
+        width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
         z-index: 1;
+        text-align: left;
     }
     .fc .fc-daygrid-event .fc-event-title,
     .fc .fc-timegrid-event .fc-event-title {
@@ -180,12 +183,14 @@
 .fc-daygrid-dot-event { display: flex; align-items: center; padding: 0; border: none; background: none; }
 .fc-daygrid-dot-event .fc-event-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; border: none; }
 .fc-event-main-custom {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 0.35rem;
     font-size: 0.75rem;
     line-height: 1;
     white-space: nowrap;
+    width: 100%;
 }
 .fc-daygrid-day .fc-event-main-custom { font-size: 0.8rem; }
 .fc-event-main-custom .fc-event-creator { font-weight: 600; }
@@ -245,6 +250,17 @@
             return null;
         }
 
+        function hasTadeuFlag(event) {
+            if (!event) { return false; }
+            if (event.extendedProps && typeof event.extendedProps.is_tadeu_event !== 'undefined') {
+                return Boolean(event.extendedProps.is_tadeu_event);
+            }
+            if (typeof event.is_tadeu_event !== 'undefined') {
+                return Boolean(event.is_tadeu_event);
+            }
+            return false;
+        }
+
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             fixedWeekCount: false,
@@ -261,6 +277,11 @@
             eventDisplay: 'block',
             eventMaxStack: 8,
             eventOrder: function(a, b) {
+                var aTadeu = hasTadeuFlag(a);
+                var bTadeu = hasTadeuFlag(b);
+                if (aTadeu !== bTadeu) {
+                    return aTadeu ? -1 : 1;
+                }
                 if (a.allDay && !b.allDay) {
                     return -1;
                 }
@@ -468,6 +489,15 @@
                 .then(function(data) {
                     calendar.removeAllEvents();
                     data.sort(function(a, b) {
+                        var aTadeu = Boolean(
+                            (a.extendedProps && a.extendedProps.is_tadeu_event) || a.is_tadeu_event
+                        );
+                        var bTadeu = Boolean(
+                            (b.extendedProps && b.extendedProps.is_tadeu_event) || b.is_tadeu_event
+                        );
+                        if (aTadeu !== bTadeu) {
+                            return aTadeu ? -1 : 1;
+                        }
                         var startA = eventPayloadStartDate(a);
                         var startB = eventPayloadStartDate(b);
                         if (startA && startB && startA.getTime() !== startB.getTime()) {
@@ -484,6 +514,9 @@
                     data.forEach(function(ev) {
                         if (!ev.extendedProps) {
                             ev.extendedProps = {};
+                        }
+                        if (typeof ev.is_tadeu_event !== 'undefined') {
+                            ev.extendedProps.is_tadeu_event = ev.is_tadeu_event;
                         }
                         if (ev.allDay) {
                             var startDate = parseUTCDate(ev.start_date || ev.start);
@@ -508,6 +541,9 @@
                                 }
                                 segment.extendedProps.originalId = ev.id;
                                 segment.extendedProps.spanDays = totalDays;
+                                if (typeof segment.is_tadeu_event !== 'undefined') {
+                                    segment.extendedProps.is_tadeu_event = segment.is_tadeu_event;
+                                }
                                 segment.originalId = ev.id;
                                 if (segmentIndex === 0) {
                                     segment.id = ev.id;
@@ -517,6 +553,9 @@
                                 segment.start = formatUTCDate(segmentStart);
                                 segment.end = formatUTCDate(segmentEnd);
                                 segment.display = 'block';
+                                if (typeof ev.is_tadeu_event !== 'undefined') {
+                                    segment.is_tadeu_event = ev.is_tadeu_event;
+                                }
                                 calendar.addEvent(segment);
                                 segmentIndex += 1;
                                 current.setUTCDate(current.getUTCDate() + 1);
@@ -526,6 +565,9 @@
                                 ev.extendedProps = {};
                             }
                             ev.extendedProps.spanDays = 1;
+                            if (typeof ev.is_tadeu_event !== 'undefined') {
+                                ev.extendedProps.is_tadeu_event = ev.is_tadeu_event;
+                            }
                             calendar.addEvent(ev);
                         }
                     });
