@@ -8,7 +8,10 @@
     .content-wrapper { padding: 0; }
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 200px; overflow-y: auto; }
-    #calendar { height: 70vh; }
+    #calendar {
+        min-height: 85vh;
+        height: calc(100vh - 12rem);
+    }
     .fc .fc-daygrid-event-harness { margin-bottom: 2px; }
     .fc .fc-daygrid-event,
     .fc .fc-timegrid-event { padding: 2px 6px; border-radius: 6px; }
@@ -196,6 +199,7 @@
             },
             navLinks: true,
             expandRows: true,
+            height: 'auto',
             eventDisplay: 'block',
             eventMaxStack: 8,
             buttonText: {
