@@ -173,7 +173,13 @@ def serialize_events_for_calendar(
     """Return events formatted for FullCalendar consumption."""
 
     events: list[dict] = []
-    for event in GeneralCalendarEvent.query.order_by(GeneralCalendarEvent.start_date).all():
+    for event in (
+        GeneralCalendarEvent.query.order_by(
+            GeneralCalendarEvent.start_date,
+            GeneralCalendarEvent.start_time,
+            GeneralCalendarEvent.title,
+        ).all()
+    ):
         can_edit = can_manage_all and (is_admin or event.created_by_id == current_user_id)
         can_delete = can_edit or is_admin
         start_iso = event.start_date.isoformat()
