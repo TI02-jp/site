@@ -239,15 +239,22 @@
             return date.toISOString().split('T')[0];
         }
         var calendarEl = document.getElementById('calendar');
-        function eventStartDate(event) {
-            var startDateStr = event.extendedProps && event.extendedProps.start_date;
-            if (startDateStr) {
-                return parseUTCDate(startDateStr);
+        function eventStartKey(event) {
+            var date = '';
+            if (event.extendedProps && event.extendedProps.start_date) {
+                date = event.extendedProps.start_date;
+            } else if (event.start) {
+                date = formatUTCDate(new Date(event.start.valueOf()));
             }
-            if (event.start) {
-                return new Date(event.start.valueOf());
+            var time = '';
+            if (event.extendedProps && event.extendedProps.start_time) {
+                time = event.extendedProps.start_time;
+            } else if (!event.allDay && event.start) {
+                var hours = String(event.start.getHours()).padStart(2, '0');
+                var minutes = String(event.start.getMinutes()).padStart(2, '0');
+                time = hours + ':' + minutes;
             }
-            return null;
+            return { date: date, time: time };
         }
 
         function hasTadeuFlag(event) {
@@ -277,27 +284,22 @@
             eventDisplay: 'block',
             eventMaxStack: 8,
             eventOrder: function(a, b) {
+                var aKey = eventStartKey(a);
+                var bKey = eventStartKey(b);
+                if (aKey.date && bKey.date && aKey.date !== bKey.date) {
+                    return aKey.date < bKey.date ? -1 : 1;
+                }
+                if (aKey.date && !bKey.date) { return -1; }
+                if (!aKey.date && bKey.date) { return 1; }
+                if (aKey.time && bKey.time && aKey.time !== bKey.time) {
+                    return aKey.time < bKey.time ? -1 : 1;
+                }
+                if (aKey.time && !bKey.time) { return 1; }
+                if (!aKey.time && bKey.time) { return -1; }
                 var aTadeu = hasTadeuFlag(a);
                 var bTadeu = hasTadeuFlag(b);
                 if (aTadeu !== bTadeu) {
                     return aTadeu ? -1 : 1;
-                }
-                if (a.allDay && !b.allDay) {
-                    return -1;
-                }
-                if (!a.allDay && b.allDay) {
-                    return 1;
-                }
-                var aStart = eventStartDate(a);
-                var bStart = eventStartDate(b);
-                if (aStart && bStart && aStart.getTime() !== bStart.getTime()) {
-                    return aStart - bStart;
-                }
-                if (aStart && !bStart) {
-                    return -1;
-                }
-                if (!aStart && bStart) {
-                    return 1;
                 }
                 if (a.allDay && b.allDay) {
                     var aSpan = (a.extendedProps && a.extendedProps.spanDays) ? a.extendedProps.spanDays : 1;
@@ -305,6 +307,8 @@
                     if (aSpan !== bSpan) {
                         return bSpan - aSpan;
                     }
+                } else if (a.allDay !== b.allDay) {
+                    return a.allDay ? -1 : 1;
                 }
                 var aTitle = a.title || '';
                 var bTitle = b.title || '';
@@ -473,14 +477,18 @@
             return copy;
         }
 
-        function eventPayloadStartDate(ev) {
-            if (ev.allDay) {
-                return parseUTCDate(ev.start_date || (ev.start ? ev.start.split('T')[0] : ''));
+        function eventPayloadStartKey(ev) {
+            var date = '';
+            if (ev.start_date) {
+                date = ev.start_date;
+            } else if (ev.start && typeof ev.start === 'string') {
+                date = ev.start.split('T')[0];
             }
-            if (ev.start) {
-                return new Date(ev.start);
+            var time = '';
+            if (ev.start_time) {
+                time = ev.start_time;
             }
-            return null;
+            return { date: date, time: time };
         }
 
         function loadEvents() {
@@ -489,6 +497,18 @@
                 .then(function(data) {
                     calendar.removeAllEvents();
                     data.sort(function(a, b) {
+                        var keyA = eventPayloadStartKey(a);
+                        var keyB = eventPayloadStartKey(b);
+                        if (keyA.date && keyB.date && keyA.date !== keyB.date) {
+                            return keyA.date < keyB.date ? -1 : 1;
+                        }
+                        if (keyA.date && !keyB.date) { return -1; }
+                        if (!keyA.date && keyB.date) { return 1; }
+                        if (keyA.time && keyB.time && keyA.time !== keyB.time) {
+                            return keyA.time < keyB.time ? -1 : 1;
+                        }
+                        if (keyA.time && !keyB.time) { return 1; }
+                        if (!keyA.time && keyB.time) { return -1; }
                         var aTadeu = Boolean(
                             (a.extendedProps && a.extendedProps.is_tadeu_event) || a.is_tadeu_event
                         );
@@ -498,13 +518,6 @@
                         if (aTadeu !== bTadeu) {
                             return aTadeu ? -1 : 1;
                         }
-                        var startA = eventPayloadStartDate(a);
-                        var startB = eventPayloadStartDate(b);
-                        if (startA && startB && startA.getTime() !== startB.getTime()) {
-                            return startA - startB;
-                        }
-                        if (startA && !startB) { return -1; }
-                        if (!startA && startB) { return 1; }
                         var titleA = (a.title || '').toLocaleLowerCase();
                         var titleB = (b.title || '').toLocaleLowerCase();
                         if (titleA < titleB) { return -1; }
