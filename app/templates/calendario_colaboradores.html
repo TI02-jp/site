@@ -30,7 +30,7 @@
         gap: 0.35rem;
         padding: 2px 6px;
         border-radius: 999px;
-        background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(9, 73, 168, 0.95));
+        background: rgba(13, 110, 253, 0.9);
         color: #fff;
         line-height: 1;
         white-space: nowrap;
@@ -39,11 +39,6 @@
         text-overflow: ellipsis;
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
         z-index: 1;
-    }
-    .fc-daygrid-day-events .fc-daygrid-event-harness:nth-child(even) .fc-event-main,
-    .fc-timegrid-event-harness:nth-child(even) .fc-event-main {
-        background: linear-gradient(135deg, rgba(17, 128, 255, 0.95), rgba(8, 55, 126, 0.95));
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
     }
     .fc .fc-daygrid-event .fc-event-title,
     .fc .fc-timegrid-event .fc-event-title {
@@ -229,6 +224,18 @@
         var currentEvent = null;
         var currentEventOriginalId = null;
         var MS_IN_DAY = 24 * 60 * 60 * 1000;
+        var EVENT_COLOR_PALETTE = [
+            { background: 'linear-gradient(135deg, #0d6efd, #0949a8)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.6)' },
+            { background: 'linear-gradient(135deg, #6610f2, #520dc2)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.55)' },
+            { background: 'linear-gradient(135deg, #d63384, #a61e68)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.55)' },
+            { background: 'linear-gradient(135deg, #198754, #146c43)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.5)' },
+            { background: 'linear-gradient(135deg, #fd7e14, #c85f00)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.55)' },
+            { background: 'linear-gradient(135deg, #20c997, #159a74)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.5)' },
+            { background: 'linear-gradient(135deg, #0dcaf0, #0aa2c0)', color: '#0b1625', shadow: '0 0 0 1px rgba(11, 22, 37, 0.25)' },
+            { background: 'linear-gradient(135deg, #6c757d, #4a5258)', color: '#fff', shadow: '0 0 0 1px rgba(255, 255, 255, 0.45)' }
+        ];
+        var eventColorMap = {};
+        var nextColorIndex = 0;
         function parseUTCDate(value) {
             if (!value) { return null; }
             var parts = value.split('-').map(function(part) { return parseInt(part, 10); });
@@ -239,6 +246,21 @@
             return date.toISOString().split('T')[0];
         }
         var calendarEl = document.getElementById('calendar');
+        function colorKeyForEvent(ev) {
+            if (!ev) { return 'unknown'; }
+            if (ev.id) { return String(ev.id); }
+            var start = ev.start_date || ev.start || '';
+            var end = ev.end_date || ev.end || '';
+            return (ev.title || '') + '|' + start + '|' + end;
+        }
+        function ensureColorForEvent(ev) {
+            var key = colorKeyForEvent(ev);
+            if (!eventColorMap.hasOwnProperty(key)) {
+                eventColorMap[key] = nextColorIndex % EVENT_COLOR_PALETTE.length;
+                nextColorIndex += 1;
+            }
+            return eventColorMap[key];
+        }
         function eventStartDate(event) {
             var startDateStr = event.extendedProps && event.extendedProps.start_date;
             if (startDateStr) {
@@ -295,6 +317,23 @@
                 if (aTitle < bTitle) { return -1; }
                 if (aTitle > bTitle) { return 1; }
                 return 0;
+            },
+            eventDidMount: function(info) {
+                var extended = info.event.extendedProps || {};
+                var colorIndex = extended.colorIndex;
+                if (colorIndex === undefined || colorIndex === null) { return; }
+                var paletteEntry = EVENT_COLOR_PALETTE[colorIndex % EVENT_COLOR_PALETTE.length];
+                if (!paletteEntry) { return; }
+                var mainEl = info.el.querySelector('.fc-event-main');
+                if (mainEl) {
+                    mainEl.style.background = paletteEntry.background;
+                    mainEl.style.color = paletteEntry.color;
+                    mainEl.style.boxShadow = paletteEntry.shadow;
+                }
+                var customEl = info.el.querySelector('.fc-event-main-custom');
+                if (customEl) {
+                    customEl.style.color = paletteEntry.color;
+                }
             },
             buttonText: {
                 dayGridDay: 'Dia',
@@ -487,6 +526,11 @@
                         return 0;
                     });
                     data.forEach(function(ev) {
+                        var colorIndex = ensureColorForEvent(ev);
+                        if (!ev.extendedProps) {
+                            ev.extendedProps = {};
+                        }
+                        ev.extendedProps.colorIndex = colorIndex;
                         if (ev.allDay) {
                             var startDate = parseUTCDate(ev.start_date || ev.start);
                             var endDate = parseUTCDate(ev.end_date || ev.end);
@@ -510,6 +554,7 @@
                                 }
                                 segment.extendedProps.originalId = ev.id;
                                 segment.extendedProps.spanDays = totalDays;
+                                segment.extendedProps.colorIndex = colorIndex;
                                 segment.originalId = ev.id;
                                 if (segmentIndex === 0) {
                                     segment.id = ev.id;
@@ -528,6 +573,7 @@
                                 ev.extendedProps = {};
                             }
                             ev.extendedProps.spanDays = 1;
+                            ev.extendedProps.colorIndex = colorIndex;
                             calendar.addEvent(ev);
                         }
                     });
