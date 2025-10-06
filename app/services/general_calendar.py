@@ -115,7 +115,10 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
     selected_users = _selected_users(form.participants.data)
     for user in selected_users:
         event.participants.append(
-            GeneralCalendarEventParticipant(user_id=user.id, user_name=user.name)
+            GeneralCalendarEventParticipant(
+                user_id=user.id,
+                user_name=user.username,
+            )
         )
     db.session.add(event)
     db.session.commit()
@@ -145,7 +148,10 @@ def update_calendar_event_from_form(
     selected_users = _selected_users(form.participants.data)
     for user in selected_users:
         event.participants.append(
-            GeneralCalendarEventParticipant(user_id=user.id, user_name=user.name)
+            GeneralCalendarEventParticipant(
+                user_id=user.id,
+                user_name=user.username,
+            )
         )
     db.session.commit()
     flash("Evento atualizado com sucesso!", "success")
@@ -193,8 +199,13 @@ def serialize_events_for_calendar(
                 "start_time": event.start_time.strftime("%H:%M") if event.start_time else None,
                 "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
                 "description": event.description,
-                "creator": event.created_by.name if event.created_by else None,
-                "participants": [p.user_name for p in event.participants],
+                "creator": (
+                    event.created_by.username if event.created_by else None
+                ),
+                "participants": [
+                    p.user.username if p.user else p.user_name
+                    for p in event.participants
+                ],
                 "participant_ids": [p.user_id for p in event.participants],
                 "color": DEFAULT_EVENT_COLOR,
                 "can_edit": can_edit,
