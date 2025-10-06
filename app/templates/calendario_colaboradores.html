@@ -30,14 +30,20 @@
         gap: 0.35rem;
         padding: 2px 6px;
         border-radius: 999px;
-        background-color: var(--fc-event-bg-color, #0d6efd);
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(9, 73, 168, 0.95));
         color: #fff;
         line-height: 1;
         white-space: nowrap;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
         z-index: 1;
+    }
+    .fc-daygrid-day-events .fc-daygrid-event-harness:nth-child(even) .fc-event-main,
+    .fc-timegrid-event-harness:nth-child(even) .fc-event-main {
+        background: linear-gradient(135deg, rgba(17, 128, 255, 0.95), rgba(8, 55, 126, 0.95));
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
     }
     .fc .fc-daygrid-event .fc-event-title,
     .fc .fc-timegrid-event .fc-event-title {
@@ -233,6 +239,17 @@
             return date.toISOString().split('T')[0];
         }
         var calendarEl = document.getElementById('calendar');
+        function eventStartDate(event) {
+            var startDateStr = event.extendedProps && event.extendedProps.start_date;
+            if (startDateStr) {
+                return parseUTCDate(startDateStr);
+            }
+            if (event.start) {
+                return new Date(event.start.valueOf());
+            }
+            return null;
+        }
+
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             fixedWeekCount: false,
@@ -253,6 +270,17 @@
                     return -1;
                 }
                 if (!a.allDay && b.allDay) {
+                    return 1;
+                }
+                var aStart = eventStartDate(a);
+                var bStart = eventStartDate(b);
+                if (aStart && bStart && aStart.getTime() !== bStart.getTime()) {
+                    return aStart - bStart;
+                }
+                if (aStart && !bStart) {
+                    return -1;
+                }
+                if (!aStart && bStart) {
                     return 1;
                 }
                 if (a.allDay && b.allDay) {
@@ -429,16 +457,29 @@
             return copy;
         }
 
+        function eventPayloadStartDate(ev) {
+            if (ev.allDay) {
+                return parseUTCDate(ev.start_date || (ev.start ? ev.start.split('T')[0] : ''));
+            }
+            if (ev.start) {
+                return new Date(ev.start);
+            }
+            return null;
+        }
+
         function loadEvents() {
             fetch('/api/calendario-eventos')
                 .then(function(resp) { return resp.json(); })
                 .then(function(data) {
                     calendar.removeAllEvents();
                     data.sort(function(a, b) {
-                        var startA = new Date(a.start);
-                        var startB = new Date(b.start);
-                        if (startA < startB) { return -1; }
-                        if (startA > startB) { return 1; }
+                        var startA = eventPayloadStartDate(a);
+                        var startB = eventPayloadStartDate(b);
+                        if (startA && startB && startA.getTime() !== startB.getTime()) {
+                            return startA - startB;
+                        }
+                        if (startA && !startB) { return -1; }
+                        if (!startA && startB) { return 1; }
                         var titleA = (a.title || '').toLocaleLowerCase();
                         var titleB = (b.title || '').toLocaleLowerCase();
                         if (titleA < titleB) { return -1; }
