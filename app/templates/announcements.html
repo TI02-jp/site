@@ -17,11 +17,19 @@
   }
 
   .announcement-search-tools form {
-    flex: 1 1 16rem;
+    flex: 1 1 100%;
   }
 
   .announcement-search-tools .input-group {
     width: 100%;
+  }
+
+  @media (min-width: 576px) {
+    .announcement-search-tools form {
+      flex: 0 1 auto;
+      width: auto !important;
+      max-width: 16rem;
+    }
   }
 
   .announcement-search-tools .btn {
