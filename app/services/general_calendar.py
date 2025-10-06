@@ -192,9 +192,18 @@ def serialize_events_for_calendar(
             start_iso = datetime.combine(event.start_date, event.start_time).isoformat()
             end_iso = datetime.combine(event.end_date, event.end_time).isoformat()
             all_day = False
+        sorted_participants = sorted(
+            event.participants,
+            key=lambda participant: (
+                0 if participant.user_id == 33 else 1,
+                (participant.user.username if participant.user else participant.user_name or "").lower(),
+                participant.user_id if participant.user_id is not None else 10**9,
+                participant.id,
+            ),
+        )
         participants = [
-            p.user.username if p.user else p.user_name
-            for p in event.participants
+            participant.user.username if participant.user else participant.user_name
+            for participant in sorted_participants
         ]
         creator_username = event.created_by.username if event.created_by else None
         is_tadeu_event = any(
@@ -216,7 +225,7 @@ def serialize_events_for_calendar(
                 "description": event.description,
                 "creator": creator_username,
                 "participants": participants,
-                "participant_ids": [p.user_id for p in event.participants],
+                "participant_ids": [p.user_id for p in sorted_participants],
                 "can_edit": can_edit,
                 "can_delete": can_delete,
                 "is_tadeu_event": is_tadeu_event,
