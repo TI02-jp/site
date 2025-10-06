@@ -32,6 +32,12 @@
         transform: translateY(-50%);
         pointer-events: none;
     }
+    .fc .fc-daygrid-event:not(.fc-event-start) {
+        padding: 4px 0;
+    }
+    .fc .fc-daygrid-event:not(.fc-event-start) .fc-event-main {
+        display: none;
+    }
     .fc .fc-daygrid-event { font-size: 0.75rem; }
     .fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 0; }
     .fc .fc-daygrid-event .fc-event-main,
