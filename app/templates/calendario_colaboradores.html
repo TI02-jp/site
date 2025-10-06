@@ -12,15 +12,36 @@
         min-height: 85vh;
         height: calc(100vh - 12rem);
     }
-    .fc .fc-daygrid-event-harness { margin-bottom: 1px; }
+    .fc .fc-daygrid-event-harness { margin-bottom: 0; }
     .fc .fc-daygrid-event,
-    .fc .fc-timegrid-event { padding: 1px 5px; border-radius: 4px; }
+    .fc .fc-timegrid-event {
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
     .fc .fc-daygrid-event { font-size: 0.75rem; }
-    .fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 0.9rem; }
+    .fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 0; }
     .fc .fc-daygrid-event .fc-event-main,
-    .fc .fc-timegrid-event .fc-event-main { padding: 0; line-height: 1.1; }
+    .fc .fc-timegrid-event .fc-event-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background-color: var(--fc-event-bg-color);
+        color: var(--fc-event-text-color);
+        line-height: 1;
+        white-space: nowrap;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .fc .fc-daygrid-event .fc-event-title,
-    .fc .fc-timegrid-event .fc-event-title { white-space: normal; }
+    .fc .fc-timegrid-event .fc-event-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     </style>
 {% endblock %}
 
@@ -154,10 +175,20 @@
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
 .fc-daygrid-dot-event { display: flex; align-items: center; padding: 0; border: none; background: none; }
 .fc-daygrid-dot-event .fc-event-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; border: none; }
-.fc-event-main-custom { display: flex; flex-direction: column; align-items: flex-start; font-size: var(--font-sm); line-height: 1.25; }
-.fc-event-participants { font-weight: 600; margin-bottom: 2px; }
-.fc-daygrid-day .fc-event-participants { font-size: var(--font-base); }
-.fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 1.25rem; }
+.fc-event-main-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+.fc-daygrid-day .fc-event-main-custom { font-size: 0.8rem; }
+.fc-event-main-custom .fc-event-creator { font-weight: 600; }
+.fc-event-main-custom .fc-event-separator {
+    font-weight: 600;
+    color: inherit;
+}
 </style>
 {% endblock %}
 
@@ -287,22 +318,26 @@
                 wrapper.className = 'fc-event-main-custom';
                 var participants = arg.event.extendedProps.participants || [];
                 var creator = arg.event.extendedProps.creator;
-                var whoText = '';
-                if (participants.length) {
-                    whoText = participants.join(', ');
-                } else if (creator) {
-                    whoText = creator;
+                var username = creator || (participants.length ? participants[0] : '');
+                if (username) {
+                    var userEl = document.createElement('span');
+                    userEl.className = 'fc-event-creator';
+                    userEl.textContent = username;
+                    wrapper.appendChild(userEl);
                 }
-                if (whoText) {
-                    var whoEl = document.createElement('div');
-                    whoEl.className = 'fc-event-participants';
-                    whoEl.textContent = whoText;
-                    wrapper.appendChild(whoEl);
+                var title = arg.event.title || '';
+                if (title) {
+                    if (username) {
+                        var separator = document.createElement('span');
+                        separator.className = 'fc-event-separator';
+                        separator.textContent = '•';
+                        wrapper.appendChild(separator);
+                    }
+                    var titleEl = document.createElement('span');
+                    titleEl.className = 'fc-event-title';
+                    titleEl.textContent = title;
+                    wrapper.appendChild(titleEl);
                 }
-                var titleEl = document.createElement('div');
-                titleEl.className = 'fc-event-title';
-                titleEl.textContent = arg.event.title || '';
-                wrapper.appendChild(titleEl);
                 return { domNodes: [wrapper] };
             }
         });
