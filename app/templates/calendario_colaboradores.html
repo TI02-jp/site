@@ -397,62 +397,27 @@
         if (startDateInput) { startDateInput.addEventListener('change', updateTimeFieldsVisibility); }
         if (endDateInput) { endDateInput.addEventListener('change', updateTimeFieldsVisibility); }
 
-        function cloneEvent(ev) {
-            var clone = Object.assign({}, ev);
-            if (Array.isArray(ev.participants)) {
-                clone.participants = ev.participants.slice();
-            }
-            if (Array.isArray(ev.participant_ids)) {
-                clone.participant_ids = ev.participant_ids.slice();
-            }
-            return clone;
-        }
-
         function loadEvents() {
             fetch('/api/calendario-eventos')
                 .then(function(resp) { return resp.json(); })
                 .then(function(data) {
                     calendar.removeAllEvents();
                     data.forEach(function(ev) {
-                        if (ev.allDay && ev.start_date && ev.end_date) {
-                            var startDate = parseUTCDate(ev.start_date);
-                            var endDate = parseUTCDate(ev.end_date);
-                            if (!startDate || !endDate) {
-                                if (!ev.display) { ev.display = 'block'; }
-                                calendar.addEvent(ev);
-                                return;
-                            }
-                            var segmentIndex = 0;
-                            for (var cursor = new Date(startDate.getTime()); cursor <= endDate; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-                                var segment = cloneEvent(ev);
-                                segment.originalId = ev.id;
-                                if (segmentIndex === 0) {
-                                    segment.id = ev.id;
-                                } else {
-                                    segment.id = ev.id + '-seg-' + segmentIndex;
+                        if (ev.allDay) {
+                            var startDate = parseUTCDate(ev.start_date || ev.start);
+                            var endDate = parseUTCDate(ev.end_date || ev.end);
+                            if (startDate) {
+                                if (!endDate || endDate < startDate) {
+                                    endDate = new Date(startDate.getTime());
                                 }
-                                var segmentEnd = new Date(cursor.getTime());
-                                segmentEnd.setUTCDate(segmentEnd.getUTCDate() + 1);
-                                segment.start = formatUTCDate(cursor);
-                                segment.end = formatUTCDate(segmentEnd);
-                                segment.display = 'block';
-                                calendar.addEvent(segment);
-                                segmentIndex += 1;
+                                var exclusiveEnd = new Date(endDate.getTime());
+                                exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+                                ev.start = formatUTCDate(startDate);
+                                ev.end = formatUTCDate(exclusiveEnd);
                             }
-                        } else {
-                            if (ev.allDay) {
-                                var hasEnd = Boolean(ev.end);
-                                if (!hasEnd || ev.end === ev.start) {
-                                    var fallbackEnd = parseUTCDate(ev.start);
-                                    if (fallbackEnd) {
-                                        fallbackEnd.setUTCDate(fallbackEnd.getUTCDate() + 1);
-                                        ev.end = formatUTCDate(fallbackEnd);
-                                    }
-                                }
-                                ev.display = 'block';
-                            }
-                            calendar.addEvent(ev);
+                            ev.display = 'block';
                         }
+                        calendar.addEvent(ev);
                     });
                 });
         }
