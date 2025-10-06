@@ -227,7 +227,8 @@ Botões e Ações
 Atalhos (Central de Acessos)
 ----------------------------- */
 .access-shortcut-wrapper {
-    width: 100%;
+    width: min(100%, 16rem);
+    align-self: flex-start;
 }
 
 .access-shortcut {
