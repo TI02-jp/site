@@ -723,14 +723,37 @@ def announcements():
 
     form = AnnouncementForm()
 
+    search_term = (request.args.get("q") or "").strip()
+
+    base_query = Announcement.query
+
+    if search_term:
+        ilike_pattern = f"%{search_term}%"
+        base_query = base_query.filter(
+            or_(
+                Announcement.subject.ilike(ilike_pattern),
+                Announcement.content.ilike(ilike_pattern),
+            )
+        )
+
+    total_announcements = base_query.count()
+
     announcements_query = (
-        Announcement.query.options(
+        base_query.options(
             joinedload(Announcement.created_by),
             joinedload(Announcement.attachments),
         )
         .order_by(Announcement.date.desc(), Announcement.created_at.desc())
     )
-    announcement_items = announcements_query.all()
+
+    if search_term:
+        announcement_items = announcements_query.all()
+    else:
+        announcement_items = announcements_query.limit(6).all()
+
+    display_count = len(announcement_items)
+    history_count = max(total_announcements - 6, 0)
+    has_history = not search_term and history_count > 0
 
     if request.method == "POST":
         if current_user.role != "admin":
@@ -813,6 +836,104 @@ def announcements():
         announcements=announcement_items,
         edit_forms=edit_forms,
         announcement_reads=announcement_reads,
+        search_term=search_term,
+        total_announcements=total_announcements,
+        display_count=display_count,
+        history_mode=False,
+        history_count=history_count,
+        has_history=has_history,
+        search_action_url=url_for("announcements"),
+        history_link_url=url_for("announcement_history"),
+        history_back_url=None,
+    )
+
+
+@app.route("/announcements/history", methods=["GET"])
+@login_required
+def announcement_history():
+    """Display the backlog of announcements that fall outside the main mural."""
+
+    search_term = (request.args.get("q") or "").strip()
+
+    recent_id_rows = (
+        Announcement.query.with_entities(Announcement.id)
+        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
+        .limit(6)
+        .all()
+    )
+    recent_ids = [row[0] for row in recent_id_rows]
+
+    base_query = Announcement.query
+
+    if recent_ids:
+        base_query = base_query.filter(Announcement.id.notin_(recent_ids))
+
+    if search_term:
+        ilike_pattern = f"%{search_term}%"
+        base_query = base_query.filter(
+            or_(
+                Announcement.subject.ilike(ilike_pattern),
+                Announcement.content.ilike(ilike_pattern),
+            )
+        )
+
+    total_history = base_query.count()
+
+    announcements_query = (
+        base_query.options(
+            joinedload(Announcement.created_by),
+            joinedload(Announcement.attachments),
+        )
+        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
+    )
+
+    announcement_items = announcements_query.all()
+    display_count = len(announcement_items)
+
+    announcement_reads: dict[int, bool] = {}
+    read_rows = (
+        TaskNotification.query.with_entities(
+            TaskNotification.announcement_id, TaskNotification.read_at
+        )
+        .filter(
+            TaskNotification.user_id == current_user.id,
+            TaskNotification.announcement_id.isnot(None),
+        )
+        .all()
+    )
+
+    for announcement_id, read_at in read_rows:
+        if announcement_id is None:
+            continue
+        if read_at:
+            announcement_reads[announcement_id] = True
+        elif announcement_id not in announcement_reads:
+            announcement_reads[announcement_id] = False
+
+    edit_forms: dict[int, AnnouncementForm] = {}
+    if current_user.role == "admin":
+        for item in announcement_items:
+            edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
+            edit_form.date.data = item.date
+            edit_form.subject.data = item.subject
+            edit_form.content.data = item.content
+            edit_forms[item.id] = edit_form
+
+    return render_template(
+        "announcements.html",
+        form=None,
+        announcements=announcement_items,
+        edit_forms=edit_forms,
+        announcement_reads=announcement_reads,
+        search_term=search_term,
+        total_announcements=total_history,
+        display_count=display_count,
+        history_mode=True,
+        history_count=total_history,
+        has_history=False,
+        search_action_url=url_for("announcement_history"),
+        history_link_url=None,
+        history_back_url=url_for("announcements"),
     )
 
 
