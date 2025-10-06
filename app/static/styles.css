@@ -226,8 +226,12 @@ Botões e Ações
 /* -----------------------------
 Atalhos (Central de Acessos)
 ----------------------------- */
+.access-shortcut-wrapper {
+    width: min(100%, 18rem);
+}
+
 .access-shortcut {
-    width: min(100%, 16rem);
+    width: 100%;
     min-height: 2.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
@@ -239,6 +243,30 @@ Atalhos (Central de Acessos)
 .access-shortcut .bi {
     flex-shrink: 0;
     font-size: var(--font-lg);
+}
+
+.access-description-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    border-radius: 0.5rem;
+}
+
+.access-description-toggle .bi {
+    transition: transform 0.2s ease;
+}
+
+.access-description-toggle:not(.collapsed) .bi {
+    transform: rotate(180deg);
+}
+
+.access-description {
+    background-color: var(--bs-light);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    line-height: 1.4;
 }
 
 /* -----------------------------
