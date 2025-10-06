@@ -231,6 +231,12 @@ Atalhos (Central de Acessos)
 }
 
 .access-shortcut {
+    position: relative;
+    width: 100%;
+    align-self: flex-start;
+}
+
+.access-shortcut-link {
     width: 100%;
     min-height: 2.5rem;
     padding: 0.5rem 0.75rem;
@@ -238,19 +244,45 @@ Atalhos (Central de Acessos)
     text-align: left;
     font-weight: 600;
     align-self: flex-start;
+    position: relative;
+    z-index: 0;
 }
 
-.access-shortcut .bi {
+.access-shortcut.has-description .access-shortcut-link {
+    padding-right: 2.75rem;
+}
+
+.access-shortcut-link .bi {
     flex-shrink: 0;
     font-size: var(--font-lg);
 }
 
 .access-description-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 2.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    border-radius: 0.5rem;
+    border: none;
+    border-radius: 0 0.5rem 0.5rem 0;
+    background-color: transparent;
+    color: var(--bs-primary);
+    border-left: 1px solid rgba(var(--bs-primary-rgb, 13, 110, 253), 0.2);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.access-description-toggle:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+.access-description-toggle:hover {
+    background-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08);
 }
 
 .access-description-toggle .bi {
