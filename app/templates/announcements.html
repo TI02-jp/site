@@ -244,12 +244,12 @@
   }
 
   .announcement-view-modal .modal-dialog {
-    max-width: min(1000px, 95vw);
+    max-width: min(1200px, 96vw);
   }
 
   @media (min-width: 1400px) {
     .announcement-view-modal .modal-dialog {
-      max-width: 1100px;
+      max-width: 1320px;
     }
   }
 
@@ -267,10 +267,23 @@
 
   .announcement-modal-attachment iframe {
     background: #fff;
+    border-radius: 0.75rem;
   }
 
-  .announcement-modal-attachment img {
-    object-fit: cover;
+  .announcement-modal-attachment-media {
+    width: 100%;
+  }
+
+  .announcement-modal-attachment-media .ratio {
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .announcement-modal-attachment-media img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0.75rem;
   }
 
   .announcement-modal-attachment .attachment-icon,
@@ -478,12 +491,14 @@
                     </a>
                   </div>
                   {% if attachment.is_image %}
-                  <div class="ratio ratio-4x3 mt-2">
-                    <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100 rounded">
+                  <div class="announcement-modal-attachment-media mt-2">
+                    <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="img-fluid rounded">
                   </div>
                   {% elif attachment.is_pdf or attachment.is_text %}
-                  <div class="ratio ratio-4x3 mt-2">
-                    <iframe src="{{ url_for('static', filename=attachment.file_path) }}" title="Pré-visualização do anexo" class="w-100 h-100 border rounded" allowfullscreen></iframe>
+                  <div class="announcement-modal-attachment-media mt-2">
+                    <div class="ratio ratio-4x3">
+                      <iframe src="{{ url_for('static', filename=attachment.file_path) }}" title="Pré-visualização do anexo" class="w-100 h-100 border" allowfullscreen></iframe>
+                    </div>
                   </div>
                   {% else %}
                   <div class="alert alert-light border mt-2 mb-0 text-muted small">
