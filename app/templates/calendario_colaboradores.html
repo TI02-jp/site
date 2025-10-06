@@ -15,14 +15,28 @@
     .fc .fc-daygrid-event-harness { margin-bottom: 0; }
     .fc .fc-daygrid-event,
     .fc .fc-timegrid-event {
+        position: relative;
         padding: 0;
         border: none;
         background: transparent;
+    }
+    .fc .fc-daygrid-event::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 999px;
+        background-color: var(--fc-event-bg-color);
+        transform: translateY(-50%);
+        pointer-events: none;
     }
     .fc .fc-daygrid-event { font-size: 0.75rem; }
     .fc .fc-daygrid-event.fc-daygrid-block-event { min-height: 0; }
     .fc .fc-daygrid-event .fc-event-main,
     .fc .fc-timegrid-event .fc-event-main {
+        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
@@ -35,6 +49,7 @@
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
+        z-index: 1;
     }
     .fc .fc-daygrid-event .fc-event-title,
     .fc .fc-timegrid-event .fc-event-title {
