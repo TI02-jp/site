@@ -234,9 +234,9 @@ def serialize_events_for_calendar(
 
     events.sort(
         key=lambda data: (
-            0 if data.get("is_tadeu_event") else 1,
-            data.get("start_date"),
+            data.get("start_date") or "",
             data.get("start_time") or "",
+            0 if data.get("is_tadeu_event") else 1,
             (data.get("title") or "").lower(),
         )
     )
