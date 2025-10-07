@@ -29,6 +29,7 @@ from app.models.tables import (
     SAO_PAULO_TZ,
     Reuniao,
     ReuniaoStatus,
+    default_meet_settings,
     Task,
     TaskStatus,
     TaskPriority,
@@ -59,6 +60,7 @@ from app.forms import (
     SetorForm,
     TagForm,
     MeetingForm,
+    MeetConfigurationForm,
     GeneralCalendarEventForm,
     TaskForm,
     AccessLinkForm,
@@ -87,6 +89,7 @@ from app.services.meeting_room import (
     update_meeting,
     combine_events,
     delete_meeting,
+    update_meeting_configuration,
 )
 from app.services.general_calendar import (
     populate_event_participants as populate_general_event_participants,
@@ -2024,11 +2027,59 @@ def delete_calendario_evento(event_id):
     return redirect(url_for("calendario_colaboradores"))
 
 
+def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], str]:
+    """Return possible Meet host options alongside the creator's name."""
+
+    candidates: list[dict[str, Any]] = []
+    seen_ids: set[int] = set()
+    for participant in meeting.participantes:
+        seen_ids.add(participant.id_usuario)
+        name = (
+            participant.usuario.name
+            if participant.usuario and participant.usuario.name
+            else participant.username_usuario
+        )
+        candidates.append(
+            {
+                "id": participant.id_usuario,
+                "name": name,
+                "username": participant.username_usuario,
+                "email": participant.usuario.email if participant.usuario else None,
+            }
+        )
+    creator_name = meeting.criador.name or meeting.criador.username
+    creator_entry = {
+        "id": meeting.criador_id,
+        "name": creator_name,
+        "username": meeting.criador.username,
+        "email": meeting.criador.email,
+    }
+    if meeting.criador_id not in seen_ids:
+        candidates.append(creator_entry)
+        seen_ids.add(meeting.criador_id)
+    if meeting.meet_host_id and meeting.meet_host_id not in seen_ids:
+        host_obj = meeting.meet_host
+        host_name = (
+            host_obj.name if host_obj and host_obj.name else (host_obj.username if host_obj else creator_name)
+        )
+        candidates.append(
+            {
+                "id": meeting.meet_host_id,
+                "name": host_name,
+                "username": host_obj.username if host_obj else "",
+                "email": host_obj.email if host_obj else None,
+            }
+        )
+    candidates.sort(key=lambda entry: (entry["name"] or "").lower())
+    return candidates, creator_name
+
+
 @app.route("/sala-reunioes", methods=["GET", "POST"])
 @login_required
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
+    meet_config_form = MeetConfigurationForm()
     populate_participants_choices(form)
     show_modal = False
     prefill_from_course = request.method == "GET" and request.args.get("course_calendar") == "1"
@@ -2090,10 +2141,13 @@ def sala_reunioes():
                         "danger",
                     )
                     return redirect(url_for("sala_reunioes"))
-                success, meet_link = update_meeting(form, raw_events, now, meeting)
+                success, operation = update_meeting(form, raw_events, now, meeting)
                 if success:
-                    if meet_link:
-                        session["meet_link"] = meet_link
+                    if operation and operation.meet_link:
+                        session["meet_popup"] = {
+                            "meeting_id": operation.meeting_id,
+                            "meet_link": operation.meet_link,
+                        }
                     return redirect(url_for("sala_reunioes"))
                 show_modal = True
             else:
@@ -2102,24 +2156,118 @@ def sala_reunioes():
                     "danger",
                 )
         else:
-            success, meet_link = create_meeting_and_event(
+            success, operation = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
             if success:
-                if meet_link:
-                    session["meet_link"] = meet_link
+                if operation and operation.meet_link:
+                    session["meet_popup"] = {
+                        "meeting_id": operation.meeting_id,
+                        "meet_link": operation.meet_link,
+                    }
                 return redirect(url_for("sala_reunioes"))
             show_modal = True
     if request.method == "POST":
         show_modal = True
-    meet_popup_link = session.pop("meet_link", None)
+    meet_popup_payload = session.pop("meet_popup", None)
+    meet_popup_data: dict[str, Any] | None = None
+    if meet_popup_payload:
+        meeting_id = meet_popup_payload.get("meeting_id")
+        meet_link = meet_popup_payload.get("meet_link")
+        if meeting_id and meet_link:
+            meeting = Reuniao.query.get(meeting_id)
+            if meeting and meeting.meet_link == meet_link:
+                can_configure = (
+                    current_user.role == "admin"
+                    or meeting.criador_id == current_user.id
+                )
+                participant_options, creator_name = _meeting_host_candidates(meeting)
+                settings_dict = dict(meeting.meet_settings or default_meet_settings())
+                meet_popup_data = {
+                    "meeting_id": meeting.id,
+                    "meet_link": meet_link,
+                    "subject": meeting.assunto,
+                    "host_candidates": participant_options,
+                    "current_host_id": meeting.meet_host_id or 0,
+                    "meet_settings": settings_dict,
+                    "creator_name": creator_name,
+                    "can_configure": can_configure,
+                }
     return render_template(
         "sala_reunioes.html",
         form=form,
+        meet_config_form=meet_config_form,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
-        meet_popup_link=meet_popup_link,
+        meet_popup_data=meet_popup_data,
     )
+
+
+@app.route("/reuniao/<int:meeting_id>/meet-config", methods=["POST"])
+@login_required
+def configure_meet_call(meeting_id: int):
+    """Persist configuration options for the Google Meet room."""
+
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    if current_user.role != "admin" and meeting.criador_id != current_user.id:
+        abort(403)
+    form = MeetConfigurationForm()
+    candidate_entries, creator_name = _meeting_host_candidates(meeting)
+    host_choices = [(0, f"Conta padrão ({creator_name})")] + [
+        (entry["id"], entry["name"]) for entry in candidate_entries
+    ]
+    form.host_id.choices = host_choices
+    form.meeting_id.data = str(meeting.id)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    if form.validate_on_submit():
+        try:
+            submitted_meeting_id = int(form.meeting_id.data)
+        except (TypeError, ValueError):
+            submitted_meeting_id = None
+        if submitted_meeting_id != meeting.id:
+            error_message = "Reunião inválida para configurar o Meet."
+            form.meeting_id.errors.append(error_message)
+        else:
+            selected_host_raw = form.host_id.data
+            allowed_host_ids = {choice for choice, _ in host_choices if choice}
+            if selected_host_raw and selected_host_raw not in allowed_host_ids:
+                form.host_id.errors.append("Selecione um proprietário válido para o Meet.")
+            else:
+                host_id = selected_host_raw or None
+                settings_payload = {
+                    "quick_access_enabled": form.quick_access_enabled.data,
+                    "mute_on_join": form.mute_on_join.data,
+                    "allow_chat": form.allow_chat.data,
+                    "allow_screen_share": form.allow_screen_share.data,
+                }
+                normalized_settings, host = update_meeting_configuration(
+                    meeting, host_id, settings_payload
+                )
+                host_name = (
+                    host.name or host.username
+                    if host
+                    else creator_name
+                )
+                response_payload = {
+                    "success": True,
+                    "message": "Configurações do Meet atualizadas com sucesso!",
+                    "meet_settings": normalized_settings,
+                    "meet_host": {
+                        "id": host.id if host else None,
+                        "name": host_name,
+                    },
+                }
+                if is_ajax:
+                    return jsonify(response_payload)
+                flash(response_payload["message"], "success")
+                return redirect(url_for("sala_reunioes"))
+    if is_ajax:
+        return jsonify({"success": False, "errors": form.errors}), 400
+    for field_errors in form.errors.values():
+        for error in field_errors:
+            flash(error, "danger")
+    return redirect(url_for("sala_reunioes"))
 
 
 @app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])

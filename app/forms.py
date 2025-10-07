@@ -28,6 +28,7 @@ from wtforms.validators import (
     EqualTo,
     ValidationError,
     URL,
+    InputRequired,
 )
 import re
 
@@ -483,6 +484,24 @@ class MeetingForm(FlaskForm):
             if has_error:
                 return False
         return True
+
+
+class MeetConfigurationForm(FlaskForm):
+    """Formulário para configurar opções da sala do Google Meet."""
+
+    meeting_id = HiddenField(validators=[DataRequired()])
+    host_id = SelectField(
+        "Proprietário da sala",
+        choices=[],
+        coerce=int,
+        validators=[InputRequired()],
+        default=0,
+    )
+    quick_access_enabled = BooleanField("Acesso rápido habilitado", default=True)
+    mute_on_join = BooleanField("Silenciar participantes ao entrar")
+    allow_chat = BooleanField("Permitir chat durante a reunião", default=True)
+    allow_screen_share = BooleanField("Permitir compartilhamento de tela", default=True)
+    submit = SubmitField("Salvar configurações")
 
 
 class GeneralCalendarEventForm(FlaskForm):
