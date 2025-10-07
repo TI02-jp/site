@@ -1,6 +1,8 @@
 """Helpers for meeting room scheduling logic."""
 
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Any
 from flask import flash
 from markupsafe import Markup
 from dateutil.parser import isoparse
@@ -11,6 +13,7 @@ from app.models.tables import (
     Reuniao,
     ReuniaoParticipante,
     ReuniaoStatus,
+    default_meet_settings,
 )
 from app.services.google_calendar import (
     list_upcoming_events,
@@ -24,6 +27,26 @@ from app.services.google_calendar import (
 CALENDAR_TZ = get_calendar_timezone()
 
 MIN_GAP = timedelta(minutes=2)
+
+
+@dataclass(slots=True)
+class MeetingOperationResult:
+    """Lightweight data returned after creating or updating a meeting."""
+
+    meeting_id: int
+    meet_link: str | None
+
+
+def _normalize_meet_settings(raw: Any | None = None) -> dict[str, bool]:
+    """Return a normalized dictionary with all Meet configuration flags."""
+
+    defaults = default_meet_settings()
+    normalized = defaults.copy()
+    if isinstance(raw, dict):
+        for key in defaults:
+            if key in raw:
+                normalized[key] = bool(raw[key])
+    return normalized
 
 
 def _parse_course_id(form) -> int | None:
@@ -142,6 +165,7 @@ def _create_additional_meeting(
         criador_id=user_id,
         course_id=course_id,
     )
+    meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
     db.session.flush()
     for u in selected_users:
@@ -168,9 +192,10 @@ def _create_additional_meeting(
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts.
 
-    Returns a tuple ``(success, meet_link)`` where ``success`` indicates
-    whether the meeting was created and ``meet_link`` contains the generated
-    Google Meet URL when available.
+    Returns a tuple ``(success, result)`` where ``success`` indicates whether
+    the meeting was created and ``result`` is an instance of
+    :class:`MeetingOperationResult` containing the meeting identifier and the
+    generated Google Meet URL when available.
     """
     course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
@@ -264,6 +289,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         criador_id=user_id,
         course_id=course_id_value,
     )
+    meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
     db.session.flush()
     for u in selected_users:
@@ -298,14 +324,15 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             )
             if not meet_link and link and not additional_meet_link:
                 additional_meet_link = link
-    return True, meet_link or additional_meet_link
+    return True, MeetingOperationResult(meeting.id, meet_link or additional_meet_link)
 
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar.
 
-    Returns a tuple ``(success, meet_link)`` similar to
-    :func:`create_meeting_and_event`.
+    Returns a tuple ``(success, result)`` similar to
+    :func:`create_meeting_and_event`, where ``result`` is a
+    :class:`MeetingOperationResult`.
     """
     course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
@@ -349,6 +376,7 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.assunto = form.subject.data
     meeting.descricao = form.description.data
     meeting.course_id = course_id_value
+    meeting.meet_settings = _normalize_meet_settings(meeting.meet_settings)
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     for u in selected_users:
@@ -396,7 +424,29 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return True, meeting.meet_link
+    return True, MeetingOperationResult(meeting.id, meeting.meet_link)
+
+
+def update_meeting_configuration(
+    meeting: Reuniao,
+    host_id: int | None,
+    settings: dict[str, Any] | None,
+) -> tuple[dict[str, bool], User | None]:
+    """Persist Meet configuration preferences for a meeting."""
+
+    normalized_settings = _normalize_meet_settings(settings)
+    meeting.meet_settings = normalized_settings
+    host: User | None = None
+    if host_id:
+        host = User.query.get(host_id)
+        if host is None:
+            meeting.meet_host_id = None
+        else:
+            meeting.meet_host_id = host.id
+    else:
+        meeting.meet_host_id = None
+    db.session.commit()
+    return normalized_settings, host
 
 
 def delete_meeting(meeting: Reuniao) -> bool:
@@ -452,6 +502,53 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             updated = True
         can_edit = r.criador_id == current_user_id and status == ReuniaoStatus.AGENDADA
         can_delete = can_edit or is_admin
+        can_configure = can_edit or is_admin
+        normalized_settings = _normalize_meet_settings(r.meet_settings)
+        participant_usernames: list[str] = []
+        participant_ids: list[int] = []
+        participant_details: list[dict[str, Any]] = []
+        host_candidates: list[dict[str, Any]] = []
+        seen_host_ids: set[int] = set()
+        for participant in r.participantes:
+            participant_usernames.append(participant.username_usuario)
+            participant_ids.append(participant.id_usuario)
+            if participant.usuario and participant.usuario.name:
+                display_name = participant.usuario.name
+            else:
+                display_name = participant.username_usuario
+            participant_details.append(
+                {
+                    "id": participant.id_usuario,
+                    "name": display_name,
+                    "username": participant.username_usuario,
+                    "email": participant.usuario.email if participant.usuario else None,
+                }
+            )
+            if participant.id_usuario not in seen_host_ids:
+                host_candidates.append({"id": participant.id_usuario, "name": display_name})
+                seen_host_ids.add(participant.id_usuario)
+        host_display: str | None = None
+        creator_name = ""
+        creator_username = ""
+        if r.criador:
+            creator_name = r.criador.name or r.criador.username
+            creator_username = r.criador.username
+            if r.criador.id not in seen_host_ids:
+                host_candidates.append({"id": r.criador.id, "name": creator_name})
+                seen_host_ids.add(r.criador.id)
+            if r.meet_host_id is None:
+                host_display = creator_name
+        if r.meet_host_id:
+            if r.meet_host:
+                host_display = r.meet_host.name or r.meet_host.username
+            else:
+                for detail in participant_details:
+                    if detail["id"] == r.meet_host_id:
+                        host_display = detail["name"]
+                        break
+            if r.meet_host_id not in seen_host_ids and host_display:
+                host_candidates.append({"id": r.meet_host_id, "name": host_display})
+                seen_host_ids.add(r.meet_host_id)
         event_data = {
             "id": r.id,
             "title": r.assunto,
@@ -460,16 +557,24 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "color": color,
             "description": r.descricao,
             "status": status_label,
-            "creator": r.criador.username,
-            "participants": [p.username_usuario for p in r.participantes],
-            "participant_ids": [p.id_usuario for p in r.participantes],
+            "creator": creator_name or creator_username,
+            "creator_username": creator_username,
+            "participants": participant_usernames,
+            "participant_ids": participant_ids,
+            "participant_details": participant_details,
             "meeting_id": r.id,
             "can_edit": can_edit,
             "can_delete": can_delete,
+            "can_configure": can_configure,
             "course_id": r.course_id,
+            "meet_settings": normalized_settings,
+            "host_candidates": host_candidates,
+            "meet_host_id": r.meet_host_id,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
+        if host_display:
+            event_data["meet_host_name"] = host_display
         events.append(event_data)
         seen_keys.add(key)
 

@@ -196,11 +196,16 @@
                                 <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
                                 <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
                                 <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
+                                <li class="list-group-item text-start d-none" id="detailMeetHostRow"><strong>Proprietário do Meet:</strong> <span id="detailMeetHost"></span></li>
                             </ul>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
                                 <i class="bi bi-camera-video"></i>
                                 <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
                                 <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
+                            </div>
+                            <div id="meetConfigSummary" class="bg-light border rounded p-3 mt-3 d-none">
+                                <div class="fw-semibold mb-2">Configurações do Meet</div>
+                                <ul class="list-unstyled mb-0 small" id="meetConfigSummaryList"></ul>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -208,34 +213,83 @@
                                 {{ form.csrf_token(id='csrf_token_delete') }}
                             </form>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" class="btn btn-outline-primary d-none" id="configureMeetBtn"><i class="bi bi-sliders me-1"></i>Configurar Meet</button>
                             <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
                             <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
                         </div>
                     </div>
                 </div>
             </div>
-            {% if meet_popup_link %}
-            <div class="modal fade" id="meetLinkModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-sm">
+            <div class="modal fade" id="meetConfigModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Sala do Google Meet</h5>
+                            <div>
+                                <h5 class="modal-title">Configurar sala do Google Meet</h5>
+                                <div class="text-muted small" id="meetConfigSubtitle"></div>
+                            </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-start">
-                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
-                                <i class="bi bi-camera-video me-2"></i>Abrir Meet
-                            </a>
-                            <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-camera-video"></i>
-                                <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
-                                <button class="btn btn-outline-secondary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
+                        <form id="meetConfigForm" method="post" data-action-template="{{ url_for('configure_meet_call', meeting_id=0) }}">
+                            <div class="modal-body text-start">
+                                {{ meet_config_form.csrf_token }}
+                                {{ meet_config_form.meeting_id(id='meet_config_meeting_id') }}
+                                <div class="alert alert-danger d-none" id="meetConfigError"></div>
+                                <div class="mb-3">
+                                    {{ meet_config_form.host_id.label(class="form-label") }}
+                                    {{ meet_config_form.host_id(class="form-select", id='meetConfigHost') }}
+                                    <div class="invalid-feedback" id="meetConfigHostError"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="meetConfigLink">Link da reunião</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-camera-video"></i></span>
+                                        <input type="text" class="form-control" id="meetConfigLink" readonly>
+                                        <button type="button" class="btn btn-outline-secondary" id="copyMeetConfigLink"><i class="bi bi-clipboard"></i></button>
+                                        <a class="btn btn-success" id="openMeetConfigLink" href="#" target="_blank" rel="noopener">
+                                            <i class="bi bi-camera-video-fill me-1"></i>Abrir Meet
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            {{ meet_config_form.quick_access_enabled(class="form-check-input", id='quick_access_enabled') }}
+                                            <label class="form-check-label" for="quick_access_enabled">{{ meet_config_form.quick_access_enabled.label.text }}</label>
+                                            <div class="form-text">Permite que os convidados entrem sem solicitar acesso.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            {{ meet_config_form.mute_on_join(class="form-check-input", id='mute_on_join') }}
+                                            <label class="form-check-label" for="mute_on_join">{{ meet_config_form.mute_on_join.label.text }}</label>
+                                            <div class="form-text">Os participantes entram com o microfone desligado.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            {{ meet_config_form.allow_chat(class="form-check-input", id='allow_chat') }}
+                                            <label class="form-check-label" for="allow_chat">{{ meet_config_form.allow_chat.label.text }}</label>
+                                            <div class="form-text">Define se o chat da reunião fica disponível.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            {{ meet_config_form.allow_screen_share(class="form-check-input", id='allow_screen_share') }}
+                                            <label class="form-check-label" for="allow_screen_share">{{ meet_config_form.allow_screen_share.label.text }}</label>
+                                            <div class="form-text">Controla se convidados podem compartilhar a tela.</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                {{ meet_config_form.submit(class="btn btn-primary", id='meetConfigSubmit') }}
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
-            {% endif %}
     </div>
     <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
@@ -274,11 +328,260 @@
 
     document.addEventListener('DOMContentLoaded', function() {
     var currentEvent;
+    var currentMeetConfig;
     var calendarEl = document.getElementById('calendar');
     var applyMoreDaysCheckbox = document.getElementById('apply_more_days');
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');
     var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
+    var meetConfigModalEl = document.getElementById('meetConfigModal');
+    var meetConfigForm = document.getElementById('meetConfigForm');
+    var meetConfigMeetingIdInput = document.getElementById('meet_config_meeting_id');
+    var meetConfigHostSelect = document.getElementById('meetConfigHost');
+    var meetConfigHostError = document.getElementById('meetConfigHostError');
+    var meetConfigError = document.getElementById('meetConfigError');
+    var meetConfigLinkInput = document.getElementById('meetConfigLink');
+    var meetConfigCopyBtn = document.getElementById('copyMeetConfigLink');
+    var meetConfigOpenBtn = document.getElementById('openMeetConfigLink');
+    var meetConfigSubtitle = document.getElementById('meetConfigSubtitle');
+    var meetConfigSubmitBtn = document.getElementById('meetConfigSubmit');
+    var configureMeetBtn = document.getElementById('configureMeetBtn');
+    var detailMeetHostRow = document.getElementById('detailMeetHostRow');
+    var detailMeetHost = document.getElementById('detailMeetHost');
+    var meetConfigSummary = document.getElementById('meetConfigSummary');
+    var meetConfigSummaryList = document.getElementById('meetConfigSummaryList');
+    var meetPopupData = {{ meet_popup_data|tojson|safe if meet_popup_data else 'null' }};
+
+    function getMeetConfigModal() {
+        if (!meetConfigModalEl) {
+            return null;
+        }
+        return bootstrap.Modal.getOrCreateInstance(meetConfigModalEl);
+    }
+
+    function resetMeetConfigFeedback() {
+        if (meetConfigHostSelect) {
+            meetConfigHostSelect.classList.remove('is-invalid');
+        }
+        if (meetConfigHostError) {
+            meetConfigHostError.textContent = '';
+        }
+        if (meetConfigError) {
+            meetConfigError.classList.add('d-none');
+            meetConfigError.textContent = '';
+        }
+    }
+
+    function populateMeetConfigForm(config) {
+        if (!meetConfigForm || !config) {
+            return;
+        }
+        currentMeetConfig = config;
+        resetMeetConfigFeedback();
+        if (meetConfigSubtitle) {
+            meetConfigSubtitle.textContent = config.subject ? `Reunião: ${config.subject}` : '';
+        }
+        if (meetConfigMeetingIdInput) {
+            meetConfigMeetingIdInput.value = config.meeting_id || '';
+        }
+        var actionTemplate = meetConfigForm.dataset.actionTemplate || '';
+        if (actionTemplate) {
+            if (actionTemplate.includes('/0/')) {
+                meetConfigForm.action = actionTemplate.replace('/0/', '/' + config.meeting_id + '/');
+            } else {
+                meetConfigForm.action = actionTemplate.replace(/0$/, String(config.meeting_id));
+            }
+        }
+        if (meetConfigHostSelect) {
+            meetConfigHostSelect.innerHTML = '';
+            var defaultOption = document.createElement('option');
+            defaultOption.value = '0';
+            var defaultLabel = config.creator_name ? `Conta padrão (${config.creator_name})` : 'Conta padrão';
+            defaultOption.textContent = defaultLabel;
+            meetConfigHostSelect.appendChild(defaultOption);
+            (config.host_candidates || []).forEach(function(entry) {
+                var option = document.createElement('option');
+                option.value = String(entry.id);
+                option.textContent = entry.name || entry.username || entry.email || `ID ${entry.id}`;
+                meetConfigHostSelect.appendChild(option);
+            });
+            var desiredHost = config.current_host_id ? String(config.current_host_id) : '0';
+            meetConfigHostSelect.value = desiredHost;
+            meetConfigHostSelect.disabled = config.can_configure === false;
+        }
+        var settings = config.meet_settings || {};
+        if (meetConfigForm.quick_access_enabled) {
+            meetConfigForm.quick_access_enabled.checked = !!settings.quick_access_enabled;
+            meetConfigForm.quick_access_enabled.disabled = config.can_configure === false;
+        }
+        if (meetConfigForm.mute_on_join) {
+            meetConfigForm.mute_on_join.checked = !!settings.mute_on_join;
+            meetConfigForm.mute_on_join.disabled = config.can_configure === false;
+        }
+        if (meetConfigForm.allow_chat) {
+            meetConfigForm.allow_chat.checked = !!settings.allow_chat;
+            meetConfigForm.allow_chat.disabled = config.can_configure === false;
+        }
+        if (meetConfigForm.allow_screen_share) {
+            meetConfigForm.allow_screen_share.checked = !!settings.allow_screen_share;
+            meetConfigForm.allow_screen_share.disabled = config.can_configure === false;
+        }
+        if (meetConfigLinkInput) {
+            meetConfigLinkInput.value = config.meet_link || '';
+        }
+        if (meetConfigOpenBtn) {
+            if (config.meet_link) {
+                meetConfigOpenBtn.href = config.meet_link;
+                meetConfigOpenBtn.classList.remove('disabled');
+            } else {
+                meetConfigOpenBtn.href = '#';
+                meetConfigOpenBtn.classList.add('disabled');
+            }
+        }
+        if (meetConfigSubmitBtn) {
+            meetConfigSubmitBtn.disabled = config.can_configure === false;
+        }
+    }
+
+    function openMeetConfiguration(config) {
+        if (!config) {
+            return;
+        }
+        populateMeetConfigForm(config);
+        var modalInstance = getMeetConfigModal();
+        if (modalInstance) {
+            modalInstance.show();
+        }
+    }
+
+    function updateMeetDetails(event) {
+        if (!event) {
+            return;
+        }
+        if (detailMeetHost && detailMeetHostRow) {
+            var hostName = event.extendedProps.meet_host_name || event.extendedProps.creator || '';
+            if (hostName && event.extendedProps.meet_link) {
+                detailMeetHost.textContent = hostName;
+                detailMeetHostRow.classList.remove('d-none');
+            } else {
+                detailMeetHost.textContent = '';
+                detailMeetHostRow.classList.add('d-none');
+            }
+        }
+        if (meetConfigSummary && meetConfigSummaryList) {
+            meetConfigSummaryList.innerHTML = '';
+            if (event.extendedProps.meet_link) {
+                var settings = event.extendedProps.meet_settings || {};
+                var summaryItems = [
+                    settings.quick_access_enabled ? 'Acesso rápido habilitado' : 'Acesso rápido desativado',
+                    settings.mute_on_join ? 'Participantes entram silenciados' : 'Participantes podem ativar o áudio ao entrar',
+                    settings.allow_chat ? 'Chat habilitado' : 'Chat desativado',
+                    settings.allow_screen_share ? 'Compartilhamento de tela permitido' : 'Compartilhamento de tela bloqueado',
+                ];
+                summaryItems.forEach(function(text) {
+                    var li = document.createElement('li');
+                    li.textContent = text;
+                    meetConfigSummaryList.appendChild(li);
+                });
+                meetConfigSummary.classList.remove('d-none');
+            } else {
+                meetConfigSummary.classList.add('d-none');
+            }
+        }
+    }
+
+    if (meetConfigCopyBtn && meetConfigLinkInput) {
+        meetConfigCopyBtn.addEventListener('click', function() {
+            if (!meetConfigLinkInput.value) {
+                return;
+            }
+            navigator.clipboard.writeText(meetConfigLinkInput.value).then(function() {
+                showFlashMessage('Link copiado!', 'success');
+            });
+        });
+    }
+
+    if (configureMeetBtn) {
+        configureMeetBtn.addEventListener('click', function() {
+            if (!configureMeetBtn.dataset.config) {
+                return;
+            }
+            try {
+                var parsed = JSON.parse(configureMeetBtn.dataset.config);
+                openMeetConfiguration(parsed);
+            } catch (err) {
+                console.error('Não foi possível abrir as configurações do Meet.', err);
+            }
+        });
+    }
+
+    if (meetConfigForm) {
+        meetConfigForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (!meetConfigForm.action) {
+                return;
+            }
+            resetMeetConfigFeedback();
+            var formData = new FormData(meetConfigForm);
+            fetch(meetConfigForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.json().then(function(data) {
+                            throw data;
+                        });
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (!data.success) {
+                        throw data;
+                    }
+                    showFlashMessage(data.message || 'Configurações atualizadas com sucesso!', 'success');
+                    var modalInstance = getMeetConfigModal();
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                    if (currentEvent) {
+                        if (data.meet_settings) {
+                            currentEvent.setExtendedProp('meet_settings', data.meet_settings);
+                        }
+                        if (data.meet_host) {
+                            currentEvent.setExtendedProp('meet_host_name', data.meet_host.name || '');
+                            currentEvent.setExtendedProp('meet_host_id', data.meet_host.id || null);
+                        } else {
+                            currentEvent.setExtendedProp('meet_host_name', '');
+                            currentEvent.setExtendedProp('meet_host_id', null);
+                        }
+                        updateMeetDetails(currentEvent);
+                    }
+                })
+                .catch(function(errorData) {
+                    if (errorData && errorData.errors) {
+                        if (errorData.errors.host_id && meetConfigHostSelect) {
+                            meetConfigHostSelect.classList.add('is-invalid');
+                            meetConfigHostError.textContent = errorData.errors.host_id[0];
+                        }
+                        if (errorData.errors.meeting_id && meetConfigError) {
+                            meetConfigError.classList.remove('d-none');
+                            meetConfigError.textContent = errorData.errors.meeting_id[0];
+                        }
+                    } else if (meetConfigError) {
+                        meetConfigError.classList.remove('d-none');
+                        meetConfigError.textContent = 'Não foi possível salvar as configurações do Meet.';
+                    }
+                });
+        });
+    }
+
+    if (meetPopupData) {
+        openMeetConfiguration(meetPopupData);
+    }
 
     function renumberAdditionalDates() {
         if (!additionalDatesContainer) {
@@ -540,6 +843,26 @@
             } else {
                 linkContainer.classList.add('d-none');
             }
+            updateMeetDetails(e);
+            if (configureMeetBtn) {
+                if (e.extendedProps.meet_link && e.extendedProps.can_configure) {
+                    configureMeetBtn.classList.remove('d-none');
+                    var configPayload = {
+                        meeting_id: e.extendedProps.meeting_id,
+                        meet_link: e.extendedProps.meet_link,
+                        host_candidates: e.extendedProps.host_candidates || [],
+                        current_host_id: e.extendedProps.meet_host_id || 0,
+                        meet_settings: e.extendedProps.meet_settings || {},
+                        creator_name: e.extendedProps.creator,
+                        subject: e.title,
+                        can_configure: true,
+                    };
+                    configureMeetBtn.dataset.config = JSON.stringify(configPayload);
+                } else {
+                    configureMeetBtn.classList.add('d-none');
+                    configureMeetBtn.dataset.config = '';
+                }
+            }
             var editBtn = document.getElementById('editEventBtn');
             var deleteBtn = document.getElementById('deleteEventBtn');
             var deleteForm = document.getElementById('deleteMeetingForm');
@@ -584,6 +907,9 @@
                         if (existing.extendedProps.can_delete !== evData.can_delete) {
                             existing.setExtendedProp('can_delete', evData.can_delete);
                         }
+                        if (existing.extendedProps.can_configure !== evData.can_configure) {
+                            existing.setExtendedProp('can_configure', evData.can_configure);
+                        }
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
                         }
@@ -593,9 +919,32 @@
                         if (existing.extendedProps.creator !== evData.creator) {
                             existing.setExtendedProp('creator', evData.creator);
                         }
+                        if (existing.extendedProps.creator_username !== evData.creator_username) {
+                            existing.setExtendedProp('creator_username', evData.creator_username);
+                        }
+                        existing.setExtendedProp('host_candidates', evData.host_candidates || []);
+                        existing.setExtendedProp('meet_settings', evData.meet_settings || {});
+                        existing.setExtendedProp('meet_host_id', evData.meet_host_id || 0);
+                        existing.setExtendedProp('meet_host_name', evData.meet_host_name || '');
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
+                        }
+                        if (currentEvent && currentEvent.id === existing.id) {
+                            updateMeetDetails(currentEvent);
+                            if (configureMeetBtn && !configureMeetBtn.classList.contains('d-none')) {
+                                var activeConfig = {
+                                    meeting_id: existing.extendedProps.meeting_id,
+                                    meet_link: existing.extendedProps.meet_link,
+                                    host_candidates: existing.extendedProps.host_candidates || [],
+                                    current_host_id: existing.extendedProps.meet_host_id || 0,
+                                    meet_settings: existing.extendedProps.meet_settings || {},
+                                    creator_name: existing.extendedProps.creator,
+                                    subject: existing.title,
+                                    can_configure: !!existing.extendedProps.can_configure,
+                                };
+                                configureMeetBtn.dataset.config = JSON.stringify(activeConfig);
+                            }
                         }
                         var el = existing.el;
                         if (el) {
@@ -673,19 +1022,6 @@
     });
     });
     </script>
-    {% if meet_popup_link %}
-        <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var popup = new bootstrap.Modal(document.getElementById('meetLinkModal'));
-        document.getElementById('copyMeetLinkPopup').addEventListener('click', function() {
-            navigator.clipboard.writeText(document.getElementById('meetLinkInput').value).then(function(){
-                showFlashMessage('Link copiado!', 'success');
-            });
-        });
-        popup.show();
-    });
-        </script>
-    {% endif %}
     {% if show_modal %}
         <script>
 document.addEventListener('DOMContentLoaded', function() {

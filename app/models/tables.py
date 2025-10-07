@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -637,6 +638,17 @@ class ReuniaoStatus(str, Enum):
     REALIZADA = "REALIZADA"
 
 
+def default_meet_settings() -> dict[str, bool]:
+    """Return the default configuration applied to new Google Meet rooms."""
+
+    return {
+        "quick_access_enabled": True,
+        "mute_on_join": False,
+        "allow_chat": True,
+        "allow_screen_share": True,
+    }
+
+
 class Reuniao(db.Model):
     """Meeting scheduled in the system."""
     __tablename__ = 'reunioes'
@@ -652,6 +664,16 @@ class Reuniao(db.Model):
         db.Integer,
         db.ForeignKey('courses.id', ondelete='SET NULL'),
         nullable=True,
+    )
+    meet_host_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True,
+    )
+    meet_settings = db.Column(
+        MutableDict.as_mutable(db.JSON),
+        nullable=False,
+        default=default_meet_settings,
     )
     status = db.Column(
         db.Enum(ReuniaoStatus, name="reuniao_status"),
@@ -671,6 +693,7 @@ class Reuniao(db.Model):
         lazy=True,
     )
     criador = db.relationship('User', foreign_keys=[criador_id])
+    meet_host = db.relationship('User', foreign_keys=[meet_host_id])
     course = db.relationship('Course', backref=db.backref('meetings', lazy=True))
 
 
