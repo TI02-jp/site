@@ -466,6 +466,51 @@
     var postponeStartInput = document.getElementById('postponeStart');
     var postponeEndInput = document.getElementById('postponeEnd');
 
+    function formatDateInputValue(date) {
+        if (!date) { return ''; }
+        var year = String(date.getFullYear());
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function formatTimeInputValue(date) {
+        if (!date) { return ''; }
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        return hours + ':' + minutes;
+    }
+
+    function formatDisplayDate(date) {
+        if (!date) { return ''; }
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    function formatDisplayTime(date) {
+        if (!date) { return ''; }
+        return date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    }
+
+    function setStatusButtonLoading(isLoading) {
+        if (!updateStatusBtn) { return; }
+        if (!updateStatusBtn.dataset.originalHtml) {
+            updateStatusBtn.dataset.originalHtml = updateStatusBtn.innerHTML;
+        }
+        if (isLoading) {
+            updateStatusBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Aguarde...</span>';
+            updateStatusBtn.disabled = true;
+            updateStatusBtn.classList.add('disabled');
+        } else {
+            updateStatusBtn.innerHTML = updateStatusBtn.dataset.originalHtml;
+            updateStatusBtn.disabled = false;
+            updateStatusBtn.classList.remove('disabled');
+        }
+    }
+
     function clearPostponeFields() {
         if (postponeDateInput) { postponeDateInput.value = ''; }
         if (postponeStartInput) { postponeStartInput.value = ''; }
@@ -474,18 +519,16 @@
 
     function populatePostponeDefaults() {
         if (!currentEvent) { return; }
-        if (postponeDateInput && currentEvent.startStr) {
-            postponeDateInput.value = currentEvent.startStr.slice(0,10);
+        var startDate = currentEvent.start;
+        var endDate = currentEvent.end;
+        if (postponeDateInput) {
+            postponeDateInput.value = formatDateInputValue(startDate);
         }
-        if (postponeStartInput && currentEvent.startStr) {
-            postponeStartInput.value = currentEvent.startStr.slice(11,16);
+        if (postponeStartInput) {
+            postponeStartInput.value = formatTimeInputValue(startDate);
         }
         if (postponeEndInput) {
-            if (currentEvent.endStr) {
-                postponeEndInput.value = currentEvent.endStr.slice(11,16);
-            } else if (currentEvent.startStr) {
-                postponeEndInput.value = '';
-            }
+            postponeEndInput.value = formatTimeInputValue(endDate);
         }
     }
 
@@ -886,13 +929,11 @@
                     if (statusSelect.value !== e.extendedProps.status_value) {
                         statusSelect.value = '';
                     }
-                    if (updateStatusBtn) {
-                        updateStatusBtn.disabled = false;
-                        updateStatusBtn.classList.remove('disabled');
-                    }
+                    setStatusButtonLoading(false);
                     togglePostponeFields(true);
                 } else {
                     statusWrapper.classList.add('d-none');
+                    setStatusButtonLoading(false);
                     togglePostponeFields(true);
                 }
             }
@@ -1096,8 +1137,7 @@
                 payload.new_start_time = newStart;
                 payload.new_end_time = newEnd;
             }
-            updateStatusBtn.disabled = true;
-            updateStatusBtn.classList.add('disabled');
+            setStatusButtonLoading(true);
             fetch('/reuniao/' + encodeURIComponent(meetingId) + '/status', {
                 method: 'POST',
                 headers: headers,
@@ -1126,27 +1166,41 @@
                     }
                     togglePostponeFields(false);
                     if (data.start) {
-                        currentEvent.setDates(data.start, data.end || null);
-                        var dateDisplay = data.start.slice(0,10).split('-').reverse().join('/');
-                        var startDisplay = data.start.slice(11,16);
+                        var startDateObj = new Date(data.start);
+                        var endDateObj = data.end ? new Date(data.end) : null;
+                        currentEvent.setDates(startDateObj, endDateObj || null);
                         var detailDateEl = document.getElementById('detailDate');
                         var detailStartEl = document.getElementById('detailStart');
                         var detailEndEl = document.getElementById('detailEnd');
                         var detailEndWrapper = document.getElementById('detailEndWrapper');
-                        if (detailDateEl) { detailDateEl.textContent = dateDisplay; }
-                        if (detailStartEl) { detailStartEl.textContent = startDisplay; }
+                        if (detailDateEl) {
+                            detailDateEl.textContent = formatDisplayDate(startDateObj);
+                        }
+                        if (detailStartEl) {
+                            detailStartEl.textContent = formatDisplayTime(startDateObj);
+                        }
                         if (detailEndWrapper && detailEndEl) {
-                            if (data.end) {
-                                detailEndEl.textContent = data.end.slice(11,16);
+                            if (endDateObj) {
+                                detailEndEl.textContent = formatDisplayTime(endDateObj);
                                 detailEndWrapper.classList.remove('d-none');
                             } else {
                                 detailEndEl.textContent = '';
                                 detailEndWrapper.classList.add('d-none');
                             }
                         }
+                        if (postponeDateInput) {
+                            postponeDateInput.value = formatDateInputValue(startDateObj);
+                        }
+                        if (postponeStartInput) {
+                            postponeStartInput.value = formatTimeInputValue(startDateObj);
+                        }
+                        if (postponeEndInput) {
+                            postponeEndInput.value = formatTimeInputValue(endDateObj);
+                        }
                         populatePostponeDefaults();
                     }
                     updateMeetLinkControls(currentEvent);
+                    refreshStatuses();
                     showFlashMessage(data.message || 'Status atualizado com sucesso.', 'success');
                 })
                 .catch(function(err) {
@@ -1157,8 +1211,7 @@
                     showFlashMessage(message, 'danger');
                 })
                 .finally(function() {
-                    updateStatusBtn.disabled = false;
-                    updateStatusBtn.classList.remove('disabled');
+                    setStatusButtonLoading(false);
                 });
         });
     }
@@ -1170,10 +1223,7 @@
                 statusWrapper.classList.add('d-none');
             }
             togglePostponeFields(true);
-            if (updateStatusBtn) {
-                updateStatusBtn.disabled = false;
-                updateStatusBtn.classList.remove('disabled');
-            }
+            setStatusButtonLoading(false);
         });
     }
 

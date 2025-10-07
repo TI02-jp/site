@@ -574,20 +574,29 @@ def postpone_meeting(
     meeting: Reuniao,
     new_start: datetime,
     new_end: datetime,
-    raw_events: list[dict[str, Any]] | None,
     status: ReuniaoStatus,
+    raw_events: list[dict[str, Any]] | None = None,
     notify_attendees: bool = False,
+    check_external_conflicts: bool = True,
 ) -> tuple[bool, str | None]:
     """Reschedule ``meeting`` to the provided interval.
 
     Returns ``(success, error_message)``. When ``success`` is ``False`` the
-    ``error_message`` contains a human readable reason.
+    ``error_message`` contains a human readable reason. When
+    ``check_external_conflicts`` is ``False`` the conflict detection only uses
+    local meetings, skipping external calendar lookups for faster responses.
     """
 
     if new_end <= new_start:
         return False, "O horário de término deve ser posterior ao horário de início."
 
     intervals: list[tuple[datetime, datetime]] = []
+    if check_external_conflicts and raw_events is None and meeting.google_event_id:
+        try:
+            raw_events = fetch_raw_events()
+        except Exception:
+            raw_events = []
+
     if raw_events:
         for event in raw_events:
             if meeting.google_event_id and event.get("id") == meeting.google_event_id:
