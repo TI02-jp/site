@@ -25,6 +25,8 @@ CALENDAR_TZ = get_calendar_timezone()
 
 MIN_GAP = timedelta(minutes=2)
 
+PORTAL_PRIMARY_HEX = "#0b288b"
+
 
 def _status_palette(start_dt: datetime, end_dt: datetime, now: datetime):
     """Return status metadata (enum, label, colors) for a meeting interval."""
@@ -34,20 +36,20 @@ def _status_palette(start_dt: datetime, end_dt: datetime, now: datetime):
             ReuniaoStatus.AGENDADA,
             "Agendada",
             "#ffc107",
-            "#b58105",
+            PORTAL_PRIMARY_HEX,
         )
     if start_dt <= now <= end_dt:
         return (
             ReuniaoStatus.EM_ANDAMENTO,
             "Em Andamento",
             "#198754",
-            "#0f5132",
+            PORTAL_PRIMARY_HEX,
         )
     return (
         ReuniaoStatus.REALIZADA,
         "Realizada",
         "#dc3545",
-        "#842029",
+        PORTAL_PRIMARY_HEX,
     )
 
 
