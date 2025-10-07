@@ -5,16 +5,37 @@
     {{ super() }}
     <style>
     .content-breadcrumb { display: none; }
+    .content-area { display: flex; }
+    .content-area > .content-wrapper {
+        flex: 1 1 auto;
+        display: flex;
+        min-height: 0;
+    }
     .content-wrapper { padding: 0; }
+    .agenda-calendar {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem 2.5rem 1.75rem;
+        gap: 1.25rem;
+        overflow: hidden;
+    }
+    .agenda-calendar-header {
+        flex: 0 0 auto;
+    }
+    .agenda-calendar-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+    }
+    .agenda-calendar-body #calendar {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 200px; overflow-y: auto; }
-    #calendar {
-        min-height: 700px;
-        height: 82vh;
-        max-height: 960px;
-    }
     .fc .fc-scroller {
-        overflow: visible !important;
+        overflow: hidden !important;
     }
     .fc .fc-daygrid-event-harness { margin-bottom: 0; }
     .fc .fc-daygrid-event,
@@ -61,8 +82,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid px-4 agenda-calendar">
+    <div class="d-flex justify-content-between align-items-center agenda-calendar-header">
         <h2>AGENDA</h2>
         {% if can_manage %}
         <button id="openEventModal"
@@ -71,7 +92,9 @@
                 data-bs-target="#calendarEventModal">Novo Evento</button>
         {% endif %}
     </div>
-    <div id="calendar"></div>
+    <div class="agenda-calendar-body">
+        <div id="calendar"></div>
+    </div>
 
     {% if can_manage %}
     <div class="modal fade" id="calendarEventModal" tabindex="-1" aria-hidden="true">
@@ -284,7 +307,7 @@
             },
             navLinks: true,
             expandRows: true,
-            height: 'auto',
+            height: '100%',
             eventDisplay: 'block',
             eventMaxStack: 8,
             eventOrder: function(a, b) {
