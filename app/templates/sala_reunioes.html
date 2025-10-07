@@ -236,11 +236,13 @@
                             <button type="button"
                                     class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mb-3"
                                     id="configureMeetBtn"
-                                    data-config-url="{{ meet_popup_config_url }}">
+                                    data-config-url="{{ meet_popup_config_url }}"
+                                    data-bs-target="#meetConfigModal"
+                                    data-bs-toggle="modal">
                                 <i class="bi bi-sliders me-2"></i>Configurar sala do Meet
                             </button>
                             <p class="small text-muted mb-3">
-                                Use esta opção para acessar a tela de configurações do Google Meet e transferir a propriedade da videochamada ou ajustar os controles de anfitrião.
+                                Use esta opção para ajustar os controles da videochamada sem sair do portal.
                             </p>
                             {% endif %}
                             <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
@@ -252,6 +254,28 @@
                     </div>
                 </div>
             </div>
+            {% if meet_popup_config_url %}
+            <div class="modal fade" id="meetConfigModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered meet-config-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Opções da videochamada</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0 position-relative">
+                            <div class="d-flex align-items-center justify-content-center py-5" id="meetConfigSpinner">
+                                <div class="spinner-border text-primary" role="status" aria-label="Carregando opções do Meet"></div>
+                            </div>
+                            <iframe id="meetConfigFrame"
+                                    class="w-100 border-0 d-none meet-config-frame"
+                                    title="Configurações do Google Meet"
+                                    allow="camera; microphone; display-capture;"
+                                    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
     </div>
     <style>
@@ -264,6 +288,8 @@
 .tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
+.meet-config-modal .modal-content{min-height:70vh;}
+.meet-config-frame{min-height:70vh;}
     </style>
 {% endblock %}
 {% block scripts %}
@@ -775,12 +801,30 @@
             });
         });
         var configureBtn = document.getElementById('configureMeetBtn');
-        if (configureBtn) {
+        var configModalEl = document.getElementById('meetConfigModal');
+        var configFrame = document.getElementById('meetConfigFrame');
+        var configSpinner = document.getElementById('meetConfigSpinner');
+        var configModal = configModalEl ? new bootstrap.Modal(configModalEl, {focus: true}) : null;
+        if (configureBtn && configModal && configFrame && configSpinner) {
             configureBtn.addEventListener('click', function() {
                 var url = configureBtn.getAttribute('data-config-url');
-                if (url) {
-                    window.open(url, 'meetConfigOptions', 'width=780,height=640,menubar=no,toolbar=no,location=yes');
+                if (!url) {
+                    return;
                 }
+                configSpinner.classList.remove('d-none');
+                configFrame.classList.add('d-none');
+                if (configFrame.src !== url) {
+                    configFrame.src = url;
+                }
+            });
+            configFrame.addEventListener('load', function() {
+                configSpinner.classList.add('d-none');
+                configFrame.classList.remove('d-none');
+            });
+            configModalEl.addEventListener('hidden.bs.modal', function() {
+                configFrame.src = 'about:blank';
+                configSpinner.classList.remove('d-none');
+                configFrame.classList.add('d-none');
             });
         }
         popup.show();
