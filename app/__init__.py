@@ -20,9 +20,19 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
-)
+_db_user = os.getenv('DB_USER')
+_db_password = os.getenv('DB_PASSWORD')
+_db_host = os.getenv('DB_HOST')
+_db_name = os.getenv('DB_NAME')
+
+if all([_db_user, _db_password, _db_host, _db_name]):
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f"mysql+pymysql://{_db_user}:{_db_password}@{_db_host}/{_db_name}"
+    )
+else:
+    os.makedirs(app.instance_path, exist_ok=True)
+    default_db_path = os.path.join(app.instance_path, 'storage.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{default_db_path}"
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "umsegredoforteaqui123")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
