@@ -940,6 +940,7 @@
                 }
             }
             var statusText = e.extendedProps.status || '';
+            var normalizedStatus = statusText.toLowerCase();
             var statusEl = document.getElementById('detailStatus');
             if (statusEl) {
                 statusEl.textContent = statusText;
@@ -969,6 +970,60 @@
                 } else {
                     ownerEl.textContent = '';
                     ownerItem.classList.add('d-none');
+                }
+                } else {
+                    ownerEl.textContent = '';
+                    ownerItem.classList.add('d-none');
+                }
+            }
+            var linkContainer = document.getElementById('meetLinkContainer');
+            var linkEl = document.getElementById('detailMeetLink');
+            var copyBtn = document.getElementById('copyMeetLink');
+            if (e.extendedProps.meet_link) {
+                if (linkEl) {
+                    linkEl.textContent = e.extendedProps.meet_link;
+                }
+                if (linkContainer) {
+                    linkContainer.classList.remove('d-none');
+                }
+                if (normalizedStatus === 'realizada') {
+                    if (linkEl) {
+                        linkEl.removeAttribute('href');
+                        linkEl.classList.add('text-muted', 'user-select-none');
+                        linkEl.style.pointerEvents = 'none';
+                    }
+                    if (copyBtn) {
+                        copyBtn.classList.add('d-none');
+                        copyBtn.onclick = null;
+                    }
+                } else {
+                    if (linkEl) {
+                        linkEl.href = e.extendedProps.meet_link;
+                        linkEl.classList.remove('text-muted', 'user-select-none');
+                        linkEl.style.pointerEvents = '';
+                    }
+                    if (copyBtn) {
+                        copyBtn.classList.remove('d-none');
+                        copyBtn.onclick = function() {
+                            navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
+                                showFlashMessage('Link copiado!', 'success');
+                            });
+                        };
+                    }
+                }
+            } else {
+                if (linkContainer) {
+                    linkContainer.classList.add('d-none');
+                }
+                if (linkEl) {
+                    linkEl.textContent = '';
+                    linkEl.removeAttribute('href');
+                    linkEl.classList.remove('text-muted', 'user-select-none');
+                    linkEl.style.pointerEvents = '';
+                }
+                if (copyBtn) {
+                    copyBtn.classList.add('d-none');
+                    copyBtn.onclick = null;
                 }
             }
             updateMeetLinkControls(e);

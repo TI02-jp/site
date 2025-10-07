@@ -145,6 +145,30 @@ def _resolve_meeting_status(
         meeting.status = status_enum
     return status_enum, changed
 
+def _status_palette(start_dt: datetime, end_dt: datetime, now: datetime):
+    """Return status metadata (enum, label, colors) for a meeting interval."""
+
+    if now < start_dt:
+        return (
+            ReuniaoStatus.AGENDADA,
+            "Agendada",
+            "#ffc107",
+            PORTAL_PRIMARY_HEX,
+        )
+    if start_dt <= now <= end_dt:
+        return (
+            ReuniaoStatus.EM_ANDAMENTO,
+            "Em Andamento",
+            "#198754",
+            PORTAL_PRIMARY_HEX,
+        )
+    return (
+        ReuniaoStatus.REALIZADA,
+        "Realizada",
+        "#dc3545",
+        PORTAL_PRIMARY_HEX,
+    )
+
 
 def _parse_course_id(form) -> int | None:
     """Return the course identifier associated with the form submission."""
@@ -732,6 +756,9 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
         status_enum, changed = _resolve_meeting_status(r, start_dt, end_dt, now)
         if changed:
+        status, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
+        if r.status != status:
+            r.status = status
             updated = True
         meta = STATUS_METADATA[status_enum]
         status_label = meta["label"]
@@ -794,6 +821,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         text_color = meta["text_color"]
         tooltip_class = meta["tooltip_class"]
         disable_meet_link = meta["disable_meet_link"]
+        _, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
         attendee_objs = e.get("attendees", [])
         emails = [a.get("email") for a in attendee_objs if a.get("email")]
         user_map = {
