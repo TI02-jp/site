@@ -52,6 +52,10 @@
     .meeting-modal-dialog .additional-date-group {
         min-width: 190px;
     }
+    .meet-link-modal-dialog { max-width: 520px; }
+    @media (max-width: 576px) {
+        .meet-link-modal-dialog { margin: 1rem; }
+    }
     .meet-link-modal { border: none; border-radius: 1rem; box-shadow: 0 20px 45px -28px rgba(18, 38, 63, 0.4); }
     .meet-link-modal .modal-body { padding: 1.75rem; }
     .meet-link-icon { width: 48px; height: 48px; background: #e8f0fe; color: #1a73e8; font-size: 1.4rem; }
@@ -287,7 +291,7 @@
             </div>
             {% if meet_popup_link %}
             <div class="modal fade" id="meetLinkModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-dialog modal-dialog-centered meet-link-modal-dialog">
                     <div class="modal-content meet-link-modal">
                         <div class="modal-header border-0 pb-0">
                             <div class="d-flex align-items-center gap-2">
