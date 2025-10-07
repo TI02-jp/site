@@ -79,7 +79,11 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
 from app.services.courses import CourseStatus, get_courses_overview
-from app.services.google_calendar import get_calendar_timezone
+from app.services.google_calendar import (
+    get_calendar_timezone,
+    MEETING_ROOM_EMAIL,
+    build_event_edit_link,
+)
 from app.services.meeting_room import (
     populate_participants_choices,
     fetch_raw_events,
@@ -87,6 +91,11 @@ from app.services.meeting_room import (
     update_meeting,
     combine_events,
     delete_meeting,
+    get_status_options,
+    get_status_badges,
+    get_status_metadata,
+    MANUAL_STATUS_OVERRIDES,
+    postpone_meeting,
 )
 from app.services.general_calendar import (
     populate_event_participants as populate_general_event_participants,
@@ -2030,6 +2039,8 @@ def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
     populate_participants_choices(form)
+    status_options = get_status_options()
+    status_badges = get_status_badges()
     show_modal = False
     prefill_from_course = request.method == "GET" and request.args.get("course_calendar") == "1"
     if prefill_from_course:
@@ -2090,10 +2101,15 @@ def sala_reunioes():
                         "danger",
                     )
                     return redirect(url_for("sala_reunioes"))
-                success, meet_link = update_meeting(form, raw_events, now, meeting)
+                success, meet_info = update_meeting(form, raw_events, now, meeting)
                 if success:
-                    if meet_link:
-                        session["meet_link"] = meet_link
+                    if meet_info:
+                        link = meet_info.get("link")
+                        event_id = meet_info.get("event_id")
+                        if link:
+                            session["meet_link"] = link
+                        if event_id:
+                            session["meet_event_id"] = event_id
                     return redirect(url_for("sala_reunioes"))
                 show_modal = True
             else:
@@ -2102,23 +2118,41 @@ def sala_reunioes():
                     "danger",
                 )
         else:
-            success, meet_link = create_meeting_and_event(
+            success, meet_info = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
             if success:
-                if meet_link:
-                    session["meet_link"] = meet_link
+                if meet_info:
+                    link = meet_info.get("link")
+                    event_id = meet_info.get("event_id")
+                    if link:
+                        session["meet_link"] = link
+                    if event_id:
+                        session["meet_event_id"] = event_id
                 return redirect(url_for("sala_reunioes"))
             show_modal = True
     if request.method == "POST":
         show_modal = True
     meet_popup_link = session.pop("meet_link", None)
+    meet_popup_event_id = session.pop("meet_event_id", None)
+    meet_popup_config_url = None
+    if meet_popup_event_id and MEETING_ROOM_EMAIL:
+        try:
+            meet_popup_config_url = build_event_edit_link(
+                meet_popup_event_id, MEETING_ROOM_EMAIL, calendar_tz.key
+            )
+        except ValueError:
+            meet_popup_config_url = None
     return render_template(
         "sala_reunioes.html",
         form=form,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
         meet_popup_link=meet_popup_link,
+        meet_popup_event_id=meet_popup_event_id,
+        meet_popup_config_url=meet_popup_config_url,
+        meeting_status_options=status_options,
+        meeting_status_badges=status_badges,
     )
 
 
@@ -2145,6 +2179,148 @@ def delete_reuniao(meeting_id):
     else:
         flash("Não foi possível remover o evento do Google Calendar.", "danger")
     return redirect(url_for("sala_reunioes"))
+
+
+@app.route("/reuniao/<int:meeting_id>/status", methods=["POST"])
+@login_required
+def update_reuniao_status(meeting_id):
+    """Update the status of a meeting, honoring manual overrides."""
+
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    allowed_users = {meeting.criador_id}
+    if meeting.owner_id:
+        allowed_users.add(meeting.owner_id)
+    is_admin = current_user.role == "admin"
+    if not is_admin and current_user.id not in allowed_users:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Você não tem permissão para alterar o status desta reunião.",
+                }
+            ),
+            403,
+        )
+
+    payload = request.get_json(silent=True) or request.form
+    calendar_tz = get_calendar_timezone()
+    new_status_value = (payload.get("status") or "").strip()
+    if not new_status_value:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Informe o novo status da reunião.",
+                }
+            ),
+            400,
+        )
+
+    try:
+        new_status = ReuniaoStatus(new_status_value)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Status selecionado é inválido.",
+                }
+            ),
+            400,
+        )
+
+    manual_override = new_status in MANUAL_STATUS_OVERRIDES
+    current_status = meeting.status_override or meeting.status
+    existing_override = meeting.status_override
+
+    schedule_updated = False
+    postpone_message: str | None = None
+    new_start_iso: str | None = None
+    new_end_iso: str | None = None
+
+    if new_status == ReuniaoStatus.ADIADA:
+        postpone_date_raw = (payload.get("new_date") or "").strip()
+        postpone_start_raw = (payload.get("new_start_time") or "").strip()
+        postpone_end_raw = (payload.get("new_end_time") or "").strip()
+        if not (postpone_date_raw and postpone_start_raw and postpone_end_raw):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Informe a nova data e horários para adiar a reunião.",
+                    }
+                ),
+                400,
+            )
+        try:
+            postpone_date = datetime.strptime(postpone_date_raw, "%Y-%m-%d").date()
+            postpone_start = datetime.strptime(postpone_start_raw, "%H:%M").time()
+            postpone_end = datetime.strptime(postpone_end_raw, "%H:%M").time()
+        except ValueError:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Data ou horário inválido para reagendamento.",
+                    }
+                ),
+                400,
+            )
+        new_start_dt = datetime.combine(postpone_date, postpone_start, tzinfo=calendar_tz)
+        new_end_dt = datetime.combine(postpone_date, postpone_end, tzinfo=calendar_tz)
+        success, error_message = postpone_meeting(
+            meeting,
+            new_start_dt,
+            new_end_dt,
+            new_status,
+            check_external_conflicts=False,
+        )
+        if not success:
+            return (
+                jsonify({"success": False, "message": error_message or "Não foi possível adiar a reunião."}),
+                400,
+            )
+        schedule_updated = True
+        new_start_local = meeting.inicio.astimezone(calendar_tz)
+        new_end_local = meeting.fim.astimezone(calendar_tz)
+        new_start_iso = new_start_local.isoformat()
+        new_end_iso = new_end_local.isoformat()
+        postpone_message = (
+            "Reunião reagendada para "
+            f"{new_start_local.strftime('%d/%m/%Y')} às {new_start_local.strftime('%H:%M')}."
+        )
+
+    status_changed = current_status != new_status or (
+        manual_override and existing_override != new_status
+    ) or (
+        not manual_override and existing_override is not None
+    )
+
+    if status_changed:
+        if manual_override:
+            meeting.status_override = new_status
+        else:
+            meeting.status_override = None
+        meeting.status = new_status
+    if status_changed or schedule_updated:
+        db.session.commit()
+
+    meta = get_status_metadata(meeting.status_override or meeting.status)
+    status_message = (
+        f"Status atualizado para {meta['label']}."
+        if status_changed
+        else f"O status já está definido como {meta['label']}."
+    )
+    if postpone_message:
+        message = f"{postpone_message} {status_message}".strip()
+    else:
+        message = status_message
+
+    response = {"success": True, "message": message, "status": meta}
+    if schedule_updated:
+        response["start"] = new_start_iso
+        response["end"] = new_end_iso
+    return jsonify(response)
 
 
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])

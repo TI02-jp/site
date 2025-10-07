@@ -52,6 +52,64 @@
     .meeting-modal-dialog .additional-date-group {
         min-width: 190px;
     }
+    .meet-link-modal-dialog { max-width: 520px; }
+    @media (max-width: 576px) {
+        .meet-link-modal-dialog { margin: 1rem; }
+    }
+    .meet-link-modal { border: none; border-radius: 1rem; box-shadow: 0 20px 45px -28px rgba(18, 38, 63, 0.4); }
+    .meet-link-modal .modal-body { padding: 1.75rem; }
+    .meet-link-icon { width: 48px; height: 48px; background: #e8f0fe; color: #1a73e8; font-size: 1.4rem; }
+    .btn-quiet-primary {
+        background: #e8f0fe;
+        color: #1a73e8;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-primary:hover,
+    .btn-quiet-primary:focus {
+        background: #d2e3fc;
+        color: #174ea6;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
+    .btn-quiet-secondary {
+        background: #f3f6fc;
+        color: #3c4043;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-secondary:hover,
+    .btn-quiet-secondary:focus {
+        background: #e8eaed;
+        color: #202124;
+        box-shadow: 0 0 0 3px rgba(60, 64, 67, 0.1);
+    }
+    .meet-link-card { background: linear-gradient(135deg, #f7f9ff 0%, #ffffff 100%); }
+    .meet-link-badge { width: 40px; height: 40px; background: #ecf3fe; color: #1a73e8; font-size: 1.2rem; }
+    .btn-icon {
+        border: none;
+        background: #ecf3fe;
+        color: #1a73e8;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        outline: none;
+        font-size: 1.1rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-icon:hover,
+    .btn-icon:focus {
+        background: #d2e3fc;
+        color: #174ea6;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
     </style>
 {% endblock %}
 
@@ -69,9 +127,9 @@
                 </div>
             </div>
             <div class="mb-3">
-                <span class="badge bg-warning text-dark me-2">Agendada</span>
-                <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger">Realizada</span>
+                {% for badge in meeting_status_badges %}
+                    <span class="badge {{ badge.badge_class }} me-2">{{ badge.label }}</span>
+                {% endfor %}
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -101,6 +159,11 @@
                                             {% endfor %}
                                         </div>
                                         {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
+                                        <div class="mt-3" id="ownerFieldWrapper">
+                                            {{ form.owner_id.label(class="form-label") }}
+                                            {{ form.owner_id(class="form-select") }}
+                                            {% if form.owner_id.errors %}<div class="text-danger">{{ form.owner_id.errors[0] }}</div>{% endif %}
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -193,48 +256,152 @@
                         <div class="modal-body text-start">
                             <ul class="list-group text-start">
                                 <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
+                                <li class="list-group-item text-start">
+                                    <strong>Hora:</strong>
+                                    <span id="detailStart"></span>
+                                    <span id="detailEndWrapper" class="d-none"> - <span id="detailEnd"></span></span>
+                                </li>
                                 <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
+                                <li class="list-group-item text-start d-none" id="detailOwnerItem"><strong>Proprietário:</strong> <span id="detailOwner"></span></li>
                                 <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
                                 <i class="bi bi-camera-video"></i>
                                 <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
-                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
+                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary" aria-label="Copiar link do Meet">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <form id="deleteMeetingForm" method="post" class="d-none">
                                 {{ form.csrf_token(id='csrf_token_delete') }}
                             </form>
+                            <div class="me-auto w-100 d-none" id="statusActionWrapper">
+                                <div class="d-flex flex-column flex-sm-row align-items-sm-end gap-2">
+                                    <div class="flex-grow-1">
+                                        <label for="statusUpdateSelect" class="form-label mb-1">Status</label>
+                                        <select id="statusUpdateSelect" class="form-select form-select-sm">
+                                            {% for value, label in meeting_status_options %}
+                                                <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="d-flex align-items-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="updateStatusBtn">Aplicar</button>
+                                    </div>
+                                </div>
+                                <div class="row g-2 mt-2 align-items-end d-none" id="postponeFields">
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeDate" class="form-label small mb-1">Nova data</label>
+                                        <input type="date" class="form-control form-control-sm" id="postponeDate">
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeStart" class="form-label small mb-1">Novo início</label>
+                                        <input type="time" class="form-control form-control-sm" id="postponeStart">
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeEnd" class="form-label small mb-1">Novo término</label>
+                                        <input type="time" class="form-control form-control-sm" id="postponeEnd">
+                                    </div>
+                                </div>
+                            </div>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                             <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
-                            <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
+                            <button type="submit"
+                                    class="btn btn-danger d-none"
+                                    id="deleteEventBtn"
+                                    form="deleteMeetingForm">
+                                Excluir
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
             {% if meet_popup_link %}
             <div class="modal fade" id="meetLinkModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-sm">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Sala do Google Meet</h5>
+                <div class="modal-dialog modal-dialog-centered meet-link-modal-dialog">
+                    <div class="modal-content meet-link-modal">
+                        <div class="modal-header border-0 pb-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="meet-link-icon rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-camera-video-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title mb-0">Sala do Google Meet</h5>
+                                    <p class="text-muted small mb-0">Gerencie rapidamente a sua videochamada</p>
+                                </div>
+                            </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-start">
-                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
-                                <i class="bi bi-camera-video me-2"></i>Abrir Meet
+                        <div class="modal-body text-start pt-3">
+                            <a id="openMeetLink"
+                               href="{{ meet_popup_link }}"
+                               target="_blank"
+                               class="btn btn-quiet-primary w-100 d-flex align-items-center justify-content-center mb-3">
+                                <i class="bi bi-play-circle me-2"></i>Entrar na reunião
                             </a>
-                            <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-camera-video"></i>
-                                <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
-                                <button class="btn btn-outline-secondary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
+                            {% if meet_popup_config_url %}
+                            <button type="button"
+                                    class="btn btn-quiet-secondary w-100 d-flex align-items-center justify-content-center mb-3"
+                                    id="configureMeetBtn"
+                                    data-config-url="{{ meet_popup_config_url }}"
+                                    data-bs-target="#meetConfigModal"
+                                    data-bs-toggle="modal">
+                                <i class="bi bi-sliders me-2"></i>Configurar sala do Meet
+                            </button>
+                            <p class="small text-muted mb-4">
+                                Ajuste proprietário, permissões e demais preferências diretamente nas opções da videochamada.
+                            </p>
+                            {% endif %}
+                            <div class="meet-link-card border rounded-3 p-3 d-flex align-items-center gap-2">
+                                <div class="meet-link-badge rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-link-45deg"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="meetLinkInput" class="form-label small text-uppercase text-muted fw-semibold mb-1">Link do Meet</label>
+                                    <input type="text" id="meetLinkInput" class="form-control form-control-sm border-0 p-0 bg-transparent" value="{{ meet_popup_link }}" readonly>
+                                </div>
+                                <button class="btn btn-icon" id="copyMeetLinkPopup" type="button" aria-label="Copiar link do Meet">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            {% if meet_popup_config_url %}
+            <div class="modal fade" id="meetConfigModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered meet-config-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Opções da videochamada</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0 position-relative">
+                            <div class="d-flex align-items-center justify-content-center py-5" id="meetConfigSpinner">
+                                <div class="spinner-border text-primary" role="status" aria-label="Carregando opções do Meet"></div>
+                            </div>
+                            <iframe id="meetConfigFrame"
+                                    class="w-100 border-0 d-none meet-config-frame"
+                                    title="Configurações do Google Meet"
+                                    allow="camera; microphone; display-capture;"
+                                    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                            <div id="meetConfigFallback" class="d-none text-center py-5 px-4">
+                                <i class="bi bi-shield-lock text-primary display-5 d-block mb-3"></i>
+                                <h6 class="mb-2">Não foi possível exibir as opções do Meet aqui.</h6>
+                                <p class="text-muted mb-4">
+                                    Para manter a segurança da videochamada, o Google solicita que essas configurações sejam abertas diretamente em uma página deles.
+                                </p>
+                                <a id="meetConfigExternalLink" class="btn btn-primary" target="_blank" rel="noopener">
+                                    Abrir opções da videochamada
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
     </div>
     <style>
@@ -247,6 +414,8 @@
 .tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
+.meet-config-modal .modal-content{min-height:70vh;}
+.meet-config-frame{min-height:70vh;}
     </style>
 {% endblock %}
 {% block scripts %}
@@ -261,7 +430,13 @@
             container.className = 'flash-container';
             document.body.appendChild(container);
         }
-        const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
+        const iconMap = {
+            success: 'check-circle-fill',
+            info: 'info-circle-fill',
+            warning: 'exclamation-triangle-fill',
+            danger: 'exclamation-octagon-fill'
+        };
+        const icon = iconMap[category] || 'info-circle-fill';
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
         alertDiv.setAttribute('role', 'alert');
@@ -279,6 +454,284 @@
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');
     var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
+    var ownerWrapper = document.getElementById('ownerFieldWrapper');
+    var ownerSelect = document.getElementById('owner_id');
+    var participantCheckboxes = Array.from(document.querySelectorAll('#meetingModal input[name="participants"]'));
+    var statusWrapper = document.getElementById('statusActionWrapper');
+    var statusSelect = document.getElementById('statusUpdateSelect');
+    var detailStatusEl = document.getElementById('detailStatus');
+    var updateStatusBtn = document.getElementById('updateStatusBtn');
+    var csrfTokenField = document.getElementById('csrf_token_delete');
+    var postponeFields = document.getElementById('postponeFields');
+    var postponeDateInput = document.getElementById('postponeDate');
+    var postponeStartInput = document.getElementById('postponeStart');
+    var postponeEndInput = document.getElementById('postponeEnd');
+    var statusRefreshToken = 0;
+    var pendingStatusLabel = '';
+
+    function formatDateInputValue(date) {
+        if (!date) { return ''; }
+        var year = String(date.getFullYear());
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function formatTimeInputValue(date) {
+        if (!date) { return ''; }
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        return hours + ':' + minutes;
+    }
+
+    function formatDisplayDate(date) {
+        if (!date) { return ''; }
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    function formatDisplayTime(date) {
+        if (!date) { return ''; }
+        return date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    }
+
+    function setStatusButtonLoading(isLoading) {
+        if (!updateStatusBtn) { return; }
+        if (!updateStatusBtn.dataset.originalHtml) {
+            updateStatusBtn.dataset.originalHtml = updateStatusBtn.innerHTML;
+        }
+        if (isLoading) {
+            updateStatusBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Aguarde...</span>';
+            updateStatusBtn.disabled = true;
+            updateStatusBtn.classList.add('disabled');
+        } else {
+            updateStatusBtn.innerHTML = updateStatusBtn.dataset.originalHtml;
+            updateStatusBtn.disabled = false;
+            updateStatusBtn.classList.remove('disabled');
+        }
+    }
+
+    function clearPostponeFields() {
+        if (postponeDateInput) { postponeDateInput.value = ''; }
+        if (postponeStartInput) { postponeStartInput.value = ''; }
+        if (postponeEndInput) { postponeEndInput.value = ''; }
+    }
+
+    function populatePostponeDefaults() {
+        if (!currentEvent) { return; }
+        var startDate = currentEvent.start;
+        var endDate = currentEvent.end;
+        if (postponeDateInput) {
+            postponeDateInput.value = formatDateInputValue(startDate);
+        }
+        if (postponeStartInput) {
+            postponeStartInput.value = formatTimeInputValue(startDate);
+        }
+        if (postponeEndInput) {
+            postponeEndInput.value = formatTimeInputValue(endDate);
+        }
+    }
+
+    function resetStatusSelectionTracking() {
+        if (!statusSelect) { return; }
+        delete statusSelect.dataset.userEdited;
+        delete statusSelect.dataset.pendingValue;
+        pendingStatusLabel = '';
+        if (detailStatusEl) {
+            if (currentEvent && currentEvent.extendedProps && currentEvent.extendedProps.status) {
+                detailStatusEl.textContent = currentEvent.extendedProps.status;
+            } else {
+                detailStatusEl.textContent = '';
+            }
+        }
+    }
+
+    function getStatusLabelByValue(value) {
+        if (!statusSelect) { return ''; }
+        for (var i = 0; i < statusSelect.options.length; i++) {
+            if (statusSelect.options[i].value === value) {
+                return statusSelect.options[i].textContent.trim();
+            }
+        }
+        return '';
+    }
+
+    function setStatusSelectValue(value, options) {
+        if (!statusSelect) { return; }
+        var opts = options || {};
+        if (!opts.force && statusSelect.dataset.userEdited === 'true') {
+            var pendingValue = statusSelect.dataset.pendingValue;
+            if (typeof pendingValue !== 'undefined') {
+                statusSelect.value = pendingValue;
+            }
+            if (detailStatusEl && pendingStatusLabel) {
+                detailStatusEl.textContent = pendingStatusLabel;
+            }
+            return;
+        }
+        statusSelect.value = value || '';
+        if (statusSelect.value !== (value || '')) {
+            statusSelect.value = '';
+        }
+        delete statusSelect.dataset.pendingValue;
+        if (!opts.preservePending) {
+            resetStatusSelectionTracking();
+        }
+    }
+
+    function togglePostponeFields(shouldPrefill) {
+        if (!postponeFields) { return; }
+        var shouldShow = statusSelect && statusSelect.value === 'adiada';
+        if (shouldShow) {
+            postponeFields.classList.remove('d-none');
+            if (shouldPrefill) {
+                populatePostponeDefaults();
+            }
+        } else {
+            postponeFields.classList.add('d-none');
+            if (shouldPrefill) {
+                clearPostponeFields();
+            }
+        }
+    }
+
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            statusSelect.dataset.userEdited = 'true';
+            statusSelect.dataset.pendingValue = statusSelect.value || '';
+            pendingStatusLabel = getStatusLabelByValue(statusSelect.value);
+            if (detailStatusEl) {
+                if (pendingStatusLabel) {
+                    detailStatusEl.textContent = pendingStatusLabel;
+                } else if (currentEvent && currentEvent.extendedProps && currentEvent.extendedProps.status) {
+                    detailStatusEl.textContent = currentEvent.extendedProps.status;
+                }
+            }
+            togglePostponeFields(true);
+        });
+    }
+
+    function applyStatusToEvent(event, meta) {
+        if (!event || !meta) {
+            return;
+        }
+        if (meta.label) {
+            event.setExtendedProp('status', meta.label);
+        }
+        if (meta.value) {
+            event.setExtendedProp('status_value', meta.value);
+        }
+        if (typeof meta.disable_meet_link !== 'undefined') {
+            event.setExtendedProp('disable_meet_link', !!meta.disable_meet_link);
+        }
+        if (typeof meta.tooltip_class !== 'undefined') {
+            event.setExtendedProp('tooltip_class', meta.tooltip_class || '');
+        }
+        if (typeof meta.can_update_status !== 'undefined') {
+            event.setExtendedProp('can_update_status', !!meta.can_update_status);
+        }
+        if (meta.color) {
+            event.setProp('backgroundColor', meta.color);
+            event.setProp('borderColor', meta.color);
+        }
+        if (meta.text_color) {
+            event.setProp('textColor', meta.text_color);
+        }
+        var el = event.el;
+        if (el) {
+            var tip = bootstrap.Tooltip.getInstance(el);
+            if (tip) { tip.dispose(); }
+            var time = event.allDay ? '' : event.startStr.substring(11,16);
+            if (meta.tooltip_class) {
+                el.setAttribute('data-bs-custom-class', meta.tooltip_class);
+            } else {
+                el.removeAttribute('data-bs-custom-class');
+            }
+            el.setAttribute('title', time + ' ' + event.title);
+            new bootstrap.Tooltip(el);
+        }
+    }
+
+    function updateMeetLinkControls(event) {
+        var linkContainer = document.getElementById('meetLinkContainer');
+        var linkEl = document.getElementById('detailMeetLink');
+        var copyBtn = document.getElementById('copyMeetLink');
+        if (!linkContainer || !linkEl || !copyBtn) {
+            return;
+        }
+        var meetLink = event && event.extendedProps ? event.extendedProps.meet_link : null;
+        if (meetLink) {
+            linkEl.textContent = meetLink;
+            linkContainer.classList.remove('d-none');
+            var disableLink = !!event.extendedProps.disable_meet_link;
+            if (disableLink) {
+                linkEl.removeAttribute('href');
+                linkEl.classList.add('text-muted', 'user-select-none');
+                linkEl.style.pointerEvents = 'none';
+                copyBtn.classList.add('d-none');
+                copyBtn.onclick = null;
+            } else {
+                linkEl.href = meetLink;
+                linkEl.classList.remove('text-muted', 'user-select-none');
+                linkEl.style.pointerEvents = '';
+                copyBtn.classList.remove('d-none');
+                copyBtn.onclick = function() {
+                    navigator.clipboard.writeText(meetLink).then(function(){
+                        showFlashMessage('Link copiado!', 'success');
+                    });
+                };
+            }
+        } else {
+            linkContainer.classList.add('d-none');
+            linkEl.textContent = '';
+            linkEl.removeAttribute('href');
+            linkEl.classList.remove('text-muted', 'user-select-none');
+            linkEl.style.pointerEvents = '';
+            copyBtn.classList.add('d-none');
+            copyBtn.onclick = null;
+        }
+    }
+
+    function updateOwnerFieldVisibility() {
+        if (!ownerSelect || !ownerWrapper) {
+            return;
+        }
+        var selectedIds = participantCheckboxes
+            .filter(function(cb) { return cb.checked; })
+            .map(function(cb) { return cb.value; });
+        var ownerValueBefore = ownerSelect.value;
+        Array.from(ownerSelect.options).forEach(function(option) {
+            if (option.value === '') {
+                option.disabled = selectedIds.length <= 1;
+                option.hidden = selectedIds.length <= 1;
+                return;
+            }
+            var isParticipant = selectedIds.includes(option.value);
+            option.disabled = !isParticipant;
+            option.hidden = !isParticipant;
+        });
+        if (selectedIds.length <= 1) {
+            ownerWrapper.classList.add('d-none');
+            if (selectedIds.length === 1) {
+                ownerSelect.value = selectedIds[0];
+            } else {
+                ownerSelect.value = '';
+            }
+        } else {
+            ownerWrapper.classList.remove('d-none');
+            if (!selectedIds.includes(ownerValueBefore)) {
+                ownerSelect.value = '';
+            }
+        }
+    }
+
+    participantCheckboxes.forEach(function(cb) {
+        cb.addEventListener('change', updateOwnerFieldVisibility);
+    });
+    updateOwnerFieldVisibility();
 
     function renumberAdditionalDates() {
         if (!additionalDatesContainer) {
@@ -439,6 +892,10 @@
         }
         clearAdditionalDates();
         toggleAdditionalDates();
+        if (ownerSelect) {
+            ownerSelect.value = '';
+        }
+        updateOwnerFieldVisibility();
         document.getElementById('meeting_id').value = '';
         var courseInput = document.getElementById('meeting_course_id');
         if (courseInput) {
@@ -482,14 +939,14 @@
         },
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
-            var color = info.event.backgroundColor || info.event.borderColor;
-            var cls = '';
-            if(color === '#ffc107'){cls='tooltip-warning';}
-            else if(color === '#198754'){cls='tooltip-success';}
-            else if(color === '#dc3545'){cls='tooltip-danger';}
+            var cls = info.event.extendedProps.tooltip_class || '';
             info.el.setAttribute('data-bs-toggle', 'tooltip');
             info.el.setAttribute('data-bs-html', 'true');
-            info.el.setAttribute('data-bs-custom-class', cls);
+            if (cls) {
+                info.el.setAttribute('data-bs-custom-class', cls);
+            } else {
+                info.el.removeAttribute('data-bs-custom-class');
+            }
             info.el.setAttribute('title', time + ' ' + info.event.title);
             new bootstrap.Tooltip(info.el);
         },
@@ -509,37 +966,50 @@
             var dateParts = e.startStr.slice(0,10).split('-');
             document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
             document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
-            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
+            var endWrapper = document.getElementById('detailEndWrapper');
+            var endEl = document.getElementById('detailEnd');
+            if (endEl && endWrapper) {
+                if (e.endStr) {
+                    endEl.textContent = e.endStr.slice(11,16);
+                    endWrapper.classList.remove('d-none');
+                } else {
+                    endEl.textContent = '';
+                    endWrapper.classList.add('d-none');
+                }
+            }
             var statusText = e.extendedProps.status || '';
-            document.getElementById('detailStatus').textContent = statusText;
+            var statusEl = document.getElementById('detailStatus');
+            if (statusEl) {
+                statusEl.textContent = statusText;
+            }
+            if (statusWrapper && statusSelect) {
+                if (e.extendedProps.can_update_status && e.extendedProps.status_value) {
+                    statusWrapper.classList.remove('d-none');
+                    setStatusSelectValue(e.extendedProps.status_value, { force: true });
+                    setStatusButtonLoading(false);
+                    togglePostponeFields(true);
+                } else {
+                    statusWrapper.classList.add('d-none');
+                    resetStatusSelectionTracking();
+                    setStatusButtonLoading(false);
+                    togglePostponeFields(true);
+                }
+            }
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
-            var linkContainer = document.getElementById('meetLinkContainer');
-            var linkEl = document.getElementById('detailMeetLink');
-            var copyBtn = document.getElementById('copyMeetLink');
-            if (e.extendedProps.meet_link) {
-                linkEl.textContent = e.extendedProps.meet_link;
-                linkContainer.classList.remove('d-none');
-                if (statusText === 'Realizada') {
-                    linkEl.removeAttribute('href');
-                    linkEl.classList.add('text-muted', 'user-select-none');
-                    linkEl.style.pointerEvents = 'none';
-                    copyBtn.classList.add('d-none');
-                    copyBtn.onclick = null;
+            var ownerItem = document.getElementById('detailOwnerItem');
+            var ownerEl = document.getElementById('detailOwner');
+            if (ownerEl && ownerItem) {
+                var ownerName = e.extendedProps.owner_name;
+                if (ownerName) {
+                    ownerEl.textContent = ownerName;
+                    ownerItem.classList.remove('d-none');
                 } else {
-                    linkEl.href = e.extendedProps.meet_link;
-                    linkEl.classList.remove('text-muted', 'user-select-none');
-                    linkEl.style.pointerEvents = '';
-                    copyBtn.classList.remove('d-none');
-                    copyBtn.onclick = function() {
-                        navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
-                            showFlashMessage('Link copiado!', 'success');
-                        });
-                    };
+                    ownerEl.textContent = '';
+                    ownerItem.classList.add('d-none');
                 }
-            } else {
-                linkContainer.classList.add('d-none');
             }
+            updateMeetLinkControls(e);
             var editBtn = document.getElementById('editEventBtn');
             var deleteBtn = document.getElementById('deleteEventBtn');
             var deleteForm = document.getElementById('deleteMeetingForm');
@@ -548,11 +1018,16 @@
             } else {
                 editBtn.classList.add('d-none');
             }
-            if (e.extendedProps.can_delete) {
-                deleteBtn.classList.remove('d-none');
-                deleteForm.action = '/reuniao/' + e.id + '/delete';
-            } else {
-                deleteBtn.classList.add('d-none');
+            if (deleteBtn && deleteForm) {
+                if (e.extendedProps.can_delete) {
+                    deleteBtn.classList.remove('d-none');
+                    deleteForm.action = '/reuniao/' + encodeURIComponent(e.id) + '/delete';
+                    deleteForm.dataset.eventTitle = e.title || '';
+                } else {
+                    deleteBtn.classList.add('d-none');
+                    deleteForm.removeAttribute('action');
+                    deleteForm.removeAttribute('data-event-title');
+                }
             }
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             modal.show();
@@ -560,9 +1035,13 @@
     });
     calendar.render();
     function refreshStatuses() {
+        var requestToken = ++statusRefreshToken;
         fetch('/api/reunioes')
             .then(function(resp) { return resp.json(); })
             .then(function(data) {
+                if (requestToken !== statusRefreshToken) {
+                    return;
+                }
                 var newIds = new Set();
                 data.forEach(function(evData) {
                     var id = String(evData.id);
@@ -578,17 +1057,44 @@
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
                         }
+                        if (existing.extendedProps.status_value !== evData.status_value) {
+                            existing.setExtendedProp('status_value', evData.status_value);
+                        }
                         if (existing.extendedProps.can_edit !== evData.can_edit) {
                             existing.setExtendedProp('can_edit', evData.can_edit);
                         }
                         if (existing.extendedProps.can_delete !== evData.can_delete) {
                             existing.setExtendedProp('can_delete', evData.can_delete);
                         }
+                        if (existing.extendedProps.can_update_status !== evData.can_update_status) {
+                            existing.setExtendedProp('can_update_status', evData.can_update_status);
+                        }
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
                         }
+                        if (existing.extendedProps.owner_id !== evData.owner_id) {
+                            existing.setExtendedProp('owner_id', evData.owner_id);
+                        }
+                        if (existing.extendedProps.owner_name !== evData.owner_name) {
+                            existing.setExtendedProp('owner_name', evData.owner_name);
+                        }
                         if (existing.extendedProps.meet_link !== evData.meet_link) {
                             existing.setExtendedProp('meet_link', evData.meet_link);
+                        }
+                        if (existing.extendedProps.tooltip_class !== evData.tooltip_class) {
+                            existing.setExtendedProp('tooltip_class', evData.tooltip_class);
+                        }
+                        if (!!existing.extendedProps.disable_meet_link !== !!evData.disable_meet_link) {
+                            existing.setExtendedProp('disable_meet_link', !!evData.disable_meet_link);
+                        }
+                        if (existing.extendedProps.participants !== evData.participants) {
+                            existing.setExtendedProp('participants', evData.participants);
+                        }
+                        if (existing.extendedProps.participant_ids !== evData.participant_ids) {
+                            existing.setExtendedProp('participant_ids', evData.participant_ids);
+                        }
+                        if (existing.extendedProps.description !== evData.description) {
+                            existing.setExtendedProp('description', evData.description);
                         }
                         if (existing.extendedProps.creator !== evData.creator) {
                             existing.setExtendedProp('creator', evData.creator);
@@ -597,22 +1103,41 @@
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
                         }
+                        if (existing.textColor !== evData.textColor) {
+                            existing.setProp('textColor', evData.textColor);
+                        }
                         var el = existing.el;
                         if (el) {
                             var tip = bootstrap.Tooltip.getInstance(el);
                             if (tip) { tip.dispose(); }
                             var time = existing.allDay ? '' : existing.startStr.substring(11,16);
-                            var color = existing.backgroundColor || existing.borderColor;
-                            var cls = '';
-                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
-                            else if (color === '#198754') { cls = 'tooltip-success'; }
-                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
+                            var cls = existing.extendedProps.tooltip_class || '';
                             el.setAttribute('data-bs-custom-class', cls);
                             el.setAttribute('title', time + ' ' + existing.title);
                             new bootstrap.Tooltip(el);
                         }
+                        if (currentEvent && currentEvent.id === existing.id) {
+                            updateMeetLinkControls(currentEvent);
+                            if (statusWrapper && !statusWrapper.classList.contains('d-none') && statusSelect) {
+                                var updatedStatusValue = currentEvent.extendedProps.status_value || '';
+                                setStatusSelectValue(updatedStatusValue);
+                                togglePostponeFields(false);
+                            }
+                            if (detailStatusEl) {
+                                if (statusSelect && statusSelect.dataset.userEdited === 'true') {
+                                    if (pendingStatusLabel) {
+                                        detailStatusEl.textContent = pendingStatusLabel;
+                                    }
+                                } else if (currentEvent.extendedProps.status) {
+                                    detailStatusEl.textContent = currentEvent.extendedProps.status;
+                                } else {
+                                    detailStatusEl.textContent = '';
+                                }
+                            }
+                        }
                     } else {
-                        calendar.addEvent(evData);
+                        var newEvent = Object.assign({}, evData, { id: String(evData.id) });
+                        calendar.addEvent(newEvent);
                     }
                 });
                 calendar.getEvents().forEach(function(ev) {
@@ -624,6 +1149,151 @@
     }
     refreshStatuses();
     setInterval(refreshStatuses, 5000);
+
+    if (updateStatusBtn && statusSelect) {
+        updateStatusBtn.addEventListener('click', function() {
+            if (!currentEvent || !currentEvent.extendedProps) {
+                return;
+            }
+            if (!currentEvent.extendedProps.can_update_status) {
+                showFlashMessage('Você não tem permissão para alterar o status desta reunião.', 'warning');
+                return;
+            }
+            var selectedStatus = statusSelect.value;
+            if (!selectedStatus) {
+                showFlashMessage('Selecione um status para atualizar.', 'warning');
+                return;
+            }
+            var meetingId = currentEvent.extendedProps.meeting_id || currentEvent.id;
+            if (!meetingId) {
+                showFlashMessage('Não foi possível identificar a reunião selecionada.', 'danger');
+                return;
+            }
+            var headers = { 'Content-Type': 'application/json' };
+            var csrfToken = csrfTokenField ? csrfTokenField.value : null;
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+            var payload = { status: selectedStatus };
+            if (selectedStatus === 'adiada') {
+                var newDate = postponeDateInput ? postponeDateInput.value : '';
+                var newStart = postponeStartInput ? postponeStartInput.value : '';
+                var newEnd = postponeEndInput ? postponeEndInput.value : '';
+                if (!newDate || !newStart || !newEnd) {
+                    showFlashMessage('Informe a nova data e horários para o adiamento.', 'warning');
+                    return;
+                }
+                var startParts = newStart.split(':');
+                var endParts = newEnd.split(':');
+                if (startParts.length < 2 || endParts.length < 2) {
+                    showFlashMessage('Horários inválidos para o adiamento.', 'warning');
+                    return;
+                }
+                var startMinutes = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
+                var endMinutes = parseInt(endParts[0], 10) * 60 + parseInt(endParts[1], 10);
+                if (isNaN(startMinutes) || isNaN(endMinutes)) {
+                    showFlashMessage('Horários inválidos para o adiamento.', 'warning');
+                    return;
+                }
+                if (endMinutes <= startMinutes) {
+                    showFlashMessage('O horário de término deve ser posterior ao horário de início.', 'warning');
+                    return;
+                }
+                payload.new_date = newDate;
+                payload.new_start_time = newStart;
+                payload.new_end_time = newEnd;
+            }
+            setStatusButtonLoading(true);
+            fetch('/reuniao/' + encodeURIComponent(meetingId) + '/status', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(payload)
+            })
+                .then(function(resp) {
+                    if (!resp.ok) {
+                        return resp.json().then(function(data) { throw data; }).catch(function() {
+                            throw { success: false, message: 'Erro ao atualizar o status.' };
+                        });
+                    }
+                    return resp.json();
+                })
+                .then(function(data) {
+                    if (!data.success) {
+                        throw data;
+                    }
+                    var meta = data.status || {};
+                    applyStatusToEvent(currentEvent, meta);
+                    var statusEl = document.getElementById('detailStatus');
+                    if (statusEl && meta.label) {
+                        statusEl.textContent = meta.label;
+                    }
+                    if (meta.value) {
+                        setStatusSelectValue(meta.value, { force: true });
+                    }
+                    togglePostponeFields(false);
+                    if (data.start) {
+                        var startDateObj = new Date(data.start);
+                        var endDateObj = data.end ? new Date(data.end) : null;
+                        currentEvent.setDates(startDateObj, endDateObj || null);
+                        var detailDateEl = document.getElementById('detailDate');
+                        var detailStartEl = document.getElementById('detailStart');
+                        var detailEndEl = document.getElementById('detailEnd');
+                        var detailEndWrapper = document.getElementById('detailEndWrapper');
+                        if (detailDateEl) {
+                            detailDateEl.textContent = formatDisplayDate(startDateObj);
+                        }
+                        if (detailStartEl) {
+                            detailStartEl.textContent = formatDisplayTime(startDateObj);
+                        }
+                        if (detailEndWrapper && detailEndEl) {
+                            if (endDateObj) {
+                                detailEndEl.textContent = formatDisplayTime(endDateObj);
+                                detailEndWrapper.classList.remove('d-none');
+                            } else {
+                                detailEndEl.textContent = '';
+                                detailEndWrapper.classList.add('d-none');
+                            }
+                        }
+                        if (postponeDateInput) {
+                            postponeDateInput.value = formatDateInputValue(startDateObj);
+                        }
+                        if (postponeStartInput) {
+                            postponeStartInput.value = formatTimeInputValue(startDateObj);
+                        }
+                        if (postponeEndInput) {
+                            postponeEndInput.value = formatTimeInputValue(endDateObj);
+                        }
+                        populatePostponeDefaults();
+                    }
+                    updateMeetLinkControls(currentEvent);
+                    refreshStatuses();
+                    showFlashMessage(data.message || 'Status atualizado com sucesso.', 'success');
+                })
+                .catch(function(err) {
+                    var message = 'Não foi possível atualizar o status.';
+                    if (err && typeof err.message === 'string') {
+                        message = err.message;
+                    }
+                    showFlashMessage(message, 'danger');
+                })
+                .finally(function() {
+                    setStatusButtonLoading(false);
+                });
+        });
+    }
+
+    var eventDetailsModalEl = document.getElementById('eventDetailsModal');
+    if (eventDetailsModalEl) {
+        eventDetailsModalEl.addEventListener('hidden.bs.modal', function() {
+            if (statusWrapper) {
+                statusWrapper.classList.add('d-none');
+            }
+            resetStatusSelectionTracking();
+            togglePostponeFields(true);
+            setStatusButtonLoading(false);
+        });
+    }
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
@@ -653,23 +1323,74 @@
         clearAdditionalDates();
         toggleAdditionalDates();
         var ids = currentEvent.extendedProps.participant_ids || [];
-        document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
+        participantCheckboxes.forEach(function(cb){
             cb.checked = ids.includes(parseInt(cb.value));
         });
+        updateOwnerFieldVisibility();
+        if (ownerSelect) {
+            var ownerId = currentEvent.extendedProps.owner_id;
+            if (ownerId) {
+                ownerSelect.value = String(ownerId);
+                if (ownerSelect.value !== String(ownerId)) {
+                    ownerSelect.value = '';
+                }
+            } else {
+                ownerSelect.value = '';
+            }
+        }
         document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
         var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
         meetingModal.show();
-    });
-
-    document.getElementById('deleteEventBtn').addEventListener('click', function() {
-        if (confirm('Deseja excluir esta reunião?')) {
-            document.getElementById('deleteMeetingForm').submit();
+        hasShownSubmissionMessage = false;
+        if (meetingForm) {
+            var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitButton) {
+                submitButton.removeAttribute('disabled');
+                submitButton.classList.remove('disabled');
+            }
         }
     });
 
+    var deleteMeetingForm = document.getElementById('deleteMeetingForm');
+    if (deleteMeetingForm) {
+        deleteMeetingForm.addEventListener('submit', function(event) {
+            var title = deleteMeetingForm.dataset.eventTitle || '';
+            var promptMessage = title ?
+                'Deseja excluir a reunião "' + title + '"?' :
+                'Deseja excluir esta reunião?';
+            if (!confirm(promptMessage)) {
+                event.preventDefault();
+            }
+        });
+    }
+
+    var meetingForm = document.querySelector('#meetingModal form');
+    var hasShownSubmissionMessage = false;
+    if (meetingForm) {
+        meetingForm.addEventListener('submit', function(event) {
+            if (!hasShownSubmissionMessage) {
+                hasShownSubmissionMessage = true;
+                var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+                if (submitButton) {
+                    submitButton.setAttribute('disabled', 'disabled');
+                    submitButton.classList.add('disabled');
+                }
+                showFlashMessage('Por gentileza, aguarde enquanto finalizamos o agendamento da reunião.', 'info');
+            }
+        });
+    }
+
     document.getElementById('openMeetingModal').addEventListener('click', function() {
         openNewMeeting('');
+        hasShownSubmissionMessage = false;
+        if (meetingForm) {
+            var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitButton) {
+                submitButton.removeAttribute('disabled');
+                submitButton.classList.remove('disabled');
+            }
+        }
     });
     });
     </script>
@@ -682,6 +1403,87 @@
                 showFlashMessage('Link copiado!', 'success');
             });
         });
+        var configureBtn = document.getElementById('configureMeetBtn');
+        var configModalEl = document.getElementById('meetConfigModal');
+        var configFrame = document.getElementById('meetConfigFrame');
+        var configSpinner = document.getElementById('meetConfigSpinner');
+        var configFallback = document.getElementById('meetConfigFallback');
+        var configExternalLink = document.getElementById('meetConfigExternalLink');
+        var configModal = configModalEl ? new bootstrap.Modal(configModalEl, {focus: true}) : null;
+        var fallbackTimer = null;
+        if (configureBtn && configModal && configFrame && configSpinner) {
+            configureBtn.addEventListener('click', function() {
+                var url = configureBtn.getAttribute('data-config-url');
+                if (!url) {
+                    return;
+                }
+                if (configExternalLink) {
+                    configExternalLink.href = url;
+                }
+                if (configFallback) {
+                    configFallback.classList.add('d-none');
+                }
+                configSpinner.classList.remove('d-none');
+                configFrame.classList.add('d-none');
+                if (configFrame.src !== url) {
+                    configFrame.src = url;
+                }
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                }
+                fallbackTimer = setTimeout(function() {
+                    if (!configFrame.classList.contains('d-none')) {
+                        return;
+                    }
+                    configSpinner.classList.add('d-none');
+                    if (configFallback) {
+                        configFallback.classList.remove('d-none');
+                    }
+                }, 4000);
+            });
+            configFrame.addEventListener('load', function() {
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
+                configSpinner.classList.add('d-none');
+                var shouldFallback = false;
+                try {
+                    var doc = configFrame.contentDocument;
+                    if (!doc || !doc.body) {
+                        shouldFallback = true;
+                    } else {
+                        var text = doc.body.innerText || '';
+                        shouldFallback = text.trim().startsWith('403');
+                    }
+                } catch (err) {
+                    shouldFallback = true;
+                }
+                if (shouldFallback) {
+                    configFrame.classList.add('d-none');
+                    if (configFallback) {
+                        configFallback.classList.remove('d-none');
+                    }
+                } else {
+                    configFrame.classList.remove('d-none');
+                    if (configFallback) {
+                        configFallback.classList.add('d-none');
+                    }
+                }
+            });
+            configModalEl.addEventListener('hidden.bs.modal', function() {
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
+                configFrame.src = 'about:blank';
+                configSpinner.classList.remove('d-none');
+                configFrame.classList.add('d-none');
+                if (configFallback) {
+                    configFallback.classList.add('d-none');
+                }
+            });
+        }
         popup.show();
     });
         </script>
