@@ -271,6 +271,16 @@
                                     title="Configurações do Google Meet"
                                     allow="camera; microphone; display-capture;"
                                     referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                            <div id="meetConfigFallback" class="d-none text-center py-5 px-4">
+                                <i class="bi bi-shield-lock text-primary display-5 d-block mb-3"></i>
+                                <h6 class="mb-2">Não foi possível exibir as opções do Meet aqui.</h6>
+                                <p class="text-muted mb-4">
+                                    Para manter a segurança da videochamada, o Google solicita que essas configurações sejam abertas diretamente em uma página deles.
+                                </p>
+                                <a id="meetConfigExternalLink" class="btn btn-primary" target="_blank" rel="noopener">
+                                    Abrir opções da videochamada
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -304,7 +314,13 @@
             container.className = 'flash-container';
             document.body.appendChild(container);
         }
-        const icon = category === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill';
+        const iconMap = {
+            success: 'check-circle-fill',
+            info: 'info-circle-fill',
+            warning: 'exclamation-triangle-fill',
+            danger: 'exclamation-octagon-fill'
+        };
+        const icon = iconMap[category] || 'info-circle-fill';
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
         alertDiv.setAttribute('role', 'alert');
@@ -778,6 +794,14 @@
         document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
         var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
         meetingModal.show();
+        hasShownSubmissionMessage = false;
+        if (meetingForm) {
+            var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitButton) {
+                submitButton.removeAttribute('disabled');
+                submitButton.classList.remove('disabled');
+            }
+        }
     });
 
     document.getElementById('deleteEventBtn').addEventListener('click', function() {
@@ -786,8 +810,32 @@
         }
     });
 
+    var meetingForm = document.querySelector('#meetingModal form');
+    var hasShownSubmissionMessage = false;
+    if (meetingForm) {
+        meetingForm.addEventListener('submit', function(event) {
+            if (!hasShownSubmissionMessage) {
+                hasShownSubmissionMessage = true;
+                var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+                if (submitButton) {
+                    submitButton.setAttribute('disabled', 'disabled');
+                    submitButton.classList.add('disabled');
+                }
+                showFlashMessage('Por gentileza, aguarde enquanto finalizamos o agendamento da reunião.', 'info');
+            }
+        });
+    }
+
     document.getElementById('openMeetingModal').addEventListener('click', function() {
         openNewMeeting('');
+        hasShownSubmissionMessage = false;
+        if (meetingForm) {
+            var submitButton = meetingForm.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitButton) {
+                submitButton.removeAttribute('disabled');
+                submitButton.classList.remove('disabled');
+            }
+        }
     });
     });
     </script>
@@ -804,27 +852,81 @@
         var configModalEl = document.getElementById('meetConfigModal');
         var configFrame = document.getElementById('meetConfigFrame');
         var configSpinner = document.getElementById('meetConfigSpinner');
+        var configFallback = document.getElementById('meetConfigFallback');
+        var configExternalLink = document.getElementById('meetConfigExternalLink');
         var configModal = configModalEl ? new bootstrap.Modal(configModalEl, {focus: true}) : null;
+        var fallbackTimer = null;
         if (configureBtn && configModal && configFrame && configSpinner) {
             configureBtn.addEventListener('click', function() {
                 var url = configureBtn.getAttribute('data-config-url');
                 if (!url) {
                     return;
                 }
+                if (configExternalLink) {
+                    configExternalLink.href = url;
+                }
+                if (configFallback) {
+                    configFallback.classList.add('d-none');
+                }
                 configSpinner.classList.remove('d-none');
                 configFrame.classList.add('d-none');
                 if (configFrame.src !== url) {
                     configFrame.src = url;
                 }
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                }
+                fallbackTimer = setTimeout(function() {
+                    if (!configFrame.classList.contains('d-none')) {
+                        return;
+                    }
+                    configSpinner.classList.add('d-none');
+                    if (configFallback) {
+                        configFallback.classList.remove('d-none');
+                    }
+                }, 4000);
             });
             configFrame.addEventListener('load', function() {
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
                 configSpinner.classList.add('d-none');
-                configFrame.classList.remove('d-none');
+                var shouldFallback = false;
+                try {
+                    var doc = configFrame.contentDocument;
+                    if (!doc || !doc.body) {
+                        shouldFallback = true;
+                    } else {
+                        var text = doc.body.innerText || '';
+                        shouldFallback = text.trim().startsWith('403');
+                    }
+                } catch (err) {
+                    shouldFallback = true;
+                }
+                if (shouldFallback) {
+                    configFrame.classList.add('d-none');
+                    if (configFallback) {
+                        configFallback.classList.remove('d-none');
+                    }
+                } else {
+                    configFrame.classList.remove('d-none');
+                    if (configFallback) {
+                        configFallback.classList.add('d-none');
+                    }
+                }
             });
             configModalEl.addEventListener('hidden.bs.modal', function() {
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
                 configFrame.src = 'about:blank';
                 configSpinner.classList.remove('d-none');
                 configFrame.classList.add('d-none');
+                if (configFallback) {
+                    configFallback.classList.add('d-none');
+                }
             });
         }
         popup.show();
