@@ -226,6 +226,18 @@
                             <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
                                 <i class="bi bi-camera-video me-2"></i>Abrir Meet
                             </a>
+                            {% if meet_popup_event_id and meeting_room_email %}
+                            {% set calendar_id = meeting_room_email|urlencode %}
+                            <button type="button"
+                                    class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mb-3"
+                                    id="configureMeetBtn"
+                                    data-config-url="https://calendar.google.com/calendar/u/0/r/eventedit/{{ meet_popup_event_id }}?cid={{ calendar_id }}">
+                                <i class="bi bi-sliders me-2"></i>Configurar sala do Meet
+                            </button>
+                            <p class="small text-muted mb-3">
+                                Use esta opção para acessar a tela de configurações do Google Meet e transferir a propriedade da videochamada ou ajustar os controles de anfitrião.
+                            </p>
+                            {% endif %}
                             <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
                                 <i class="bi bi-camera-video"></i>
                                 <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
@@ -682,6 +694,15 @@
                 showFlashMessage('Link copiado!', 'success');
             });
         });
+        var configureBtn = document.getElementById('configureMeetBtn');
+        if (configureBtn) {
+            configureBtn.addEventListener('click', function() {
+                var url = configureBtn.getAttribute('data-config-url');
+                if (url) {
+                    window.open(url, 'meetConfigOptions', 'width=780,height=640,menubar=no,toolbar=no,location=yes');
+                }
+            });
+        }
         popup.show();
     });
         </script>
