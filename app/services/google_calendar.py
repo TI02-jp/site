@@ -7,6 +7,7 @@ dedicated room e-mail and performs all calendar operations.
 
 from __future__ import annotations
 
+import base64
 import os
 from datetime import datetime
 from uuid import uuid4
@@ -16,6 +17,7 @@ from zoneinfo import ZoneInfo
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from urllib.parse import urlencode
 
 # Scopes required to manage calendar events.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -202,6 +204,40 @@ def update_event(
         .execute()
     )
     return updated_event
+
+
+def build_event_edit_link(
+    event_id: str, calendar_id: str, timezone: str | None = None
+) -> str:
+    """Return the Google Calendar URL used to edit an event.
+
+    Google Calendar expects the ``eventedit`` route to receive the event id and
+    calendar id encoded together using URL-safe base64. The encoded identifier
+    is placed in the path segment and optional query parameters (such as the
+    calendar timezone) are appended afterwards.
+
+    Args:
+        event_id: Identifier returned by the Calendar API.
+        calendar_id: Calendar that owns the event (usually an e-mail).
+        timezone: Optional timezone name to preselect in the Calendar UI.
+
+    Returns:
+        A fully qualified URL pointing to the Calendar event configuration
+        screen.
+    """
+
+    if not event_id or not calendar_id:
+        raise ValueError("event_id and calendar_id are required")
+
+    token = base64.urlsafe_b64encode(f"{event_id} {calendar_id}".encode("utf-8")).decode(
+        "ascii"
+    ).rstrip("=")
+    query = {"pli": "1"}
+    if timezone:
+        query["ctz"] = timezone
+    return "https://calendar.google.com/calendar/u/0/r/eventedit/{}{}".format(
+        token, f"?{urlencode(query)}" if query else ""
+    )
 
 
 def delete_event(event_id: str):

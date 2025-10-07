@@ -55,16 +55,16 @@
         align-items: center;
         justify-content: flex-start;
         gap: 0.35rem;
-        padding: 2px 6px;
-        border-radius: 999px;
-        background: rgba(13, 110, 253, 0.9);
-        color: #fff;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        color: inherit;
         line-height: 1;
         white-space: nowrap;
         width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+        box-shadow: none;
         z-index: 1;
         text-align: left;
     }
@@ -218,6 +218,7 @@
     line-height: 1;
     white-space: nowrap;
     width: 100%;
+    color: inherit;
 }
 .fc-daygrid-day .fc-event-main-custom { font-size: 0.8rem; }
 .fc-event-main-custom .fc-event-creator { font-weight: 600; }
@@ -426,6 +427,21 @@
                 }
                 var wrapper = document.createElement('div');
                 wrapper.className = 'fc-event-main-custom';
+                var accentColor = arg.backgroundColor || arg.borderColor || '';
+                if (!accentColor && arg.event && arg.event.extendedProps) {
+                    accentColor = arg.event.extendedProps.color || '';
+                }
+                var textColor = arg.textColor || '';
+                if (!textColor && arg.event) {
+                    if (arg.event.textColor) {
+                        textColor = arg.event.textColor;
+                    } else if (arg.event.extendedProps && arg.event.extendedProps.textColor) {
+                        textColor = arg.event.extendedProps.textColor;
+                    }
+                }
+                var fallbackColor = '#0b288b';
+                var effectiveColor = textColor || accentColor || fallbackColor;
+                wrapper.style.color = effectiveColor;
                 var participants = (arg.event.extendedProps.participants || [])
                     .filter(function(name) { return name && name.trim(); });
                 var creator = arg.event.extendedProps.creator;

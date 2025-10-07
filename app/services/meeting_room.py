@@ -1,6 +1,8 @@
 """Helpers for meeting room scheduling logic."""
 
 from datetime import date, datetime, timedelta
+from typing import Any
+
 from flask import flash
 from markupsafe import Markup
 from dateutil.parser import isoparse
@@ -25,6 +27,124 @@ CALENDAR_TZ = get_calendar_timezone()
 
 MIN_GAP = timedelta(minutes=2)
 
+PORTAL_PRIMARY_HEX = "#0b288b"
+
+STATUS_ORDER = [
+    ReuniaoStatus.AGENDADA,
+    ReuniaoStatus.EM_ANDAMENTO,
+    ReuniaoStatus.REALIZADA,
+    ReuniaoStatus.ADIADA,
+    ReuniaoStatus.CANCELADA,
+]
+
+STATUS_METADATA: dict[ReuniaoStatus, dict[str, Any]] = {
+    ReuniaoStatus.AGENDADA: {
+        "label": "Agendada",
+        "color": "#ffc107",
+        "text_color": PORTAL_PRIMARY_HEX,
+        "tooltip_class": "tooltip-warning",
+        "badge_class": "bg-warning text-dark",
+        "disable_meet_link": False,
+    },
+    ReuniaoStatus.EM_ANDAMENTO: {
+        "label": "Em Andamento",
+        "color": "#198754",
+        "text_color": PORTAL_PRIMARY_HEX,
+        "tooltip_class": "tooltip-success",
+        "badge_class": "bg-success",
+        "disable_meet_link": False,
+    },
+    ReuniaoStatus.REALIZADA: {
+        "label": "Realizada",
+        "color": "#dc3545",
+        "text_color": PORTAL_PRIMARY_HEX,
+        "tooltip_class": "tooltip-danger",
+        "badge_class": "bg-danger",
+        "disable_meet_link": True,
+    },
+    ReuniaoStatus.ADIADA: {
+        "label": "Adiada",
+        "color": "#0dcaf0",
+        "text_color": PORTAL_PRIMARY_HEX,
+        "tooltip_class": "tooltip-info",
+        "badge_class": "bg-info text-dark",
+        "disable_meet_link": False,
+    },
+    ReuniaoStatus.CANCELADA: {
+        "label": "Cancelada",
+        "color": "#6c757d",
+        "text_color": PORTAL_PRIMARY_HEX,
+        "tooltip_class": "tooltip-secondary",
+        "badge_class": "bg-secondary",
+        "disable_meet_link": True,
+    },
+}
+
+MANUAL_STATUS_OVERRIDES = {
+    ReuniaoStatus.ADIADA,
+    ReuniaoStatus.CANCELADA,
+    ReuniaoStatus.REALIZADA,
+}
+
+
+def get_status_metadata(status: ReuniaoStatus) -> dict[str, Any]:
+    """Return display metadata for ``status``."""
+
+    meta = STATUS_METADATA[status].copy()
+    meta["value"] = status.value
+    return meta
+
+
+def get_status_options() -> list[tuple[str, str]]:
+    """Return ``(value, label)`` tuples for status selectors."""
+
+    return [
+        (status.value, STATUS_METADATA[status]["label"])
+        for status in STATUS_ORDER
+    ]
+
+
+def get_status_badges() -> list[dict[str, str]]:
+    """Return badge metadata for legend rendering."""
+
+    return [
+        {
+            "value": status.value,
+            "label": STATUS_METADATA[status]["label"],
+            "badge_class": STATUS_METADATA[status]["badge_class"],
+        }
+        for status in STATUS_ORDER
+    ]
+
+
+def _auto_status_enum(start_dt: datetime, end_dt: datetime, now: datetime) -> ReuniaoStatus:
+    """Return the automatic status for a meeting interval."""
+
+    if now < start_dt:
+        return ReuniaoStatus.AGENDADA
+    if start_dt <= now <= end_dt:
+        return ReuniaoStatus.EM_ANDAMENTO
+    return ReuniaoStatus.REALIZADA
+
+
+def _resolve_meeting_status(
+    meeting: Reuniao, start_dt: datetime, end_dt: datetime, now: datetime
+) -> tuple[ReuniaoStatus, bool]:
+    """Determine the meeting status respecting manual overrides."""
+
+    if meeting.status_override:
+        status_enum = meeting.status_override
+        changed = meeting.status != status_enum
+        if changed:
+            meeting.status = status_enum
+        return status_enum, changed
+
+    status_enum = _auto_status_enum(start_dt, end_dt, now)
+    changed = meeting.status != status_enum
+    if changed:
+        meeting.status = status_enum
+    return status_enum, changed
+
 
 def _parse_course_id(form) -> int | None:
     """Return the course identifier associated with the form submission."""
@@ -40,10 +160,14 @@ def _parse_course_id(form) -> int | None:
 
 def populate_participants_choices(form):
     """Populate participant choices ordered by name."""
-    form.participants.choices = [
+    choices = [
         (u.id, u.name)
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
+    form.participants.choices = choices
+    owner_field = getattr(form, "owner_id", None)
+    if owner_field is not None:
+        owner_field.choices = [("", "Selecione o proprietário")] + choices
 
 
 def fetch_raw_events():
@@ -105,6 +229,7 @@ def _create_additional_meeting(
     participant_emails: list[str],
     should_notify: bool,
     user_id: int,
+    owner_id: int | None,
     course_id: int | None,
 ):
     start_dt = datetime.combine(
@@ -140,6 +265,7 @@ def _create_additional_meeting(
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        owner_id=owner_id,
         course_id=course_id,
     )
     db.session.add(meeting)
@@ -168,9 +294,11 @@ def _create_additional_meeting(
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts.
 
-    Returns a tuple ``(success, meet_link)`` where ``success`` indicates
-    whether the meeting was created and ``meet_link`` contains the generated
-    Google Meet URL when available.
+    Returns a tuple ``(success, meet_info)`` where ``success`` indicates
+    whether the meeting was created and ``meet_info`` is either ``None`` or a
+    dictionary containing the generated Google Meet URL (under the
+    ``"link"`` key) alongside the Google Calendar event identifier (under the
+    ``"event_id"`` key).
     """
     course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
@@ -225,12 +353,20 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             additional_dates.append(field.data)
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+    selected_user_ids = [u.id for u in selected_users]
+    owner_field = getattr(form, "owner_id", None)
+    owner_id_value: int | None = None
+    if selected_user_ids:
+        if len(selected_user_ids) == 1:
+            owner_id_value = selected_user_ids[0]
+        elif owner_field and owner_field.data in selected_user_ids:
+            owner_id_value = owner_field.data
     participant_emails = [u.email for u in selected_users]
     participant_usernames = [u.username for u in selected_users]
     description = form.description.data or ""
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
-    description += "\nStatus: Agendada"
+    description += "\nStatus: " + STATUS_METADATA[ReuniaoStatus.AGENDADA]["label"]
     notify_attendees = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_attendees.data) if notify_attendees else False
     if form.create_meet.data:
@@ -262,6 +398,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        owner_id=owner_id_value,
         course_id=course_id_value,
     )
     db.session.add(meeting)
@@ -294,17 +431,22 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 participant_emails,
                 should_notify,
                 user_id,
+                owner_id_value,
                 course_id_value,
             )
             if not meet_link and link and not additional_meet_link:
                 additional_meet_link = link
-    return True, meet_link or additional_meet_link
+    meet_link_for_popup = meet_link or additional_meet_link
+    meet_info = None
+    if meet_link_for_popup:
+        meet_info = {"link": meet_link_for_popup, "event_id": event.get("id")}
+    return True, meet_info
 
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar.
 
-    Returns a tuple ``(success, meet_link)`` similar to
+    Returns a tuple ``(success, meet_info)`` similar to
     :func:`create_meeting_and_event`.
     """
     course_id_value = _parse_course_id(form)
@@ -351,6 +493,15 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.course_id = course_id_value
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+    selected_user_ids = [u.id for u in selected_users]
+    owner_field = getattr(form, "owner_id", None)
+    owner_id_value: int | None = None
+    if selected_user_ids:
+        if len(selected_user_ids) == 1:
+            owner_id_value = selected_user_ids[0]
+        elif owner_field and owner_field.data in selected_user_ids:
+            owner_id_value = owner_field.data
+    meeting.owner_id = owner_id_value
     for u in selected_users:
         meeting.participantes.append(ReuniaoParticipante(id_usuario=u.id, username_usuario=u.username))
     participant_emails = [u.email for u in selected_users]
@@ -358,10 +509,20 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     description = form.description.data or ""
     if participant_usernames:
         description += "\nParticipantes: " + ", ".join(participant_usernames)
-    description += "\nStatus: Agendada"
+    current_status = meeting.status_override or meeting.status or ReuniaoStatus.AGENDADA
+    status_label = STATUS_METADATA[current_status]["label"]
+    description += "\nStatus: " + status_label
     notify_field = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_field.data) if notify_field else False
     if meeting.google_event_id:
+        wants_meet = bool(form.create_meet.data)
+        existing_link = meeting.meet_link
+        create_meet_flag: bool | None = None
+        if wants_meet and not existing_link:
+            create_meet_flag = True
+        elif not wants_meet and existing_link:
+            create_meet_flag = False
+
         updated_event = update_event(
             meeting.google_event_id,
             form.subject.data,
@@ -369,10 +530,17 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             end_dt,
             description,
             participant_emails,
-            create_meet=form.create_meet.data,
+            create_meet=create_meet_flag,
             notify_attendees=should_notify,
         )
-        meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
+
+        if wants_meet:
+            meeting.meet_link = (
+                updated_event.get("hangoutLink")
+                or existing_link
+            )
+        else:
+            meeting.meet_link = None
     else:
         if form.create_meet.data:
             updated_event = create_meet_event(
@@ -396,7 +564,10 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return True, meeting.meet_link
+    meet_info = None
+    if meeting.meet_link:
+        meet_info = {"link": meeting.meet_link, "event_id": meeting.google_event_id}
+    return True, meet_info
 
 
 def delete_meeting(meeting: Reuniao) -> bool:
@@ -435,23 +606,24 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         start_dt = r.inicio.astimezone(CALENDAR_TZ)
         end_dt = r.fim.astimezone(CALENDAR_TZ)
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
-        if now < start_dt:
-            status = ReuniaoStatus.AGENDADA
-            status_label = "Agendada"
-            color = "#ffc107"
-        elif start_dt <= now <= end_dt:
-            status = ReuniaoStatus.EM_ANDAMENTO
-            status_label = "Em Andamento"
-            color = "#198754"
-        else:
-            status = ReuniaoStatus.REALIZADA
-            status_label = "Realizada"
-            color = "#dc3545"
-        if r.status != status:
-            r.status = status
+        status_enum, changed = _resolve_meeting_status(r, start_dt, end_dt, now)
+        if changed:
             updated = True
-        can_edit = r.criador_id == current_user_id and status == ReuniaoStatus.AGENDADA
+        meta = STATUS_METADATA[status_enum]
+        status_label = meta["label"]
+        color = meta["color"]
+        text_color = meta["text_color"]
+        tooltip_class = meta["tooltip_class"]
+        disable_meet_link = meta["disable_meet_link"]
+        can_edit = (
+            r.criador_id == current_user_id
+            and status_enum in (ReuniaoStatus.AGENDADA, ReuniaoStatus.ADIADA)
+        )
         can_delete = can_edit or is_admin
+        allowed_status_users = {r.criador_id}
+        if r.owner_id:
+            allowed_status_users.add(r.owner_id)
+        can_update_status = is_admin or current_user_id in allowed_status_users
         event_data = {
             "id": r.id,
             "title": r.assunto,
@@ -460,13 +632,20 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "color": color,
             "description": r.descricao,
             "status": status_label,
+            "status_value": status_enum.value,
             "creator": r.criador.username,
+            "owner_id": r.owner_id,
+            "owner_name": r.owner.username if r.owner else None,
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
             "can_edit": can_edit,
             "can_delete": can_delete,
+            "can_update_status": can_update_status,
             "course_id": r.course_id,
+            "textColor": text_color,
+            "tooltip_class": tooltip_class,
+            "disable_meet_link": disable_meet_link,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
@@ -484,15 +663,13 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         key = (e.get("summary", "Sem título"), start_dt.isoformat(), end_dt.isoformat())
         if key in seen_keys:
             continue
-        if now < start_dt:
-            color = "#ffc107"
-            status_label = "Agendada"
-        elif start_dt <= now <= end_dt:
-            color = "#198754"
-            status_label = "Em Andamento"
-        else:
-            color = "#dc3545"
-            status_label = "Realizada"
+        status_enum = _auto_status_enum(start_dt, end_dt, now)
+        meta = STATUS_METADATA[status_enum]
+        status_label = meta["label"]
+        color = meta["color"]
+        text_color = meta["text_color"]
+        tooltip_class = meta["tooltip_class"]
+        disable_meet_link = meta["disable_meet_link"]
         attendee_objs = e.get("attendees", [])
         emails = [a.get("email") for a in attendee_objs if a.get("email")]
         user_map = {
@@ -527,11 +704,16 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "description": e.get("description"),
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
+                "textColor": text_color,
                 "status": status_label,
+                "status_value": status_enum.value,
                 "participants": attendees,
                 "creator": creator_name,
                 "can_edit": False,
                 "can_delete": False,
+                "can_update_status": False,
+                "tooltip_class": tooltip_class,
+                "disable_meet_link": disable_meet_link,
             }
         )
         seen_keys.add(key)
