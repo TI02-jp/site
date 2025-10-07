@@ -533,6 +533,26 @@
         }
     }
 
+    function resetStatusSelectionTracking() {
+        if (!statusSelect) { return; }
+        delete statusSelect.dataset.userEdited;
+    }
+
+    function setStatusSelectValue(value, options) {
+        if (!statusSelect) { return; }
+        var opts = options || {};
+        if (!opts.force && statusSelect.dataset.userEdited === 'true') {
+            return;
+        }
+        statusSelect.value = value || '';
+        if (statusSelect.value !== (value || '')) {
+            statusSelect.value = '';
+        }
+        if (!opts.preservePending) {
+            resetStatusSelectionTracking();
+        }
+    }
+
     function togglePostponeFields(shouldPrefill) {
         if (!postponeFields) { return; }
         var shouldShow = statusSelect && statusSelect.value === 'adiada';
@@ -551,6 +571,7 @@
 
     if (statusSelect) {
         statusSelect.addEventListener('change', function() {
+            statusSelect.dataset.userEdited = 'true';
             togglePostponeFields(true);
         });
     }
@@ -926,14 +947,12 @@
             if (statusWrapper && statusSelect) {
                 if (e.extendedProps.can_update_status && e.extendedProps.status_value) {
                     statusWrapper.classList.remove('d-none');
-                    statusSelect.value = e.extendedProps.status_value;
-                    if (statusSelect.value !== e.extendedProps.status_value) {
-                        statusSelect.value = '';
-                    }
+                    setStatusSelectValue(e.extendedProps.status_value, { force: true });
                     setStatusButtonLoading(false);
                     togglePostponeFields(true);
                 } else {
                     statusWrapper.classList.add('d-none');
+                    resetStatusSelectionTracking();
                     setStatusButtonLoading(false);
                     togglePostponeFields(true);
                 }
@@ -1063,10 +1082,8 @@
                             updateMeetLinkControls(currentEvent);
                             if (statusWrapper && !statusWrapper.classList.contains('d-none') && statusSelect) {
                                 var updatedStatusValue = currentEvent.extendedProps.status_value || '';
-                                statusSelect.value = updatedStatusValue;
-                                if (statusSelect.value !== updatedStatusValue) {
-                                    statusSelect.value = '';
-                                }
+                                setStatusSelectValue(updatedStatusValue);
+                                togglePostponeFields(false);
                             }
                             var detailStatusEl = document.getElementById('detailStatus');
                             if (detailStatusEl && currentEvent.extendedProps.status) {
@@ -1166,8 +1183,8 @@
                     if (statusEl && meta.label) {
                         statusEl.textContent = meta.label;
                     }
-                    if (meta.value && statusSelect.value !== meta.value) {
-                        statusSelect.value = meta.value;
+                    if (meta.value) {
+                        setStatusSelectValue(meta.value, { force: true });
                     }
                     togglePostponeFields(false);
                     if (data.start) {
@@ -1227,6 +1244,7 @@
             if (statusWrapper) {
                 statusWrapper.classList.add('d-none');
             }
+            resetStatusSelectionTracking();
             togglePostponeFields(true);
             setStatusButtonLoading(false);
         });
