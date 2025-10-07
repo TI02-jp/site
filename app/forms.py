@@ -425,6 +425,12 @@ class MeetingForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
+    owner_id = SelectField(
+        "Proprietário da reunião",
+        coerce=lambda value: int(value) if value not in (None, "", "None") else None,
+        validators=[Optional()],
+        validate_choice=False,
+    )
     meeting_id = HiddenField()
     course_id = HiddenField()
     date = DateField("Data da Reunião", format="%Y-%m-%d", validators=[DataRequired()])
@@ -453,6 +459,22 @@ class MeetingForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
             return False
+        owner_field = getattr(self, "owner_id", None)
+        selected_participants = set(self.participants.data or [])
+        if owner_field:
+            if len(selected_participants) == 1:
+                owner_field.data = next(iter(selected_participants))
+            elif len(selected_participants) > 1:
+                if owner_field.data is None:
+                    owner_field.errors.append("Selecione o proprietário da reunião.")
+                    return False
+                if owner_field.data not in selected_participants:
+                    owner_field.errors.append(
+                        "O proprietário deve ser um dos participantes selecionados."
+                    )
+                    return False
+            else:
+                owner_field.data = None
         if self.apply_more_days.data:
             valid_dates: list[date] = []
             has_error = False

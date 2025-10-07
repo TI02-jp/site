@@ -101,6 +101,11 @@
                                             {% endfor %}
                                         </div>
                                         {% if form.participants.errors %}<div class="text-danger">{{ form.participants.errors[0] }}</div>{% endif %}
+                                        <div class="mt-3" id="ownerFieldWrapper">
+                                            {{ form.owner_id.label(class="form-label") }}
+                                            {{ form.owner_id(class="form-select") }}
+                                            {% if form.owner_id.errors %}<div class="text-danger">{{ form.owner_id.errors[0] }}</div>{% endif %}
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -195,6 +200,7 @@
                                 <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
                                 <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
                                 <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
+                                <li class="list-group-item text-start d-none" id="detailOwnerItem"><strong>Proprietário:</strong> <span id="detailOwner"></span></li>
                                 <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
                             </ul>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
@@ -291,6 +297,47 @@
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');
     var addAdditionalDateBtn = document.getElementById('addAdditionalDateBtn');
+    var ownerWrapper = document.getElementById('ownerFieldWrapper');
+    var ownerSelect = document.getElementById('owner_id');
+    var participantCheckboxes = Array.from(document.querySelectorAll('#meetingModal input[name="participants"]'));
+
+    function updateOwnerFieldVisibility() {
+        if (!ownerSelect || !ownerWrapper) {
+            return;
+        }
+        var selectedIds = participantCheckboxes
+            .filter(function(cb) { return cb.checked; })
+            .map(function(cb) { return cb.value; });
+        var ownerValueBefore = ownerSelect.value;
+        Array.from(ownerSelect.options).forEach(function(option) {
+            if (option.value === '') {
+                option.disabled = selectedIds.length <= 1;
+                option.hidden = selectedIds.length <= 1;
+                return;
+            }
+            var isParticipant = selectedIds.includes(option.value);
+            option.disabled = !isParticipant;
+            option.hidden = !isParticipant;
+        });
+        if (selectedIds.length <= 1) {
+            ownerWrapper.classList.add('d-none');
+            if (selectedIds.length === 1) {
+                ownerSelect.value = selectedIds[0];
+            } else {
+                ownerSelect.value = '';
+            }
+        } else {
+            ownerWrapper.classList.remove('d-none');
+            if (!selectedIds.includes(ownerValueBefore)) {
+                ownerSelect.value = '';
+            }
+        }
+    }
+
+    participantCheckboxes.forEach(function(cb) {
+        cb.addEventListener('change', updateOwnerFieldVisibility);
+    });
+    updateOwnerFieldVisibility();
 
     function renumberAdditionalDates() {
         if (!additionalDatesContainer) {
@@ -451,6 +498,10 @@
         }
         clearAdditionalDates();
         toggleAdditionalDates();
+        if (ownerSelect) {
+            ownerSelect.value = '';
+        }
+        updateOwnerFieldVisibility();
         document.getElementById('meeting_id').value = '';
         var courseInput = document.getElementById('meeting_course_id');
         if (courseInput) {
@@ -526,6 +577,18 @@
             document.getElementById('detailStatus').textContent = statusText;
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
+            var ownerItem = document.getElementById('detailOwnerItem');
+            var ownerEl = document.getElementById('detailOwner');
+            if (ownerEl && ownerItem) {
+                var ownerName = e.extendedProps.owner_name;
+                if (ownerName) {
+                    ownerEl.textContent = ownerName;
+                    ownerItem.classList.remove('d-none');
+                } else {
+                    ownerEl.textContent = '';
+                    ownerItem.classList.add('d-none');
+                }
+            }
             var linkContainer = document.getElementById('meetLinkContainer');
             var linkEl = document.getElementById('detailMeetLink');
             var copyBtn = document.getElementById('copyMeetLink');
@@ -599,6 +662,12 @@
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
                         }
+                        if (existing.extendedProps.owner_id !== evData.owner_id) {
+                            existing.setExtendedProp('owner_id', evData.owner_id);
+                        }
+                        if (existing.extendedProps.owner_name !== evData.owner_name) {
+                            existing.setExtendedProp('owner_name', evData.owner_name);
+                        }
                         if (existing.extendedProps.meet_link !== evData.meet_link) {
                             existing.setExtendedProp('meet_link', evData.meet_link);
                         }
@@ -665,9 +734,21 @@
         clearAdditionalDates();
         toggleAdditionalDates();
         var ids = currentEvent.extendedProps.participant_ids || [];
-        document.querySelectorAll('#meetingModal input[name="participants"]').forEach(function(cb){
+        participantCheckboxes.forEach(function(cb){
             cb.checked = ids.includes(parseInt(cb.value));
         });
+        updateOwnerFieldVisibility();
+        if (ownerSelect) {
+            var ownerId = currentEvent.extendedProps.owner_id;
+            if (ownerId) {
+                ownerSelect.value = String(ownerId);
+                if (ownerSelect.value !== String(ownerId)) {
+                    ownerSelect.value = '';
+                }
+            } else {
+                ownerSelect.value = '';
+            }
+        }
         document.querySelector('#meetingModal .modal-title').textContent = 'Editar Reunião';
         document.querySelector('#meetingModal input[type="submit"]').value = 'Salvar';
         var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));

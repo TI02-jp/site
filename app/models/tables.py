@@ -651,6 +651,11 @@ class Reuniao(db.Model):
         default=ReuniaoStatus.AGENDADA,
     )
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    owner_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True,
+    )
     data_criacao = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(CALENDAR_TZ),
@@ -663,6 +668,7 @@ class Reuniao(db.Model):
         lazy=True,
     )
     criador = db.relationship('User', foreign_keys=[criador_id])
+    owner = db.relationship('User', foreign_keys=[owner_id])
     course = db.relationship('Course', backref=db.backref('meetings', lazy=True))
 
 
