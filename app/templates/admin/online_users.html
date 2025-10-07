@@ -9,7 +9,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="row mb-4">
-        <div class="col-12">
+        <div class="col-12 col-lg-10 col-xl-7">
             <h1 class="text-primary mb-2">
                 <i class="bi bi-person-check me-2"></i>Usuários Online
                 <span class="badge bg-success ms-2">{{ users|length }}</span>
@@ -17,39 +17,74 @@
             <p class="text-muted mb-0">Usuários ativos nos últimos 5 minutos</p>
         </div>
     </div>
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="table-success">
-                        <tr>
-                            <th>Nome</th>
-                            <th>Tags</th>
-                            <th>Última atividade</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.name }}</td>
-                            <td>
-                                {% if user.tags %}
-                                    {% for tag in user.tags %}
-                                        <span class="badge bg-secondary">{{ tag.nome }}</span>
-                                    {% endfor %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-7">
+            <div class="card online-users-card shadow-sm">
+                <div class="card-header online-users-header d-flex align-items-center justify-content-between">
+                    <div>
+                        <h2 class="h5 mb-0 text-dark">Visão geral</h2>
+                        <small class="text-muted">Atualizado em tempo real</small>
+                    </div>
+                    <span class="badge rounded-pill online-users-count px-3 py-2">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>{{ users|length }} online
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 align-middle online-users-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Nome</th>
+                                    <th scope="col" class="w-25">Tags</th>
+                                    <th scope="col" class="text-end">Última atividade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="online-users-avatar">
+                                                <i class="bi bi-person-fill"></i>
+                                            </span>
+                                            <div>
+                                                <div class="fw-semibold">{{ user.name }}</div>
+                                                <div class="text-muted small">{{ user.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% if user.tags %}
+                                                {% for tag in user.tags %}
+                                                    <span class="badge rounded-pill bg-light text-primary border">{{ tag.nome }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge online-users-last-seen">
+                                            {{ user.last_seen | time_since }}
+                                        </span>
+                                    </td>
+                                </tr>
                                 {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ user.last_seen | time_since }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">Nenhum usuário online</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <tr>
+                                    <td colspan="3" class="text-center py-5">
+                                        <div class="online-users-empty">
+                                            <i class="bi bi-emoji-neutral"></i>
+                                            <h3 class="h6 mt-3 mb-1">Nenhum usuário online agora</h3>
+                                            <p class="text-muted mb-0">Assim que alguém entrar, você verá aqui.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
