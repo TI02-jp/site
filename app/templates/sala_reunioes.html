@@ -106,6 +106,163 @@
         color: #174ea6;
         box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
     }
+    .btn-quiet-neutral {
+        background: #f5f7fb;
+        color: #1f2937;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-neutral:hover,
+    .btn-quiet-neutral:focus {
+        background: #e8ecf5;
+        color: #0f172a;
+        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+    }
+    .btn-quiet-danger {
+        background: #fef2f2;
+        color: #b42318;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-danger:hover,
+    .btn-quiet-danger:focus {
+        background: #fde6e4;
+        color: #912018;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+    }
+    #eventDetailsModal .modal-dialog {
+        max-width: 520px;
+    }
+    #eventDetailsModal .modal-content {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 25px 55px -28px rgba(15, 23, 42, 0.4);
+    }
+    #eventDetailsModal .modal-header {
+        border-bottom: none;
+        padding: 1.5rem 1.5rem 0.75rem;
+    }
+    #eventDetailsModal .modal-body {
+        padding: 0 1.5rem 1.75rem;
+    }
+    #eventDetailsModal .modal-footer {
+        border-top: none;
+        padding: 0 1.5rem 1.5rem;
+        gap: 0.75rem;
+    }
+    .event-details-icon {
+        width: 48px;
+        height: 48px;
+        background: #e8f0fe;
+        color: #1a73e8;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .event-details-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .event-details-heading h5 {
+        font-size: var(--font-xl);
+        margin-bottom: 0.35rem;
+    }
+    .event-details-meta {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        font-weight: 600;
+    }
+    .event-details-section {
+        background: #f8faff;
+        border: 1px solid #ecf1fb;
+        border-radius: 0.9rem;
+        padding: 1.1rem 1rem;
+        margin-top: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .event-detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .event-detail-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+        font-weight: 600;
+    }
+    .event-detail-value {
+        font-size: 0.98rem;
+        color: #1f2937;
+        word-break: break-word;
+    }
+    .event-detail-value strong {
+        font-weight: 600;
+    }
+    .event-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #e8f0fe;
+        color: #1a73e8;
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .event-status-badge.status-agendada {
+        background: #fff4d6;
+        color: #a15d00;
+    }
+    .event-status-badge.status-em-andamento {
+        background: #dff7ed;
+        color: #047857;
+    }
+    .event-status-badge.status-realizada {
+        background: #fdecec;
+        color: #b42318;
+    }
+    #meetLinkContainer {
+        border-radius: 0.9rem;
+        border: 1px dashed #c9d5f1;
+        background: #f3f6ff;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    #meetLinkContainer .meet-link-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: #ecf3fe;
+        color: #1a73e8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    #meetLinkContainer a {
+        display: block;
+        font-weight: 600;
+        color: #1a73e8;
+        word-break: break-all;
+        text-decoration: none;
+    }
     </style>
 {% endblock %}
 
@@ -237,12 +394,17 @@
                  id="eventDetailsModal"
                  tabindex="-1"
                  aria-hidden="true">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header align-items-start">
-                            <div class="flex-grow-1">
-                                <div id="detailCreator" class="text-muted small d-none mb-1"></div>
-                                <h5 class="modal-title mb-0" id="detailTitle"></h5>
+                            <div class="event-details-heading flex-grow-1">
+                                <div class="event-details-icon">
+                                    <i class="bi bi-calendar-event"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div id="detailCreator" class="event-details-meta d-none mb-2"></div>
+                                    <h5 class="modal-title mb-0" id="detailTitle"></h5>
+                                </div>
                             </div>
                             <button type="button"
                                     class="btn-close"
@@ -250,26 +412,53 @@
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
-                            <ul class="list-group text-start">
-                                <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
-                                <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
-                                <li class="list-group-item text-start d-none" id="detailOwnerItem"><strong>Proprietário:</strong> <span id="detailOwner"></span></li>
-                                <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
-                            </ul>
-                            <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
-                                <i class="bi bi-camera-video"></i>
-                                <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
-                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
+                            <div class="event-details-section">
+                                <div class="event-detail-item">
+                                    <span class="event-detail-label">Data</span>
+                                    <span class="event-detail-value" id="detailDate"></span>
+                                </div>
+                                <div class="event-detail-item">
+                                    <span class="event-detail-label">Horário</span>
+                                    <span class="event-detail-value">
+                                        <span id="detailStart"></span>
+                                        <span id="detailEndWrapper" class="text-muted ms-2">até <span id="detailEnd"></span></span>
+                                    </span>
+                                </div>
+                                <div class="event-detail-item">
+                                    <span class="event-detail-label">Participantes</span>
+                                    <span class="event-detail-value" id="detailParticipants"></span>
+                                </div>
+                                <div class="event-detail-item d-none" id="detailOwnerItem">
+                                    <span class="event-detail-label">Proprietário</span>
+                                    <span class="event-detail-value" id="detailOwner"></span>
+                                </div>
+                                <div class="event-detail-item">
+                                    <span class="event-detail-label">Status</span>
+                                    <span class="event-detail-value">
+                                        <span class="event-status-badge" id="detailStatus"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div id="meetLinkContainer" class="mt-3 d-none">
+                                <div class="meet-link-icon">
+                                    <i class="bi bi-camera-video-fill"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="event-detail-label mb-1">Link do Meet</div>
+                                    <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none"></a>
+                                </div>
+                                <button type="button" id="copyMeetLink" class="btn btn-icon" aria-label="Copiar link do Meet">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <form id="deleteMeetingForm" method="post" class="d-none">
                                 {{ form.csrf_token(id='csrf_token_delete') }}
                             </form>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                            <button type="button" class="btn btn-primary d-none" id="editEventBtn">Editar</button>
-                            <button type="button" class="btn btn-danger d-none" id="deleteEventBtn">Excluir</button>
+                            <button type="button" class="btn btn-quiet-neutral" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" class="btn btn-quiet-primary d-none" id="editEventBtn">Editar</button>
+                            <button type="button" class="btn btn-quiet-danger d-none" id="deleteEventBtn">Excluir</button>
                         </div>
                     </div>
                 </div>
@@ -685,9 +874,31 @@
             var dateParts = e.startStr.slice(0,10).split('-');
             document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
             document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
-            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
+            var endWrapper = document.getElementById('detailEndWrapper');
+            var endEl = document.getElementById('detailEnd');
+            if (endEl && endWrapper) {
+                if (e.endStr) {
+                    endEl.textContent = e.endStr.slice(11,16);
+                    endWrapper.classList.remove('d-none');
+                } else {
+                    endEl.textContent = '';
+                    endWrapper.classList.add('d-none');
+                }
+            }
             var statusText = e.extendedProps.status || '';
-            document.getElementById('detailStatus').textContent = statusText;
+            var statusEl = document.getElementById('detailStatus');
+            if (statusEl) {
+                statusEl.textContent = statusText;
+                statusEl.classList.remove('status-agendada', 'status-em-andamento', 'status-realizada');
+                var normalizedStatus = statusText.toLowerCase();
+                if (normalizedStatus === 'agendada') {
+                    statusEl.classList.add('status-agendada');
+                } else if (normalizedStatus === 'em andamento') {
+                    statusEl.classList.add('status-em-andamento');
+                } else if (normalizedStatus === 'realizada') {
+                    statusEl.classList.add('status-realizada');
+                }
+            }
             var participants = e.extendedProps.participants;
             document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
             var ownerItem = document.getElementById('detailOwnerItem');
