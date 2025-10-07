@@ -52,6 +52,60 @@
     .meeting-modal-dialog .additional-date-group {
         min-width: 190px;
     }
+    .meet-link-modal { border: none; border-radius: 1rem; box-shadow: 0 20px 45px -28px rgba(18, 38, 63, 0.4); }
+    .meet-link-modal .modal-body { padding: 1.75rem; }
+    .meet-link-icon { width: 48px; height: 48px; background: #e8f0fe; color: #1a73e8; font-size: 1.4rem; }
+    .btn-quiet-primary {
+        background: #e8f0fe;
+        color: #1a73e8;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-primary:hover,
+    .btn-quiet-primary:focus {
+        background: #d2e3fc;
+        color: #174ea6;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
+    .btn-quiet-secondary {
+        background: #f3f6fc;
+        color: #3c4043;
+        border: none;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-quiet-secondary:hover,
+    .btn-quiet-secondary:focus {
+        background: #e8eaed;
+        color: #202124;
+        box-shadow: 0 0 0 3px rgba(60, 64, 67, 0.1);
+    }
+    .meet-link-card { background: linear-gradient(135deg, #f7f9ff 0%, #ffffff 100%); }
+    .meet-link-badge { width: 40px; height: 40px; background: #ecf3fe; color: #1a73e8; font-size: 1.2rem; }
+    .btn-icon {
+        border: none;
+        background: #ecf3fe;
+        color: #1a73e8;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        outline: none;
+        font-size: 1.1rem;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-icon:hover,
+    .btn-icon:focus {
+        background: #d2e3fc;
+        color: #174ea6;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
     </style>
 {% endblock %}
 
@@ -222,33 +276,51 @@
             </div>
             {% if meet_popup_link %}
             <div class="modal fade" id="meetLinkModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-sm">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Sala do Google Meet</h5>
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content meet-link-modal">
+                        <div class="modal-header border-0 pb-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="meet-link-icon rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-camera-video-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title mb-0">Sala do Google Meet</h5>
+                                    <p class="text-muted small mb-0">Gerencie rapidamente a sua videochamada</p>
+                                </div>
+                            </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-start">
-                            <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
-                                <i class="bi bi-camera-video me-2"></i>Abrir Meet
+                        <div class="modal-body text-start pt-3">
+                            <a id="openMeetLink"
+                               href="{{ meet_popup_link }}"
+                               target="_blank"
+                               class="btn btn-quiet-primary w-100 d-flex align-items-center justify-content-center mb-3">
+                                <i class="bi bi-play-circle me-2"></i>Entrar na reunião
                             </a>
                             {% if meet_popup_config_url %}
                             <button type="button"
-                                    class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mb-3"
+                                    class="btn btn-quiet-secondary w-100 d-flex align-items-center justify-content-center mb-3"
                                     id="configureMeetBtn"
                                     data-config-url="{{ meet_popup_config_url }}"
                                     data-bs-target="#meetConfigModal"
                                     data-bs-toggle="modal">
                                 <i class="bi bi-sliders me-2"></i>Configurar sala do Meet
                             </button>
-                            <p class="small text-muted mb-3">
-                                Use esta opção para ajustar os controles da videochamada sem sair do portal.
+                            <p class="small text-muted mb-4">
+                                Ajuste proprietário, permissões e demais preferências diretamente nas opções da videochamada.
                             </p>
                             {% endif %}
-                            <div class="bg-light border rounded p-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-camera-video"></i>
-                                <input type="text" id="meetLinkInput" class="form-control border-0 bg-light" value="{{ meet_popup_link }}" readonly>
-                                <button class="btn btn-outline-secondary" id="copyMeetLinkPopup"><i class="bi bi-clipboard"></i></button>
+                            <div class="meet-link-card border rounded-3 p-3 d-flex align-items-center gap-2">
+                                <div class="meet-link-badge rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-link-45deg"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="meetLinkInput" class="form-label small text-uppercase text-muted fw-semibold mb-1">Link do Meet</label>
+                                    <input type="text" id="meetLinkInput" class="form-control form-control-sm border-0 p-0 bg-transparent" value="{{ meet_popup_link }}" readonly>
+                                </div>
+                                <button class="btn btn-icon" id="copyMeetLinkPopup" type="button" aria-label="Copiar link do Meet">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
