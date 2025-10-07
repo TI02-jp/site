@@ -188,6 +188,45 @@ with app.app_context():
                     )
                 )
 
+        meeting_columns = {col["name"] for col in inspector.get_columns("reunioes")}
+        if "owner_id" not in meeting_columns:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        "ALTER TABLE reunioes ADD COLUMN owner_id INTEGER NULL"
+                    )
+                )
+            meeting_columns.add("owner_id")
+
+        if "owner_id" in meeting_columns:
+            existing_fks = inspector.get_foreign_keys("reunioes")
+            has_owner_fk = any(
+                fk.get("constrained_columns") == ["owner_id"] for fk in existing_fks
+            )
+            if not has_owner_fk:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            """
+                            ALTER TABLE reunioes
+                            ADD CONSTRAINT fk_reunioes_owner_id_users
+                            FOREIGN KEY (owner_id) REFERENCES users (id)
+                            ON DELETE SET NULL
+                            """
+                        )
+                    )
+
+            existing_indexes = {
+                index["name"] for index in inspector.get_indexes("reunioes")
+            }
+            if "ix_reunioes_owner_id" not in existing_indexes:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "CREATE INDEX ix_reunioes_owner_id ON reunioes (owner_id)"
+                        )
+                    )
+
         diretoria_columns = {
             col["name"] for col in inspector.get_columns("diretoria_events")
         }
