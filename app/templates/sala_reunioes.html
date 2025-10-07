@@ -465,6 +465,7 @@
     var postponeDateInput = document.getElementById('postponeDate');
     var postponeStartInput = document.getElementById('postponeStart');
     var postponeEndInput = document.getElementById('postponeEnd');
+    var statusRefreshToken = 0;
 
     function formatDateInputValue(date) {
         if (!date) { return ''; }
@@ -977,9 +978,13 @@
     });
     calendar.render();
     function refreshStatuses() {
+        var requestToken = ++statusRefreshToken;
         fetch('/api/reunioes')
             .then(function(resp) { return resp.json(); })
             .then(function(data) {
+                if (requestToken !== statusRefreshToken) {
+                    return;
+                }
                 var newIds = new Set();
                 data.forEach(function(evData) {
                     var id = String(evData.id);
