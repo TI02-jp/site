@@ -756,7 +756,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
         status_enum, changed = _resolve_meeting_status(r, start_dt, end_dt, now)
         if changed:
-        status, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
+            status, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
         if r.status != status:
             r.status = status
             updated = True
