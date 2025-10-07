@@ -251,15 +251,40 @@ with app.app_context():
                             """
                         )
                     )
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        """
+                        UPDATE reunioes
+                        SET status = LOWER(status)
+                        WHERE status IS NOT NULL AND status <> LOWER(status)
+                        """
+                    )
+                )
 
         meeting_columns = {col["name"] for col in inspector.get_columns("reunioes")}
-        if "status_override" not in meeting_columns:
+        has_status_override = "status_override" in meeting_columns
+        if not has_status_override:
             with db.engine.begin() as conn:
                 conn.execute(
                     sa.text(
                         """
                         ALTER TABLE reunioes
                         ADD COLUMN status_override ENUM('agendada','em andamento','realizada','adiada','cancelada') NULL
+                        """
+                    )
+                )
+            has_status_override = True
+
+        if has_status_override:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        """
+                        UPDATE reunioes
+                        SET status_override = LOWER(status_override)
+                        WHERE status_override IS NOT NULL
+                        AND status_override <> LOWER(status_override)
                         """
                     )
                 )
