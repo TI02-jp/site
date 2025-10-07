@@ -79,7 +79,11 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
 from app.services.courses import CourseStatus, get_courses_overview
-from app.services.google_calendar import get_calendar_timezone, MEETING_ROOM_EMAIL
+from app.services.google_calendar import (
+    get_calendar_timezone,
+    MEETING_ROOM_EMAIL,
+    build_event_edit_link,
+)
 from app.services.meeting_room import (
     populate_participants_choices,
     fetch_raw_events,
@@ -2124,6 +2128,14 @@ def sala_reunioes():
         show_modal = True
     meet_popup_link = session.pop("meet_link", None)
     meet_popup_event_id = session.pop("meet_event_id", None)
+    meet_popup_config_url = None
+    if meet_popup_event_id and MEETING_ROOM_EMAIL:
+        try:
+            meet_popup_config_url = build_event_edit_link(
+                meet_popup_event_id, MEETING_ROOM_EMAIL, calendar_tz.key
+            )
+        except ValueError:
+            meet_popup_config_url = None
     return render_template(
         "sala_reunioes.html",
         form=form,
@@ -2131,7 +2143,7 @@ def sala_reunioes():
         calendar_timezone=calendar_tz.key,
         meet_popup_link=meet_popup_link,
         meet_popup_event_id=meet_popup_event_id,
-        meeting_room_email=MEETING_ROOM_EMAIL,
+        meet_popup_config_url=meet_popup_config_url,
     )
 
 

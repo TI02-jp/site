@@ -232,12 +232,11 @@
                             <a id="openMeetLink" href="{{ meet_popup_link }}" target="_blank" class="btn btn-success w-100 d-flex align-items-center justify-content-center mb-3">
                                 <i class="bi bi-camera-video me-2"></i>Abrir Meet
                             </a>
-                            {% if meet_popup_event_id and meeting_room_email %}
-                            {% set calendar_id = meeting_room_email|urlencode %}
+                            {% if meet_popup_config_url %}
                             <button type="button"
                                     class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mb-3"
                                     id="configureMeetBtn"
-                                    data-config-url="https://calendar.google.com/calendar/u/0/r/eventedit/{{ meet_popup_event_id }}?cid={{ calendar_id }}">
+                                    data-config-url="{{ meet_popup_config_url }}">
                                 <i class="bi bi-sliders me-2"></i>Configurar sala do Meet
                             </button>
                             <p class="small text-muted mb-3">
