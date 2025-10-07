@@ -95,6 +95,7 @@ from app.services.meeting_room import (
     get_status_badges,
     get_status_metadata,
     MANUAL_STATUS_OVERRIDES,
+    postpone_meeting,
 )
 from app.services.general_calendar import (
     populate_event_participants as populate_general_event_participants,
@@ -2202,6 +2203,7 @@ def update_reuniao_status(meeting_id):
         )
 
     payload = request.get_json(silent=True) or request.form
+    calendar_tz = get_calendar_timezone()
     new_status_value = (payload.get("status") or "").strip()
     if not new_status_value:
         return (
@@ -2231,6 +2233,67 @@ def update_reuniao_status(meeting_id):
     current_status = meeting.status_override or meeting.status
     existing_override = meeting.status_override
 
+    schedule_updated = False
+    postpone_message: str | None = None
+    new_start_iso: str | None = None
+    new_end_iso: str | None = None
+
+    if new_status == ReuniaoStatus.ADIADA:
+        postpone_date_raw = (payload.get("new_date") or "").strip()
+        postpone_start_raw = (payload.get("new_start_time") or "").strip()
+        postpone_end_raw = (payload.get("new_end_time") or "").strip()
+        if not (postpone_date_raw and postpone_start_raw and postpone_end_raw):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Informe a nova data e horários para adiar a reunião.",
+                    }
+                ),
+                400,
+            )
+        try:
+            postpone_date = datetime.strptime(postpone_date_raw, "%Y-%m-%d").date()
+            postpone_start = datetime.strptime(postpone_start_raw, "%H:%M").time()
+            postpone_end = datetime.strptime(postpone_end_raw, "%H:%M").time()
+        except ValueError:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Data ou horário inválido para reagendamento.",
+                    }
+                ),
+                400,
+            )
+        new_start_dt = datetime.combine(postpone_date, postpone_start, tzinfo=calendar_tz)
+        new_end_dt = datetime.combine(postpone_date, postpone_end, tzinfo=calendar_tz)
+        try:
+            raw_events = fetch_raw_events()
+        except Exception:
+            raw_events = []
+        success, error_message = postpone_meeting(
+            meeting,
+            new_start_dt,
+            new_end_dt,
+            raw_events,
+            new_status,
+        )
+        if not success:
+            return (
+                jsonify({"success": False, "message": error_message or "Não foi possível adiar a reunião."}),
+                400,
+            )
+        schedule_updated = True
+        new_start_local = meeting.inicio.astimezone(calendar_tz)
+        new_end_local = meeting.fim.astimezone(calendar_tz)
+        new_start_iso = new_start_local.isoformat()
+        new_end_iso = new_end_local.isoformat()
+        postpone_message = (
+            "Reunião reagendada para "
+            f"{new_start_local.strftime('%d/%m/%Y')} às {new_start_local.strftime('%H:%M')}."
+        )
+
     status_changed = current_status != new_status or (
         manual_override and existing_override != new_status
     ) or (
@@ -2243,15 +2306,25 @@ def update_reuniao_status(meeting_id):
         else:
             meeting.status_override = None
         meeting.status = new_status
+    if status_changed or schedule_updated:
         db.session.commit()
 
     meta = get_status_metadata(meeting.status_override or meeting.status)
-    message = (
+    status_message = (
         f"Status atualizado para {meta['label']}."
         if status_changed
         else f"O status já está definido como {meta['label']}."
     )
-    return jsonify({"success": True, "message": message, "status": meta})
+    if postpone_message:
+        message = f"{postpone_message} {status_message}".strip()
+    else:
+        message = status_message
+
+    response = {"success": True, "message": message, "status": meta}
+    if schedule_updated:
+        response["start"] = new_start_iso
+        response["end"] = new_end_iso
+    return jsonify(response)
 
 
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])

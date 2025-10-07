@@ -570,6 +570,121 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     return True, meet_info
 
 
+def postpone_meeting(
+    meeting: Reuniao,
+    new_start: datetime,
+    new_end: datetime,
+    raw_events: list[dict[str, Any]] | None,
+    status: ReuniaoStatus,
+    notify_attendees: bool = False,
+) -> tuple[bool, str | None]:
+    """Reschedule ``meeting`` to the provided interval.
+
+    Returns ``(success, error_message)``. When ``success`` is ``False`` the
+    ``error_message`` contains a human readable reason.
+    """
+
+    if new_end <= new_start:
+        return False, "O horário de término deve ser posterior ao horário de início."
+
+    intervals: list[tuple[datetime, datetime]] = []
+    if raw_events:
+        for event in raw_events:
+            if meeting.google_event_id and event.get("id") == meeting.google_event_id:
+                continue
+            existing_start = isoparse(
+                event["start"].get("dateTime") or event["start"].get("date")
+            ).astimezone(CALENDAR_TZ)
+            existing_end = isoparse(
+                event["end"].get("dateTime") or event["end"].get("date")
+            ).astimezone(CALENDAR_TZ)
+            intervals.append((existing_start, existing_end))
+
+    for other in Reuniao.query.filter(Reuniao.id != meeting.id).all():
+        existing_start = other.inicio.astimezone(CALENDAR_TZ)
+        existing_end = other.fim.astimezone(CALENDAR_TZ)
+        intervals.append((existing_start, existing_end))
+
+    for existing_start, existing_end in intervals:
+        if new_start < existing_end + MIN_GAP and new_end > existing_start - MIN_GAP:
+            return False, "O horário informado conflita com outra reunião."
+
+    participant_ids = [p.id_usuario for p in meeting.participantes]
+    users = (
+        User.query.filter(User.id.in_(participant_ids)).all()
+        if participant_ids
+        else []
+    )
+    email_map = {user.id: user.email for user in users if user.email}
+    username_map = {user.id: user.username for user in users if user.username}
+    participant_emails = [
+        email_map[pid] for pid in participant_ids if pid in email_map
+    ]
+    participant_usernames: list[str] = []
+    for participant in meeting.participantes:
+        username = username_map.get(participant.id_usuario) or participant.username_usuario
+        if username:
+            participant_usernames.append(username)
+
+    description_lines: list[str] = []
+    if meeting.descricao:
+        description_lines.append(meeting.descricao)
+    if participant_usernames:
+        description_lines.append("Participantes: " + ", ".join(participant_usernames))
+    description_lines.append("Status: " + STATUS_METADATA[status]["label"])
+    description = "\n".join(description_lines).strip()
+
+    original_start = meeting.inicio
+    original_end = meeting.fim
+
+    try:
+        if meeting.google_event_id:
+            updated_event = update_event(
+                meeting.google_event_id,
+                meeting.assunto,
+                new_start,
+                new_end,
+                description,
+                participant_emails,
+                create_meet=None,
+                notify_attendees=notify_attendees,
+            )
+            hangout_link = updated_event.get("hangoutLink") if updated_event else None
+            if hangout_link:
+                meeting.meet_link = hangout_link
+        else:
+            if meeting.meet_link:
+                created_event = create_meet_event(
+                    meeting.assunto,
+                    new_start,
+                    new_end,
+                    description,
+                    participant_emails,
+                    notify_attendees=notify_attendees,
+                )
+            else:
+                created_event = create_event(
+                    meeting.assunto,
+                    new_start,
+                    new_end,
+                    description,
+                    participant_emails,
+                    notify_attendees=notify_attendees,
+                )
+            meeting.google_event_id = created_event.get("id") if created_event else None
+            hangout_link = created_event.get("hangoutLink") if created_event else None
+            if hangout_link:
+                meeting.meet_link = hangout_link
+    except Exception:
+        meeting.inicio = original_start
+        meeting.fim = original_end
+        return False, "Não foi possível atualizar o evento no Google Calendar."
+
+    meeting.inicio = new_start
+    meeting.fim = new_end
+    return True, None
+
+
 def delete_meeting(meeting: Reuniao) -> bool:
     """Remove meeting from DB and Google Calendar.
 

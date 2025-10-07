@@ -277,17 +277,33 @@
                             <form id="deleteMeetingForm" method="post" class="d-none">
                                 {{ form.csrf_token(id='csrf_token_delete') }}
                             </form>
-                            <div class="me-auto d-flex flex-column flex-sm-row align-items-sm-center gap-2 w-100 d-none" id="statusActionWrapper">
-                                <div class="d-flex flex-column">
-                                    <label for="statusUpdateSelect" class="form-label mb-0">Status</label>
+                            <div class="me-auto w-100 d-none" id="statusActionWrapper">
+                                <div class="d-flex flex-column flex-sm-row align-items-sm-end gap-2">
+                                    <div class="flex-grow-1">
+                                        <label for="statusUpdateSelect" class="form-label mb-1">Status</label>
+                                        <select id="statusUpdateSelect" class="form-select form-select-sm">
+                                            {% for value, label in meeting_status_options %}
+                                                <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="d-flex align-items-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="updateStatusBtn">Aplicar</button>
+                                    </div>
                                 </div>
-                                <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-sm-auto">
-                                    <select id="statusUpdateSelect" class="form-select form-select-sm">
-                                        {% for value, label in meeting_status_options %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="updateStatusBtn">Aplicar</button>
+                                <div class="row g-2 mt-2 align-items-end d-none" id="postponeFields">
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeDate" class="form-label small mb-1">Nova data</label>
+                                        <input type="date" class="form-control form-control-sm" id="postponeDate">
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeStart" class="form-label small mb-1">Novo início</label>
+                                        <input type="time" class="form-control form-control-sm" id="postponeStart">
+                                    </div>
+                                    <div class="col-12 col-sm-4">
+                                        <label for="postponeEnd" class="form-label small mb-1">Novo término</label>
+                                        <input type="time" class="form-control form-control-sm" id="postponeEnd">
+                                    </div>
                                 </div>
                             </div>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -445,6 +461,55 @@
     var statusSelect = document.getElementById('statusUpdateSelect');
     var updateStatusBtn = document.getElementById('updateStatusBtn');
     var csrfTokenField = document.getElementById('csrf_token_delete');
+    var postponeFields = document.getElementById('postponeFields');
+    var postponeDateInput = document.getElementById('postponeDate');
+    var postponeStartInput = document.getElementById('postponeStart');
+    var postponeEndInput = document.getElementById('postponeEnd');
+
+    function clearPostponeFields() {
+        if (postponeDateInput) { postponeDateInput.value = ''; }
+        if (postponeStartInput) { postponeStartInput.value = ''; }
+        if (postponeEndInput) { postponeEndInput.value = ''; }
+    }
+
+    function populatePostponeDefaults() {
+        if (!currentEvent) { return; }
+        if (postponeDateInput && currentEvent.startStr) {
+            postponeDateInput.value = currentEvent.startStr.slice(0,10);
+        }
+        if (postponeStartInput && currentEvent.startStr) {
+            postponeStartInput.value = currentEvent.startStr.slice(11,16);
+        }
+        if (postponeEndInput) {
+            if (currentEvent.endStr) {
+                postponeEndInput.value = currentEvent.endStr.slice(11,16);
+            } else if (currentEvent.startStr) {
+                postponeEndInput.value = '';
+            }
+        }
+    }
+
+    function togglePostponeFields(shouldPrefill) {
+        if (!postponeFields) { return; }
+        var shouldShow = statusSelect && statusSelect.value === 'adiada';
+        if (shouldShow) {
+            postponeFields.classList.remove('d-none');
+            if (shouldPrefill) {
+                populatePostponeDefaults();
+            }
+        } else {
+            postponeFields.classList.add('d-none');
+            if (shouldPrefill) {
+                clearPostponeFields();
+            }
+        }
+    }
+
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            togglePostponeFields(true);
+        });
+    }
 
     function applyStatusToEvent(event, meta) {
         if (!event || !meta) {
@@ -825,8 +890,10 @@
                         updateStatusBtn.disabled = false;
                         updateStatusBtn.classList.remove('disabled');
                     }
+                    togglePostponeFields(true);
                 } else {
                     statusWrapper.classList.add('d-none');
+                    togglePostponeFields(true);
                 }
             }
             var participants = e.extendedProps.participants;
@@ -1000,12 +1067,41 @@
                 headers['X-CSRFToken'] = csrfToken;
                 headers['X-CSRF-Token'] = csrfToken;
             }
+            var payload = { status: selectedStatus };
+            if (selectedStatus === 'adiada') {
+                var newDate = postponeDateInput ? postponeDateInput.value : '';
+                var newStart = postponeStartInput ? postponeStartInput.value : '';
+                var newEnd = postponeEndInput ? postponeEndInput.value : '';
+                if (!newDate || !newStart || !newEnd) {
+                    showFlashMessage('Informe a nova data e horários para o adiamento.', 'warning');
+                    return;
+                }
+                var startParts = newStart.split(':');
+                var endParts = newEnd.split(':');
+                if (startParts.length < 2 || endParts.length < 2) {
+                    showFlashMessage('Horários inválidos para o adiamento.', 'warning');
+                    return;
+                }
+                var startMinutes = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
+                var endMinutes = parseInt(endParts[0], 10) * 60 + parseInt(endParts[1], 10);
+                if (isNaN(startMinutes) || isNaN(endMinutes)) {
+                    showFlashMessage('Horários inválidos para o adiamento.', 'warning');
+                    return;
+                }
+                if (endMinutes <= startMinutes) {
+                    showFlashMessage('O horário de término deve ser posterior ao horário de início.', 'warning');
+                    return;
+                }
+                payload.new_date = newDate;
+                payload.new_start_time = newStart;
+                payload.new_end_time = newEnd;
+            }
             updateStatusBtn.disabled = true;
             updateStatusBtn.classList.add('disabled');
             fetch('/reuniao/' + encodeURIComponent(meetingId) + '/status', {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify({ status: selectedStatus })
+                body: JSON.stringify(payload)
             })
                 .then(function(resp) {
                     if (!resp.ok) {
@@ -1027,6 +1123,28 @@
                     }
                     if (meta.value && statusSelect.value !== meta.value) {
                         statusSelect.value = meta.value;
+                    }
+                    togglePostponeFields(false);
+                    if (data.start) {
+                        currentEvent.setDates(data.start, data.end || null);
+                        var dateDisplay = data.start.slice(0,10).split('-').reverse().join('/');
+                        var startDisplay = data.start.slice(11,16);
+                        var detailDateEl = document.getElementById('detailDate');
+                        var detailStartEl = document.getElementById('detailStart');
+                        var detailEndEl = document.getElementById('detailEnd');
+                        var detailEndWrapper = document.getElementById('detailEndWrapper');
+                        if (detailDateEl) { detailDateEl.textContent = dateDisplay; }
+                        if (detailStartEl) { detailStartEl.textContent = startDisplay; }
+                        if (detailEndWrapper && detailEndEl) {
+                            if (data.end) {
+                                detailEndEl.textContent = data.end.slice(11,16);
+                                detailEndWrapper.classList.remove('d-none');
+                            } else {
+                                detailEndEl.textContent = '';
+                                detailEndWrapper.classList.add('d-none');
+                            }
+                        }
+                        populatePostponeDefaults();
                     }
                     updateMeetLinkControls(currentEvent);
                     showFlashMessage(data.message || 'Status atualizado com sucesso.', 'success');
@@ -1051,6 +1169,7 @@
             if (statusWrapper) {
                 statusWrapper.classList.add('d-none');
             }
+            togglePostponeFields(true);
             if (updateStatusBtn) {
                 updateStatusBtn.disabled = false;
                 updateStatusBtn.classList.remove('disabled');
