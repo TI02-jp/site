@@ -26,6 +26,31 @@ CALENDAR_TZ = get_calendar_timezone()
 MIN_GAP = timedelta(minutes=2)
 
 
+def _status_palette(start_dt: datetime, end_dt: datetime, now: datetime):
+    """Return status metadata (enum, label, colors) for a meeting interval."""
+
+    if now < start_dt:
+        return (
+            ReuniaoStatus.AGENDADA,
+            "Agendada",
+            "#ffc107",
+            "#b58105",
+        )
+    if start_dt <= now <= end_dt:
+        return (
+            ReuniaoStatus.EM_ANDAMENTO,
+            "Em Andamento",
+            "#198754",
+            "#0f5132",
+        )
+    return (
+        ReuniaoStatus.REALIZADA,
+        "Realizada",
+        "#dc3545",
+        "#842029",
+    )
+
+
 def _parse_course_id(form) -> int | None:
     """Return the course identifier associated with the form submission."""
 
@@ -393,6 +418,14 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     notify_field = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_field.data) if notify_field else False
     if meeting.google_event_id:
+        wants_meet = bool(form.create_meet.data)
+        existing_link = meeting.meet_link
+        create_meet_flag: bool | None = None
+        if wants_meet and not existing_link:
+            create_meet_flag = True
+        elif not wants_meet and existing_link:
+            create_meet_flag = False
+
         updated_event = update_event(
             meeting.google_event_id,
             form.subject.data,
@@ -400,10 +433,17 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             end_dt,
             description,
             participant_emails,
-            create_meet=form.create_meet.data,
+            create_meet=create_meet_flag,
             notify_attendees=should_notify,
         )
-        meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
+
+        if wants_meet:
+            meeting.meet_link = (
+                updated_event.get("hangoutLink")
+                or existing_link
+            )
+        else:
+            meeting.meet_link = None
     else:
         if form.create_meet.data:
             updated_event = create_meet_event(
@@ -469,18 +509,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         start_dt = r.inicio.astimezone(CALENDAR_TZ)
         end_dt = r.fim.astimezone(CALENDAR_TZ)
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
-        if now < start_dt:
-            status = ReuniaoStatus.AGENDADA
-            status_label = "Agendada"
-            color = "#ffc107"
-        elif start_dt <= now <= end_dt:
-            status = ReuniaoStatus.EM_ANDAMENTO
-            status_label = "Em Andamento"
-            color = "#198754"
-        else:
-            status = ReuniaoStatus.REALIZADA
-            status_label = "Realizada"
-            color = "#dc3545"
+        status, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
         if r.status != status:
             r.status = status
             updated = True
@@ -503,6 +532,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "can_edit": can_edit,
             "can_delete": can_delete,
             "course_id": r.course_id,
+            "textColor": text_color,
         }
         if r.meet_link:
             event_data["meet_link"] = r.meet_link
@@ -520,15 +550,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         key = (e.get("summary", "Sem título"), start_dt.isoformat(), end_dt.isoformat())
         if key in seen_keys:
             continue
-        if now < start_dt:
-            color = "#ffc107"
-            status_label = "Agendada"
-        elif start_dt <= now <= end_dt:
-            color = "#198754"
-            status_label = "Em Andamento"
-        else:
-            color = "#dc3545"
-            status_label = "Realizada"
+        _, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
         attendee_objs = e.get("attendees", [])
         emails = [a.get("email") for a in attendee_objs if a.get("email")]
         user_map = {
@@ -563,6 +585,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "description": e.get("description"),
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
+                "textColor": text_color,
                 "status": status_label,
                 "participants": attendees,
                 "creator": creator_name,
