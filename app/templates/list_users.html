@@ -20,7 +20,7 @@
                     <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
                 </div>
                 <div class="d-flex align-items-center justify-content-end gap-3">
-                    <a href="{{ url_for('list_users') }}"
+                    <a href="{{ url_for('list_active_users') }}"
                        class="btn btn-outline-success{% if not show_inactive %} disabled{% endif %}"
                        role="button"
                        aria-disabled="{{ 'true' if not show_inactive else 'false' }}"

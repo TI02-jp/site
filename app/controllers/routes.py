@@ -3698,6 +3698,7 @@ def logout():
     return redirect(url_for("index"))
 
 
+@app.route("/users/active", methods=["GET"], endpoint="list_active_users")
 @app.route("/users", methods=["GET", "POST"])
 @admin_required
 def list_users():
