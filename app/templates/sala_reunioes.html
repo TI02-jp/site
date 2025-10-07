@@ -458,7 +458,12 @@
                             </form>
                             <button type="button" class="btn btn-quiet-neutral" data-bs-dismiss="modal">Fechar</button>
                             <button type="button" class="btn btn-quiet-primary d-none" id="editEventBtn">Editar</button>
-                            <button type="button" class="btn btn-quiet-danger d-none" id="deleteEventBtn">Excluir</button>
+                            <button type="submit"
+                                    class="btn btn-quiet-danger d-none"
+                                    id="deleteEventBtn"
+                                    form="deleteMeetingForm">
+                                Excluir
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -947,11 +952,16 @@
             } else {
                 editBtn.classList.add('d-none');
             }
-            if (e.extendedProps.can_delete) {
-                deleteBtn.classList.remove('d-none');
-                deleteForm.action = '/reuniao/' + e.id + '/delete';
-            } else {
-                deleteBtn.classList.add('d-none');
+            if (deleteBtn && deleteForm) {
+                if (e.extendedProps.can_delete) {
+                    deleteBtn.classList.remove('d-none');
+                    deleteForm.action = '/reuniao/' + encodeURIComponent(e.id) + '/delete';
+                    deleteForm.dataset.eventTitle = e.title || '';
+                } else {
+                    deleteBtn.classList.add('d-none');
+                    deleteForm.removeAttribute('action');
+                    deleteForm.removeAttribute('data-event-title');
+                }
             }
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             modal.show();
@@ -1087,11 +1097,18 @@
         }
     });
 
-    document.getElementById('deleteEventBtn').addEventListener('click', function() {
-        if (confirm('Deseja excluir esta reunião?')) {
-            document.getElementById('deleteMeetingForm').submit();
-        }
-    });
+    var deleteMeetingForm = document.getElementById('deleteMeetingForm');
+    if (deleteMeetingForm) {
+        deleteMeetingForm.addEventListener('submit', function(event) {
+            var title = deleteMeetingForm.dataset.eventTitle || '';
+            var promptMessage = title ?
+                'Deseja excluir a reunião "' + title + '"?' :
+                'Deseja excluir esta reunião?';
+            if (!confirm(promptMessage)) {
+                event.preventDefault();
+            }
+        });
+    }
 
     var meetingForm = document.querySelector('#meetingModal form');
     var hasShownSubmissionMessage = false;
