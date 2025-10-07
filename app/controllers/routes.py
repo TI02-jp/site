@@ -79,7 +79,7 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
 from app.services.courses import CourseStatus, get_courses_overview
-from app.services.google_calendar import get_calendar_timezone
+from app.services.google_calendar import get_calendar_timezone, MEETING_ROOM_EMAIL
 from app.services.meeting_room import (
     populate_participants_choices,
     fetch_raw_events,
@@ -2090,10 +2090,15 @@ def sala_reunioes():
                         "danger",
                     )
                     return redirect(url_for("sala_reunioes"))
-                success, meet_link = update_meeting(form, raw_events, now, meeting)
+                success, meet_info = update_meeting(form, raw_events, now, meeting)
                 if success:
-                    if meet_link:
-                        session["meet_link"] = meet_link
+                    if meet_info:
+                        link = meet_info.get("link")
+                        event_id = meet_info.get("event_id")
+                        if link:
+                            session["meet_link"] = link
+                        if event_id:
+                            session["meet_event_id"] = event_id
                     return redirect(url_for("sala_reunioes"))
                 show_modal = True
             else:
@@ -2102,23 +2107,31 @@ def sala_reunioes():
                     "danger",
                 )
         else:
-            success, meet_link = create_meeting_and_event(
+            success, meet_info = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
             if success:
-                if meet_link:
-                    session["meet_link"] = meet_link
+                if meet_info:
+                    link = meet_info.get("link")
+                    event_id = meet_info.get("event_id")
+                    if link:
+                        session["meet_link"] = link
+                    if event_id:
+                        session["meet_event_id"] = event_id
                 return redirect(url_for("sala_reunioes"))
             show_modal = True
     if request.method == "POST":
         show_modal = True
     meet_popup_link = session.pop("meet_link", None)
+    meet_popup_event_id = session.pop("meet_event_id", None)
     return render_template(
         "sala_reunioes.html",
         form=form,
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
         meet_popup_link=meet_popup_link,
+        meet_popup_event_id=meet_popup_event_id,
+        meeting_room_email=MEETING_ROOM_EMAIL,
     )
 
 

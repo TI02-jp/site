@@ -168,9 +168,11 @@ def _create_additional_meeting(
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts.
 
-    Returns a tuple ``(success, meet_link)`` where ``success`` indicates
-    whether the meeting was created and ``meet_link`` contains the generated
-    Google Meet URL when available.
+    Returns a tuple ``(success, meet_info)`` where ``success`` indicates
+    whether the meeting was created and ``meet_info`` is either ``None`` or a
+    dictionary containing the generated Google Meet URL (under the
+    ``"link"`` key) alongside the Google Calendar event identifier (under the
+    ``"event_id"`` key).
     """
     course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
@@ -298,13 +300,17 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             )
             if not meet_link and link and not additional_meet_link:
                 additional_meet_link = link
-    return True, meet_link or additional_meet_link
+    meet_link_for_popup = meet_link or additional_meet_link
+    meet_info = None
+    if meet_link_for_popup:
+        meet_info = {"link": meet_link_for_popup, "event_id": event.get("id")}
+    return True, meet_info
 
 
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar.
 
-    Returns a tuple ``(success, meet_link)`` similar to
+    Returns a tuple ``(success, meet_info)`` similar to
     :func:`create_meeting_and_event`.
     """
     course_id_value = _parse_course_id(form)
@@ -396,7 +402,10 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
-    return True, meeting.meet_link
+    meet_info = None
+    if meeting.meet_link:
+        meet_info = {"link": meeting.meet_link, "event_id": meeting.google_event_id}
+    return True, meet_info
 
 
 def delete_meeting(meeting: Reuniao) -> bool:
