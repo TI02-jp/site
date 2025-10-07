@@ -2268,16 +2268,12 @@ def update_reuniao_status(meeting_id):
             )
         new_start_dt = datetime.combine(postpone_date, postpone_start, tzinfo=calendar_tz)
         new_end_dt = datetime.combine(postpone_date, postpone_end, tzinfo=calendar_tz)
-        try:
-            raw_events = fetch_raw_events()
-        except Exception:
-            raw_events = []
         success, error_message = postpone_meeting(
             meeting,
             new_start_dt,
             new_end_dt,
-            raw_events,
             new_status,
+            check_external_conflicts=False,
         )
         if not success:
             return (
