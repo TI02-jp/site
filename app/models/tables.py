@@ -622,13 +622,31 @@ class Departamento(db.Model):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
 
 
+def _enum_values(enum_cls):
+    """Return the stored values for a SQLAlchemy ``Enum`` column."""
+
+    return [member.value for member in enum_cls]
+
+
 class ReuniaoStatus(str, Enum):
     """Enumeration of possible meeting states."""
+
     AGENDADA = "agendada"
     EM_ANDAMENTO = "em andamento"
     REALIZADA = "realizada"
     ADIADA = "adiada"
     CANCELADA = "cancelada"
+
+    @classmethod
+    def _missing_(cls, value):  # type: ignore[override]
+        """Return the enum member matching ``value`` ignoring case and spacing."""
+
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            for member in cls:
+                if member.value == normalized:
+                    return member
+        return None
 
 
 class Reuniao(db.Model):
@@ -648,12 +666,20 @@ class Reuniao(db.Model):
         nullable=True,
     )
     status = db.Column(
-        db.Enum(ReuniaoStatus, name="reuniao_status"),
+        db.Enum(
+            ReuniaoStatus,
+            name="reuniao_status",
+            values_callable=_enum_values,
+        ),
         nullable=False,
         default=ReuniaoStatus.AGENDADA,
     )
     status_override = db.Column(
-        db.Enum(ReuniaoStatus, name="reuniao_status"),
+        db.Enum(
+            ReuniaoStatus,
+            name="reuniao_status",
+            values_callable=_enum_values,
+        ),
         nullable=True,
     )
     criador_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
