@@ -587,7 +587,8 @@ Página de Cursos
 }
 
 .courses-table-actions__controls {
-    width: 100%;
+    flex-wrap: nowrap;
+    width: auto;
 }
 
 .courses-table-actions__search {
@@ -627,6 +628,21 @@ Página de Cursos
     }
     .courses-table-actions__search {
         flex: 0 0 260px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .courses-table-actions__controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .courses-table-actions__controls > * {
+        flex: 1 1 100%;
+    }
+
+    .courses-table-actions__controls > .courses-table-actions__search {
+        flex: 1 1 auto;
     }
 }
 
