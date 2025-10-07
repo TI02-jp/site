@@ -3,7 +3,7 @@
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from flask import flash
+from flask import current_app, flash
 from markupsafe import Markup
 from dateutil.parser import isoparse
 
@@ -28,6 +28,11 @@ CALENDAR_TZ = get_calendar_timezone()
 MIN_GAP = timedelta(minutes=2)
 
 PORTAL_PRIMARY_HEX = "#0b288b"
+
+CALENDAR_SYNC_WARNING = (
+    "Não foi possível sincronizar com o Google Calendar. "
+    "A reunião foi registrada apenas no portal."
+)
 
 STATUS_ORDER = [
     ReuniaoStatus.AGENDADA,
@@ -85,6 +90,17 @@ MANUAL_STATUS_OVERRIDES = {
     ReuniaoStatus.CANCELADA,
     ReuniaoStatus.REALIZADA,
 }
+
+
+def _log_calendar_error(message: str, exc: Exception) -> None:
+    """Log ``message`` with ``exc`` if an application context is available."""
+
+    try:
+        logger = current_app.logger
+    except Exception:
+        logger = None
+    if logger:
+        logger.warning(message, exc_info=exc)
 
 
 def get_status_metadata(status: ReuniaoStatus) -> dict[str, Any]:
@@ -196,7 +212,11 @@ def populate_participants_choices(form):
 
 def fetch_raw_events():
     """Fetch upcoming events from Google Calendar."""
-    return list_upcoming_events(max_results=250)
+    try:
+        return list_upcoming_events(max_results=250)
+    except Exception as exc:
+        _log_calendar_error("Não foi possível carregar eventos externos.", exc)
+        return []
 
 
 def _next_available(
@@ -260,26 +280,36 @@ def _create_additional_meeting(
         additional_date, form.start_time.data, tzinfo=CALENDAR_TZ
     )
     end_dt = start_dt + duration
-    if form.create_meet.data:
-        event = create_meet_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
+    event = None
+    meet_link = None
+    google_event_id = None
+    try:
+        if form.create_meet.data:
+            event = create_meet_event(
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+                notify_attendees=should_notify,
+            )
+        else:
+            event = create_event(
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+                notify_attendees=should_notify,
+            )
+        if event:
+            meet_link = event.get("hangoutLink")
+            google_event_id = event.get("id")
+    except Exception as exc:
+        _log_calendar_error(
+            "Falha ao criar reunião adicional no Google Calendar.", exc
         )
-        meet_link = event.get("hangoutLink")
-    else:
-        event = create_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
-        )
-        meet_link = None
+        flash(CALENDAR_SYNC_WARNING, "warning")
     meeting = Reuniao(
         inicio=start_dt,
         fim=end_dt,
@@ -287,7 +317,7 @@ def _create_additional_meeting(
         descricao=form.description.data,
         status=ReuniaoStatus.AGENDADA,
         meet_link=meet_link,
-        google_event_id=event["id"],
+        google_event_id=google_event_id,
         criador_id=user_id,
         owner_id=owner_id,
         course_id=course_id,
@@ -393,26 +423,34 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     description += "\nStatus: " + STATUS_METADATA[ReuniaoStatus.AGENDADA]["label"]
     notify_attendees = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_attendees.data) if notify_attendees else False
-    if form.create_meet.data:
-        event = create_meet_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
-        )
-        meet_link = event.get("hangoutLink")
-    else:
-        event = create_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
-        )
-        meet_link = None
+    event = None
+    meet_link = None
+    google_event_id = None
+    try:
+        if form.create_meet.data:
+            event = create_meet_event(
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+                notify_attendees=should_notify,
+            )
+        else:
+            event = create_event(
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+                notify_attendees=should_notify,
+            )
+        if event:
+            meet_link = event.get("hangoutLink")
+            google_event_id = event.get("id")
+    except Exception as exc:
+        _log_calendar_error("Falha ao criar evento no Google Calendar.", exc)
+        flash(CALENDAR_SYNC_WARNING, "warning")
     meeting = Reuniao(
         inicio=start_dt,
         fim=end_dt,
@@ -420,7 +458,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         descricao=form.description.data,
         status=ReuniaoStatus.AGENDADA,
         meet_link=meet_link,
-        google_event_id=event["id"],
+        google_event_id=google_event_id,
         criador_id=user_id,
         owner_id=owner_id_value,
         course_id=course_id_value,
@@ -463,7 +501,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     meet_link_for_popup = meet_link or additional_meet_link
     meet_info = None
     if meet_link_for_popup:
-        meet_info = {"link": meet_link_for_popup, "event_id": event.get("id")}
+        meet_info = {"link": meet_link_for_popup, "event_id": google_event_id}
     return True, meet_info
 
 
@@ -547,45 +585,55 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         elif not wants_meet and existing_link:
             create_meet_flag = False
 
-        updated_event = update_event(
-            meeting.google_event_id,
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            create_meet=create_meet_flag,
-            notify_attendees=should_notify,
-        )
+        updated_event = None
+        try:
+            updated_event = update_event(
+                meeting.google_event_id,
+                form.subject.data,
+                start_dt,
+                end_dt,
+                description,
+                participant_emails,
+                create_meet=create_meet_flag,
+                notify_attendees=should_notify,
+            )
+        except Exception as exc:
+            _log_calendar_error("Falha ao atualizar evento no Google Calendar.", exc)
+            flash(CALENDAR_SYNC_WARNING, "warning")
 
         if wants_meet:
-            meeting.meet_link = (
-                updated_event.get("hangoutLink")
-                or existing_link
-            )
+            if updated_event and updated_event.get("hangoutLink"):
+                meeting.meet_link = updated_event.get("hangoutLink")
+            else:
+                meeting.meet_link = existing_link
         else:
             meeting.meet_link = None
     else:
-        if form.create_meet.data:
-            updated_event = create_meet_event(
-                form.subject.data,
-                start_dt,
-                end_dt,
-                description,
-                participant_emails,
-                notify_attendees=should_notify,
-            )
-        else:
-            updated_event = create_event(
-                form.subject.data,
-                start_dt,
-                end_dt,
-                description,
-                participant_emails,
-                notify_attendees=should_notify,
-            )
-        meeting.meet_link = updated_event.get("hangoutLink")
-        meeting.google_event_id = updated_event.get("id")
+        updated_event = None
+        try:
+            if form.create_meet.data:
+                updated_event = create_meet_event(
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+            else:
+                updated_event = create_event(
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+        except Exception as exc:
+            _log_calendar_error("Falha ao criar evento no Google Calendar.", exc)
+            flash(CALENDAR_SYNC_WARNING, "warning")
+        meeting.meet_link = updated_event.get("hangoutLink") if updated_event else None
+        meeting.google_event_id = updated_event.get("id") if updated_event else None
     db.session.commit()
     flash("Reunião atualizada com sucesso!", "success")
     meet_info = None
@@ -756,9 +804,6 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         key = (r.assunto, start_dt.isoformat(), end_dt.isoformat())
         status_enum, changed = _resolve_meeting_status(r, start_dt, end_dt, now)
         if changed:
-            status, status_label, color, text_color = _status_palette(start_dt, end_dt, now)
-        if r.status != status:
-            r.status = status
             updated = True
         meta = STATUS_METADATA[status_enum]
         status_label = meta["label"]
