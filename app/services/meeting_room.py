@@ -40,10 +40,14 @@ def _parse_course_id(form) -> int | None:
 
 def populate_participants_choices(form):
     """Populate participant choices ordered by name."""
-    form.participants.choices = [
+    choices = [
         (u.id, u.name)
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
+    form.participants.choices = choices
+    owner_field = getattr(form, "owner_id", None)
+    if owner_field is not None:
+        owner_field.choices = [("", "Selecione o proprietário")] + choices
 
 
 def fetch_raw_events():
@@ -105,6 +109,7 @@ def _create_additional_meeting(
     participant_emails: list[str],
     should_notify: bool,
     user_id: int,
+    owner_id: int | None,
     course_id: int | None,
 ):
     start_dt = datetime.combine(
@@ -140,6 +145,7 @@ def _create_additional_meeting(
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        owner_id=owner_id,
         course_id=course_id,
     )
     db.session.add(meeting)
@@ -227,6 +233,14 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             additional_dates.append(field.data)
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+    selected_user_ids = [u.id for u in selected_users]
+    owner_field = getattr(form, "owner_id", None)
+    owner_id_value: int | None = None
+    if selected_user_ids:
+        if len(selected_user_ids) == 1:
+            owner_id_value = selected_user_ids[0]
+        elif owner_field and owner_field.data in selected_user_ids:
+            owner_id_value = owner_field.data
     participant_emails = [u.email for u in selected_users]
     participant_usernames = [u.username for u in selected_users]
     description = form.description.data or ""
@@ -264,6 +278,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         meet_link=meet_link,
         google_event_id=event["id"],
         criador_id=user_id,
+        owner_id=owner_id_value,
         course_id=course_id_value,
     )
     db.session.add(meeting)
@@ -296,6 +311,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 participant_emails,
                 should_notify,
                 user_id,
+                owner_id_value,
                 course_id_value,
             )
             if not meet_link and link and not additional_meet_link:
@@ -357,6 +373,15 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     meeting.course_id = course_id_value
     meeting.participantes.clear()
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
+    selected_user_ids = [u.id for u in selected_users]
+    owner_field = getattr(form, "owner_id", None)
+    owner_id_value: int | None = None
+    if selected_user_ids:
+        if len(selected_user_ids) == 1:
+            owner_id_value = selected_user_ids[0]
+        elif owner_field and owner_field.data in selected_user_ids:
+            owner_id_value = owner_field.data
+    meeting.owner_id = owner_id_value
     for u in selected_users:
         meeting.participantes.append(ReuniaoParticipante(id_usuario=u.id, username_usuario=u.username))
     participant_emails = [u.email for u in selected_users]
@@ -470,6 +495,8 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             "description": r.descricao,
             "status": status_label,
             "creator": r.criador.username,
+            "owner_id": r.owner_id,
+            "owner_name": r.owner.username if r.owner else None,
             "participants": [p.username_usuario for p in r.participantes],
             "participant_ids": [p.id_usuario for p in r.participantes],
             "meeting_id": r.id,
