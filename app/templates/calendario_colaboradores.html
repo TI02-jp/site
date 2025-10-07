@@ -9,8 +9,7 @@
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 200px; overflow-y: auto; }
     #calendar {
-        min-height: 92vh;
-        height: calc(100vh - 8rem);
+        height: 70vh;
     }
     .fc .fc-daygrid-event-harness { margin-bottom: 0; }
     .fc .fc-daygrid-event,
@@ -57,7 +56,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>AGENDA</h2>
         {% if can_manage %}
