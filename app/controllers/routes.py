@@ -2323,6 +2323,7 @@ def update_meeting_status(meeting_id: int):
             jsonify({"success": False, "error": "Status inválido para a reunião."}),
             400,
         )
+    notify_attendees = False
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
     new_start: datetime | None = None
@@ -2357,6 +2358,7 @@ def update_meeting_status(meeting_id: int):
             )
         new_start = datetime.combine(parsed_date, start_time, tzinfo=calendar_tz)
         new_end = datetime.combine(parsed_date, end_time, tzinfo=calendar_tz)
+        notify_attendees = bool(payload.get("notify_attendees"))
     try:
         event_payload = change_meeting_status(
             meeting,
@@ -2366,6 +2368,7 @@ def update_meeting_status(meeting_id: int):
             new_start=new_start,
             new_end=new_end,
             now=now,
+            notify_attendees=notify_attendees,
         )
     except MeetingStatusConflictError as exc:
         message = " ".join(exc.messages) if getattr(exc, "messages", None) else None

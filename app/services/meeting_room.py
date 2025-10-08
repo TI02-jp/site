@@ -733,6 +733,7 @@ def change_meeting_status(
     new_end: datetime | None = None,
     raw_events: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
+    notify_attendees: bool = False,
 ) -> dict[str, Any]:
     """Update a meeting status handling optional rescheduling logic."""
 
@@ -783,7 +784,7 @@ def change_meeting_status(
                 description,
                 participant_emails,
                 create_meet=create_meet_flag,
-                notify_attendees=False,
+                notify_attendees=notify_attendees,
             )
             if new_status == ReuniaoStatus.CANCELADA or create_meet_flag is False:
                 meeting.meet_link = None
