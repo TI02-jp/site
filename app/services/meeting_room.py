@@ -501,7 +501,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     description = _compose_calendar_description(
         form.description.data,
         participant_usernames,
-        get_status_label(meeting.status),
+        get_status_label(ReuniaoStatus.AGENDADA),
     )
     notify_attendees = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_attendees.data) if notify_attendees else False
