@@ -624,18 +624,13 @@ class Departamento(db.Model):
 
 
 class ReuniaoStatus(str, Enum):
-    """Enumeration of possible meeting states.
-
-    The database enum uses upper case values (``AGENDADA``,
-    ``EM_ANDAMENTO`` and ``REALIZADA``). We mirror that here so SQLAlchemy
-    can seamlessly map persisted values back to the Python representation
-    without raising ``LookupError`` when reading rows created with the
-    database defaults.
-    """
+    """Enumeration of possible meeting states."""
 
     AGENDADA = "AGENDADA"
     EM_ANDAMENTO = "EM_ANDAMENTO"
     REALIZADA = "REALIZADA"
+    ADIADA = "ADIADA"
+    CANCELADA = "CANCELADA"
 
 
 def default_meet_settings() -> dict[str, bool]:

@@ -90,6 +90,11 @@ from app.services.meeting_room import (
     combine_events,
     delete_meeting,
     update_meeting_configuration,
+    change_meeting_status,
+    STATUS_SEQUENCE,
+    get_status_label,
+    MeetingStatusConflictError,
+    RESCHEDULE_REQUIRED_STATUSES,
 )
 from app.services.general_calendar import (
     populate_event_participants as populate_general_event_participants,
@@ -2135,6 +2140,7 @@ def sala_reunioes():
                 if meeting.status in (
                     ReuniaoStatus.EM_ANDAMENTO,
                     ReuniaoStatus.REALIZADA,
+                    ReuniaoStatus.CANCELADA,
                 ):
                     flash(
                         "Reuniões em andamento ou realizadas não podem ser editadas.",
@@ -2193,6 +2199,14 @@ def sala_reunioes():
                     "creator_name": creator_name,
                     "can_configure": can_configure,
                 }
+    status_options = [
+        {
+            "value": status.value,
+            "label": get_status_label(status),
+        }
+        for status in STATUS_SEQUENCE
+    ]
+    reschedule_statuses = [status.value for status in RESCHEDULE_REQUIRED_STATUSES]
     return render_template(
         "sala_reunioes.html",
         form=form,
@@ -2200,6 +2214,8 @@ def sala_reunioes():
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
         meet_popup_data=meet_popup_data,
+        meeting_status_options=status_options,
+        reschedule_statuses=reschedule_statuses,
     )
 
 
@@ -2283,6 +2299,102 @@ def configure_meet_call(meeting_id: int):
         for error in field_errors:
             flash(error, "danger")
     return redirect(url_for("sala_reunioes"))
+
+
+@app.route("/reuniao/<int:meeting_id>/status", methods=["POST"])
+@login_required
+def update_meeting_status(meeting_id: int):
+    """Allow creators or admins to change the meeting status."""
+
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    if current_user.role != "admin" and meeting.criador_id != current_user.id:
+        abort(403)
+    payload = request.get_json(silent=True) or {}
+    status_raw = payload.get("status")
+    if not status_raw:
+        return (
+            jsonify({"success": False, "error": "Selecione um status para atualizar a reunião."}),
+            400,
+        )
+    try:
+        new_status = ReuniaoStatus(status_raw)
+    except ValueError:
+        return (
+            jsonify({"success": False, "error": "Status inválido para a reunião."}),
+            400,
+        )
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
+    new_start: datetime | None = None
+    new_end: datetime | None = None
+    if new_status == ReuniaoStatus.ADIADA:
+        date_raw = payload.get("date")
+        start_raw = payload.get("start_time")
+        end_raw = payload.get("end_time")
+        if not (date_raw and start_raw and end_raw):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Informe a nova data e horário para adiar a reunião.",
+                    }
+                ),
+                400,
+            )
+        try:
+            parsed_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
+            start_time = datetime.strptime(start_raw, "%H:%M").time()
+            end_time = datetime.strptime(end_raw, "%H:%M").time()
+        except (TypeError, ValueError):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Data ou horário inválido para adiar a reunião.",
+                    }
+                ),
+                400,
+            )
+        new_start = datetime.combine(parsed_date, start_time, tzinfo=calendar_tz)
+        new_end = datetime.combine(parsed_date, end_time, tzinfo=calendar_tz)
+    try:
+        event_payload = change_meeting_status(
+            meeting,
+            new_status,
+            current_user.id,
+            current_user.role == "admin",
+            new_start=new_start,
+            new_end=new_end,
+            now=now,
+        )
+    except MeetingStatusConflictError as exc:
+        message = " ".join(exc.messages) if getattr(exc, "messages", None) else None
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": message or "Horário indisponível para adiar a reunião.",
+                }
+            ),
+            400,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        current_app.logger.exception(
+            "Não foi possível atualizar o status da reunião %s", meeting_id
+        )
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Não foi possível atualizar o status da reunião.",
+                }
+            ),
+            500,
+        )
+    message = f"Status atualizado para {get_status_label(new_status)}."
+    return jsonify({"success": True, "event": event_payload, "message": message})
 
 
 @app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])
