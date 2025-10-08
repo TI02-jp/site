@@ -390,6 +390,14 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     notify_field = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_field.data) if notify_field else False
     if meeting.google_event_id:
+        previous_meet_link = meeting.meet_link
+        if form.create_meet.data:
+            if previous_meet_link:
+                create_meet_flag = None
+            else:
+                create_meet_flag = True
+        else:
+            create_meet_flag = False
         updated_event = update_event(
             meeting.google_event_id,
             form.subject.data,
@@ -397,10 +405,13 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             end_dt,
             description,
             participant_emails,
-            create_meet=form.create_meet.data,
+            create_meet=create_meet_flag,
             notify_attendees=should_notify,
         )
-        meeting.meet_link = updated_event.get("hangoutLink") if form.create_meet.data else None
+        if form.create_meet.data:
+            meeting.meet_link = updated_event.get("hangoutLink") or previous_meet_link
+        else:
+            meeting.meet_link = None
     else:
         if form.create_meet.data:
             updated_event = create_meet_event(
