@@ -71,7 +71,9 @@
             <div class="mb-3">
                 <span class="badge bg-warning text-dark me-2">Agendada</span>
                 <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger">Realizada</span>
+                <span class="badge bg-danger me-2">Realizada</span>
+                <span class="badge bg-primary me-2">Adiada</span>
+                <span class="badge bg-secondary">Cancelada</span>
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -206,6 +208,29 @@
                             <div id="meetConfigSummary" class="bg-light border rounded p-3 mt-3 d-none">
                                 <div class="fw-semibold mb-2">Configurações do Meet</div>
                                 <ul class="list-unstyled mb-0 small" id="meetConfigSummaryList"></ul>
+                            </div>
+                            <div id="statusControls" class="bg-light border rounded p-3 mt-3 d-none">
+                                <label for="statusSelect" class="form-label mb-2">Atualizar status</label>
+                                <select id="statusSelect" class="form-select"></select>
+                                <div class="row g-2 mt-2 d-none" id="postponeFields">
+                                    <div class="col-6">
+                                        <label for="postponeDate" class="form-label mb-1">Nova data</label>
+                                        <input type="date" class="form-control" id="postponeDate">
+                                    </div>
+                                    <div class="col-3">
+                                        <label for="postponeStart" class="form-label mb-1">Início</label>
+                                        <input type="time" class="form-control" id="postponeStart">
+                                    </div>
+                                    <div class="col-3">
+                                        <label for="postponeEnd" class="form-label mb-1">Fim</label>
+                                        <input type="time" class="form-control" id="postponeEnd">
+                                    </div>
+                                </div>
+                                <div class="text-danger small mt-2 d-none" id="statusError"></div>
+                                <button type="button" class="btn btn-primary mt-3" id="saveStatusBtn">
+                                    <span id="statusSpinner" class="spinner-border spinner-border-sm align-middle me-2 d-none" role="status" aria-hidden="true"></span>
+                                    <span class="align-middle">Salvar status</span>
+                                </button>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -351,6 +376,32 @@
     var meetConfigSummary = document.getElementById('meetConfigSummary');
     var meetConfigSummaryList = document.getElementById('meetConfigSummaryList');
     var meetPopupData = {{ meet_popup_data|tojson|safe if meet_popup_data else 'null' }};
+    var meetingStatusOptions = {{ meeting_status_options|tojson|safe }} || [];
+    var rescheduleStatuses = {{ reschedule_statuses|tojson|safe }} || [];
+    var statusOptionsPopulated = false;
+    var detailTitle = document.getElementById('detailTitle');
+    var detailCreator = document.getElementById('detailCreator');
+    var detailDate = document.getElementById('detailDate');
+    var detailStart = document.getElementById('detailStart');
+    var detailEnd = document.getElementById('detailEnd');
+    var detailParticipants = document.getElementById('detailParticipants');
+    var detailStatus = document.getElementById('detailStatus');
+    var meetLinkContainer = document.getElementById('meetLinkContainer');
+    var detailMeetLink = document.getElementById('detailMeetLink');
+    var copyMeetLink = document.getElementById('copyMeetLink');
+    var statusesDisablingMeetLink = ['REALIZADA', 'CANCELADA'];
+    var statusControls = document.getElementById('statusControls');
+    var statusSelect = document.getElementById('statusSelect');
+    var postponeFields = document.getElementById('postponeFields');
+    var postponeDateInput = document.getElementById('postponeDate');
+    var postponeStartInput = document.getElementById('postponeStart');
+    var postponeEndInput = document.getElementById('postponeEnd');
+    var statusError = document.getElementById('statusError');
+    var saveStatusBtn = document.getElementById('saveStatusBtn');
+    var statusSpinner = document.getElementById('statusSpinner');
+    var editEventBtn = document.getElementById('editEventBtn');
+    var deleteEventBtn = document.getElementById('deleteEventBtn');
+    var deleteMeetingForm = document.getElementById('deleteMeetingForm');
 
     function getMeetConfigModal() {
         if (!meetConfigModalEl) {
@@ -490,6 +541,303 @@
         }
     }
 
+    function addMinutesToTime(timeStr, minutes) {
+        if (!timeStr) {
+            return '';
+        }
+        var parts = timeStr.split(':');
+        var hours = parseInt(parts[0], 10);
+        var mins = parseInt(parts[1], 10);
+        if (Number.isNaN(hours) || Number.isNaN(mins)) {
+            return '';
+        }
+        var total = hours * 60 + mins + minutes;
+        if (total < 0) {
+            total = 0;
+        }
+        var newHours = Math.floor(total / 60) % 24;
+        var newMinutes = total % 60;
+        return String(newHours).padStart(2, '0') + ':' + String(newMinutes).padStart(2, '0');
+    }
+
+    function populateStatusSelect() {
+        if (!statusSelect || statusOptionsPopulated) {
+            return;
+        }
+        meetingStatusOptions.forEach(function(option) {
+            var opt = document.createElement('option');
+            opt.value = option.value;
+            opt.textContent = option.label;
+            statusSelect.appendChild(opt);
+        });
+        statusOptionsPopulated = true;
+    }
+
+    function togglePostponeFields(selectedValue) {
+        if (!postponeFields) {
+            return;
+        }
+        var requiresReschedule = rescheduleStatuses.indexOf(selectedValue) !== -1;
+        postponeFields.classList.toggle('d-none', !requiresReschedule);
+    }
+
+    function prefillPostponeInputs(event) {
+        if (!event) {
+            return;
+        }
+        if (postponeDateInput && event.startStr) {
+            postponeDateInput.value = event.startStr.slice(0, 10);
+        }
+        if (postponeStartInput && event.startStr && event.startStr.length >= 16) {
+            postponeStartInput.value = event.startStr.slice(11, 16);
+        }
+        if (postponeEndInput) {
+            if (event.endStr && event.endStr.length >= 16) {
+                postponeEndInput.value = event.endStr.slice(11, 16);
+            } else if (postponeStartInput && postponeStartInput.value) {
+                postponeEndInput.value = addMinutesToTime(postponeStartInput.value, 30);
+            } else {
+                postponeEndInput.value = '';
+            }
+        }
+    }
+
+    function resetStatusError() {
+        if (!statusError) {
+            return;
+        }
+        statusError.textContent = '';
+        statusError.classList.add('d-none');
+    }
+
+    function showStatusError(message) {
+        if (!statusError) {
+            return;
+        }
+        statusError.textContent = message;
+        statusError.classList.remove('d-none');
+    }
+
+    function setStatusLoading(isLoading) {
+        if (!saveStatusBtn) {
+            return;
+        }
+        saveStatusBtn.disabled = !!isLoading;
+        if (statusSpinner) {
+            statusSpinner.classList.toggle('d-none', !isLoading);
+        }
+    }
+
+    function updateMeetLink(event) {
+        if (!meetLinkContainer || !detailMeetLink || !copyMeetLink) {
+            return;
+        }
+        var link = event.extendedProps ? event.extendedProps.meet_link : null;
+        if (link) {
+            meetLinkContainer.classList.remove('d-none');
+            detailMeetLink.textContent = link;
+            var statusCode = event.extendedProps.status_code || '';
+            var disableLink = statusesDisablingMeetLink.indexOf(statusCode) !== -1;
+            if (disableLink) {
+                detailMeetLink.removeAttribute('href');
+                detailMeetLink.classList.add('text-muted', 'user-select-none');
+                detailMeetLink.style.pointerEvents = 'none';
+                copyMeetLink.classList.add('d-none');
+                copyMeetLink.onclick = null;
+            } else {
+                detailMeetLink.href = link;
+                detailMeetLink.classList.remove('text-muted', 'user-select-none');
+                detailMeetLink.style.pointerEvents = '';
+                copyMeetLink.classList.remove('d-none');
+                copyMeetLink.onclick = function() {
+                    navigator.clipboard.writeText(link).then(function() {
+                        showFlashMessage('Link copiado!', 'success');
+                    });
+                };
+            }
+        } else {
+            meetLinkContainer.classList.add('d-none');
+            detailMeetLink.textContent = '';
+            detailMeetLink.removeAttribute('href');
+            detailMeetLink.classList.remove('text-muted', 'user-select-none');
+            detailMeetLink.style.pointerEvents = '';
+            copyMeetLink.classList.add('d-none');
+            copyMeetLink.onclick = null;
+        }
+    }
+
+    function renderEventDetails(event) {
+        if (!event) {
+            return;
+        }
+        if (detailTitle) {
+            detailTitle.textContent = event.title || '';
+        }
+        if (detailCreator) {
+            var creator = event.extendedProps.creator || '';
+            if (creator) {
+                detailCreator.textContent = 'Criado por: ' + creator;
+                detailCreator.classList.remove('d-none');
+            } else {
+                detailCreator.textContent = '';
+                detailCreator.classList.add('d-none');
+            }
+        }
+        if (detailDate) {
+            if (event.startStr && event.startStr.length >= 10) {
+                var dateParts = event.startStr.slice(0, 10).split('-');
+                detailDate.textContent = dateParts.reverse().join('/');
+            } else {
+                detailDate.textContent = '';
+            }
+        }
+        if (detailStart) {
+            detailStart.textContent = event.startStr && event.startStr.length >= 16 ? event.startStr.slice(11, 16) : '';
+        }
+        if (detailEnd) {
+            detailEnd.textContent = event.endStr && event.endStr.length >= 16 ? event.endStr.slice(11, 16) : '';
+        }
+        if (detailParticipants) {
+            var participants = event.extendedProps.participants || [];
+            detailParticipants.textContent = participants.join(', ');
+        }
+        if (detailStatus) {
+            detailStatus.textContent = event.extendedProps.status || '';
+        }
+        updateMeetLink(event);
+    }
+
+    function updateStatusControls(event) {
+        if (!statusControls || !statusSelect || !saveStatusBtn) {
+            return;
+        }
+        populateStatusSelect();
+        resetStatusError();
+        togglePostponeFields('');
+        if (!event || !event.extendedProps || !event.extendedProps.can_update_status) {
+            statusControls.classList.add('d-none');
+            saveStatusBtn.dataset.meetingId = '';
+            return;
+        }
+        statusControls.classList.remove('d-none');
+        var meetingId = event.extendedProps.meeting_id || event.id;
+        saveStatusBtn.dataset.meetingId = meetingId ? String(meetingId) : '';
+        var currentStatusCode = event.extendedProps.status_code || '';
+        if (currentStatusCode) {
+            statusSelect.value = currentStatusCode;
+        } else if (meetingStatusOptions.length) {
+            statusSelect.value = meetingStatusOptions[0].value;
+        } else {
+            statusSelect.value = '';
+        }
+        togglePostponeFields(statusSelect.value);
+        if (postponeDateInput && event.startStr) {
+            postponeDateInput.value = event.startStr.slice(0, 10);
+        }
+        if (postponeStartInput && event.startStr && event.startStr.length >= 16) {
+            postponeStartInput.value = event.startStr.slice(11, 16);
+        }
+        if (postponeEndInput) {
+            if (event.endStr && event.endStr.length >= 16) {
+                postponeEndInput.value = event.endStr.slice(11, 16);
+            } else if (postponeStartInput && postponeStartInput.value) {
+                postponeEndInput.value = addMinutesToTime(postponeStartInput.value, 30);
+            } else {
+                postponeEndInput.value = '';
+            }
+        }
+        if (rescheduleStatuses.indexOf(statusSelect.value) !== -1) {
+            prefillPostponeInputs(event);
+        }
+    }
+
+    function updateActionButtons(event) {
+        if (!editEventBtn || !deleteEventBtn || !deleteMeetingForm) {
+            return;
+        }
+        if (event && event.extendedProps.can_edit) {
+            editEventBtn.classList.remove('d-none');
+        } else {
+            editEventBtn.classList.add('d-none');
+        }
+        if (event && event.extendedProps.can_delete) {
+            deleteEventBtn.classList.remove('d-none');
+            deleteMeetingForm.action = '/reuniao/' + event.id + '/delete';
+        } else {
+            deleteEventBtn.classList.add('d-none');
+            deleteMeetingForm.action = '';
+        }
+    }
+
+    function updateConfigureButton(event) {
+        if (!configureMeetBtn) {
+            return;
+        }
+        if (event.extendedProps.meet_link && event.extendedProps.can_configure) {
+            configureMeetBtn.classList.remove('d-none');
+            var configPayload = {
+                meeting_id: event.extendedProps.meeting_id,
+                meet_link: event.extendedProps.meet_link,
+                host_candidates: event.extendedProps.host_candidates || [],
+                current_host_id: event.extendedProps.meet_host_id || 0,
+                meet_settings: event.extendedProps.meet_settings || {},
+                creator_name: event.extendedProps.creator,
+                subject: event.title,
+                can_configure: true,
+            };
+            configureMeetBtn.dataset.config = JSON.stringify(configPayload);
+        } else {
+            configureMeetBtn.classList.add('d-none');
+            configureMeetBtn.dataset.config = '';
+        }
+    }
+
+    function syncEventWithPayload(event, payload) {
+        if (!event || !payload) {
+            return;
+        }
+        if (payload.start) {
+            if (payload.end) {
+                event.setDates(payload.start, payload.end);
+            } else {
+                event.setStart(payload.start);
+            }
+        }
+        if (payload.title) {
+            event.setProp('title', payload.title);
+        }
+        if (payload.color) {
+            event.setProp('backgroundColor', payload.color);
+            event.setProp('borderColor', payload.color);
+        }
+        var mapping = [
+            ['status', 'status'],
+            ['status_code', 'status_code'],
+            ['can_edit', 'can_edit'],
+            ['can_delete', 'can_delete'],
+            ['can_configure', 'can_configure'],
+            ['can_update_status', 'can_update_status'],
+            ['meet_link', 'meet_link'],
+            ['meet_host_name', 'meet_host_name'],
+            ['meet_host_id', 'meet_host_id'],
+            ['meet_settings', 'meet_settings'],
+            ['participants', 'participants'],
+            ['participant_ids', 'participant_ids'],
+            ['participant_details', 'participant_details'],
+            ['course_id', 'course_id'],
+            ['creator', 'creator'],
+            ['creator_username', 'creator_username'],
+            ['host_candidates', 'host_candidates'],
+        ];
+        mapping.forEach(function(pair) {
+            var propKey = pair[0];
+            var payloadKey = pair[1];
+            if (Object.prototype.hasOwnProperty.call(payload, payloadKey)) {
+                event.setExtendedProp(propKey, payload[payloadKey]);
+            }
+        });
+    }
+
     if (meetConfigCopyBtn && meetConfigLinkInput) {
         meetConfigCopyBtn.addEventListener('click', function() {
             if (!meetConfigLinkInput.value) {
@@ -512,6 +860,89 @@
             } catch (err) {
                 console.error('Não foi possível abrir as configurações do Meet.', err);
             }
+        });
+    }
+
+    populateStatusSelect();
+
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            resetStatusError();
+            togglePostponeFields(statusSelect.value);
+            if (rescheduleStatuses.indexOf(statusSelect.value) !== -1 && currentEvent) {
+                prefillPostponeInputs(currentEvent);
+            }
+        });
+    }
+
+    if (saveStatusBtn) {
+        saveStatusBtn.addEventListener('click', function() {
+            if (!currentEvent) {
+                showStatusError('Nenhuma reunião selecionada.');
+                return;
+            }
+            if (!statusSelect) {
+                showStatusError('Selecione um status.');
+                return;
+            }
+            var selectedStatus = statusSelect.value;
+            if (!selectedStatus) {
+                showStatusError('Selecione um status.');
+                return;
+            }
+            var payload = { status: selectedStatus };
+            if (rescheduleStatuses.indexOf(selectedStatus) !== -1) {
+                var dateVal = postponeDateInput ? postponeDateInput.value : '';
+                var startVal = postponeStartInput ? postponeStartInput.value : '';
+                var endVal = postponeEndInput ? postponeEndInput.value : '';
+                if (!(dateVal && startVal && endVal)) {
+                    showStatusError('Informe a nova data e horários para adiar a reunião.');
+                    return;
+                }
+                payload.date = dateVal;
+                payload.start_time = startVal;
+                payload.end_time = endVal;
+            }
+            resetStatusError();
+            setStatusLoading(true);
+            var meetingId = saveStatusBtn.dataset.meetingId || currentEvent.extendedProps.meeting_id || currentEvent.id;
+            fetch('/reuniao/' + meetingId + '/status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(payload),
+            })
+                .then(function(response) {
+                    return response.json().then(function(data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function(result) {
+                    setStatusLoading(false);
+                    if (!result.ok || !result.data || result.data.success === false) {
+                        var errorMessage = (result.data && (result.data.error || result.data.message)) || 'Não foi possível atualizar o status da reunião.';
+                        showStatusError(errorMessage);
+                        return;
+                    }
+                    var updatedEvent = result.data.event;
+                    if (updatedEvent) {
+                        syncEventWithPayload(currentEvent, updatedEvent);
+                        renderEventDetails(currentEvent);
+                        updateMeetDetails(currentEvent);
+                        updateStatusControls(currentEvent);
+                        updateConfigureButton(currentEvent);
+                        updateActionButtons(currentEvent);
+                    }
+                    showFlashMessage(result.data.message || 'Status atualizado com sucesso!', 'success');
+                })
+                .catch(function(err) {
+                    console.error('Não foi possível atualizar o status da reunião.', err);
+                    setStatusLoading(false);
+                    showStatusError('Não foi possível atualizar o status da reunião.');
+                });
         });
     }
 
@@ -800,83 +1231,11 @@
             info.jsEvent.preventDefault();
             var e = info.event;
             currentEvent = e;
-            document.getElementById('detailTitle').textContent = e.title;
-            var creatorEl = document.getElementById('detailCreator');
-            if (e.extendedProps.creator) {
-                creatorEl.textContent = 'Criado por: ' + e.extendedProps.creator;
-                creatorEl.classList.remove('d-none');
-            } else {
-                creatorEl.textContent = '';
-                creatorEl.classList.add('d-none');
-            }
-            var dateParts = e.startStr.slice(0,10).split('-');
-            document.getElementById('detailDate').textContent = dateParts.reverse().join('/');
-            document.getElementById('detailStart').textContent = e.startStr.slice(11,16);
-            document.getElementById('detailEnd').textContent = e.endStr ? e.endStr.slice(11,16) : '';
-            var statusText = e.extendedProps.status || '';
-            document.getElementById('detailStatus').textContent = statusText;
-            var participants = e.extendedProps.participants;
-            document.getElementById('detailParticipants').textContent = participants ? participants.join(', ') : '';
-            var linkContainer = document.getElementById('meetLinkContainer');
-            var linkEl = document.getElementById('detailMeetLink');
-            var copyBtn = document.getElementById('copyMeetLink');
-            if (e.extendedProps.meet_link) {
-                linkEl.textContent = e.extendedProps.meet_link;
-                linkContainer.classList.remove('d-none');
-                if (statusText === 'Realizada') {
-                    linkEl.removeAttribute('href');
-                    linkEl.classList.add('text-muted', 'user-select-none');
-                    linkEl.style.pointerEvents = 'none';
-                    copyBtn.classList.add('d-none');
-                    copyBtn.onclick = null;
-                } else {
-                    linkEl.href = e.extendedProps.meet_link;
-                    linkEl.classList.remove('text-muted', 'user-select-none');
-                    linkEl.style.pointerEvents = '';
-                    copyBtn.classList.remove('d-none');
-                    copyBtn.onclick = function() {
-                        navigator.clipboard.writeText(e.extendedProps.meet_link).then(function(){
-                            showFlashMessage('Link copiado!', 'success');
-                        });
-                    };
-                }
-            } else {
-                linkContainer.classList.add('d-none');
-            }
+            renderEventDetails(e);
             updateMeetDetails(e);
-            if (configureMeetBtn) {
-                if (e.extendedProps.meet_link && e.extendedProps.can_configure) {
-                    configureMeetBtn.classList.remove('d-none');
-                    var configPayload = {
-                        meeting_id: e.extendedProps.meeting_id,
-                        meet_link: e.extendedProps.meet_link,
-                        host_candidates: e.extendedProps.host_candidates || [],
-                        current_host_id: e.extendedProps.meet_host_id || 0,
-                        meet_settings: e.extendedProps.meet_settings || {},
-                        creator_name: e.extendedProps.creator,
-                        subject: e.title,
-                        can_configure: true,
-                    };
-                    configureMeetBtn.dataset.config = JSON.stringify(configPayload);
-                } else {
-                    configureMeetBtn.classList.add('d-none');
-                    configureMeetBtn.dataset.config = '';
-                }
-            }
-            var editBtn = document.getElementById('editEventBtn');
-            var deleteBtn = document.getElementById('deleteEventBtn');
-            var deleteForm = document.getElementById('deleteMeetingForm');
-            if (e.extendedProps.can_edit) {
-                editBtn.classList.remove('d-none');
-            } else {
-                editBtn.classList.add('d-none');
-            }
-            if (e.extendedProps.can_delete) {
-                deleteBtn.classList.remove('d-none');
-                deleteForm.action = '/reuniao/' + e.id + '/delete';
-            } else {
-                deleteBtn.classList.add('d-none');
-            }
+            updateStatusControls(e);
+            updateConfigureButton(e);
+            updateActionButtons(e);
             var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             modal.show();
         }
@@ -901,6 +1260,9 @@
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
                         }
+                        if (existing.extendedProps.status_code !== evData.status_code) {
+                            existing.setExtendedProp('status_code', evData.status_code);
+                        }
                         if (existing.extendedProps.can_edit !== evData.can_edit) {
                             existing.setExtendedProp('can_edit', evData.can_edit);
                         }
@@ -909,6 +1271,9 @@
                         }
                         if (existing.extendedProps.can_configure !== evData.can_configure) {
                             existing.setExtendedProp('can_configure', evData.can_configure);
+                        }
+                        if (existing.extendedProps.can_update_status !== evData.can_update_status) {
+                            existing.setExtendedProp('can_update_status', evData.can_update_status);
                         }
                         if (existing.extendedProps.course_id !== evData.course_id) {
                             existing.setExtendedProp('course_id', evData.course_id);
@@ -922,6 +1287,9 @@
                         if (existing.extendedProps.creator_username !== evData.creator_username) {
                             existing.setExtendedProp('creator_username', evData.creator_username);
                         }
+                        existing.setExtendedProp('participants', evData.participants || []);
+                        existing.setExtendedProp('participant_ids', evData.participant_ids || []);
+                        existing.setExtendedProp('participant_details', evData.participant_details || []);
                         existing.setExtendedProp('host_candidates', evData.host_candidates || []);
                         existing.setExtendedProp('meet_settings', evData.meet_settings || {});
                         existing.setExtendedProp('meet_host_id', evData.meet_host_id || 0);
@@ -931,20 +1299,11 @@
                             existing.setProp('borderColor', evData.color);
                         }
                         if (currentEvent && currentEvent.id === existing.id) {
+                            renderEventDetails(currentEvent);
                             updateMeetDetails(currentEvent);
-                            if (configureMeetBtn && !configureMeetBtn.classList.contains('d-none')) {
-                                var activeConfig = {
-                                    meeting_id: existing.extendedProps.meeting_id,
-                                    meet_link: existing.extendedProps.meet_link,
-                                    host_candidates: existing.extendedProps.host_candidates || [],
-                                    current_host_id: existing.extendedProps.meet_host_id || 0,
-                                    meet_settings: existing.extendedProps.meet_settings || {},
-                                    creator_name: existing.extendedProps.creator,
-                                    subject: existing.title,
-                                    can_configure: !!existing.extendedProps.can_configure,
-                                };
-                                configureMeetBtn.dataset.config = JSON.stringify(activeConfig);
-                            }
+                            updateStatusControls(currentEvent);
+                            updateConfigureButton(currentEvent);
+                            updateActionButtons(currentEvent);
                         }
                         var el = existing.el;
                         if (el) {
