@@ -2162,6 +2162,10 @@ def sala_reunioes():
                     "danger",
                 )
         else:
+            flash(
+                "Estamos criando sua reunião. Aguarde alguns instantes enquanto finalizamos o agendamento.",
+                "info",
+            )
             success, operation = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
