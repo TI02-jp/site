@@ -2241,7 +2241,11 @@ def configure_meet_call(meeting_id: int):
                     "allow_chat": form.allow_chat.data,
                     "allow_screen_share": form.allow_screen_share.data,
                 }
-                normalized_settings, host = update_meeting_configuration(
+                (
+                    normalized_settings,
+                    host,
+                    sync_result,
+                ) = update_meeting_configuration(
                     meeting, host_id, settings_payload
                 )
                 host_name = (
@@ -2249,6 +2253,12 @@ def configure_meet_call(meeting_id: int):
                     if host
                     else creator_name
                 )
+                warning_message = None
+                if sync_result is False:
+                    warning_message = (
+                        "Não foi possível aplicar as configurações do Meet automaticamente. "
+                        "Verifique manualmente na sala do Google Meet."
+                    )
                 response_payload = {
                     "success": True,
                     "message": "Configurações do Meet atualizadas com sucesso!",
@@ -2257,9 +2267,14 @@ def configure_meet_call(meeting_id: int):
                         "id": host.id if host else None,
                         "name": host_name,
                     },
+                    "meet_settings_applied": sync_result is not False,
                 }
+                if warning_message:
+                    response_payload["warning"] = warning_message
                 if is_ajax:
                     return jsonify(response_payload)
+                if warning_message:
+                    flash(warning_message, "warning")
                 flash(response_payload["message"], "success")
                 return redirect(url_for("sala_reunioes"))
     if is_ajax:
