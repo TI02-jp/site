@@ -1114,6 +1114,14 @@
                         updateActionButtons(currentEvent);
                     }
                     showFlashMessage(result.data.message || 'Status atualizado com sucesso!', 'success');
+                    if (eventDetailsModalEl) {
+                        var detailsModalInstance = bootstrap.Modal.getInstance(eventDetailsModalEl);
+                        if (detailsModalInstance) {
+                            detailsModalInstance.hide();
+                        } else if (bootstrap.Modal.getOrCreateInstance) {
+                            bootstrap.Modal.getOrCreateInstance(eventDetailsModalEl).hide();
+                        }
+                    }
                 })
                 .catch(function(err) {
                     console.error('Não foi possível atualizar o status da reunião.', err);
