@@ -1429,7 +1429,8 @@
                     }
                 });
                 calendar.getEvents().forEach(function(ev) {
-                    if (!newIds.has(ev.id)) {
+                    var evId = ev && ev.id !== undefined && ev.id !== null ? String(ev.id) : '';
+                    if (!newIds.has(evId)) {
                         ev.remove();
                     }
                 });
