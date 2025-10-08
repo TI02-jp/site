@@ -504,9 +504,11 @@
     var statusError = document.getElementById('statusError');
     var saveStatusBtn = document.getElementById('saveStatusBtn');
     var statusSpinner = document.getElementById('statusSpinner');
+    var isStatusEditing = false;
     var editEventBtn = document.getElementById('editEventBtn');
     var deleteEventBtn = document.getElementById('deleteEventBtn');
     var deleteMeetingForm = document.getElementById('deleteMeetingForm');
+    var eventDetailsModalEl = document.getElementById('eventDetailsModal');
 
     function getMeetConfigModal() {
         if (!meetConfigModalEl) {
@@ -665,6 +667,10 @@
         return String(newHours).padStart(2, '0') + ':' + String(newMinutes).padStart(2, '0');
     }
 
+    function markStatusEditing() {
+        isStatusEditing = true;
+    }
+
     function populateStatusSelect() {
         if (!statusSelect || statusOptionsPopulated) {
             return;
@@ -817,8 +823,9 @@
             return;
         }
         populateStatusSelect();
-        resetStatusError();
-        togglePostponeFields('');
+        if (!isStatusEditing) {
+            resetStatusError();
+        }
         if (!event || !event.extendedProps || !event.extendedProps.can_update_status) {
             statusControls.classList.add('d-none');
             saveStatusBtn.dataset.meetingId = '';
@@ -827,33 +834,35 @@
         statusControls.classList.remove('d-none');
         var meetingId = event.extendedProps.meeting_id || event.id;
         saveStatusBtn.dataset.meetingId = meetingId ? String(meetingId) : '';
-        var currentStatusCode = event.extendedProps.status_code || '';
-        if (currentStatusCode) {
-            statusSelect.value = currentStatusCode;
-        } else if (meetingStatusOptions.length) {
-            statusSelect.value = meetingStatusOptions[0].value;
-        } else {
-            statusSelect.value = '';
-        }
-        togglePostponeFields(statusSelect.value);
-        if (postponeDateInput && event.startStr) {
-            postponeDateInput.value = event.startStr.slice(0, 10);
-        }
-        if (postponeStartInput && event.startStr && event.startStr.length >= 16) {
-            postponeStartInput.value = event.startStr.slice(11, 16);
-        }
-        if (postponeEndInput) {
-            if (event.endStr && event.endStr.length >= 16) {
-                postponeEndInput.value = event.endStr.slice(11, 16);
-            } else if (postponeStartInput && postponeStartInput.value) {
-                postponeEndInput.value = addMinutesToTime(postponeStartInput.value, 30);
+        if (!isStatusEditing) {
+            var currentStatusCode = event.extendedProps.status_code || '';
+            if (currentStatusCode) {
+                statusSelect.value = currentStatusCode;
+            } else if (meetingStatusOptions.length) {
+                statusSelect.value = meetingStatusOptions[0].value;
             } else {
-                postponeEndInput.value = '';
+                statusSelect.value = '';
+            }
+            if (postponeDateInput && event.startStr) {
+                postponeDateInput.value = event.startStr.slice(0, 10);
+            }
+            if (postponeStartInput && event.startStr && event.startStr.length >= 16) {
+                postponeStartInput.value = event.startStr.slice(11, 16);
+            }
+            if (postponeEndInput) {
+                if (event.endStr && event.endStr.length >= 16) {
+                    postponeEndInput.value = event.endStr.slice(11, 16);
+                } else if (postponeStartInput && postponeStartInput.value) {
+                    postponeEndInput.value = addMinutesToTime(postponeStartInput.value, 30);
+                } else {
+                    postponeEndInput.value = '';
+                }
+            }
+            if (rescheduleStatuses.indexOf(statusSelect.value) !== -1) {
+                prefillPostponeInputs(event);
             }
         }
-        if (rescheduleStatuses.indexOf(statusSelect.value) !== -1) {
-            prefillPostponeInputs(event);
-        }
+        togglePostponeFields(statusSelect.value);
     }
 
     function updateActionButtons(event) {
@@ -972,6 +981,7 @@
 
     if (statusSelect) {
         statusSelect.addEventListener('change', function() {
+            markStatusEditing();
             resetStatusError();
             togglePostponeFields(statusSelect.value);
             if (rescheduleStatuses.indexOf(statusSelect.value) !== -1 && currentEvent) {
@@ -979,6 +989,14 @@
             }
         });
     }
+
+    [postponeDateInput, postponeStartInput, postponeEndInput].forEach(function(input) {
+        if (!input) {
+            return;
+        }
+        input.addEventListener('input', markStatusEditing);
+        input.addEventListener('change', markStatusEditing);
+    });
 
     if (saveStatusBtn) {
         saveStatusBtn.addEventListener('click', function() {
@@ -1033,6 +1051,7 @@
                         return;
                     }
                     var updatedEvent = result.data.event;
+                    isStatusEditing = false;
                     if (updatedEvent) {
                         syncEventWithPayload(currentEvent, updatedEvent);
                         renderEventDetails(currentEvent);
@@ -1336,6 +1355,7 @@
             info.jsEvent.preventDefault();
             var e = info.event;
             currentEvent = e;
+            isStatusEditing = false;
             renderEventDetails(e);
             updateMeetDetails(e);
             updateStatusControls(e);
@@ -1346,6 +1366,12 @@
         }
     });
     calendar.render();
+    if (eventDetailsModalEl) {
+        eventDetailsModalEl.addEventListener('hidden.bs.modal', function() {
+            isStatusEditing = false;
+            resetStatusError();
+        });
+    }
     function refreshStatuses() {
         fetch('/api/reunioes')
             .then(function(resp) { return resp.json(); })
