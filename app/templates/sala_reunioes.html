@@ -368,18 +368,10 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="postponeNotifyAttendees">
                                         <label class="form-check-label" for="postponeNotifyAttendees">
-                                            Enviar e-mail aos participantes com as informações da reunião, configurações do Meet e o novo status.
+                                            Enviar e-mail aos participantes com o novo status da reunião.
                                         </label>
                                     </div>
                                     <div class="postpone-email-summary">
-                                        <div class="summary-block mb-2">
-                                            <div class="summary-title">Informações da reunião</div>
-                                            <div class="summary-content" id="postponeSummaryMeeting"></div>
-                                        </div>
-                                        <div class="summary-block mb-2">
-                                            <div class="summary-title">Configurações do Meet</div>
-                                            <ul class="summary-list" id="postponeSummaryMeetConfig"></ul>
-                                        </div>
                                         <div class="summary-block mb-0">
                                             <div class="summary-title">Status</div>
                                             <div class="summary-content" id="postponeSummaryStatus"></div>
@@ -554,8 +546,6 @@
     var postponeEndInput = document.getElementById('postponeEnd');
     var postponeNotifyWrapper = document.getElementById('postponeNotifyWrapper');
     var postponeNotifyCheckbox = document.getElementById('postponeNotifyAttendees');
-    var postponeSummaryMeeting = document.getElementById('postponeSummaryMeeting');
-    var postponeSummaryMeetConfig = document.getElementById('postponeSummaryMeetConfig');
     var postponeSummaryStatus = document.getElementById('postponeSummaryStatus');
     var statusError = document.getElementById('statusError');
     var saveStatusBtn = document.getElementById('saveStatusBtn');
@@ -702,8 +692,6 @@
     function refreshPostponeSummary(event, selectedValue) {
         if (
             !postponeNotifyWrapper ||
-            !postponeSummaryMeeting ||
-            !postponeSummaryMeetConfig ||
             !postponeSummaryStatus
         ) {
             return;
@@ -714,93 +702,15 @@
             if (postponeNotifyCheckbox) {
                 postponeNotifyCheckbox.checked = false;
             }
-            postponeSummaryMeeting.innerHTML = '';
-            postponeSummaryMeetConfig.innerHTML = '';
             postponeSummaryStatus.textContent = '';
             return;
         }
         var sourceEvent = event || currentEvent || null;
-        var meetingTitle = '';
-        if (detailTitle && detailTitle.textContent) {
-            meetingTitle = detailTitle.textContent.trim();
-        }
-        if (!meetingTitle && sourceEvent && sourceEvent.title) {
-            meetingTitle = sourceEvent.title;
-        }
-        var dateDisplay = '';
-        if (postponeDateInput && postponeDateInput.value) {
-            var parts = postponeDateInput.value.split('-');
-            if (parts.length === 3) {
-                dateDisplay = parts[2] + '/' + parts[1] + '/' + parts[0];
-            }
-        } else if (detailDate && detailDate.textContent) {
-            dateDisplay = detailDate.textContent.trim();
-        }
-        var startValue = postponeStartInput ? postponeStartInput.value : '';
-        var endValue = postponeEndInput ? postponeEndInput.value : '';
-        var timeDisplay = '';
-        if (startValue && endValue) {
-            timeDisplay = startValue + ' - ' + endValue;
-        } else if (detailStart && detailEnd && detailStart.textContent && detailEnd.textContent) {
-            timeDisplay = detailStart.textContent.trim() + ' - ' + detailEnd.textContent.trim();
-        }
-        postponeSummaryMeeting.innerHTML = '';
-        var infoFragments = [];
-        if (meetingTitle) {
-            infoFragments.push(meetingTitle);
-        }
-        var scheduleFragments = [];
-        if (dateDisplay) {
-            scheduleFragments.push(dateDisplay);
-        }
-        if (timeDisplay && timeDisplay.replace(/\s/g, '').length) {
-            scheduleFragments.push(timeDisplay);
-        }
-        if (scheduleFragments.length) {
-            infoFragments.push(scheduleFragments.join(' • '));
-        }
-        if (infoFragments.length) {
-            var infoEl = document.createElement('div');
-            infoEl.textContent = infoFragments.join(' — ');
-            infoEl.className = 'mb-1';
-            postponeSummaryMeeting.appendChild(infoEl);
-        }
-        var meetLink = sourceEvent && sourceEvent.extendedProps ? sourceEvent.extendedProps.meet_link || '' : '';
-        if (meetLink) {
-            var linkWrapper = document.createElement('div');
-            var linkEl = document.createElement('a');
-            linkEl.href = meetLink;
-            linkEl.target = '_blank';
-            linkEl.rel = 'noopener';
-            linkEl.textContent = meetLink;
-            linkWrapper.appendChild(linkEl);
-            postponeSummaryMeeting.appendChild(linkWrapper);
-        } else {
-            var noLinkEl = document.createElement('div');
-            noLinkEl.className = infoFragments.length ? 'text-muted small' : 'text-muted small mb-0';
-            noLinkEl.textContent = 'Sala do Meet não configurada.';
-            postponeSummaryMeeting.appendChild(noLinkEl);
-        }
-        postponeSummaryMeetConfig.innerHTML = '';
-        var settings = sourceEvent && sourceEvent.extendedProps ? sourceEvent.extendedProps.meet_settings || {} : {};
-        var configItems = describeMeetSettings(settings);
-        if (configItems.length) {
-            configItems.forEach(function(text) {
-                var li = document.createElement('li');
-                li.textContent = text;
-                postponeSummaryMeetConfig.appendChild(li);
-            });
-        } else {
-            var emptyItem = document.createElement('li');
-            emptyItem.className = 'text-muted';
-            emptyItem.textContent = 'Nenhuma configuração de Meet disponível.';
-            postponeSummaryMeetConfig.appendChild(emptyItem);
-        }
         var statusLabel = getStatusLabelByValue(selectedValue);
         if (!statusLabel && sourceEvent && sourceEvent.extendedProps) {
             statusLabel = sourceEvent.extendedProps.status || '';
         }
-        postponeSummaryStatus.textContent = statusLabel;
+        postponeSummaryStatus.textContent = statusLabel || 'Status não definido.';
     }
 
     function addMinutesToTime(timeStr, minutes) {
