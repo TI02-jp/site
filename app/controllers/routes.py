@@ -2311,6 +2311,7 @@ def update_meeting_status(meeting_id: int):
         abort(403)
     payload = request.get_json(silent=True) or {}
     status_raw = payload.get("status")
+    notify_attendees = bool(payload.get("notify_attendees"))
     if not status_raw:
         return (
             jsonify({"success": False, "error": "Selecione um status para atualizar a reunião."}),
@@ -2365,6 +2366,7 @@ def update_meeting_status(meeting_id: int):
             current_user.role == "admin",
             new_start=new_start,
             new_end=new_end,
+            notify_attendees=notify_attendees,
             now=now,
         )
     except MeetingStatusConflictError as exc:
