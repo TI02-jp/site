@@ -95,32 +95,6 @@
     }
     .event-details-modal #statusControls .form-label { margin-bottom: 0.3rem; }
     .event-details-modal #statusControls #statusError { margin-top: 0.5rem; }
-    .event-details-modal .postpone-email-summary {
-        background-color: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 0.75rem 0.85rem;
-    }
-    .event-details-modal .postpone-email-summary .summary-title {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #6c757d;
-        margin-bottom: 0.35rem;
-    }
-    .event-details-modal .postpone-email-summary .summary-content {
-        font-size: 0.85rem;
-        color: #212529;
-    }
-    .event-details-modal .postpone-email-summary .summary-list {
-        padding-left: 1rem;
-        margin-bottom: 0;
-    }
-    .event-details-modal .postpone-email-summary .summary-list li {
-        font-size: 0.85rem;
-        margin-bottom: 0.2rem;
-    }
     .meeting-modal-dialog .modal-header,
     .meeting-modal-dialog .modal-body,
     .meeting-modal-dialog .modal-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
@@ -365,17 +339,11 @@
                                     </div>
                                 </div>
                                 <div id="postponeNotifyWrapper" class="d-none">
-                                    <div class="form-check mb-2">
+                                    <div class="form-check mb-0">
                                         <input class="form-check-input" type="checkbox" id="postponeNotifyAttendees">
                                         <label class="form-check-label" for="postponeNotifyAttendees">
                                             Enviar e-mail aos participantes com o novo status da reunião.
                                         </label>
-                                    </div>
-                                    <div class="postpone-email-summary">
-                                        <div class="summary-block mb-0">
-                                            <div class="summary-title">Status</div>
-                                            <div class="summary-content" id="postponeSummaryStatus"></div>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="text-danger small d-none" id="statusError"></div>
@@ -546,7 +514,6 @@
     var postponeEndInput = document.getElementById('postponeEnd');
     var postponeNotifyWrapper = document.getElementById('postponeNotifyWrapper');
     var postponeNotifyCheckbox = document.getElementById('postponeNotifyAttendees');
-    var postponeSummaryStatus = document.getElementById('postponeSummaryStatus');
     var statusError = document.getElementById('statusError');
     var saveStatusBtn = document.getElementById('saveStatusBtn');
     var statusSpinner = document.getElementById('statusSpinner');
@@ -690,27 +657,14 @@
     }
 
     function refreshPostponeSummary(event, selectedValue) {
-        if (
-            !postponeNotifyWrapper ||
-            !postponeSummaryStatus
-        ) {
+        if (!postponeNotifyWrapper) {
             return;
         }
         var requiresReschedule = rescheduleStatuses.indexOf(selectedValue) !== -1;
         postponeNotifyWrapper.classList.toggle('d-none', !requiresReschedule);
-        if (!requiresReschedule) {
-            if (postponeNotifyCheckbox) {
-                postponeNotifyCheckbox.checked = false;
-            }
-            postponeSummaryStatus.textContent = '';
-            return;
+        if (!requiresReschedule && postponeNotifyCheckbox) {
+            postponeNotifyCheckbox.checked = false;
         }
-        var sourceEvent = event || currentEvent || null;
-        var statusLabel = getStatusLabelByValue(selectedValue);
-        if (!statusLabel && sourceEvent && sourceEvent.extendedProps) {
-            statusLabel = sourceEvent.extendedProps.status || '';
-        }
-        postponeSummaryStatus.textContent = statusLabel || 'Status não definido.';
     }
 
     function addMinutesToTime(timeStr, minutes) {
