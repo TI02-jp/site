@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import uuid4
 from functools import lru_cache
@@ -22,43 +23,48 @@ from googleapiclient.errors import HttpError
 
 _MEET_CODE_PATTERN = re.compile(r"[a-z0-9]{3,}(?:-[a-z0-9]{3,}){2}|[a-z0-9]{10,}")
 
-# Scopes required to manage calendar events and Meet spaces.
-SCOPES = [
+# Scopes required to manage calendar events.
+CALENDAR_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/calendar",
+)
+
+# Optional scopes used to update Google Meet spaces when available.
+MEET_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/meetings.space.created",
     "https://www.googleapis.com/auth/meetings.space.readonly",
     "https://www.googleapis.com/auth/meetings.space.settings",
-]
+)
 
 # Environment driven configuration for the meeting room.
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
 MEETING_ROOM_EMAIL = os.getenv("GOOGLE_MEETING_ROOM_EMAIL")
 
 
-def _build_service():
-    """Create a Calendar API service authorized as the meeting room account."""
+def _build_delegated_credentials(scopes: Sequence[str]):
+    """Return delegated service-account credentials for the given scopes."""
+
     if not SERVICE_ACCOUNT_FILE or not MEETING_ROOM_EMAIL:
         raise RuntimeError(
             "Service account file and meeting room e-mail must be configured"
         )
+
     creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        SERVICE_ACCOUNT_FILE, scopes=list(scopes)
     )
-    delegated = creds.with_subject(MEETING_ROOM_EMAIL)
+    return creds.with_subject(MEETING_ROOM_EMAIL)
+
+
+def _build_service():
+    """Create a Calendar API service authorized as the meeting room account."""
+
+    delegated = _build_delegated_credentials(CALENDAR_SCOPES)
     return build("calendar", "v3", credentials=delegated)
 
 
 def _build_meet_service():
     """Create a Meet API service authorized as the meeting room account."""
 
-    if not SERVICE_ACCOUNT_FILE or not MEETING_ROOM_EMAIL:
-        raise RuntimeError(
-            "Service account file and meeting room e-mail must be configured"
-        )
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
-    )
-    delegated = creds.with_subject(MEETING_ROOM_EMAIL)
+    delegated = _build_delegated_credentials(MEET_SCOPES)
     return build("meet", "v2", credentials=delegated)
 
 
