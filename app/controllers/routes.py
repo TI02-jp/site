@@ -2133,6 +2133,17 @@ def sala_reunioes():
     raw_events = fetch_raw_events()
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
+    is_creating_meeting_request = (
+        request.method == "POST"
+        and not form.meeting_id.data
+        and bool(form.submit.data)
+    )
+    if is_creating_meeting_request:
+        flash(
+            "Estamos criando sua reunião. Aguarde alguns instantes enquanto finalizamos o agendamento.",
+            "info",
+        )
+
     if form.validate_on_submit():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
@@ -2162,10 +2173,6 @@ def sala_reunioes():
                     "danger",
                 )
         else:
-            flash(
-                "Estamos criando sua reunião. Aguarde alguns instantes enquanto finalizamos o agendamento.",
-                "info",
-            )
             success, operation = create_meeting_and_event(
                 form, raw_events, now, current_user.id
             )
