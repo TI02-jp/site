@@ -522,6 +522,7 @@
     var deleteEventBtn = document.getElementById('deleteEventBtn');
     var deleteMeetingForm = document.getElementById('deleteMeetingForm');
     var eventDetailsModalEl = document.getElementById('eventDetailsModal');
+    var eventDetailsModalInstance = null;
 
     function getMeetConfigModal() {
         if (!meetConfigModalEl) {
@@ -1106,6 +1107,11 @@
                     var updatedEvent = result.data.event;
                     isStatusEditing = false;
                     if (updatedEvent) {
+                        var calendarEventId = updatedEvent.id || (currentEvent && currentEvent.id);
+                        var matchingEvent = calendarEventId ? calendar.getEventById(String(calendarEventId)) : null;
+                        if (matchingEvent) {
+                            currentEvent = matchingEvent;
+                        }
                         syncEventWithPayload(currentEvent, updatedEvent);
                         renderEventDetails(currentEvent);
                         updateMeetDetails(currentEvent);
@@ -1114,13 +1120,17 @@
                         updateActionButtons(currentEvent);
                     }
                     showFlashMessage(result.data.message || 'Status atualizado com sucesso!', 'success');
-                    if (eventDetailsModalEl) {
-                        var detailsModalInstance = bootstrap.Modal.getInstance(eventDetailsModalEl);
-                        if (detailsModalInstance) {
-                            detailsModalInstance.hide();
-                        } else if (bootstrap.Modal.getOrCreateInstance) {
-                            bootstrap.Modal.getOrCreateInstance(eventDetailsModalEl).hide();
-                        }
+                    refreshStatuses();
+                    var modalRef = eventDetailsModalInstance;
+                    if (!modalRef && eventDetailsModalEl) {
+                        modalRef =
+                            bootstrap.Modal.getInstance(eventDetailsModalEl) ||
+                            (bootstrap.Modal.getOrCreateInstance
+                                ? bootstrap.Modal.getOrCreateInstance(eventDetailsModalEl)
+                                : null);
+                    }
+                    if (modalRef) {
+                        modalRef.hide();
                     }
                 })
                 .catch(function(err) {
@@ -1422,8 +1432,14 @@
             updateStatusControls(e);
             updateConfigureButton(e);
             updateActionButtons(e);
-            var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
-            modal.show();
+            if (eventDetailsModalEl) {
+                eventDetailsModalInstance =
+                    bootstrap.Modal.getInstance(eventDetailsModalEl) ||
+                    (bootstrap.Modal.getOrCreateInstance
+                        ? bootstrap.Modal.getOrCreateInstance(eventDetailsModalEl)
+                        : new bootstrap.Modal(eventDetailsModalEl));
+                eventDetailsModalInstance.show();
+            }
         }
     });
     calendar.render();
@@ -1431,6 +1447,7 @@
         eventDetailsModalEl.addEventListener('hidden.bs.modal', function() {
             isStatusEditing = false;
             resetStatusError();
+            eventDetailsModalInstance = bootstrap.Modal.getInstance(eventDetailsModalEl) || null;
         });
     }
     function refreshStatuses() {
