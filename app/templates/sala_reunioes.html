@@ -11,6 +11,87 @@
     #calendar { height: 70vh; }
     .meeting-modal-dialog { max-width: 1200px; }
     .event-details-modal { max-width: 960px; width: calc(100% - 2rem); }
+    .event-details-modal .modal-header,
+    .event-details-modal .modal-body,
+    .event-details-modal .modal-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .event-details-modal .modal-header { padding-top: 0.85rem; padding-bottom: 0.7rem; }
+    .event-details-modal .modal-title { font-size: 1.1rem; }
+    .event-details-modal .modal-body {
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+        font-size: 0.92rem;
+        line-height: 1.4;
+    }
+    .event-details-modal .modal-footer { padding-top: 0.7rem; padding-bottom: 0.75rem; }
+    .event-details-modal .detail-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+    }
+    .event-details-modal .detail-item {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.7rem;
+        background-color: #fff;
+        min-height: 0;
+    }
+    .event-details-modal .detail-item.detail-full { grid-column: 1 / -1; }
+    .event-details-modal .detail-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        margin-bottom: 0.2rem;
+    }
+    .event-details-modal .detail-value {
+        font-size: 0.9rem;
+        color: #212529;
+        word-break: break-word;
+    }
+    .event-details-modal #detailParticipants { white-space: normal; }
+    .event-details-modal #meetLinkContainer,
+    .event-details-modal #meetConfigSummary,
+    .event-details-modal #statusControls {
+        margin-top: 0.65rem;
+        border-radius: 0.55rem;
+        padding: 0.7rem 0.85rem;
+        font-size: 0.9rem;
+    }
+    .event-details-modal #meetLinkContainer {
+        gap: 0.45rem;
+        font-size: 0.9rem;
+    }
+    .event-details-modal #meetLinkContainer i { font-size: 1rem; color: #0d6efd; }
+    .event-details-modal #meetLinkContainer .btn,
+    .event-details-modal #statusControls .btn {
+        padding: 0.45rem 0.85rem;
+        font-size: 0.9rem;
+    }
+    .event-details-modal #meetConfigSummary .fw-semibold {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.35rem;
+    }
+    .event-details-modal #meetConfigSummaryList li { margin-bottom: 0.25rem; }
+    .event-details-modal #statusControls label {
+        font-size: 0.82rem;
+        margin-bottom: 0.35rem;
+    }
+    .event-details-modal #statusControls .row { margin-left: -0.35rem; margin-right: -0.35rem; }
+    .event-details-modal #statusControls .row > [class*='col-'] {
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+    .event-details-modal #statusControls .form-select,
+    .event-details-modal #statusControls .form-control {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.65rem;
+    }
+    .event-details-modal #statusControls .form-label { margin-bottom: 0.3rem; }
+    .event-details-modal #statusControls #statusError { margin-top: 0.5rem; }
     .meeting-modal-dialog .modal-header,
     .meeting-modal-dialog .modal-body,
     .meeting-modal-dialog .modal-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
@@ -194,13 +275,28 @@
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-start">
-                            <ul class="list-group text-start">
-                                <li class="list-group-item text-start"><strong>Data:</strong> <span id="detailDate"></span></li>
-                                <li class="list-group-item text-start"><strong>Hora:</strong> <span id="detailStart"></span> - <span id="detailEnd"></span></li>
-                                <li class="list-group-item text-start"><strong>Participantes:</strong> <span id="detailParticipants"></span></li>
-                                <li class="list-group-item text-start"><strong>Status:</strong> <span id="detailStatus"></span></li>
-                                <li class="list-group-item text-start d-none" id="detailMeetHostRow"><strong>Proprietário do Meet:</strong> <span id="detailMeetHost"></span></li>
-                            </ul>
+                            <div class="detail-summary">
+                                <div class="detail-item">
+                                    <div class="detail-label">Data</div>
+                                    <div class="detail-value" id="detailDate"></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Hora</div>
+                                    <div class="detail-value"><span id="detailStart"></span> - <span id="detailEnd"></span></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Status</div>
+                                    <div class="detail-value" id="detailStatus"></div>
+                                </div>
+                                <div class="detail-item detail-full d-none" id="detailMeetHostRow">
+                                    <div class="detail-label">Proprietário do Meet</div>
+                                    <div class="detail-value" id="detailMeetHost"></div>
+                                </div>
+                                <div class="detail-item detail-full">
+                                    <div class="detail-label">Participantes</div>
+                                    <div class="detail-value" id="detailParticipants"></div>
+                                </div>
+                            </div>
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
                                 <i class="bi bi-camera-video"></i>
                                 <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
@@ -210,28 +306,36 @@
                                 <div class="fw-semibold mb-2">Configurações do Meet</div>
                                 <ul class="list-unstyled mb-0 small" id="meetConfigSummaryList"></ul>
                             </div>
-                            <div id="statusControls" class="bg-light border rounded p-3 mt-3 d-none">
-                                <label for="statusSelect" class="form-label mb-2">Atualizar status</label>
-                                <select id="statusSelect" class="form-select"></select>
-                                <div class="row g-2 mt-2 d-none" id="postponeFields">
-                                    <div class="col-6">
-                                        <label for="postponeDate" class="form-label mb-1">Nova data</label>
-                                        <input type="date" class="form-control" id="postponeDate">
+                            <div id="statusControls" class="bg-light border rounded mt-3 d-none">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-sm-6 col-lg-4">
+                                        <label for="statusSelect" class="form-label">Atualizar status</label>
+                                        <select id="statusSelect" class="form-select"></select>
                                     </div>
-                                    <div class="col-3">
-                                        <label for="postponeStart" class="form-label mb-1">Início</label>
-                                        <input type="time" class="form-control" id="postponeStart">
+                                    <div class="col-sm-6 col-lg-6 d-none" id="postponeFields">
+                                        <div class="row g-2">
+                                            <div class="col-12 col-md-4">
+                                                <label for="postponeDate" class="form-label">Nova data</label>
+                                                <input type="date" class="form-control" id="postponeDate">
+                                            </div>
+                                            <div class="col-6 col-md-4">
+                                                <label for="postponeStart" class="form-label">Início</label>
+                                                <input type="time" class="form-control" id="postponeStart">
+                                            </div>
+                                            <div class="col-6 col-md-4">
+                                                <label for="postponeEnd" class="form-label">Fim</label>
+                                                <input type="time" class="form-control" id="postponeEnd">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-3">
-                                        <label for="postponeEnd" class="form-label mb-1">Fim</label>
-                                        <input type="time" class="form-control" id="postponeEnd">
+                                    <div class="col-sm-6 col-lg-2 text-sm-end d-flex justify-content-sm-end">
+                                        <button type="button" class="btn btn-primary w-100 w-sm-auto" id="saveStatusBtn">
+                                            <span id="statusSpinner" class="spinner-border spinner-border-sm align-middle me-2 d-none" role="status" aria-hidden="true"></span>
+                                            <span class="align-middle">Salvar status</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="text-danger small mt-2 d-none" id="statusError"></div>
-                                <button type="button" class="btn btn-primary mt-3" id="saveStatusBtn">
-                                    <span id="statusSpinner" class="spinner-border spinner-border-sm align-middle me-2 d-none" role="status" aria-hidden="true"></span>
-                                    <span class="align-middle">Salvar status</span>
-                                </button>
+                                <div class="text-danger small d-none" id="statusError"></div>
                             </div>
                         </div>
                         <div class="modal-footer">
