@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
-from flask import flash
+from flask import flash, current_app
 from markupsafe import Markup
 from dateutil.parser import isoparse
 
@@ -22,6 +22,7 @@ from app.services.google_calendar import (
     update_event,
     delete_event,
     get_calendar_timezone,
+    update_meet_space_preferences,
 )
 
 CALENDAR_TZ = get_calendar_timezone()
@@ -47,6 +48,22 @@ def _normalize_meet_settings(raw: Any | None = None) -> dict[str, bool]:
             if key in raw:
                 normalized[key] = bool(raw[key])
     return normalized
+
+
+def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
+    """Sync stored Meet preferences with the Google Meet space."""
+
+    if not meeting.meet_link:
+        return None
+    settings = _normalize_meet_settings(meeting.meet_settings)
+    try:
+        update_meet_space_preferences(meeting.meet_link, settings)
+    except Exception:
+        current_app.logger.exception(
+            "Failed to apply Meet settings for meeting %s", meeting.id
+        )
+        return False
+    return True
 
 
 def _parse_course_id(form) -> int | None:
@@ -175,6 +192,12 @@ def _create_additional_meeting(
             )
         )
     db.session.commit()
+    sync_result = _apply_meet_preferences(meeting)
+    if sync_result is False:
+        flash(
+            "Não foi possível aplicar as configurações do Meet automaticamente.",
+            "warning",
+        )
     formatted_date = additional_date.strftime("%d/%m/%Y")
     if meet_link:
         flash(
@@ -299,6 +322,12 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             )
         )
     db.session.commit()
+    sync_result = _apply_meet_preferences(meeting)
+    if sync_result is False:
+        flash(
+            "Não foi possível aplicar as configurações do Meet automaticamente.",
+            "warning",
+        )
     additional_meet_link = None
     if meet_link:
         flash(
@@ -434,6 +463,12 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.meet_link = updated_event.get("hangoutLink")
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
+    sync_result = _apply_meet_preferences(meeting)
+    if sync_result is False:
+        flash(
+            "Não foi possível aplicar as configurações do Meet automaticamente.",
+            "warning",
+        )
     flash("Reunião atualizada com sucesso!", "success")
     return True, MeetingOperationResult(meeting.id, meeting.meet_link)
 
@@ -442,7 +477,7 @@ def update_meeting_configuration(
     meeting: Reuniao,
     host_id: int | None,
     settings: dict[str, Any] | None,
-) -> tuple[dict[str, bool], User | None]:
+) -> tuple[dict[str, bool], User | None, bool | None]:
     """Persist Meet configuration preferences for a meeting."""
 
     normalized_settings = _normalize_meet_settings(settings)
@@ -457,7 +492,8 @@ def update_meeting_configuration(
     else:
         meeting.meet_host_id = None
     db.session.commit()
-    return normalized_settings, host
+    sync_result = _apply_meet_preferences(meeting)
+    return normalized_settings, host, sync_result
 
 
 def delete_meeting(meeting: Reuniao) -> bool:

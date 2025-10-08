@@ -8,17 +8,27 @@ dedicated room e-mail and performs all calendar operations.
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime
 from uuid import uuid4
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
+from urllib.parse import urlparse
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-# Scopes required to manage calendar events.
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+_MEET_CODE_PATTERN = re.compile(r"[a-z0-9]{3,}(?:-[a-z0-9]{3,}){2}|[a-z0-9]{10,}")
+
+# Scopes required to manage calendar events and Meet spaces.
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/meetings.space.created",
+    "https://www.googleapis.com/auth/meetings.space.readonly",
+    "https://www.googleapis.com/auth/meetings.space.settings",
+]
 
 # Environment driven configuration for the meeting room.
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
@@ -36,6 +46,20 @@ def _build_service():
     )
     delegated = creds.with_subject(MEETING_ROOM_EMAIL)
     return build("calendar", "v3", credentials=delegated)
+
+
+def _build_meet_service():
+    """Create a Meet API service authorized as the meeting room account."""
+
+    if not SERVICE_ACCOUNT_FILE or not MEETING_ROOM_EMAIL:
+        raise RuntimeError(
+            "Service account file and meeting room e-mail must be configured"
+        )
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    delegated = creds.with_subject(MEETING_ROOM_EMAIL)
+    return build("meet", "v2", credentials=delegated)
 
 
 @lru_cache(maxsize=1)
@@ -212,4 +236,84 @@ def delete_event(event_id: str):
     except HttpError:
         # Ignore errors when the event has already been removed.
         pass
+
+
+def _extract_meeting_code(meet_link: str | None) -> str | None:
+    """Return the meeting code embedded in a Google Meet URL."""
+
+    if not meet_link:
+        return None
+    candidate = meet_link.strip()
+    if not candidate:
+        return None
+    if "//" not in candidate:
+        candidate = f"https://{candidate}"
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return None
+    path = parsed.path.strip("/")
+    if not path:
+        return None
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return None
+    if segments[0] == "lookup" and len(segments) > 1:
+        code = segments[1]
+    else:
+        code = segments[-1]
+    match = _MEET_CODE_PATTERN.fullmatch(code.lower())
+    if not match:
+        return None
+    return match.group(0)
+
+
+def _build_space_config_payload(settings: dict[str, bool]) -> tuple[dict, str]:
+    """Translate internal Meet flags into the Meet API payload."""
+
+    quick_access = bool(settings.get("quick_access_enabled", True))
+    allow_chat = bool(settings.get("allow_chat", True))
+    allow_screen_share = bool(settings.get("allow_screen_share", True))
+    mute_on_join = bool(settings.get("mute_on_join", False))
+
+    config: dict[str, object] = {}
+    update_fields: list[str] = []
+
+    config["accessType"] = "OPEN" if quick_access else "TRUSTED"
+    update_fields.append("config.accessType")
+
+    restrictions: dict[str, str] = {
+        "chatRestriction": "NO_RESTRICTION" if allow_chat else "HOSTS_ONLY",
+        "presentRestriction": "NO_RESTRICTION"
+        if allow_screen_share
+        else "HOSTS_ONLY",
+        "reactionRestriction": "NO_RESTRICTION",
+        "defaultJoinAsViewerType": "ON" if mute_on_join else "OFF",
+    }
+    config["moderationRestrictions"] = restrictions
+    update_fields.append("config.moderationRestrictions")
+
+    should_moderate = not allow_chat or not allow_screen_share or mute_on_join
+    config["moderation"] = "ON" if should_moderate else "OFF"
+    update_fields.append("config.moderation")
+
+    update_mask = ",".join(update_fields)
+    return {"config": config}, update_mask
+
+
+def update_meet_space_preferences(
+    meet_link: str, settings: dict[str, bool]
+) -> dict | None:
+    """Apply Meet configuration flags to the underlying meeting space."""
+
+    meeting_code = _extract_meeting_code(meet_link)
+    if meeting_code is None:
+        raise ValueError("Invalid Google Meet link")
+    body, update_mask = _build_space_config_payload(settings)
+    service = _build_meet_service()
+    return (
+        service.spaces()
+        .patch(name=f"spaces/{meeting_code}", updateMask=update_mask, body=body)
+        .execute()
+    )
 
