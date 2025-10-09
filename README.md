@@ -36,26 +36,26 @@ O sistema segue o padrão **MVC (Model-View-Controller)** adaptado para Flask:
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   FLASK APPLICATION                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  Templates   │  │ Controllers  │  │    Models    │  │
-│  │   (Views)    │◄─┤  (Routes)    │◄─┤  (Database)  │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-│         │                  │                  │          │
-│         │                  │                  │          │
+│                   FLASK APPLICATION                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │  Templates   │  │ Controllers  │  │    Models    │   │
+│  │   (Views)    │◄─┤  (Routes)    │◄─┤  (Database)  │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
+│         │                  │                  │         │
+│         │                  │                  │         │
 │  ┌──────▼──────────────────▼──────────────────▼──────┐  │
 │  │          Flask Extensions & Middleware            │  │
-│  │  • SQLAlchemy  • Flask-Migrate  • Flask-WTF      │  │
-│  │  • CSRFProtect • Werkzeug Security               │  │
+│  │  • SQLAlchemy  • Flask-Migrate  • Flask-WTF       │  │
+│  │  • CSRFProtect • Werkzeug Security                │  │
 │  └───────────────────────────────────────────────────┘  │
 └────────────────────────┬────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   MySQL DATABASE                         │
-│  ┌────────────┐           ┌────────────┐               │
-│  │   users    │───────────│   posts    │               │
-│  └────────────┘           └────────────┘               │
+│                   MySQL DATABASE                        │
+│  ┌────────────┐           ┌────────────┐                │
+│  │   users    │───────────│   posts    │                │
+│  └────────────┘           └────────────┘                │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -208,18 +208,6 @@ A aplicação estará disponível em: `http://localhost:5000`
 | password | VARCHAR(120) | NOT NULL             | Senha criptografada    |
 | name     | VARCHAR(100) | NOT NULL             | Nome completo          |
 | email    | VARCHAR(120) | UNIQUE, NOT NULL     | Email do usuário       |
-
-### Tabela: `posts`
-
-| Campo    | Tipo       | Restrições           | Descrição              |
-|----------|------------|----------------------|------------------------|
-| id       | INTEGER    | PRIMARY KEY, AUTO    | Identificador único    |
-| content  | TEXT       | NOT NULL             | Conteúdo do post       |
-| id_user  | INTEGER    | FOREIGN KEY, NOT NULL| Referência ao usuário  |
-
-### Relacionamentos
-- Um `User` pode ter muitos `Posts` (1:N)
-- Um `Post` pertence a um `User`
 
 ---
 
@@ -492,7 +480,6 @@ mysql -u root -p cadastro_empresas < backup_20250101.sql
 - [ ] Sistema de autenticação com sessões (Flask-Login)
 - [ ] Recuperação de senha via email
 - [ ] Gerenciamento de procedimentos
-- [ ] Upload de arquivos
 - [ ] Sistema de permissões por níveis
 - [ ] Histórico de alterações
 - [ ] API REST para integração
