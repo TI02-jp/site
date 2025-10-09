@@ -32,8 +32,8 @@
             top: 1.5rem;
             width: 300px;
             max-width: 100%;
-            height: 684.767px;
-            max-height: 684.767px;
+            height: 620px;
+            max-height: 620px;
             display: flex;
             flex-direction: column;
             flex: none;
@@ -172,13 +172,6 @@
 
         .acordo-editor .ql-container {
             border-radius: 0 0 0.75rem 0.75rem;
-        }
-
-        .acordo-notification-card {
-            border: 1px dashed rgba(13, 110, 253, 0.35);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            background: rgba(13, 110, 253, 0.05);
         }
 
         .acordo-placeholder {
@@ -335,47 +328,6 @@
                                     {% endfor %}
                                 </div>
 
-                                <div class="acordo-notification-card mt-4">
-                                    <div class="form-check form-switch mb-3">
-                                        {{ form.notify_user(class_="form-check-input", id="acordo-notify-toggle") }}
-                                        <label class="form-check-label fw-semibold" for="acordo-notify-toggle">
-                                            Enviar notificação por e-mail
-                                        </label>
-                                    </div>
-                                    {% for error in form.notify_user.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                    <div id="acordo-notification-options" class="row g-3 mt-1{% if not form.notify_user.data %} d-none{% endif %}">
-                                        <div class="col-lg-6">
-                                            <label class="form-label fw-semibold mb-2">Destinatário</label>
-                                            <div class="btn-group w-100" role="group" aria-label="Destinatário do e-mail">
-                                                {% for option in form.notification_destination %}
-                                                {{ option(class_="btn-check", id=option.id, **{"data-notification-destination": option.data}) }}
-                                                <label class="btn btn-outline-primary{% if option.checked %} active{% endif %}" for="{{ option.id }}">
-                                                    {{ option.label.text }}
-                                                </label>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6">
-                                            <label class="form-label fw-semibold" for="acordo-email-personalizado">E-mail para envio</label>
-                                            {{ form.notification_email(
-                                                class_="form-control" ~ (' is-invalid' if form.notification_email.errors else ''),
-                                                id="acordo-email-personalizado",
-                                                placeholder=selected_user.email if selected_user else 'exemplo@empresa.com',
-                                                disabled=(not form.notify_user.data or form.notification_destination.data != 'custom')
-                                            ) }}
-                                            <div class="form-text">Preencha para utilizar outro endereço de e-mail.</div>
-                                            {% if selected_user %}
-                                            <div class="form-text text-muted">E-mail cadastrado: {{ selected_user.email }}</div>
-                                            {% endif %}
-                                            {% for error in form.notification_email.errors %}
-                                            <div class="invalid-feedback d-block">{{ error }}</div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div class="d-flex justify-content-end mt-4">
                                     <button type="submit" class="btn btn-primary px-4">
                                         <i class="bi bi-save me-2"></i>
@@ -491,39 +443,6 @@
 
                     window.location.href = nextUrl.toString();
                 });
-            });
-
-            const notifyToggle = document.querySelector('#acordo-notify-toggle');
-            const notificationOptions = document.querySelector('#acordo-notification-options');
-            const destinationRadios = document.querySelectorAll('[data-notification-destination]');
-            const customEmailField = document.querySelector('#acordo-email-personalizado');
-
-            const syncNotificationControls = () => {
-                const isActive = !!(notifyToggle && notifyToggle.checked);
-                if (notificationOptions) {
-                    notificationOptions.classList.toggle('d-none', !isActive);
-                }
-
-                destinationRadios.forEach((input) => {
-                    input.disabled = !isActive;
-                });
-
-                if (customEmailField) {
-                    const customSelected = Array.from(destinationRadios).some(
-                        (input) => input.checked && input.value === 'custom'
-                    );
-                    customEmailField.disabled = !isActive || !customSelected;
-                    customEmailField.required = isActive && customSelected;
-                }
-            };
-
-            if (notifyToggle) {
-                notifyToggle.addEventListener('change', syncNotificationControls);
-                syncNotificationControls();
-            }
-
-            destinationRadios.forEach((input) => {
-                input.addEventListener('change', syncNotificationControls);
             });
 
             const editorContainer = document.querySelector('#acordo-editor');
