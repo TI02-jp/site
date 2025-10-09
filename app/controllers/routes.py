@@ -1711,6 +1711,21 @@ def acessos_editar(link_id: int):
 
     link = AccessLink.query.get_or_404(link_id)
 
+    if request.method == "GET" and request.args.get("format") == "json":
+        return jsonify(
+            {
+                "id": link.id,
+                "category": link.category,
+                "label": link.label,
+                "url": link.url,
+                "description": link.description or "",
+                "form_action": url_for("acessos_editar", link_id=link.id),
+                "modal_title": "Editar atalho",
+                "submit_label": "Salvar alterações",
+                "editing_label_text": link.label,
+            }
+        )
+
     form = AccessLinkForm()
     form.category.choices = _access_category_choices()
     form.submit.label.text = "Salvar alterações"

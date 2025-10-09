@@ -25,6 +25,7 @@
                 type="button"
                 data-bs-toggle="modal"
                 data-bs-target="#accessShortcutModal"
+                data-trigger="access-shortcut-create"
             >
                 <i class="bi bi-plus-lg me-1"></i>
                 Adicionar atalho
@@ -119,25 +120,40 @@
 
 {% if current_user.role == 'admin' and form %}
 {% set modal_id = 'accessShortcutModal' %}
+{% set create_form_action = url_for('acessos_novo') %}
+{% set create_modal_title = 'Novo atalho' %}
+{% set create_submit_label = 'Salvar atalho' %}
 <div
     class="modal fade"
     id="{{ modal_id }}"
     tabindex="-1"
     aria-labelledby="{{ modal_id }}Label"
     aria-hidden="true"
+    data-create-title="{{ create_modal_title }}"
+    data-create-editing-text=""
 >
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content text-start">
             <div class="modal-header border-0 pb-0">
                 <div class="d-flex flex-column">
                     <h2 class="modal-title h5 mb-0 text-start" id="{{ modal_id }}Label">{{ modal_title }}</h2>
-                    {% if editing_link %}
-                    <p class="small text-muted mb-0">Editando atalho <strong>{{ editing_link.label }}</strong></p>
-                    {% endif %}
+                    <p
+                        id="accessShortcutModalEditingLabel"
+                        class="small text-muted mb-0{% if not editing_link %} d-none{% endif %}"
+                    >
+                        Editando atalho
+                        <strong id="accessShortcutModalEditingName">{{ editing_link.label if editing_link else '' }}</strong>
+                    </p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <form method="post" action="{{ form_action }}" novalidate>
+            <form
+                method="post"
+                action="{{ form_action }}"
+                novalidate
+                data-create-action="{{ create_form_action }}"
+                data-create-submit="{{ create_submit_label }}"
+            >
                 <div class="modal-body text-start">
                     {{ form.hidden_tag() }}
                     <div class="row g-3">
@@ -191,7 +207,7 @@
                     <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-check-lg me-2"></i>
-                        {{ submit_label }}
+                        <span id="accessShortcutSubmitLabel">{{ submit_label }}</span>
                     </button>
                 </div>
             </form>
@@ -202,6 +218,183 @@
 
 {% block scripts %}
 {{ super() }}
+{% if current_user.role == 'admin' and form %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalElement = document.getElementById('{{ modal_id }}');
+        if (!modalElement) {
+            return;
+        }
+
+        var formElement = modalElement.querySelector('form');
+        if (!formElement) {
+            return;
+        }
+
+        var modalInstance = null;
+        var modalTitleElement = modalElement.querySelector('.modal-title');
+        var editingLabelElement = document.getElementById('accessShortcutModalEditingLabel');
+        var editingLabelNameElement = document.getElementById('accessShortcutModalEditingName');
+        var submitLabelElement = document.getElementById('accessShortcutSubmitLabel');
+        var categoryField = formElement.querySelector('[name="{{ form.category.name }}"]');
+        var labelField = formElement.querySelector('[name="{{ form.label.name }}"]');
+        var urlField = formElement.querySelector('[name="{{ form.url.name }}"]');
+        var descriptionField = formElement.querySelector('[name="{{ form.description.name }}"]');
+
+        var defaultState = {
+            action: formElement.dataset.createAction || formElement.getAttribute('action'),
+            title: modalElement.dataset.createTitle || (modalTitleElement ? modalTitleElement.textContent.trim() : ''),
+            submit: formElement.dataset.createSubmit || (submitLabelElement ? submitLabelElement.textContent.trim() : ''),
+            editingLabelText: modalElement.dataset.createEditingText || (editingLabelNameElement ? editingLabelNameElement.textContent : '')
+        };
+
+        function ensureModalInstance() {
+            if (!modalInstance) {
+                modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            }
+            return modalInstance;
+        }
+
+        function clearValidationState() {
+            formElement.querySelectorAll('.is-invalid').forEach(function (element) {
+                element.classList.remove('is-invalid');
+            });
+            formElement.querySelectorAll('.invalid-feedback').forEach(function (feedback) {
+                feedback.classList.remove('d-block');
+                feedback.classList.add('d-none');
+            });
+        }
+
+        function resetToDefaultState() {
+            if (modalTitleElement) {
+                modalTitleElement.textContent = defaultState.title;
+            }
+            if (editingLabelElement) {
+                var shouldShowLabel = Boolean(defaultState.editingLabelText && defaultState.editingLabelText.trim());
+                if (editingLabelNameElement) {
+                    editingLabelNameElement.textContent = defaultState.editingLabelText || '';
+                }
+                if (shouldShowLabel) {
+                    editingLabelElement.classList.remove('d-none');
+                } else {
+                    editingLabelElement.classList.add('d-none');
+                }
+            }
+            if (submitLabelElement) {
+                submitLabelElement.textContent = defaultState.submit;
+            }
+            formElement.setAttribute('action', defaultState.action);
+            clearValidationState();
+            if (typeof formElement.reset === 'function') {
+                formElement.reset();
+            }
+        }
+
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            resetToDefaultState();
+        });
+
+        document.querySelectorAll('[data-trigger="access-shortcut-create"]').forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                resetToDefaultState();
+            });
+        });
+
+        document.querySelectorAll('.access-shortcut-edit').forEach(function (editLink) {
+            editLink.addEventListener('click', function (event) {
+                var targetUrl = editLink.getAttribute('href');
+                if (!targetUrl) {
+                    return;
+                }
+
+                if (!window.fetch) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                var fetchUrl = targetUrl.indexOf('?') === -1 ? targetUrl + '?format=json' : targetUrl + '&format=json';
+
+                fetch(fetchUrl, {
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Request failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        clearValidationState();
+                        if (modalTitleElement && data.modal_title) {
+                            modalTitleElement.textContent = data.modal_title;
+                        }
+
+                        if (editingLabelElement) {
+                            var editingLabelText = '';
+                            if (Object.prototype.hasOwnProperty.call(data, 'editing_label_text')) {
+                                editingLabelText = data.editing_label_text || '';
+                            } else if (Object.prototype.hasOwnProperty.call(data, 'label')) {
+                                editingLabelText = data.label || '';
+                            }
+                            if (editingLabelNameElement) {
+                                editingLabelNameElement.textContent = editingLabelText;
+                            }
+                            if (editingLabelText && editingLabelText.trim()) {
+                                editingLabelElement.classList.remove('d-none');
+                            } else {
+                                editingLabelElement.classList.add('d-none');
+                            }
+                        }
+
+                        if (submitLabelElement && data.submit_label) {
+                            submitLabelElement.textContent = data.submit_label;
+                        }
+
+                        if (data.form_action) {
+                            formElement.setAttribute('action', data.form_action);
+                        }
+
+                        if (categoryField && Object.prototype.hasOwnProperty.call(data, 'category')) {
+                            categoryField.value = data.category || '';
+                        }
+
+                        if (labelField && Object.prototype.hasOwnProperty.call(data, 'label')) {
+                            labelField.value = data.label || '';
+                        }
+
+                        if (urlField && Object.prototype.hasOwnProperty.call(data, 'url')) {
+                            urlField.value = data.url || '';
+                        }
+
+                        if (descriptionField) {
+                            if (Object.prototype.hasOwnProperty.call(data, 'description') && data.description) {
+                                descriptionField.value = data.description;
+                            } else {
+                                descriptionField.value = '';
+                            }
+                        }
+
+                        var instance = ensureModalInstance();
+                        instance.show();
+
+                        if (labelField) {
+                            setTimeout(function () {
+                                labelField.focus();
+                            }, 150);
+                        }
+                    })
+                    .catch(function () {
+                        window.location.href = targetUrl;
+                    });
+            });
+        });
+    });
+</script>
+{% endif %}
 {% if current_user.role == 'admin' and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
