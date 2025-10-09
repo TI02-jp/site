@@ -73,14 +73,15 @@
                                                 <i class="bi bi-box-arrow-up-right"></i>
                                             </a>
                                             {% if current_user.role == 'admin' %}
-                                            <a
+                                            <button
                                                 class="access-shortcut-edit"
-                                                href="{{ url_for('acessos_editar', link_id=link.id) }}"
+                                                type="button"
+                                                data-edit-url="{{ url_for('acessos_editar', link_id=link.id) }}"
                                                 title="Editar atalho"
                                                 aria-label="Editar atalho {{ link.label }}"
                                             >
                                                 <i class="bi bi-pencil"></i>
-                                            </a>
+                                            </button>
                                             {% endif %}
                                             {% if link.description %}
                                             <button
@@ -300,18 +301,20 @@
             });
         });
 
-        document.querySelectorAll('.access-shortcut-edit').forEach(function (editLink) {
-            editLink.addEventListener('click', function (event) {
-                var targetUrl = editLink.getAttribute('href');
+        document.querySelectorAll('.access-shortcut-edit').forEach(function (editTrigger) {
+            editTrigger.addEventListener('click', function (event) {
+                event.preventDefault();
+
+                var targetUrl =
+                    editTrigger.dataset.editUrl || editTrigger.getAttribute('href');
                 if (!targetUrl) {
                     return;
                 }
 
                 if (!window.fetch) {
+                    window.location.href = targetUrl;
                     return;
                 }
-
-                event.preventDefault();
 
                 var fetchUrl = targetUrl.indexOf('?') === -1 ? targetUrl + '?format=json' : targetUrl + '&format=json';
 
