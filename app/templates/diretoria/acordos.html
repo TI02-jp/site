@@ -10,7 +10,7 @@
     <style>
         .acordos-layout {
             display: grid;
-            grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+            grid-template-columns: 300px minmax(0, 1fr);
             gap: 1.25rem;
         }
 
@@ -30,28 +30,34 @@
         .acordos-users-card {
             position: sticky;
             top: 1.5rem;
-            max-height: calc(100vh - 6rem);
+            width: 300px;
+            max-width: 100%;
+            height: 684.767px;
+            max-height: 684.767px;
             display: flex;
             flex-direction: column;
+            flex: none;
         }
 
         .acordos-users-card .card-body.acordos-users-list {
             overflow-y: auto;
             flex: 1 1 auto;
             min-height: 0;
-            max-height: clamp(220px, 52vh, 360px);
             padding: 0.75rem;
         }
 
         @media (max-width: 991.98px) {
             .acordos-users-card {
                 position: static;
+                width: 100%;
+                height: auto;
                 max-height: none;
             }
 
             .acordos-users-card .card-body.acordos-users-list {
                 overflow: visible;
                 max-height: none;
+                padding: 1.25rem;
             }
         }
 
