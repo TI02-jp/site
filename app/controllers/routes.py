@@ -3991,42 +3991,15 @@ def logout():
 @admin_required
 def list_users():
     """List and register users in the admin panel."""
-
-    def _serialize_user(user_obj):
-        return {
-            "id": user_obj.id,
-            "username": user_obj.username,
-            "email": user_obj.email,
-            "name": user_obj.name,
-            "role": user_obj.role,
-            "ativo": user_obj.ativo,
-            "tags": [tag.id for tag in user_obj.tags],
-            "is_master": user_obj.is_master,
-        }
-
-    form = RegistrationForm()
-    edit_user_form = EditUserForm(prefix="edit_user")
     tag_create_form = TagForm(prefix="tag_create")
     tag_create_form.submit.label.text = "Adicionar"
     tag_edit_form = TagForm(prefix="tag_edit")
     tag_edit_form.submit.label.text = "Salvar alterações"
     tag_query = Tag.query.order_by(Tag.nome)
     tag_list = tag_query.all()
-    form.tags.choices = [(t.id, t.nome) for t in tag_list]
-    edit_user_form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
-    open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
-    open_edit_user_modal = request.args.get("open_edit_user_modal") in (
-        "1",
-        "true",
-        "True",
-    )
     edit_tag = None
-    editing_user = None
-    editing_user_data = None
-    edit_password_error = None
-
     edit_tag_id_arg = request.args.get("edit_tag_id", type=int)
     if edit_tag_id_arg:
         open_tag_modal = True
@@ -4036,100 +4009,8 @@ def list_users():
         elif request.method == "GET":
             tag_edit_form.nome.data = edit_tag.nome
 
-    edit_user_id_arg = request.args.get("edit_user_id", type=int)
-    if edit_user_id_arg:
-        editing_user = User.query.get(edit_user_id_arg)
-        if not editing_user:
-            flash("Usuário não encontrado.", "warning")
-        else:
-            if editing_user.is_master and current_user.id != editing_user.id:
-                abort(403)
-            open_edit_user_modal = True
-            editing_user_data = _serialize_user(editing_user)
-            if request.method == "GET":
-                edit_user_form.username.data = editing_user.username
-                edit_user_form.email.data = editing_user.email
-                edit_user_form.name.data = editing_user.name
-                edit_user_form.role.data = editing_user.role
-                edit_user_form.tags.data = [t.id for t in editing_user.tags]
-                edit_user_form.ativo.data = True if editing_user.is_master else editing_user.ativo
-
     if request.method == "POST":
         form_name = request.form.get("form_name")
-
-        if form_name == "user":
-            open_user_modal = True
-            if form.validate_on_submit():
-                existing_user = User.query.filter(
-                    (User.username == form.username.data)
-                    | (User.email == form.email.data)
-                ).first()
-                if existing_user:
-                    if existing_user.username == form.username.data:
-                        form.username.errors.append("Usuário já cadastrado.")
-                    if existing_user.email == form.email.data:
-                        form.email.errors.append("Email já cadastrado.")
-                    flash("Usuário ou email já cadastrado.", "warning")
-                else:
-                    user = User(
-                        username=form.username.data,
-                        email=form.email.data,
-                        name=form.name.data,
-                        role=form.role.data,
-                    )
-                    user.set_password(form.password.data)
-                    if form.tags.data:
-                        user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
-                    db.session.add(user)
-                    db.session.commit()
-                    flash("Novo usuário cadastrado com sucesso!", "success")
-                    return redirect(url_for("list_users"))
-
-        if form_name == "user_edit":
-            open_edit_user_modal = True
-            user_id_raw = request.form.get("user_id")
-            try:
-                user_id = int(user_id_raw) if user_id_raw is not None else None
-            except (TypeError, ValueError):
-                user_id = None
-            if user_id is None:
-                flash("Usuário inválido.", "danger")
-            else:
-                editing_user = User.query.get(user_id)
-                if not editing_user:
-                    flash("Usuário não encontrado.", "warning")
-                else:
-                    if editing_user.is_master and current_user.id != editing_user.id:
-                        abort(403)
-                    editing_user_data = _serialize_user(editing_user)
-                    if editing_user.is_master:
-                        edit_user_form.role.data = editing_user.role
-                        edit_user_form.ativo.data = True
-                    if edit_user_form.validate_on_submit():
-                        new_password = request.form.get("new_password")
-                        confirm_new_password = request.form.get("confirm_new_password")
-                        if new_password and new_password != confirm_new_password:
-                            edit_password_error = "As senhas devem ser iguais."
-                        else:
-                            editing_user.username = edit_user_form.username.data
-                            editing_user.email = edit_user_form.email.data
-                            editing_user.name = edit_user_form.name.data
-                            if not editing_user.is_master:
-                                editing_user.role = edit_user_form.role.data
-                                editing_user.ativo = edit_user_form.ativo.data
-                            else:
-                                editing_user.ativo = True
-                            if edit_user_form.tags.data:
-                                editing_user.tags = Tag.query.filter(
-                                    Tag.id.in_(edit_user_form.tags.data)
-                                ).all()
-                            else:
-                                editing_user.tags = []
-                            if new_password:
-                                editing_user.set_password(new_password)
-                            db.session.commit()
-                            flash("Usuário atualizado com sucesso!", "success")
-                            return redirect(url_for("list_users"))
 
         if form_name == "tag_create":
             open_tag_modal = True
@@ -4187,18 +4068,12 @@ def list_users():
     return render_template(
         "list_users.html",
         users=users,
-        form=form,
-        edit_user_form=edit_user_form,
         tag_create_form=tag_create_form,
         tag_edit_form=tag_edit_form,
         edit_tag=edit_tag,
         tag_list=tag_list,
         show_inactive=show_inactive,
         open_tag_modal=open_tag_modal,
-        open_user_modal=open_user_modal,
-        open_edit_user_modal=open_edit_user_modal,
-        editing_user_data=editing_user_data,
-        edit_password_error=edit_password_error,
     )
 
 
@@ -4216,26 +4091,104 @@ def online_users():
     return render_template("admin/online_users.html", users=users)
 
 
-@app.route("/novo_usuario", methods=["GET"])
+@app.route("/novo_usuario", methods=["GET", "POST"])
 @admin_required
 def novo_usuario():
-    """Redirect to the user list with the registration modal open."""
-    return redirect(url_for("list_users", open_user_modal="1"))
+    """Render the standalone page to register a new user."""
+
+    form = RegistrationForm()
+    tag_query = Tag.query.order_by(Tag.nome)
+    tag_choices = [(t.id, t.nome) for t in tag_query.all()]
+    form.tags.choices = tag_choices
+
+    if form.validate_on_submit():
+        existing_user = User.query.filter(
+            (User.username == form.username.data)
+            | (User.email == form.email.data)
+        ).first()
+        if existing_user:
+            if existing_user.username == form.username.data:
+                form.username.errors.append("Usuário já cadastrado.")
+            if existing_user.email == form.email.data:
+                form.email.errors.append("Email já cadastrado.")
+            flash("Usuário ou email já cadastrado.", "warning")
+        else:
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                name=form.name.data,
+                role=form.role.data,
+            )
+            user.set_password(form.password.data)
+            if form.tags.data:
+                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
+            db.session.add(user)
+            db.session.commit()
+            flash("Novo usuário cadastrado com sucesso!", "success")
+            return redirect(url_for("list_users"))
+
+    return render_template(
+        "admin/novo_usuario.html",
+        form=form,
+        is_edit=False,
+        form_action=url_for("novo_usuario"),
+        cancel_url=url_for("list_users"),
+        submit_label=form.submit.label.text,
+    )
 
 
-@app.route("/user/edit/<int:user_id>", methods=["GET"])
+@app.route("/user/edit/<int:user_id>", methods=["GET", "POST"])
 @admin_required
 def edit_user(user_id):
-    """Redirect editing to the user list modal."""
+    """Edit an existing user."""
     user = User.query.get_or_404(user_id)
     if user.is_master and current_user.id != user.id:
         abort(403)
-    return redirect(
-        url_for(
-            "list_users",
-            open_edit_user_modal="1",
-            edit_user_id=user.id,
-        )
+    form = EditUserForm(obj=user)
+    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
+    if user.is_master:
+        form.role.data = user.role
+        form.ativo.data = True
+    if request.method == "GET":
+        form.tags.data = [t.id for t in user.tags]
+
+    password_error = None
+
+    if request.method == "POST" and form.validate_on_submit():
+        new_password = request.form.get("new_password")
+        confirm_new_password = request.form.get("confirm_new_password")
+        if new_password and new_password != confirm_new_password:
+            password_error = "As senhas devem ser iguais."
+        else:
+            user.username = form.username.data
+            user.email = form.email.data
+            user.name = form.name.data
+            if not user.is_master:
+                user.role = form.role.data
+                user.ativo = form.ativo.data
+            else:
+                user.ativo = True
+            if form.tags.data:
+                user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
+            else:
+                user.tags = []
+
+            if new_password:
+                user.set_password(new_password)
+
+            db.session.commit()
+            flash("Usuário atualizado com sucesso!", "success")
+            return redirect(url_for("list_users"))
+
+    return render_template(
+        "admin/novo_usuario.html",
+        form=form,
+        user=user,
+        is_edit=True,
+        password_error=password_error,
+        form_action=url_for("edit_user", user_id=user.id),
+        cancel_url=url_for("list_users"),
+        submit_label="Salvar alterações",
     )
 
 

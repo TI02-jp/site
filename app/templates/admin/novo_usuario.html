@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Novo Usuário{% endblock %}
+{% set editing = is_edit if is_edit is defined else False %}
+{% set page_title = 'Editar Usuário' if editing else 'Novo Usuário' %}
+{% set header_icon = 'bi-person-gear' if editing else 'bi-person-plus-fill' %}
+{% set heading_text = 'Editar Usuário' if editing else 'Cadastrar Novo Usuário' %}
+{% set submit_icon = 'bi-check-circle' if editing else 'bi-person-plus' %}
+
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block sidebar_nav %}
 {% include 'sidebar_home.html' %}
@@ -11,12 +17,12 @@
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white py-3">
             <h2 class="mb-0 text-center fw-semibold">
-                <i class="bi bi-person-plus-fill me-2"></i>Cadastrar Novo Usuário
+                <i class="bi {{ header_icon }} me-2"></i>{{ heading_text }}
             </h2>
         </div>
-        
+
         <div class="card-body p-4">
-            <form method="POST" action="{{ url_for('novo_usuario') }}">
+            <form method="POST" action="{{ form_action }}">
                 {{ form.hidden_tag() }}
 
                 <!-- Seção 1: Informações de Login -->
@@ -83,13 +89,20 @@
                         <label class="form-label fw-semibold">{{ form.role.label }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                            {{ form.role(class="form-select") }}
+                            {% if editing and user and user.is_master %}
+                                <input type="text" class="form-control" value="Administrador" readonly>
+                                <input type="hidden" name="{{ form.role.name }}" value="{{ form.role.data }}">
+                            {% else %}
+                                {{ form.role(class="form-select") }}
+                            {% endif %}
                         </div>
-                        {% for error in form.role.errors %}
-                            <div class="form-text text-danger">
-                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-                            </div>
-                        {% endfor %}
+                        {% if not (editing and user and user.is_master) %}
+                            {% for error in form.role.errors %}
+                                <div class="form-text text-danger">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
@@ -123,15 +136,45 @@
                     </div>
                 </div>
 
-                <!-- Seção 3: Definir Senha -->
+                <!-- Seção 3: Senha -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="bi bi-shield-lock me-2"></i>Definir Senha
+                            <i class="bi bi-shield-lock me-2"></i>{% if editing %}Alterar Senha{% else %}Definir Senha{% endif %}
                         </h5>
                     </div>
                 </div>
 
+                {% if editing %}
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>Deixe os campos abaixo em branco para manter a senha atual.
+                        </div>
+                    </div>
+                    {% if password_error %}
+                    <div class="col-12">
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>{{ password_error }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="newPassword">Nova senha</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" name="new_password" id="newPassword" class="form-control" placeholder="Digite a nova senha" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="confirmNewPassword">Confirmar nova senha</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            <input type="password" name="confirm_new_password" id="confirmNewPassword" class="form-control" placeholder="Confirme a nova senha" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+                {% else %}
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ form.password.label }}</label>
@@ -159,16 +202,33 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% endif %}
+
+                {% if editing and user and not user.is_master %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-toggle-on me-2"></i>Status do Usuário
+                        </h5>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            {{ form.ativo(class="form-check-input", role="switch", id="ativoSwitch") }}
+                            <label class="form-check-label" for="ativoSwitch">Usuário ativo</label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Botões de Ação -->
                 <div class="row">
                     <div class="col-12">
                         <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top">
-                            <a href="{{ url_for('list_users') }}" class="btn btn-outline-secondary px-4">
+                            <a href="{{ cancel_url }}" class="btn btn-outline-secondary px-4">
                                 <i class="bi bi-arrow-left me-2"></i>Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary px-5">
-                                <i class="bi bi-person-plus me-2"></i>{{ form.submit.label.text }}
+                                <i class="bi {{ submit_icon }} me-2"></i>{{ submit_label }}
                             </button>
                         </div>
                     </div>
@@ -184,6 +244,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Validação simples de confirmação de senha
     const passwordField = document.querySelector('#password');
     const confirmPasswordField = document.querySelector('#confirmPassword');
+    const newPasswordField = document.querySelector('#newPassword');
+    const confirmNewPasswordField = document.querySelector('#confirmNewPassword');
 
     function validatePasswordMatch() {
         if (passwordField && confirmPasswordField) {
@@ -207,6 +269,30 @@ document.addEventListener('DOMContentLoaded', function () {
     if (passwordField && confirmPasswordField) {
         passwordField.addEventListener('input', validatePasswordMatch);
         confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
+
+    function validateNewPasswordMatch() {
+        if (newPasswordField && confirmNewPasswordField) {
+            const password = newPasswordField.value;
+            const confirmPassword = confirmNewPasswordField.value;
+
+            if (confirmPassword.length > 0) {
+                if (password === confirmPassword) {
+                    confirmNewPasswordField.classList.add('is-valid');
+                    confirmNewPasswordField.classList.remove('is-invalid');
+                } else {
+                    confirmNewPasswordField.classList.add('is-invalid');
+                    confirmNewPasswordField.classList.remove('is-valid');
+                }
+            } else {
+                confirmNewPasswordField.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+    }
+
+    if (newPasswordField && confirmNewPasswordField) {
+        newPasswordField.addEventListener('input', validateNewPasswordMatch);
+        confirmNewPasswordField.addEventListener('input', validateNewPasswordMatch);
     }
 
     // Validação de username em tempo real
