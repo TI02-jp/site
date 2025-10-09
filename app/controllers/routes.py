@@ -40,6 +40,7 @@ from app.models.tables import (
     Course,
     CourseTag,
     DiretoriaEvent,
+    DiretoriaAgreement,
     GeneralCalendarEvent,
     Announcement,
     AnnouncementAttachment,
@@ -67,6 +68,7 @@ from app.forms import (
     CourseForm,
     CourseTagForm,
     AnnouncementForm,
+    DiretoriaAcordoForm,
 )
 import os, json, re, secrets
 import requests
@@ -1076,6 +1078,85 @@ def mark_announcement_read(announcement_id: int):
     read = bool(updated or already_read or not notifications)
 
     return jsonify({"status": "ok", "read": read})
+
+
+@app.route("/diretoria/acordos", methods=["GET", "POST"])
+@login_required
+def diretoria_acordos():
+    """Render and persist Diretoria JP agreements linked to portal users."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    users = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(sa.func.lower(User.name))
+        .all()
+    )
+
+    form = DiretoriaAcordoForm()
+
+    if request.method == "POST":
+        selected_user_id = request.form.get("user_id", type=int)
+    else:
+        selected_user_id = request.args.get("user_id", type=int)
+
+    selected_user = None
+    agreement = None
+
+    if selected_user_id:
+        selected_user = (
+            User.query.filter(
+                User.id == selected_user_id,
+                User.ativo.is_(True),
+            ).first()
+        )
+        if not selected_user:
+            if request.method == "GET":
+                flash("Usuário selecionado não foi encontrado ou está inativo.", "warning")
+                return redirect(url_for("diretoria_acordos"))
+            flash("Selecione um usuário válido para registrar o acordo.", "danger")
+        else:
+            agreement = DiretoriaAgreement.query.filter_by(
+                user_id=selected_user.id
+            ).first()
+            if request.method == "GET" and agreement:
+                form.title.data = agreement.title
+                form.description.data = agreement.description
+
+    if request.method == "POST":
+        if not selected_user:
+            if not selected_user_id:
+                flash("Selecione um usuário para salvar o acordo.", "danger")
+        elif form.validate_on_submit():
+            cleaned_description = sanitize_html(form.description.data)
+            if agreement is None:
+                agreement = DiretoriaAgreement(user=selected_user)
+                db.session.add(agreement)
+
+            agreement.title = form.title.data or ""
+            agreement.description = cleaned_description
+            db.session.commit()
+            flash("Acordo salvo com sucesso.", "success")
+            return redirect(url_for("diretoria_acordos", user_id=selected_user.id))
+        else:
+            flash("Por favor, corrija os erros do formulário.", "danger")
+
+    last_updated = None
+    if agreement and agreement.updated_at:
+        updated_at = agreement.updated_at
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        last_updated = updated_at.astimezone(SAO_PAULO_TZ)
+
+    return render_template(
+        "diretoria/acordos.html",
+        users=users,
+        form=form,
+        selected_user=selected_user,
+        agreement=agreement,
+        agreement_last_updated=last_updated,
+    )
 
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])

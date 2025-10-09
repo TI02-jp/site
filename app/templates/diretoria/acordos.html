@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}Acordos - Diretoria JP{% endblock %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .acordos-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .acordos-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .acordos-card {
+            border: 1px solid rgba(13, 110, 253, 0.12);
+            border-radius: 1rem;
+            box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.08);
+            background: linear-gradient(165deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0));
+        }
+
+        .acordos-card .card-header {
+            border-bottom: 1px solid rgba(13, 110, 253, 0.12);
+            background: rgba(13, 110, 253, 0.05);
+        }
+
+        .acordos-users-list {
+            max-height: 65vh;
+            overflow-y: auto;
+            padding-right: 0.35rem;
+        }
+
+        .acordos-users-list .form-check {
+            padding: 0.35rem 0.25rem;
+            border-bottom: 1px dashed rgba(13, 110, 253, 0.12);
+        }
+
+        .acordos-users-list .form-check:last-child {
+            border-bottom: none;
+        }
+
+        .acordos-users-list .form-check-input {
+            width: 1.1rem;
+            height: 1.1rem;
+            margin-top: 0.2rem;
+        }
+
+        .acordos-users-list .form-check-label {
+            display: flex;
+            flex-direction: column;
+            font-weight: 500;
+            color: #212529;
+            cursor: pointer;
+        }
+
+        .acordo-editor {
+            min-height: 280px;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(13, 110, 253, 0.25);
+            background: #ffffff;
+        }
+
+        .acordo-editor .ql-toolbar {
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+
+        .acordo-editor .ql-container {
+            border-radius: 0 0 0.75rem 0.75rem;
+        }
+
+        .acordo-placeholder {
+            border: 2px dashed rgba(13, 110, 253, 0.35);
+            border-radius: 1rem;
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+            background: rgba(13, 110, 253, 0.04);
+        }
+
+        .acordo-placeholder i {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            color: rgba(13, 110, 253, 0.75);
+        }
+
+        .acordo-metadata {
+            font-size: var(--font-sm);
+            color: #6c757d;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="content-area flex-grow-1">
+    <div class="container-fluid py-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+            <div>
+                <h1 class="h4 fw-bold mb-1">Acordos da Diretoria JP</h1>
+                <p class="text-muted mb-0">Registre instruções, acordos e anexos visuais vinculados a cada usuário do portal.</p>
+            </div>
+            <div class="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-semibold px-3 py-2">
+                Diretoria JP
+            </div>
+        </div>
+
+        <div class="acordos-layout">
+            <div class="acordos-card h-100">
+                <div class="card-header py-3 px-4">
+                    <h2 class="h6 mb-0 text-primary fw-semibold">Selecione um usuário</h2>
+                    <p class="mb-0 text-muted small">Escolha apenas um usuário por vez para visualizar ou editar o acordo correspondente.</p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="acordos-users-list">
+                        {% for user in users %}
+                        <div class="form-check form-switch px-4 py-3 m-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="acordo-user-{{ user.id }}"
+                                   value="{{ user.id }}"
+                                   data-acordo-user
+                                   {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
+                            <label class="form-check-label ms-2" for="acordo-user-{{ user.id }}">
+                                <span>{{ user.name }}</span>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </label>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-muted">
+                            Nenhum usuário ativo disponível no portal.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                {% if selected_user %}
+                <div class="acordos-card">
+                    <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
+                            <p class="mb-0 text-muted small">{{ selected_user.email }}</p>
+                        </div>
+                        {% if agreement_last_updated %}
+                        <div class="acordo-metadata">
+                            Atualizado em {{ agreement_last_updated.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" class="needs-validation" novalidate>
+                            {{ form.hidden_tag() }}
+                            <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+
+                            <div class="mb-3">
+                                <label for="acordo-title" class="form-label fw-semibold">Título</label>
+                                {{ form.title(class_="form-control" ~ (' is-invalid' if form.title.errors else ''), id="acordo-title") }}
+                                {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.title.errors[0] }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="form-label fw-semibold mb-2" for="acordo-editor">Descrição detalhada</label>
+                                    <small class="text-muted">Cole textos ou utilize o botão de imagem para anexar prints.</small>
+                                </div>
+                                <div id="acordo-editor" class="acordo-editor"></div>
+                                {{ form.description(id="acordo-descricao", style="display:none;") }}
+                                <input type="file" id="acordo-image-input" accept="image/*" style="display:none;">
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-save me-2"></i>Salvar acordo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="acordo-placeholder">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <h2 class="h5 fw-semibold">Selecione um usuário</h2>
+                    <p class="mb-0">Escolha um usuário no painel ao lado para criar ou visualizar o acordo correspondente.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkboxes = document.querySelectorAll('[data-acordo-user]');
+            const currentUrl = new URL(window.location.href);
+
+            checkboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        checkboxes.forEach(other => {
+                            if (other !== checkbox) {
+                                other.checked = false;
+                            }
+                        });
+                        currentUrl.searchParams.set('user_id', checkbox.value);
+                        window.location.href = currentUrl.toString();
+                    } else {
+                        currentUrl.searchParams.delete('user_id');
+                        window.location.href = currentUrl.toString();
+                    }
+                });
+            });
+
+            const editorContainer = document.querySelector('#acordo-editor');
+            const hiddenInput = document.querySelector('#acordo-descricao');
+            const imageInput = document.querySelector('#acordo-image-input');
+
+            if (editorContainer && hiddenInput) {
+                const csrfToken = "{{ csrf_token() }}";
+
+                function uploadImage(file) {
+                    return new Promise((resolve, reject) => {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        fetch('/upload_image', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken },
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.image_url) {
+                                resolve(result.image_url);
+                            } else {
+                                reject(result.error || 'Erro ao enviar a imagem.');
+                            }
+                        })
+                        .catch(() => reject('Não foi possível enviar a imagem.'));
+                    });
+                }
+
+                function selectLocalImage() {
+                    if (imageInput) {
+                        imageInput.click();
+                    }
+                }
+
+                const quill = new Quill(editorContainer, {
+                    theme: 'snow',
+                    placeholder: 'Descreva o acordo aqui...',
+                    modules: {
+                        toolbar: {
+                            container: [
+                                ['bold', 'italic', 'underline'],
+                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                ['link', 'image'],
+                                ['clean']
+                            ],
+                            handlers: { 'image': selectLocalImage }
+                        }
+                    }
+                });
+
+                if (hiddenInput.value) {
+                    quill.root.innerHTML = hiddenInput.value;
+                }
+
+                if (imageInput) {
+                    imageInput.addEventListener('change', () => {
+                        if (imageInput.files && imageInput.files[0]) {
+                            const file = imageInput.files[0];
+                            const range = quill.getSelection(true);
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const previewImage = e.target?.result;
+                                if (!previewImage) {
+                                    return;
+                                }
+                                quill.insertEmbed(range.index, 'image', previewImage);
+                                quill.setSelection(range.index + 1);
+                                uploadImage(file)
+                                    .then((serverUrl) => {
+                                        const tempImage = quill.root.querySelector(`img[src="${previewImage}"]`);
+                                        if (tempImage) {
+                                            tempImage.setAttribute('src', serverUrl);
+                                        }
+                                    })
+                                    .catch(() => {
+                                        const tempImage = quill.root.querySelector(`img[src="${previewImage}"]`);
+                                        if (tempImage) {
+                                            tempImage.remove();
+                                        }
+                                    });
+                            };
+                            reader.readAsDataURL(file);
+                            imageInput.value = '';
+                        }
+                    });
+                }
+
+                const formElement = editorContainer.closest('form');
+                if (formElement) {
+                    formElement.addEventListener('submit', () => {
+                        hiddenInput.value = quill.root.innerHTML;
+                    });
+                }
+            }
+        });
+    </script>
+{% endblock %}

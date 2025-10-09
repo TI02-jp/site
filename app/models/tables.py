@@ -493,6 +493,47 @@ class DiretoriaEvent(db.Model):
         return f"<DiretoriaEvent {self.name} ({self.event_type})>"
 
 
+class DiretoriaAgreement(db.Model):
+    """Stores agreements and notes associated with a single user."""
+
+    __tablename__ = "diretoria_agreements"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", name="uq_diretoria_agreements_user_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+        nullable=False,
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        nullable=False,
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "diretoria_agreements",
+            cascade="all, delete-orphan",
+            lazy="dynamic",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return f"<DiretoriaAgreement user={self.user_id} title={self.title!r}>"
+
+
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"
