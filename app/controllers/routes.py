@@ -1121,7 +1121,6 @@ def diretoria_acordos():
                 user_id=selected_user.id
             ).first()
             if request.method == "GET" and agreement:
-                form.title.data = agreement.title
                 form.description.data = agreement.description
 
     if request.method == "POST":
@@ -1134,7 +1133,8 @@ def diretoria_acordos():
                 agreement = DiretoriaAgreement(user=selected_user)
                 db.session.add(agreement)
 
-            agreement.title = form.title.data or ""
+            if agreement.title is None:
+                agreement.title = ""
             agreement.description = cleaned_description
             db.session.commit()
             flash("Acordo salvo com sucesso.", "success")

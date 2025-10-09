@@ -250,15 +250,6 @@ class AnnouncementForm(FlaskForm):
 class DiretoriaAcordoForm(FlaskForm):
     """Formulário para registrar acordos individuais da Diretoria JP."""
 
-    title = StringField(
-        "Título",
-        validators=[
-            DataRequired(message="Informe um título para o acordo."),
-            Length(max=150),
-        ],
-        filters=[lambda value: value.strip() if isinstance(value, str) else value],
-        render_kw={"placeholder": "Digite o título do acordo"},
-    )
     description = TextAreaField("Descrição", validators=[Optional()])
     submit = SubmitField("Salvar acordo")
 

@@ -110,8 +110,7 @@
         <div class="acordos-layout">
             <div class="acordos-card h-100">
                 <div class="card-header py-3 px-4">
-                    <h2 class="h6 mb-0 text-primary fw-semibold">Selecione um usuário</h2>
-                    <p class="mb-0 text-muted small">Escolha apenas um usuário por vez para visualizar ou editar o acordo correspondente.</p>
+                    <h2 class="h6 mb-0 text-primary fw-semibold">Usuários do portal</h2>
                 </div>
                 <div class="card-body p-0">
                     <div class="acordos-users-list">
@@ -124,7 +123,6 @@
                                    {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
                             <label class="form-check-label ms-2" for="acordo-user-{{ user.id }}">
                                 <span>{{ user.name }}</span>
-                                <small class="text-muted">{{ user.email }}</small>
                             </label>
                         </div>
                         {% else %}
@@ -141,8 +139,7 @@
                 <div class="acordos-card">
                     <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
-                            <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
-                            <p class="mb-0 text-muted small">{{ selected_user.email }}</p>
+                            <h2 class="h6 mb-0 text-primary fw-semibold">{{ selected_user.name }}</h2>
                         </div>
                         {% if agreement_last_updated %}
                         <div class="acordo-metadata">
@@ -154,16 +151,6 @@
                         <form method="post" class="needs-validation" novalidate>
                             {{ form.hidden_tag() }}
                             <input type="hidden" name="user_id" value="{{ selected_user.id }}">
-
-                            <div class="mb-3">
-                                <label for="acordo-title" class="form-label fw-semibold">Título</label>
-                                {{ form.title(class_="form-control" ~ (' is-invalid' if form.title.errors else ''), id="acordo-title") }}
-                                {% if form.title.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.title.errors[0] }}
-                                </div>
-                                {% endif %}
-                            </div>
 
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -186,8 +173,7 @@
                 {% else %}
                 <div class="acordo-placeholder">
                     <i class="bi bi-person-lines-fill"></i>
-                    <h2 class="h5 fw-semibold">Selecione um usuário</h2>
-                    <p class="mb-0">Escolha um usuário no painel ao lado para criar ou visualizar o acordo correspondente.</p>
+                    <h2 class="h5 fw-semibold mb-0">Acordos da Diretoria JP</h2>
                 </div>
                 {% endif %}
             </div>

@@ -507,7 +507,7 @@ class DiretoriaAgreement(db.Model):
         db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    title = db.Column(db.String(150), nullable=False)
+    title = db.Column(db.String(150), nullable=False, default="")
     description = db.Column(db.Text, nullable=False, default="")
     created_at = db.Column(
         db.DateTime(timezone=True),
@@ -531,7 +531,7 @@ class DiretoriaAgreement(db.Model):
     )
 
     def __repr__(self) -> str:
-        return f"<DiretoriaAgreement user={self.user_id} title={self.title!r}>"
+        return f"<DiretoriaAgreement user={self.user_id}>"
 
 
 class Session(db.Model):
