@@ -162,18 +162,173 @@
     <div class="card shadow-lg">
         <div class="card-header bg-primary text-white py-3">
             <h2 class="mb-0 text-center fw-semibold">
-                <i class="bi {{ header_icon }} me-2"></i>{{ heading_text }}
+                <i class="bi bi-person-plus-fill me-2"></i>Cadastrar Novo Usuário
             </h2>
         </div>
 
         <div class="card-body p-4">
-            {% include 'admin/_user_form_fields.html' %}
+            <form method="POST" action="{{ form_action }}">
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-key me-2"></i>Informações de Login
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.username.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            {{ form.username(class="form-control", placeholder="Nome de usuário") }}
+                        </div>
+                        {% for error in form.username.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.email.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            {{ form.email(class="form-control", placeholder="E-mail") }}
+                        </div>
+                        {% for error in form.email.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-person-circle me-2"></i>Informações Pessoais
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">{{ form.name.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                            {{ form.name(class="form-control", placeholder="Nome completo") }}
+                        </div>
+                        {% for error in form.name.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">{{ form.role.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                            {{ form.role(class="form-select") }}
+                        </div>
+                        {% for error in form.role.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center">
+                            {{ form.tags.label(class="form-label fw-semibold mb-0") }}
+                            {% if current_user.role == 'admin' %}
+                                <a href="{{ url_for('cadastro_tag') }}" class="btn btn-sm btn-outline-primary ms-2" title="Nova Tag">
+                                    <i class="bi bi-plus-lg"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                        {% if form.tags.choices %}
+                        <div class="mt-2">
+                            {% for tag in form.tags %}
+                                <div class="form-check form-check-inline">
+                                    {{ tag(class="form-check-input") }}
+                                    {{ tag.label(class="form-check-label") }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                            <p class="text-muted">Nenhuma tag disponível</p>
+                        {% endif %}
+                        {% for error in form.tags.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-shield-lock me-2"></i>Definir Senha
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.password.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            {{ form.password(class="form-control", placeholder="Senha", type="password", id="password") }}
+                        </div>
+                        {% for error in form.password.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ form.confirm_password.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            {{ form.confirm_password(class="form-control", placeholder="Confirme a senha", type="password", id="confirmPassword") }}
+                        </div>
+                        {% for error in form.confirm_password.errors %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top">
+                            <a href="{{ cancel_url }}" class="btn btn-outline-secondary px-4">
+                                <i class="bi bi-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-5">
+                                <i class="bi bi-person-plus me-2"></i>{{ form.submit.label.text }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 {% endif %}
+{% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const passwordField = document.querySelector('#password');
