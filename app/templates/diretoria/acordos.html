@@ -87,9 +87,40 @@
             color: rgba(13, 110, 253, 0.75);
         }
 
-        .acordo-metadata {
+        .acordo-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .acordo-item {
+            border: 1px solid rgba(13, 110, 253, 0.15);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: rgba(13, 110, 253, 0.03);
+        }
+
+        .acordo-item + .acordo-item {
+            margin-top: 1rem;
+        }
+
+        .acordo-item-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .acordo-item-meta {
             font-size: var(--font-sm);
             color: #6c757d;
+        }
+
+        .acordo-item-description {
+            margin-top: 0.75rem;
+            color: #343a40;
         }
     </style>
 {% endblock %}
@@ -139,35 +170,122 @@
                 <div class="acordos-card">
                     <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
-                            <h2 class="h6 mb-0 text-primary fw-semibold">{{ selected_user.name }}</h2>
+                            <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
+                            <span class="text-muted small">{{ agreements|length }} acordo{% if agreements|length != 1 %}s{% endif %} cadastrados</span>
                         </div>
-                        {% if agreement_last_updated %}
-                        <div class="acordo-metadata">
-                            Atualizado em {{ agreement_last_updated.strftime('%d/%m/%Y %H:%M') }}
+                        <div class="acordo-actions">
+                            {% if form_mode in ['new', 'edit'] %}
+                            <a class="btn btn-outline-secondary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id) }}">
+                                <i class="bi bi-x-lg me-2"></i>Cancelar
+                            </a>
+                            {% endif %}
+                            <a class="btn btn-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='new') }}">
+                                <i class="bi bi-plus-lg me-2"></i>NOVO ACORDO
+                            </a>
                         </div>
-                        {% endif %}
                     </div>
                     <div class="card-body p-4">
-                        <form method="post" class="needs-validation" novalidate>
-                            {{ form.hidden_tag() }}
-                            <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                        {% if form_mode in ['new', 'edit'] %}
+                        <div class="mb-4">
+                            <h3 class="h6 fw-semibold mb-3">
+                                {% if form_mode == 'edit' %}Editar acordo{% else %}Cadastrar novo acordo{% endif %}
+                            </h3>
+                            <form method="post" class="needs-validation" novalidate>
+                                {{ form.hidden_tag() }}
+                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                <input type="hidden" name="form_mode" value="{{ form_mode }}">
+                                {% if form_mode == 'edit' and active_agreement %}
+                                <input type="hidden" name="agreement_id" value="{{ active_agreement.id }}">
+                                {% endif %}
 
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <label class="form-label fw-semibold mb-2" for="acordo-editor">Descrição detalhada</label>
-                                    <small class="text-muted">Cole textos ou utilize o botão de imagem para anexar prints.</small>
+                                <div class="row g-3">
+                                    <div class="col-lg-8">
+                                        <label class="form-label fw-semibold" for="acordo-titulo">Título</label>
+                                        {{ form.title(class_="form-control" ~ (' is-invalid' if form.title.errors else ''), id="acordo-titulo", placeholder="Informe o título do acordo") }}
+                                        {% for error in form.title.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <label class="form-label fw-semibold" for="acordo-data">Data do acordo</label>
+                                        {{ form.agreement_date(class_="form-control" ~ (' is-invalid' if form.agreement_date.errors else ''), id="acordo-data") }}
+                                        {% for error in form.agreement_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
-                                <div id="acordo-editor" class="acordo-editor"></div>
-                                {{ form.description(id="acordo-descricao", style="display:none;") }}
-                                <input type="file" id="acordo-image-input" accept="image/*" style="display:none;">
+
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label fw-semibold mb-2" for="acordo-editor">Descrição detalhada</label>
+                                        <small class="text-muted">Cole textos ou utilize o botão de imagem para anexar prints.</small>
+                                    </div>
+                                    <div id="acordo-editor" class="acordo-editor"></div>
+                                    {{ form.description(id="acordo-descricao", style="display:none;") }}
+                                    <input type="file" id="acordo-image-input" accept="image/*" style="display:none;">
+                                    {% for error in form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="d-flex justify-content-end mt-4">
+                                    <button type="submit" class="btn btn-primary px-4">
+                                        <i class="bi bi-save me-2"></i>
+                                        {% if form_mode == 'edit' %}Atualizar acordo{% else %}Salvar acordo{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <hr class="my-4">
+                        {% endif %}
+
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 fw-semibold mb-0">Acordos cadastrados</h3>
+                                <span class="text-muted small">{{ agreements|length }} registro{% if agreements|length != 1 %}s{% endif %}</span>
                             </div>
 
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary px-4">
-                                    <i class="bi bi-save me-2"></i>Salvar acordo
-                                </button>
-                            </div>
-                        </form>
+                            {% if agreements %}
+                                {% for entry in agreement_entries %}
+                                    {% set agreement = entry.record %}
+                                    {% set updated_display = entry.updated_display %}
+                                <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}">
+                                    <div class="acordo-item-header">
+                                        <div>
+                                            <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
+                                            <div class="acordo-item-meta">
+                                                Data do acordo: {{ agreement.agreement_date.strftime('%d/%m/%Y') }}
+                                                {% if updated_display %}
+                                                · Última atualização {{ updated_display.strftime('%d/%m/%Y %H:%M') }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="acordo-actions">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='edit', agreement_id=agreement.id) }}">
+                                                <i class="bi bi-pencil me-1"></i>Editar
+                                            </a>
+                                            <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1"></i>Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% if agreement.description %}
+                                    <div class="acordo-item-description">
+                                        {{ agreement.description | safe }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    Nenhum acordo foi registrado para este usuário ainda.
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% else %}
@@ -187,21 +305,24 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const checkboxes = document.querySelectorAll('[data-acordo-user]');
-            const currentUrl = new URL(window.location.href);
 
             checkboxes.forEach((checkbox) => {
                 checkbox.addEventListener('change', () => {
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.delete('action');
+                    nextUrl.searchParams.delete('agreement_id');
+
                     if (checkbox.checked) {
                         checkboxes.forEach(other => {
                             if (other !== checkbox) {
                                 other.checked = false;
                             }
                         });
-                        currentUrl.searchParams.set('user_id', checkbox.value);
-                        window.location.href = currentUrl.toString();
+                        nextUrl.searchParams.set('user_id', checkbox.value);
+                        window.location.href = nextUrl.toString();
                     } else {
-                        currentUrl.searchParams.delete('user_id');
-                        window.location.href = currentUrl.toString();
+                        nextUrl.searchParams.delete('user_id');
+                        window.location.href = nextUrl.toString();
                     }
                 });
             });

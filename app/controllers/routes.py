@@ -108,7 +108,7 @@ from app.services.general_calendar import (
 import plotly.graph_objects as go
 from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 from urllib.parse import urlunsplit
@@ -1083,7 +1083,7 @@ def mark_announcement_read(announcement_id: int):
 @app.route("/diretoria/acordos", methods=["GET", "POST"])
 @login_required
 def diretoria_acordos():
-    """Render and persist Diretoria JP agreements linked to portal users."""
+    """Render and manage Diretoria JP agreements linked to portal users."""
 
     if current_user.role != "admin" and not user_has_tag("Gestão"):
         abort(403)
@@ -1102,7 +1102,8 @@ def diretoria_acordos():
         selected_user_id = request.args.get("user_id", type=int)
 
     selected_user = None
-    agreement = None
+    agreements: list[DiretoriaAgreement] = []
+    active_agreement: DiretoriaAgreement | None = None
 
     if selected_user_id:
         selected_user = (
@@ -1112,51 +1113,135 @@ def diretoria_acordos():
             ).first()
         )
         if not selected_user:
+            message = "Usuário selecionado não foi encontrado ou está inativo."
             if request.method == "GET":
-                flash("Usuário selecionado não foi encontrado ou está inativo.", "warning")
+                flash(message, "warning")
                 return redirect(url_for("diretoria_acordos"))
-            flash("Selecione um usuário válido para registrar o acordo.", "danger")
+            flash(message, "danger")
         else:
-            agreement = DiretoriaAgreement.query.filter_by(
-                user_id=selected_user.id
-            ).first()
-            if request.method == "GET" and agreement:
-                form.description.data = agreement.description
+            agreements = (
+                DiretoriaAgreement.query.filter_by(user_id=selected_user.id)
+                .order_by(
+                    DiretoriaAgreement.agreement_date.desc(),
+                    DiretoriaAgreement.created_at.desc(),
+                )
+                .all()
+            )
+    agreement_entries: list[dict[str, Any]] = []
+    for agreement_item in agreements:
+        updated_display = agreement_item.updated_at
+        if updated_display:
+            if updated_display.tzinfo is None:
+                updated_display = updated_display.replace(tzinfo=timezone.utc)
+            updated_display = updated_display.astimezone(SAO_PAULO_TZ)
+        agreement_entries.append(
+            {"record": agreement_item, "updated_display": updated_display}
+        )
+
+    if request.method == "POST":
+        form_mode = request.form.get("form_mode") or "new"
+        if form_mode not in {"new", "edit"}:
+            form_mode = "new"
+        agreement_id = request.form.get("agreement_id", type=int)
+    else:
+        form_mode = request.args.get("action")
+        if form_mode not in {"new", "edit"}:
+            form_mode = None
+        agreement_id = request.args.get("agreement_id", type=int)
+
+    if request.method == "GET" and selected_user:
+        if form_mode == "edit" and agreement_id:
+            active_agreement = next(
+                (item for item in agreements if item.id == agreement_id), None
+            )
+            if not active_agreement:
+                active_agreement = DiretoriaAgreement.query.filter_by(
+                    id=agreement_id,
+                    user_id=selected_user.id,
+                ).first()
+            if not active_agreement:
+                flash("O acordo selecionado não foi encontrado.", "warning")
+                return redirect(
+                    url_for("diretoria_acordos", user_id=selected_user.id)
+                )
+            form.title.data = active_agreement.title
+            form.agreement_date.data = active_agreement.agreement_date
+            form.description.data = active_agreement.description
+        elif form_mode == "new" and not form.agreement_date.data:
+            form.agreement_date.data = date.today()
 
     if request.method == "POST":
         if not selected_user:
             if not selected_user_id:
                 flash("Selecione um usuário para salvar o acordo.", "danger")
-        elif form.validate_on_submit():
-            cleaned_description = sanitize_html(form.description.data)
-            if agreement is None:
-                agreement = DiretoriaAgreement(user=selected_user)
-                db.session.add(agreement)
-
-            if agreement.title is None:
-                agreement.title = ""
-            agreement.description = cleaned_description
-            db.session.commit()
-            flash("Acordo salvo com sucesso.", "success")
-            return redirect(url_for("diretoria_acordos", user_id=selected_user.id))
         else:
-            flash("Por favor, corrija os erros do formulário.", "danger")
+            if form_mode == "edit" and agreement_id:
+                active_agreement = DiretoriaAgreement.query.filter_by(
+                    id=agreement_id,
+                    user_id=selected_user.id,
+                ).first()
+                if not active_agreement:
+                    flash("O acordo selecionado não foi encontrado.", "warning")
+                    return redirect(
+                        url_for("diretoria_acordos", user_id=selected_user.id)
+                    )
 
-    last_updated = None
-    if agreement and agreement.updated_at:
-        updated_at = agreement.updated_at
-        if updated_at.tzinfo is None:
-            updated_at = updated_at.replace(tzinfo=timezone.utc)
-        last_updated = updated_at.astimezone(SAO_PAULO_TZ)
+            if form.validate_on_submit():
+                cleaned_description = sanitize_html(form.description.data or "")
+
+                if form_mode == "edit" and active_agreement:
+                    active_agreement.title = form.title.data
+                    active_agreement.agreement_date = form.agreement_date.data
+                    active_agreement.description = cleaned_description
+                    feedback_message = "Acordo atualizado com sucesso."
+                else:
+                    active_agreement = DiretoriaAgreement(
+                        user=selected_user,
+                        title=form.title.data,
+                        agreement_date=form.agreement_date.data,
+                        description=cleaned_description,
+                    )
+                    db.session.add(active_agreement)
+                    feedback_message = "Acordo criado com sucesso."
+
+                db.session.commit()
+                flash(feedback_message, "success")
+                return redirect(url_for("diretoria_acordos", user_id=selected_user.id))
+
+            flash("Por favor, corrija os erros do formulário.", "danger")
 
     return render_template(
         "diretoria/acordos.html",
         users=users,
         form=form,
         selected_user=selected_user,
-        agreement=agreement,
-        agreement_last_updated=last_updated,
+        agreements=agreements,
+        form_mode=form_mode,
+        active_agreement=active_agreement,
+        agreement_entries=agreement_entries,
     )
+
+
+@app.route("/diretoria/acordos/<int:agreement_id>/excluir", methods=["POST"])
+@login_required
+def diretoria_acordos_excluir(agreement_id: int):
+    """Remove an agreement linked to a Diretoria JP user."""
+
+    if current_user.role != "admin" and not user_has_tag("Gestão"):
+        abort(403)
+
+    agreement = DiretoriaAgreement.query.get_or_404(agreement_id)
+
+    redirect_user_id = request.form.get("user_id", type=int) or agreement.user_id
+    if redirect_user_id != agreement.user_id:
+        redirect_user_id = agreement.user_id
+
+    db.session.delete(agreement)
+    db.session.commit()
+
+    flash("Acordo removido com sucesso.", "success")
+
+    return redirect(url_for("diretoria_acordos", user_id=redirect_user_id))
 
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])

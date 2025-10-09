@@ -3,7 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from enum import Enum
 from zoneinfo import ZoneInfo
 
@@ -494,12 +494,9 @@ class DiretoriaEvent(db.Model):
 
 
 class DiretoriaAgreement(db.Model):
-    """Stores agreements and notes associated with a single user."""
+    """Stores agreements and notes associated with Diretoria JP users."""
 
     __tablename__ = "diretoria_agreements"
-    __table_args__ = (
-        db.UniqueConstraint("user_id", name="uq_diretoria_agreements_user_id"),
-    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
@@ -507,7 +504,12 @@ class DiretoriaAgreement(db.Model):
         db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    title = db.Column(db.String(150), nullable=False, default="")
+    title = db.Column(db.String(150), nullable=False)
+    agreement_date = db.Column(
+        db.Date,
+        nullable=False,
+        default=date.today,
+    )
     description = db.Column(db.Text, nullable=False, default="")
     created_at = db.Column(
         db.DateTime(timezone=True),
@@ -531,7 +533,7 @@ class DiretoriaAgreement(db.Model):
     )
 
     def __repr__(self) -> str:
-        return f"<DiretoriaAgreement user={self.user_id}>"
+        return f"<DiretoriaAgreement id={self.id} user={self.user_id}>"
 
 
 class Session(db.Model):
