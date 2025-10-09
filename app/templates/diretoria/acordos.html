@@ -35,7 +35,7 @@
             flex-direction: column;
         }
 
-        .acordos-users-card .card-body {
+        .acordos-users-card .card-body.acordos-users-list {
             overflow-y: auto;
             flex: 1 1 auto;
         }
@@ -46,7 +46,7 @@
                 max-height: none;
             }
 
-            .acordos-users-card .card-body {
+            .acordos-users-card .card-body.acordos-users-list {
                 overflow: visible;
             }
         }
@@ -198,26 +198,24 @@
                 <div class="card-header">
                     <h2 class="h6 mb-0 text-primary fw-semibold">Usuários do portal</h2>
                 </div>
-                <div class="card-body">
-                    <div class="acordos-users-list">
-                        {% for user in users %}
-                        <div class="form-check acordo-user-option m-0">
-                            <input class="form-check-input" type="radio"
-                                   name="acordo-user-selector"
-                                   id="acordo-user-{{ user.id }}"
-                                   value="{{ user.id }}"
-                                   data-acordo-user
-                                   {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
-                            <label class="form-check-label" for="acordo-user-{{ user.id }}">
-                                <span>{{ user.name }}</span>
-                            </label>
-                        </div>
-                        {% else %}
-                        <div class="p-4 text-start text-muted">
-                            Nenhum usuário ativo disponível no portal.
-                        </div>
-                        {% endfor %}
+                <div class="card-body acordos-users-list">
+                    {% for user in users %}
+                    <div class="form-check acordo-user-option m-0">
+                        <input class="form-check-input" type="radio"
+                               name="acordo-user-selector"
+                               id="acordo-user-{{ user.id }}"
+                               value="{{ user.id }}"
+                               data-acordo-user
+                               {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
+                        <label class="form-check-label" for="acordo-user-{{ user.id }}">
+                            <span>{{ user.name }}</span>
+                        </label>
                     </div>
+                    {% else %}
+                    <div class="p-4 text-start text-muted">
+                        Nenhum usuário ativo disponível no portal.
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
