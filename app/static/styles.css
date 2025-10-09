@@ -240,7 +240,7 @@ Atalhos (Central de Acessos)
 .access-shortcut-link {
     width: 100%;
     min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 2.75rem 0.5rem 0.75rem;
     border-radius: 0.5rem;
     text-align: left;
     font-weight: 600;
@@ -250,7 +250,7 @@ Atalhos (Central de Acessos)
 }
 
 .access-shortcut.has-description .access-shortcut-link {
-    padding-right: 2.75rem;
+    padding-right: 5.25rem;
 }
 
 .access-shortcut-link .bi {
@@ -259,7 +259,24 @@ Atalhos (Central de Acessos)
 }
 
 .access-shortcut-edit {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--bs-border-color);
+    background-color: #ffffff;
     color: var(--bs-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.access-shortcut.has-description .access-shortcut-edit {
+    right: 3.25rem;
 }
 
 .access-shortcut-edit .bi {
@@ -269,6 +286,8 @@ Atalhos (Central de Acessos)
 .access-shortcut-edit:hover,
 .access-shortcut-edit:focus {
     color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), 0.35);
+    background-color: rgba(var(--bs-primary-rgb), 0.08);
     text-decoration: none;
 }
 

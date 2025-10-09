@@ -71,6 +71,16 @@
                                                 <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
                                                 <i class="bi bi-box-arrow-up-right"></i>
                                             </a>
+                                            {% if current_user.role == 'admin' %}
+                                            <a
+                                                class="access-shortcut-edit"
+                                                href="{{ url_for('acessos_editar', link_id=link.id) }}"
+                                                title="Editar atalho"
+                                                aria-label="Editar atalho {{ link.label }}"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
                                             {% if link.description %}
                                             <button
                                                 class="access-description-toggle collapsed"
@@ -87,19 +97,6 @@
                                             </button>
                                             {% endif %}
                                         </div>
-                                        {% if current_user.role == 'admin' %}
-                                        <div class="d-flex justify-content-end">
-                                            <a
-                                                class="btn btn-link btn-sm text-decoration-none px-0 access-shortcut-edit"
-                                                href="{{ url_for('acessos_editar', link_id=link.id) }}"
-                                                title="Editar atalho"
-                                                aria-label="Editar atalho {{ link.label }}"
-                                            >
-                                                <i class="bi bi-pencil me-1"></i>
-                                                Editar
-                                            </a>
-                                        </div>
-                                        {% endif %}
                                         {% if link.description %}
                                         <div class="collapse access-description" id="access-description-{{ link.id }}">
                                             <div class="small text-muted">{{ link.description | replace('\n', '<br>') | safe }}</div>
