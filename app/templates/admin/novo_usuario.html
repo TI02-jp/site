@@ -5,9 +5,8 @@
 {% set header_icon = 'bi-person-gear' if editing else 'bi-person-plus-fill' %}
 {% set heading_text = 'Editar Usuário' if editing else 'Cadastrar Novo Usuário' %}
 {% set submit_icon = 'bi-check-circle' if editing else 'bi-person-plus' %}
-{% set group_gap = 'g-4' if not editing else 'g-3' %}
-{% set section_spacing = 'mb-4' if not editing else 'mb-3' %}
-{% set heading_spacing = 'mb-3' if not editing else 'mb-2' %}
+{% set section_spacing = 'mb-4' if not editing else 'mb-2' %}
+{% set heading_spacing = 'mb-3' if not editing else 'mb-1' %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -24,7 +23,8 @@
     }
 
     #editUserModal .modal-dialog {
-        max-width: 760px;
+        max-width: 940px;
+        width: calc(100% - 2rem);
     }
 
     #editUserModal .modal-content {
@@ -42,49 +42,90 @@
     }
 
     #editUserModal .modal-body {
-        padding: 1.5rem 1.75rem 1.25rem;
-        font-size: 0.95rem;
+        padding: 1.35rem 2rem 1.2rem;
+        font-size: 0.94rem;
     }
 
     #editUserModal .modal-body h5.section-title {
-        font-size: 0.98rem;
-        margin-bottom: 0.75rem;
+        font-size: 0.96rem;
+        margin-bottom: 0.6rem;
     }
 
     #editUserModal .form-label {
-        font-size: 0.88rem;
+        font-size: 0.86rem;
     }
 
     #editUserModal .form-control,
     #editUserModal .form-select {
-        font-size: 0.9rem;
-        padding-top: 0.4rem;
-        padding-bottom: 0.4rem;
+        font-size: 0.88rem;
+        padding-top: 0.38rem;
+        padding-bottom: 0.38rem;
     }
 
     #editUserModal .input-group-text {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
     }
 
     #editUserModal .alert {
-        padding: 0.65rem 0.85rem;
-        font-size: 0.88rem;
-        margin-bottom: 0.75rem;
+        padding: 0.6rem 0.85rem;
+        font-size: 0.86rem;
+        margin-bottom: 0.6rem;
     }
 
     #editUserModal .form-check-label,
     #editUserModal .form-text {
-        font-size: 0.85rem;
+        font-size: 0.83rem;
+    }
+
+    #editUserModal .form-check.form-switch .form-check-input {
+        width: 2.4rem;
+        height: 1.2rem;
+        margin-right: 0.55rem;
+    }
+
+    #editUserModal .form-check.form-switch .form-check-label {
+        padding-top: 0.1rem;
     }
 
     #editUserModal .modal-footer {
         border-top: none;
-        padding: 1rem 1.75rem 1.5rem;
+        padding: 0.85rem 2rem 1.3rem;
     }
 
     #editUserModal .btn {
         font-size: 0.9rem;
-        padding: 0.45rem 1.4rem;
+        padding: 0.42rem 1.4rem;
+    }
+
+    #editUserModal .user-form--edit .section-divider {
+        margin-bottom: 1rem;
+    }
+
+    #editUserModal .user-form--edit .row.gap-tight {
+        row-gap: 0.85rem;
+    }
+
+    #editUserModal .tag-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.35rem 0.9rem !important;
+    }
+
+    #editUserModal .tag-grid .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        #editUserModal .modal-dialog {
+            max-width: 100%;
+        }
+
+        #editUserModal .modal-body {
+            padding: 1.2rem 1.4rem 1.1rem;
+        }
     }
 </style>
 {% endif %}

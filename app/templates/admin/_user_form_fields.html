@@ -1,16 +1,14 @@
-<form method="POST" action="{{ form_action }}" id="userForm">
+<form method="POST" action="{{ form_action }}" id="userForm" class="user-form {{ 'user-form--edit' if editing else 'user-form--create' }}">
     {{ form.hidden_tag() }}
 
-    <div class="row {{ section_spacing }}">
-        <div class="col-12">
-            <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
-                <i class="bi bi-key me-2"></i>Informações de Login
-            </h5>
-        </div>
+    <div class="section-divider {{ section_spacing }}">
+        <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
+            <i class="bi bi-key me-2"></i>Informações de Login
+        </h5>
     </div>
 
-    <div class="row {{ group_gap }} {{ section_spacing }}">
-        <div class="col-md-6">
+    <div class="row g-3 g-lg-4 gap-tight {{ section_spacing }}">
+        <div class="col-md-6 col-lg-5">
             <label class="form-label fw-semibold" for="username">{{ form.username.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-person"></i></span>
@@ -23,7 +21,7 @@
             {% endfor %}
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-7">
             <label class="form-label fw-semibold" for="email">{{ form.email.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-envelope"></i></span>
@@ -37,16 +35,14 @@
         </div>
     </div>
 
-    <div class="row {{ section_spacing }}">
-        <div class="col-12">
-            <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
-                <i class="bi bi-person-circle me-2"></i>Informações Pessoais
-            </h5>
-        </div>
+    <div class="section-divider {{ section_spacing }}">
+        <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
+            <i class="bi bi-person-circle me-2"></i>Informações Pessoais
+        </h5>
     </div>
 
-    <div class="row {{ group_gap }} {{ section_spacing }}">
-        <div class="col-md-8">
+    <div class="row g-3 g-lg-4 gap-tight {{ section_spacing }}">
+        <div class="col-md-6 col-lg-6">
             <label class="form-label fw-semibold" for="name">{{ form.name.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-card-text"></i></span>
@@ -59,7 +55,7 @@
             {% endfor %}
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-6 col-lg-3">
             <label class="form-label fw-semibold" for="role">{{ form.role.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
@@ -78,9 +74,19 @@
                 {% endfor %}
             {% endif %}
         </div>
+
+        {% if editing and user and not user.is_master %}
+        <div class="col-md-6 col-lg-3 align-self-end">
+            <span class="form-label fw-semibold d-block mb-2">Status</span>
+            <div class="form-check form-switch">
+                {{ form.ativo(class="form-check-input", role="switch", id="ativoSwitch") }}
+                <label class="form-check-label" for="ativoSwitch">Usuário ativo</label>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <div class="row {{ group_gap }} {{ section_spacing }}">
+    <div class="row g-3 g-lg-4 gap-tight {{ section_spacing }}">
         <div class="col-12">
             <div class="d-flex align-items-center flex-wrap gap-2">
                 {{ form.tags.label(class="form-label fw-semibold mb-0") }}
@@ -91,11 +97,11 @@
                 {% endif %}
             </div>
             {% if form.tags.choices %}
-            <div class="mt-2 d-flex flex-wrap gap-2">
+            <div class="tag-grid d-flex flex-wrap gap-2 mt-2">
                 {% for tag in form.tags %}
-                    <div class="form-check form-check-inline">
+                    <div class="form-check">
                         {{ tag(class="form-check-input") }}
-                        {{ tag.label(class="form-check-label") }}
+                        {{ tag.label(class="form-check-label mb-0") }}
                     </div>
                 {% endfor %}
             </div>
@@ -110,16 +116,14 @@
         </div>
     </div>
 
-    <div class="row {{ section_spacing }}">
-        <div class="col-12">
-            <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
-                <i class="bi bi-shield-lock me-2"></i>{% if editing %}Alterar Senha{% else %}Definir Senha{% endif %}
-            </h5>
-        </div>
+    <div class="section-divider {{ section_spacing }}">
+        <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
+            <i class="bi bi-shield-lock me-2"></i>{% if editing %}Alterar Senha{% else %}Definir Senha{% endif %}
+        </h5>
     </div>
 
     {% if editing %}
-    <div class="row {{ group_gap }} {{ section_spacing }}">
+    <div class="row g-3 g-lg-4 gap-tight {{ section_spacing }}">
         <div class="col-12">
             <div class="alert alert-info" role="alert">
                 <i class="bi bi-info-circle me-2"></i>Deixe os campos abaixo em branco para manter a senha atual.
@@ -132,14 +136,14 @@
             </div>
         </div>
         {% endif %}
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-6">
             <label class="form-label fw-semibold" for="newPassword">Nova senha</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
                 <input type="password" name="new_password" id="newPassword" class="form-control" placeholder="Digite a nova senha" autocomplete="new-password">
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-6">
             <label class="form-label fw-semibold" for="confirmNewPassword">Confirmar nova senha</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
@@ -148,8 +152,8 @@
         </div>
     </div>
     {% else %}
-    <div class="row {{ group_gap }} {{ section_spacing }}">
-        <div class="col-md-6">
+    <div class="row g-3 g-lg-4 gap-tight {{ section_spacing }}">
+        <div class="col-md-6 col-lg-6">
             <label class="form-label fw-semibold" for="password">{{ form.password.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
@@ -162,7 +166,7 @@
             {% endfor %}
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-6">
             <label class="form-label fw-semibold" for="confirmPassword">{{ form.confirm_password.label }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
@@ -173,22 +177,6 @@
                     <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
                 </div>
             {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if editing and user and not user.is_master %}
-    <div class="row {{ section_spacing }}">
-        <div class="col-12">
-            <h5 class="text-primary border-bottom pb-2 {{ heading_spacing }} section-title">
-                <i class="bi bi-toggle-on me-2"></i>Status do Usuário
-            </h5>
-        </div>
-        <div class="col-12">
-            <div class="form-check form-switch">
-                {{ form.ativo(class="form-check-input", role="switch", id="ativoSwitch") }}
-                <label class="form-check-label" for="ativoSwitch">Usuário ativo</label>
-            </div>
         </div>
     </div>
     {% endif %}
