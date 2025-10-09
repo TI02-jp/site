@@ -11,7 +11,7 @@
         .acordos-layout {
             display: grid;
             grid-template-columns: 300px minmax(0, 1fr);
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         @media (max-width: 991.98px) {
@@ -25,6 +25,10 @@
             border-radius: 1rem;
             box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.07);
             background: #ffffff;
+        }
+
+        .acordos-card.acordos-card-form .card-header {
+            padding: 0.875rem 1.15rem;
         }
 
         .acordos-users-card {
@@ -69,6 +73,33 @@
 
         .acordos-card .card-body {
             padding: 1.25rem;
+        }
+
+        .acordos-card.acordos-card-form .card-body {
+            padding: 1.15rem 1.1rem 1.35rem;
+        }
+
+        .acordos-card.acordos-card-form h3.h6 {
+            font-size: 0.95rem;
+        }
+
+        .acordos-card.acordos-card-form .form-label {
+            font-size: 0.9rem;
+        }
+
+        .acordos-card.acordos-card-form .form-control,
+        .acordos-card.acordos-card-form .form-select {
+            font-size: 0.95rem;
+            padding: 0.55rem 0.75rem;
+        }
+
+        .acordos-card.acordos-card-form .card-body .btn {
+            font-size: 0.9rem;
+            padding: 0.55rem 1.1rem;
+        }
+
+        .acordos-card.acordos-card-form .acordo-editor {
+            min-height: 240px;
         }
 
         .acordos-users-list {
@@ -229,8 +260,8 @@
 
 {% block content %}
 <div class="content-area flex-grow-1">
-    <div class="container-fluid py-4">
-        <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div class="container-fluid py-3 py-lg-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
             <div>
                 <h1 class="h4 fw-bold mb-0">Acordos da Diretoria JP</h1>
             </div>
@@ -267,8 +298,8 @@
 
             <div>
                 {% if selected_user %}
-                <div class="acordos-card">
-                    <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="acordos-card{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
                             <span class="text-muted small">{{ agreements|length }} acordo{% if agreements|length != 1 %}s{% endif %} cadastrados</span>
@@ -284,10 +315,10 @@
                             </a>
                         </div>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body">
                         {% if form_mode in ['new', 'edit'] %}
-                        <div class="mb-4">
-                            <h3 class="h6 fw-semibold mb-3">
+                        <div class="acordos-form-section mb-3">
+                            <h3 class="h6 fw-semibold mb-2">
                                 {% if form_mode == 'edit' %}Editar acordo{% else %}Cadastrar novo acordo{% endif %}
                             </h3>
                             <form method="post" class="needs-validation" novalidate>
@@ -328,17 +359,21 @@
                                     {% endfor %}
                                 </div>
 
-                                <div class="d-flex justify-content-end mt-4">
-                                    <button type="submit" class="btn btn-primary px-4">
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-save me-2"></i>
                                         {% if form_mode == 'edit' %}Atualizar acordo{% else %}Salvar acordo{% endif %}
                                     </button>
                                 </div>
                             </form>
                         </div>
-                        <hr class="my-4">
                         {% endif %}
 
+                        {% if form_mode == 'edit' %}
+                        <hr class="my-3">
+                        {% endif %}
+
+                        {% if form_mode != 'new' %}
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h3 class="h6 fw-semibold mb-0">Acordos cadastrados</h3>
@@ -349,42 +384,44 @@
                                 {% for entry in agreement_entries %}
                                     {% set agreement = entry.record %}
                                     {% set updated_display = entry.updated_display %}
-                                <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}">
-                                    <div class="acordo-item-header">
-                                        <div>
-                                            <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
-                                            <div class="acordo-item-meta">
-                                                Data do acordo: {{ agreement.agreement_date.strftime('%d/%m/%Y') }}
-                                                {% if updated_display %}
-                                                · Última atualização {{ updated_display.strftime('%d/%m/%Y %H:%M') }}
-                                                {% endif %}
+                                    <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}">
+                                        <div class="acordo-item-header">
+                                            <div>
+                                                <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
+                                                <div class="acordo-item-meta">
+                                                    Data do acordo: {{ agreement.agreement_date.strftime('%d/%m/%Y') }}
+                                                    {% if updated_display %}
+                                                    · Última atualização {{ updated_display.strftime('%d/%m/%Y %H:%M') }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="acordo-actions">
+                                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='edit', agreement_id=agreement.id) }}">
+                                                    <i class="bi bi-pencil me-1"></i>Editar
+                                                </a>
+                                                <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash me-1"></i>Excluir
+                                                    </button>
+                                                </form>
                                             </div>
                                         </div>
-                                        <div class="acordo-actions">
-                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='edit', agreement_id=agreement.id) }}">
-                                                <i class="bi bi-pencil me-1"></i>Editar
-                                            </a>
-                                            <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                    <i class="bi bi-trash me-1"></i>Excluir
-                                                </button>
-                                            </form>
+                                        {% if agreement.description %}
+                                        <div class="acordo-item-description">
+                                            {{ agreement.description | safe }}
                                         </div>
+                                        {% endif %}
                                     </div>
-                                    {% if agreement.description %}
-                                    <div class="acordo-item-description">
-                                        {{ agreement.description | safe }}
-                                    </div>
-                                    {% endif %}
-                                </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="text-start text-muted py-4">
+                                <div class="text-start text-muted py-3">
                                     Nenhum acordo foi registrado para este usuário ainda.
                                 </div>
                             {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
