@@ -30,7 +30,7 @@
         .acordos-users-card {
             position: sticky;
             top: 1.5rem;
-            max-height: calc(100vh - 3rem);
+            max-height: calc(100vh - 4.5rem);
             display: flex;
             flex-direction: column;
         }
@@ -38,6 +38,9 @@
         .acordos-users-card .card-body.acordos-users-list {
             overflow-y: auto;
             flex: 1 1 auto;
+            min-height: 0;
+            max-height: calc(100vh - 8rem);
+            padding: 1rem;
         }
 
         @media (max-width: 991.98px) {
@@ -48,6 +51,7 @@
 
             .acordos-users-card .card-body.acordos-users-list {
                 overflow: visible;
+                max-height: none;
             }
         }
 
