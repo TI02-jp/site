@@ -249,7 +249,11 @@ Atalhos (Central de Acessos)
     z-index: 0;
 }
 
-.access-shortcut.has-description .access-shortcut-link {
+.access-shortcut.has-actions .access-shortcut-link {
+    padding-right: 3rem;
+}
+
+.access-shortcut.has-actions.has-description .access-shortcut-link {
     padding-right: 5.25rem;
 }
 
@@ -258,81 +262,77 @@ Atalhos (Central de Acessos)
     font-size: var(--font-lg);
 }
 
-.access-shortcut-edit {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.75rem;
-    padding: 0.125rem;
-    border: none;
-    background-color: transparent;
-    color: var(--bs-secondary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-    line-height: 1;
-    transition: color 0.15s ease-in-out;
-    cursor: pointer;
-}
-
-.access-shortcut.has-description .access-shortcut-edit {
-    right: 3.25rem;
-}
-
-.access-shortcut-edit .bi {
-    font-size: 1rem;
-}
-
-.access-shortcut-edit:hover,
-.access-shortcut-edit:focus {
-    color: var(--bs-primary);
-    text-decoration: none;
-}
-
-.access-shortcut-edit:focus {
-    outline: none;
-}
-
-.access-shortcut-edit:focus-visible {
-    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
-    border-radius: 0.375rem;
-    outline-offset: 2px;
-}
-
-.access-description-toggle {
+.access-shortcut-actions {
     position: absolute;
     top: 0;
     right: 0;
     height: 100%;
-    width: 2.5rem;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 0 0.5rem 0.5rem 0;
-    background-color: transparent;
-    color: var(--bs-primary);
-    border-left: 1px solid rgba(var(--bs-primary-rgb, 13, 110, 253), 0.2);
-    transition: background-color 0.2s ease;
-    cursor: pointer;
+    gap: 0.25rem;
+    padding: 0 0.5rem 0 0.25rem;
     z-index: 1;
 }
 
-.access-description-toggle:focus-visible {
-    outline: 2px solid var(--bs-primary);
+.access-shortcut-actions .access-shortcut-edit,
+.access-shortcut-actions .access-description-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--bs-secondary);
+    padding: 0.25rem;
+    line-height: 1;
+    transition: color 0.15s ease-in-out, background-color 0.2s ease;
+    border-radius: 0.375rem;
+}
+
+.access-shortcut-actions .access-shortcut-edit .bi {
+    font-size: 1rem;
+}
+
+.access-shortcut-actions .access-shortcut-edit:hover,
+.access-shortcut-actions .access-shortcut-edit:focus {
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
+.access-shortcut-actions .access-shortcut-edit:focus {
+    outline: none;
+}
+
+.access-shortcut-actions .access-shortcut-edit:focus-visible {
+    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
     outline-offset: 2px;
 }
 
-.access-description-toggle:hover {
-    background-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08);
+.access-shortcut-actions .access-description-toggle {
+    width: 2.5rem;
+    color: var(--bs-primary);
+    border-left: 1px solid rgba(var(--bs-primary-rgb, 13, 110, 253), 0.2);
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 0;
+    height: 100%;
 }
 
-.access-description-toggle .bi {
+.access-shortcut-actions .access-description-toggle .bi {
     transition: transform 0.2s ease;
 }
 
-.access-description-toggle:not(.collapsed) .bi {
+.access-shortcut-actions .access-description-toggle:not(.collapsed) .bi {
     transform: rotate(180deg);
+}
+
+.access-shortcut-actions .access-description-toggle:hover,
+.access-shortcut-actions .access-description-toggle:focus {
+    background-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08);
+}
+
+.access-shortcut-actions .access-description-toggle:focus-visible {
+    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+    outline-offset: 2px;
 }
 
 .access-description {
