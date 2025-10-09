@@ -65,8 +65,8 @@ class LoginForm(FlaskForm):
 
 class RegistrationForm(FlaskForm):
     """Formulário para registrar novos usuários."""
-    # Usuário para login; entre 4 e 20 caracteres
-    username = StringField('Usuário', validators=[DataRequired(), Length(min=4, max=20)])
+    # Usuário para login; entre 3 e 20 caracteres
+    username = StringField('Usuário', validators=[DataRequired(), Length(min=3, max=20)])
     # Email de contato do usuário
     email = StringField('Email', validators=[DataRequired(), Email()])
     # Nome completo utilizado para identificação
