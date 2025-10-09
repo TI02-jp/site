@@ -17,6 +17,7 @@ from collections import Counter
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf
 from app.utils.security import sanitize_html
+from app.utils.mailer import send_email, EmailDeliveryError
 from app.models.tables import (
     User,
     Empresa,
@@ -1338,8 +1339,14 @@ def diretoria_acordos():
             form.title.data = active_agreement.title
             form.agreement_date.data = active_agreement.agreement_date
             form.description.data = active_agreement.description
+            form.notify_user.data = False
+            form.notification_destination.data = "user"
+            form.notification_email.data = ""
         elif form_mode == "new" and not form.agreement_date.data:
             form.agreement_date.data = date.today()
+            form.notify_user.data = False
+            form.notification_destination.data = "user"
+            form.notification_email.data = ""
 
     if request.method == "POST":
         if not selected_user:
@@ -1376,7 +1383,50 @@ def diretoria_acordos():
                     feedback_message = "Acordo criado com sucesso."
 
                 db.session.commit()
-                flash(feedback_message, "success")
+
+                recipient_email = None
+                destination_value = form.notification_destination.data or "user"
+                if form.notify_user.data:
+                    if destination_value == "custom":
+                        recipient_email = form.notification_email.data
+                    else:
+                        recipient_email = selected_user.email
+
+                if form.notify_user.data and recipient_email:
+                    try:
+                        action_label = (
+                            "atualizado" if form_mode == "edit" else "registrado"
+                        )
+                        email_html = render_template(
+                            "emails/diretoria_acordo.html",
+                            agreement=active_agreement,
+                            destinatario=selected_user,
+                            editor=current_user,
+                            action_label=action_label,
+                        )
+                        send_email(
+                            subject=f"[Diretoria JP] Acordo {active_agreement.title}",
+                            html_body=email_html,
+                            recipients=[recipient_email],
+                        )
+                        flash(
+                            f"{feedback_message} Notificação enviada por e-mail.",
+                            "success",
+                        )
+                    except EmailDeliveryError as exc:
+                        current_app.logger.error(
+                            "Falha ao enviar e-mail do acordo %s para %s: %s",
+                            active_agreement.id,
+                            recipient_email,
+                            exc,
+                        )
+                        flash(
+                            f"{feedback_message} Porém, não foi possível enviar o e-mail de notificação.",
+                            "warning",
+                        )
+                else:
+                    flash(feedback_message, "success")
+
                 return redirect(url_for("diretoria_acordos", user_id=selected_user.id))
 
             flash("Por favor, corrija os erros do formulário.", "danger")
