@@ -30,7 +30,7 @@
         .acordos-users-card {
             position: sticky;
             top: 1.5rem;
-            max-height: calc(100vh - 4.5rem);
+            max-height: calc(100vh - 6rem);
             display: flex;
             flex-direction: column;
         }
@@ -39,8 +39,8 @@
             overflow-y: auto;
             flex: 1 1 auto;
             min-height: 0;
-            max-height: calc(100vh - 8rem);
-            padding: 1rem;
+            max-height: clamp(220px, 52vh, 360px);
+            padding: 0.75rem;
         }
 
         @media (max-width: 991.98px) {
@@ -83,12 +83,13 @@
         }
 
         .acordo-user-option .form-check-label {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: flex-start;
             gap: 0.5rem;
             width: 100%;
-            padding: 0.5rem 0.65rem;
+            padding: 0.65rem 0.75rem 0.65rem 2.25rem;
             border-radius: 0.75rem;
             border: 1px solid rgba(13, 110, 253, 0.25);
             background: #f8f9fa;
@@ -96,7 +97,35 @@
             font-weight: 600;
             font-size: 0.9rem;
             transition: all 0.2s ease-in-out;
-            min-height: 46px;
+            min-height: 48px;
+        }
+
+        .acordo-user-option .form-check-label::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0.85rem;
+            transform: translateY(-50%);
+            width: 1.05rem;
+            height: 1.05rem;
+            border-radius: 0.3rem;
+            border: 2px solid rgba(13, 110, 253, 0.45);
+            background: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .acordo-user-option .form-check-label::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 1.08rem;
+            transform: translateY(-55%) rotate(45deg);
+            width: 0.35rem;
+            height: 0.7rem;
+            border-right: 0.2rem solid transparent;
+            border-bottom: 0.2rem solid transparent;
+            transition: opacity 0.2s ease-in-out;
+            opacity: 0;
         }
 
         .acordo-user-option .form-check-input:checked + .form-check-label {
@@ -106,8 +135,22 @@
             border-color: #0d6efd;
         }
 
+        .acordo-user-option .form-check-input:checked + .form-check-label::before {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            box-shadow: 0 0.25rem 0.6rem rgba(13, 110, 253, 0.35);
+        }
+
+        .acordo-user-option .form-check-input:checked + .form-check-label::after {
+            border-color: #ffffff;
+            opacity: 1;
+        }
+
         .acordo-user-option .form-check-label span {
             text-align: left;
+            flex: 1 1 auto;
+            white-space: normal;
+            word-break: break-word;
         }
 
         .acordo-editor {
