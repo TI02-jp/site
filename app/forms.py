@@ -250,26 +250,19 @@ class AnnouncementForm(FlaskForm):
 class DiretoriaAcordoForm(FlaskForm):
     """Formulário para registrar acordos individuais da Diretoria JP."""
 
+    title = StringField(
+        "Título",
+        validators=[DataRequired(), Length(max=150)],
+        filters=[lambda value: value.strip() if value else value],
+    )
+    agreement_date = DateField(
+        "Data do acordo",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        default=date.today,
+    )
     description = TextAreaField("Descrição", validators=[Optional()])
     submit = SubmitField("Salvar acordo")
-
-    def validate_attachments(self, field):
-        """Ensure every uploaded attachment uses an allowed extension."""
-
-        if not field.data:
-            return
-
-        for storage in field.data:
-            if not storage or not storage.filename:
-                continue
-
-            filename = storage.filename.lower()
-            if "." not in filename:
-                raise ValidationError("Formato de arquivo não permitido.")
-
-            extension = filename.rsplit(".", 1)[-1]
-            if extension not in ANNOUNCEMENT_FILE_EXTENSIONS:
-                raise ValidationError("Formato de arquivo não permitido.")
 
 
 class CourseForm(FlaskForm):
