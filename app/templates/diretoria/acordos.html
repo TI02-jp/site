@@ -10,8 +10,8 @@
     <style>
         .acordos-layout {
             display: grid;
-            grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
-            gap: 1.5rem;
+            grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+            gap: 1.25rem;
         }
 
         @media (max-width: 991.98px) {
@@ -21,54 +21,71 @@
         }
 
         .acordos-card {
-            border: 1px solid rgba(13, 110, 253, 0.12);
+            border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: 1rem;
-            box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.08);
-            background: linear-gradient(165deg, rgba(13, 110, 253, 0.05), rgba(13, 110, 253, 0));
+            box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.07);
+            background: #ffffff;
         }
 
         .acordos-card .card-header {
-            border-bottom: 1px solid rgba(13, 110, 253, 0.12);
-            background: rgba(13, 110, 253, 0.05);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: #ffffff;
+            padding: 1rem 1.25rem;
+        }
+
+        .acordos-card .card-body {
+            padding: 1.25rem;
         }
 
         .acordos-users-list {
-            max-height: 65vh;
-            overflow-y: auto;
-            padding-right: 0.35rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: 0.75rem;
         }
 
-        .acordos-users-list .form-check {
-            padding: 0.45rem 0.5rem;
-            border-bottom: 1px dashed rgba(13, 110, 253, 0.12);
+        .acordo-user-option {
+            position: relative;
         }
 
-        .acordos-users-list .form-check:last-child {
-            border-bottom: none;
-        }
-
-        .acordos-users-list .form-check-input {
-            width: 1rem;
-            height: 1rem;
-            margin-top: 0.25rem;
-        }
-
-        .acordos-users-list .form-check-label {
-            display: flex;
-            flex-direction: column;
-            font-weight: 500;
-            color: #212529;
+        .acordo-user-option .form-check-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
             cursor: pointer;
         }
 
-        .acordos-users-list .form-check-label span {
+        .acordo-user-option .form-check-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.5rem 0.65rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(13, 110, 253, 0.25);
+            background: #f8f9fa;
+            color: #0d6efd;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease-in-out;
+            min-height: 46px;
+        }
+
+        .acordo-user-option .form-check-input:checked + .form-check-label {
+            background: #0d6efd;
+            color: #ffffff;
+            box-shadow: 0 0.75rem 1.25rem rgba(13, 110, 253, 0.25);
+            border-color: #0d6efd;
+        }
+
+        .acordo-user-option .form-check-label span {
             text-align: left;
         }
 
         .acordo-editor {
             min-height: 280px;
             border-radius: 0.75rem;
-            border: 1px solid rgba(13, 110, 253, 0.25);
+            border: 1px solid rgba(15, 23, 42, 0.12);
             background: #ffffff;
         }
 
@@ -80,13 +97,20 @@
             border-radius: 0 0 0.75rem 0.75rem;
         }
 
+        .acordo-notification-card {
+            border: 1px dashed rgba(13, 110, 253, 0.35);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            background: rgba(13, 110, 253, 0.05);
+        }
+
         .acordo-placeholder {
-            border: 2px dashed rgba(13, 110, 253, 0.35);
+            border: 2px dashed rgba(15, 23, 42, 0.08);
             border-radius: 1rem;
             padding: 3rem 1rem;
             text-align: left;
             color: #6c757d;
-            background: rgba(13, 110, 253, 0.04);
+            background: #f8f9fa;
         }
 
         .acordo-placeholder i {
@@ -103,10 +127,10 @@
         }
 
         .acordo-item {
-            border: 1px solid rgba(13, 110, 253, 0.15);
+            border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: 0.75rem;
             padding: 1rem 1.25rem;
-            background: rgba(13, 110, 253, 0.03);
+            background: #ffffff;
         }
 
         .acordo-item + .acordo-item {
@@ -147,19 +171,20 @@
 
         <div class="acordos-layout">
             <div class="acordos-card h-100">
-                <div class="card-header py-3 px-4">
+                <div class="card-header">
                     <h2 class="h6 mb-0 text-primary fw-semibold">Usuários do portal</h2>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
                     <div class="acordos-users-list">
                         {% for user in users %}
-                        <div class="form-check px-4 py-3 m-0">
-                            <input class="form-check-input" type="checkbox"
+                        <div class="form-check acordo-user-option m-0">
+                            <input class="form-check-input" type="radio"
+                                   name="acordo-user-selector"
                                    id="acordo-user-{{ user.id }}"
                                    value="{{ user.id }}"
                                    data-acordo-user
                                    {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
-                            <label class="form-check-label ms-2" for="acordo-user-{{ user.id }}">
+                            <label class="form-check-label" for="acordo-user-{{ user.id }}">
                                 <span>{{ user.name }}</span>
                             </label>
                         </div>
@@ -235,6 +260,47 @@
                                     {% endfor %}
                                 </div>
 
+                                <div class="acordo-notification-card mt-4">
+                                    <div class="form-check form-switch mb-3">
+                                        {{ form.notify_user(class_="form-check-input", id="acordo-notify-toggle") }}
+                                        <label class="form-check-label fw-semibold" for="acordo-notify-toggle">
+                                            Enviar notificação por e-mail
+                                        </label>
+                                    </div>
+                                    {% for error in form.notify_user.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                    <div id="acordo-notification-options" class="row g-3 mt-1{% if not form.notify_user.data %} d-none{% endif %}">
+                                        <div class="col-lg-6">
+                                            <label class="form-label fw-semibold mb-2">Destinatário</label>
+                                            <div class="btn-group w-100" role="group" aria-label="Destinatário do e-mail">
+                                                {% for option in form.notification_destination %}
+                                                {{ option(class_="btn-check", id=option.id, **{"data-notification-destination": option.data}) }}
+                                                <label class="btn btn-outline-primary{% if option.checked %} active{% endif %}" for="{{ option.id }}">
+                                                    {{ option.label.text }}
+                                                </label>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <label class="form-label fw-semibold" for="acordo-email-personalizado">E-mail para envio</label>
+                                            {{ form.notification_email(
+                                                class_="form-control" ~ (' is-invalid' if form.notification_email.errors else ''),
+                                                id="acordo-email-personalizado",
+                                                placeholder=selected_user.email if selected_user else 'exemplo@empresa.com',
+                                                disabled=(not form.notify_user.data or form.notification_destination.data != 'custom')
+                                            ) }}
+                                            <div class="form-text">Preencha para utilizar outro endereço de e-mail.</div>
+                                            {% if selected_user %}
+                                            <div class="form-text text-muted">E-mail cadastrado: {{ selected_user.email }}</div>
+                                            {% endif %}
+                                            {% for error in form.notification_email.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="d-flex justify-content-end mt-4">
                                     <button type="submit" class="btn btn-primary px-4">
                                         <i class="bi bi-save me-2"></i>
@@ -301,7 +367,6 @@
                     <i class="bi bi-person-lines-fill"></i>
                     <h2 class="h5 fw-semibold mb-0">Acordos da Diretoria JP</h2>
                 </div>
-                </div>
             {% endif %}
         </div>
         </div>
@@ -313,46 +378,77 @@
     {{ super() }}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const checkboxes = document.querySelectorAll('[data-acordo-user]');
-            const usersList = document.querySelector('.acordos-users-list');
+            const userRadios = document.querySelectorAll('[data-acordo-user]');
             const storageKey = 'diretoriaAcordosUsersScrollTop';
 
-            if (usersList) {
-                const storedScroll = sessionStorage.getItem(storageKey);
-                if (storedScroll !== null) {
-                    usersList.scrollTop = parseInt(storedScroll, 10);
+            const storedScroll = sessionStorage.getItem(storageKey);
+            if (storedScroll !== null) {
+                const scrollValue = parseInt(storedScroll, 10);
+                if (!Number.isNaN(scrollValue)) {
+                    window.scrollTo(0, scrollValue);
                 }
-
-                usersList.addEventListener('scroll', () => {
-                    sessionStorage.setItem(storageKey, usersList.scrollTop.toString());
-                });
             }
 
-            checkboxes.forEach((checkbox) => {
-                checkbox.addEventListener('change', () => {
+            window.addEventListener(
+                'scroll',
+                () => {
+                    sessionStorage.setItem(
+                        storageKey,
+                        Math.round(window.scrollY || window.pageYOffset || 0).toString()
+                    );
+                },
+                { passive: true }
+            );
+
+            userRadios.forEach((radio) => {
+                radio.addEventListener('change', () => {
                     const nextUrl = new URL(window.location.href);
                     nextUrl.searchParams.delete('action');
                     nextUrl.searchParams.delete('agreement_id');
+                    sessionStorage.setItem(
+                        storageKey,
+                        Math.round(window.scrollY || window.pageYOffset || 0).toString()
+                    );
 
-                    if (checkbox.checked) {
-                        checkboxes.forEach(other => {
-                            if (other !== checkbox) {
-                                other.checked = false;
-                            }
-                        });
-                        if (usersList) {
-                            sessionStorage.setItem(storageKey, usersList.scrollTop.toString());
-                        }
-                        nextUrl.searchParams.set('user_id', checkbox.value);
-                        window.location.href = nextUrl.toString();
-                    } else {
-                        if (usersList) {
-                            sessionStorage.setItem(storageKey, usersList.scrollTop.toString());
-                        }
-                        nextUrl.searchParams.delete('user_id');
-                        window.location.href = nextUrl.toString();
+                    if (radio.checked) {
+                        nextUrl.searchParams.set('user_id', radio.value);
                     }
+
+                    window.location.href = nextUrl.toString();
                 });
+            });
+
+            const notifyToggle = document.querySelector('#acordo-notify-toggle');
+            const notificationOptions = document.querySelector('#acordo-notification-options');
+            const destinationRadios = document.querySelectorAll('[data-notification-destination]');
+            const customEmailField = document.querySelector('#acordo-email-personalizado');
+
+            const syncNotificationControls = () => {
+                const isActive = !!(notifyToggle && notifyToggle.checked);
+                if (notificationOptions) {
+                    notificationOptions.classList.toggle('d-none', !isActive);
+                }
+
+                destinationRadios.forEach((input) => {
+                    input.disabled = !isActive;
+                });
+
+                if (customEmailField) {
+                    const customSelected = Array.from(destinationRadios).some(
+                        (input) => input.checked && input.value === 'custom'
+                    );
+                    customEmailField.disabled = !isActive || !customSelected;
+                    customEmailField.required = isActive && customSelected;
+                }
+            };
+
+            if (notifyToggle) {
+                notifyToggle.addEventListener('change', syncNotificationControls);
+                syncNotificationControls();
+            }
+
+            destinationRadios.forEach((input) => {
+                input.addEventListener('change', syncNotificationControls);
             });
 
             const editorContainer = document.querySelector('#acordo-editor');

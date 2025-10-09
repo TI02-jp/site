@@ -262,7 +262,39 @@ class DiretoriaAcordoForm(FlaskForm):
         default=date.today,
     )
     description = TextAreaField("Descrição", validators=[Optional()])
+    notify_user = BooleanField("Enviar notificação por e-mail", default=False)
+    notification_destination = RadioField(
+        "Destinatário do e-mail",
+        choices=[("user", "E-mail do usuário"), ("custom", "Outro e-mail")],
+        default="user",
+        validators=[Optional()],
+    )
+    notification_email = StringField(
+        "E-mail personalizado",
+        validators=[Optional(), Email(), Length(max=255)],
+        filters=[lambda value: value.strip() if value else value],
+    )
     submit = SubmitField("Salvar acordo")
+
+    def validate(self, extra_validators=None):
+        """Ensure notification settings are coherent when enabled."""
+
+        if not super().validate(extra_validators=extra_validators):
+            return False
+
+        if self.notify_user.data:
+            destination = (self.notification_destination.data or "user").strip()
+            if destination not in {"user", "custom"}:
+                self.notification_destination.data = "user"
+                destination = "user"
+
+            if destination == "custom":
+                if not self.notification_email.data:
+                    self.notification_email.errors.append(
+                        "Informe um e-mail válido para o envio da notificação."
+                    )
+                    return False
+        return True
 
 
 class CourseForm(FlaskForm):
