@@ -24,7 +24,7 @@
                 class="btn btn-primary btn-sm"
                 type="button"
                 data-bs-toggle="modal"
-                data-bs-target="#novoAtalhoModal"
+                data-bs-target="#accessShortcutModal"
             >
                 <i class="bi bi-plus-lg me-1"></i>
                 Adicionar atalho
@@ -87,6 +87,19 @@
                                             </button>
                                             {% endif %}
                                         </div>
+                                        {% if current_user.role == 'admin' %}
+                                        <div class="d-flex justify-content-end">
+                                            <a
+                                                class="btn btn-link btn-sm text-decoration-none px-0 access-shortcut-edit"
+                                                href="{{ url_for('acessos_editar', link_id=link.id) }}"
+                                                title="Editar atalho"
+                                                aria-label="Editar atalho {{ link.label }}"
+                                            >
+                                                <i class="bi bi-pencil me-1"></i>
+                                                Editar
+                                            </a>
+                                        </div>
+                                        {% endif %}
                                         {% if link.description %}
                                         <div class="collapse access-description" id="access-description-{{ link.id }}">
                                             <div class="small text-muted">{{ link.description | replace('\n', '<br>') | safe }}</div>
@@ -108,22 +121,26 @@
 </div>
 
 {% if current_user.role == 'admin' and form %}
+{% set modal_id = 'accessShortcutModal' %}
 <div
     class="modal fade"
-    id="novoAtalhoModal"
+    id="{{ modal_id }}"
     tabindex="-1"
-    aria-labelledby="novoAtalhoModalLabel"
+    aria-labelledby="{{ modal_id }}Label"
     aria-hidden="true"
 >
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content text-start">
             <div class="modal-header border-0 pb-0">
                 <div class="d-flex flex-column">
-                    <h2 class="modal-title h5 mb-0 text-start" id="novoAtalhoModalLabel">Novo atalho</h2>
+                    <h2 class="modal-title h5 mb-0 text-start" id="{{ modal_id }}Label">{{ modal_title }}</h2>
+                    {% if editing_link %}
+                    <p class="small text-muted mb-0">Editando atalho <strong>{{ editing_link.label }}</strong></p>
+                    {% endif %}
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <form method="post" action="{{ url_for('acessos_novo') }}" novalidate>
+            <form method="post" action="{{ form_action }}" novalidate>
                 <div class="modal-body text-start">
                     {{ form.hidden_tag() }}
                     <div class="row g-3">
@@ -177,7 +194,7 @@
                     <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-check-lg me-2"></i>
-                        Salvar atalho
+                        {{ submit_label }}
                     </button>
                 </div>
             </form>
@@ -191,7 +208,7 @@
 {% if current_user.role == 'admin' and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var modalElement = document.getElementById('novoAtalhoModal');
+        var modalElement = document.getElementById('{{ modal_id }}');
         if (!modalElement) {
             return;
         }

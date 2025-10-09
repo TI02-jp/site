@@ -258,6 +258,20 @@ Atalhos (Central de Acessos)
     font-size: var(--font-lg);
 }
 
+.access-shortcut-edit {
+    color: var(--bs-secondary);
+}
+
+.access-shortcut-edit .bi {
+    font-size: 0.875rem;
+}
+
+.access-shortcut-edit:hover,
+.access-shortcut-edit:focus {
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
 .access-description-toggle {
     position: absolute;
     top: 0;

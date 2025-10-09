@@ -135,12 +135,12 @@ ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
 
 ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
     "fiscal": {
-        "title": "Fiscal",
+        "title": "FISCAL/CONTÁBIL",
         "description": "Sistemas utilizados pela equipe fiscal para gestão de obrigações e documentos.",
         "icon": "bi bi-clipboard-data",
     },
     "contabil": {
-        "title": "Contábil",
+        "title": "ADMINISTRATIVO",
         "description": "Ferramentas que apoiam a rotina contábil e o envio de documentos.",
         "icon": "bi bi-journal-check",
     },
@@ -1557,6 +1557,10 @@ def _build_acessos_context(
     form: "AccessLinkForm | None" = None,
     *,
     open_modal: bool = False,
+    editing_link: AccessLink | None = None,
+    form_action: str | None = None,
+    modal_title: str | None = None,
+    submit_label: str | None = None,
 ):
     """Return the template data used by the access hub pages."""
 
@@ -1568,11 +1572,28 @@ def _build_acessos_context(
         )
         for slug in ACESSOS_CATEGORIES
     }
+
+    if submit_label is None:
+        submit_label = "Salvar alterações" if editing_link else "Salvar atalho"
+
+    if modal_title is None:
+        modal_title = "Editar atalho" if editing_link else "Novo atalho"
+
+    if form_action is None and form is not None:
+        if editing_link:
+            form_action = url_for("acessos_editar", link_id=editing_link.id)
+        else:
+            form_action = url_for("acessos_novo")
+
     return {
         "categorias": ACESSOS_CATEGORIES,
         "categoria_links": categoria_links,
         "form": form,
         "open_modal": open_modal,
+        "editing_link": editing_link,
+        "form_action": form_action,
+        "modal_title": modal_title,
+        "submit_label": submit_label,
     }
 
 
@@ -1678,6 +1699,50 @@ def acessos_categoria_novo(categoria_slug: str):
     if not form.category.data:
         form.category.data = categoria_slug
     return _handle_access_shortcut_submission(form)
+
+
+@app.route("/acessos/<int:link_id>/editar", methods=["GET", "POST"])
+@login_required
+def acessos_editar(link_id: int):
+    """Display and process the form to edit an existing shortcut."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    link = AccessLink.query.get_or_404(link_id)
+
+    form = AccessLinkForm()
+    form.category.choices = _access_category_choices()
+    form.submit.label.text = "Salvar alterações"
+
+    is_valid_submission = form.validate_on_submit()
+
+    if request.method == "POST" and is_valid_submission:
+        link.category = form.category.data
+        link.label = form.label.data.strip()
+        link.url = form.url.data.strip()
+        link.description = (form.description.data or "").strip() or None
+        db.session.commit()
+        flash("Atalho atualizado com sucesso!", "success")
+        return redirect(url_for("acessos"))
+
+    if request.method == "GET":
+        form.category.data = link.category
+        form.label.data = link.label
+        form.url.data = link.url
+        form.description.data = link.description
+    elif request.method == "POST" and not is_valid_submission:
+        flash(
+            "Não foi possível atualizar o atalho. Verifique os campos destacados e tente novamente.",
+            "danger",
+        )
+
+    context = _build_acessos_context(
+        form=form,
+        open_modal=True,
+        editing_link=link,
+    )
+    return render_template("acessos.html", **context)
 
 
 @app.route("/ping")
