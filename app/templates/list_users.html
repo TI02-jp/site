@@ -2,6 +2,255 @@
 
 {% block title %}Usuários Cadastrados{% endblock %}
 
+{% block styles %}
+{{ super() }}
+{% if create_form %}
+<style>
+    body.modal-open {
+        overflow: hidden;
+    }
+
+    .user-modal .modal-dialog {
+        max-width: 940px;
+        width: calc(100% - 2rem);
+    }
+
+    .user-modal .modal-content {
+        border-radius: 1rem;
+        box-shadow: 0 0 35px rgba(16, 24, 40, 0.18);
+    }
+
+    .user-modal .modal-header {
+        border-bottom: none;
+    }
+
+    .user-modal .modal-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .user-modal .modal-body {
+        padding: 1.35rem 2rem 1.2rem;
+        font-size: 0.94rem;
+    }
+
+    .user-modal .modal-body h5.section-title {
+        font-size: 0.96rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .user-modal .form-label {
+        font-size: 0.86rem;
+    }
+
+    .user-modal .form-control,
+    .user-modal .form-select {
+        font-size: 0.88rem;
+        padding-top: 0.38rem;
+        padding-bottom: 0.38rem;
+    }
+
+    .user-modal .input-group-text {
+        font-size: 0.82rem;
+    }
+
+    .user-modal .alert {
+        padding: 0.6rem 0.85rem;
+        font-size: 0.86rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .user-modal .form-check-label,
+    .user-modal .form-text {
+        font-size: 0.83rem;
+    }
+
+    .user-modal .form-check.form-switch .form-check-input {
+        width: 2.4rem;
+        height: 1.2rem;
+        margin-right: 0.55rem;
+    }
+
+    .user-modal .form-check.form-switch .form-check-label {
+        padding-top: 0.1rem;
+    }
+
+    .user-modal .modal-footer {
+        border-top: none;
+        padding: 0.85rem 2rem 1.3rem;
+    }
+
+    .user-modal .btn {
+        font-size: 0.9rem;
+        padding: 0.42rem 1.4rem;
+    }
+
+    .user-modal .user-form--edit .section-divider {
+        margin-bottom: 1rem;
+    }
+
+    .user-modal .user-form--edit .row.gap-tight {
+        row-gap: 0.85rem;
+    }
+
+    .user-modal .tag-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.35rem 0.9rem !important;
+    }
+
+    .user-modal.user-modal--create .user-form--create .section-divider {
+        margin-bottom: 1rem;
+    }
+
+    .user-modal.user-modal--create .user-form--create .row.gap-tight {
+        row-gap: 0.95rem;
+    }
+
+    .user-modal .tag-grid .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .user-modal .modal-dialog {
+            max-width: 100%;
+        }
+
+        .user-modal .modal-body {
+            padding: 1.2rem 1.4rem 1.1rem;
+        }
+    }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if create_form %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const createModalEl = document.getElementById('createUserModal');
+        if (!createModalEl) {
+            return;
+        }
+
+        const autoShow = createModalEl.dataset.autoshow === 'true';
+
+        function setupValidation(modalEl) {
+            const passwordField = modalEl.querySelector('#password');
+            const confirmPasswordField = modalEl.querySelector('#confirmPassword');
+            const newPasswordField = modalEl.querySelector('#newPassword');
+            const confirmNewPasswordField = modalEl.querySelector('#confirmNewPassword');
+
+            function validatePair(primaryField, confirmationField) {
+                if (!primaryField || !confirmationField) {
+                    return;
+                }
+
+                const primaryValue = primaryField.value;
+                const confirmValue = confirmationField.value;
+
+                if (confirmValue.length === 0) {
+                    confirmationField.classList.remove('is-valid', 'is-invalid');
+                    return;
+                }
+
+                if (primaryValue === confirmValue) {
+                    confirmationField.classList.add('is-valid');
+                    confirmationField.classList.remove('is-invalid');
+                } else {
+                    confirmationField.classList.add('is-invalid');
+                    confirmationField.classList.remove('is-valid');
+                }
+            }
+
+            if (passwordField && confirmPasswordField) {
+                passwordField.addEventListener('input', function () {
+                    validatePair(passwordField, confirmPasswordField);
+                });
+                confirmPasswordField.addEventListener('input', function () {
+                    validatePair(passwordField, confirmPasswordField);
+                });
+            }
+
+            if (newPasswordField && confirmNewPasswordField) {
+                newPasswordField.addEventListener('input', function () {
+                    validatePair(newPasswordField, confirmNewPasswordField);
+                });
+                confirmNewPasswordField.addEventListener('input', function () {
+                    validatePair(newPasswordField, confirmNewPasswordField);
+                });
+            }
+
+            const usernameField = modalEl.querySelector('#username');
+            if (usernameField) {
+                usernameField.addEventListener('input', function () {
+                    const username = this.value.trim();
+                    if (username.length >= 3) {
+                        this.classList.add('is-valid');
+                        this.classList.remove('is-invalid');
+                    } else if (username.length > 0) {
+                        this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
+                    } else {
+                        this.classList.remove('is-valid', 'is-invalid');
+                    }
+                });
+            }
+
+            const emailField = modalEl.querySelector('#email');
+            if (emailField) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                emailField.addEventListener('input', function () {
+                    const email = this.value.trim();
+                    if (email.length > 0) {
+                        if (emailRegex.test(email)) {
+                            this.classList.add('is-valid');
+                            this.classList.remove('is-invalid');
+                        } else {
+                            this.classList.add('is-invalid');
+                            this.classList.remove('is-valid');
+                        }
+                    } else {
+                        this.classList.remove('is-valid', 'is-invalid');
+                    }
+                });
+            }
+
+            const alerts = modalEl.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function (alert) {
+                setTimeout(function () {
+                    if (alert && window.bootstrap && bootstrap.Alert) {
+                        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        bsAlert.close();
+                    }
+                }, 5000);
+            });
+        }
+
+        if (window.bootstrap && bootstrap.Modal) {
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(createModalEl);
+            createModalEl.addEventListener('shown.bs.modal', function () {
+                setupValidation(createModalEl);
+            }, { once: true });
+
+            if (autoShow) {
+                modalInstance.show();
+            }
+        } else if (autoShow) {
+            createModalEl.classList.add('show');
+            createModalEl.style.display = 'block';
+            document.body.classList.add('modal-open');
+            setupValidation(createModalEl);
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}
+
 {% block sidebar_nav %}
 {% include 'sidebar_home.html' %}
 {% endblock %}
@@ -31,9 +280,9 @@
                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tagsModal">
                         <i class="bi bi-tags me-1"></i>Tags
                     </button>
-                    <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
                         <i class="bi bi-person-plus me-1"></i>Novo Usuário
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -125,6 +374,35 @@
         </div>
     </div>
 </div>
+
+{% if create_form %}
+<div class="modal fade user-modal user-modal--create" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel"
+     aria-hidden="true" data-autoshow="{{ 'true' if show_create_modal else 'false' }}">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title" id="createUserModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Cadastrar Novo Usuário
+                </h5>
+                <a href="{{ create_cancel_url }}" class="btn-close btn-close-white" aria-label="Fechar"></a>
+            </div>
+            <div class="modal-body">
+                {% with form=create_form, editing=False, section_spacing='mb-3', heading_spacing='mb-2', form_action=create_form_action %}
+                    {% include 'admin/_user_form_fields.html' %}
+                {% endwith %}
+            </div>
+            <div class="modal-footer d-flex justify-content-end gap-2">
+                <a href="{{ create_cancel_url }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Fechar
+                </a>
+                <button type="submit" form="userForm" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-2"></i>{{ create_submit_label }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Modal de Tags -->
 <div class="modal fade" id="tagsModal" tabindex="-1" aria-labelledby="tagsModalLabel" aria-hidden="true">

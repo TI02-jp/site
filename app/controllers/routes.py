@@ -4061,10 +4061,24 @@ def list_users():
                         flash("Tag atualizada com sucesso!", "success")
                         return redirect(url_for("list_users", open_tag_modal="1"))
 
+    create_form = RegistrationForm()
+    create_form.tags.choices = [(t.id, t.nome) for t in tag_list]
     users_query = User.query
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
     users = users_query.order_by(User.ativo.desc(), User.name).all()
+
+    list_url_params = {}
+    if show_inactive:
+        list_url_params["show_inactive"] = "1"
+
+    show_create_modal = request.args.get("open_create_modal") in (
+        "1",
+        "true",
+        "True",
+        "on",
+    )
+
     return render_template(
         "list_users.html",
         users=users,
@@ -4074,6 +4088,11 @@ def list_users():
         tag_list=tag_list,
         show_inactive=show_inactive,
         open_tag_modal=open_tag_modal,
+        create_form=create_form,
+        create_form_action=url_for("novo_usuario", **list_url_params),
+        create_submit_label=create_form.submit.label.text or "Cadastrar",
+        create_cancel_url=url_for("list_users", **list_url_params),
+        show_create_modal=show_create_modal,
     )
 
 
@@ -4098,8 +4117,8 @@ def novo_usuario():
 
     form = RegistrationForm()
     tag_query = Tag.query.order_by(Tag.nome)
-    tag_choices = [(t.id, t.nome) for t in tag_query.all()]
-    form.tags.choices = tag_choices
+    tag_list = tag_query.all()
+    form.tags.choices = [(t.id, t.nome) for t in tag_list]
 
     if form.validate_on_submit():
         existing_user = User.query.filter(
@@ -4125,15 +4144,38 @@ def novo_usuario():
             db.session.add(user)
             db.session.commit()
             flash("Novo usuário cadastrado com sucesso!", "success")
-            return redirect(url_for("list_users"))
+            redirect_params = {}
+            if request.args.get("show_inactive") in ("1", "on"):
+                redirect_params["show_inactive"] = "1"
+            return redirect(url_for("list_users", **redirect_params))
+
+    tag_create_form = TagForm(prefix="tag_create")
+    tag_create_form.submit.label.text = "Adicionar"
+    tag_edit_form = TagForm(prefix="tag_edit")
+    tag_edit_form.submit.label.text = "Salvar alterações"
+
+    show_inactive = request.args.get("show_inactive") in ("1", "on")
+    users_query = User.query
+    if not show_inactive:
+        users_query = users_query.filter_by(ativo=True)
+    users = users_query.order_by(User.ativo.desc(), User.name).all()
+
+    list_url_params = {"show_inactive": "1"} if show_inactive else {}
 
     return render_template(
-        "admin/novo_usuario.html",
-        form=form,
-        is_edit=False,
-        form_action=url_for("novo_usuario"),
-        cancel_url=url_for("list_users"),
-        submit_label=form.submit.label.text,
+        "list_users.html",
+        users=users,
+        tag_create_form=tag_create_form,
+        tag_edit_form=tag_edit_form,
+        edit_tag=None,
+        tag_list=tag_list,
+        show_inactive=show_inactive,
+        open_tag_modal=False,
+        create_form=form,
+        create_form_action=url_for("novo_usuario", **list_url_params),
+        create_submit_label=form.submit.label.text or "Cadastrar",
+        create_cancel_url=url_for("list_users", **list_url_params),
+        show_create_modal=True,
     )
 
 
