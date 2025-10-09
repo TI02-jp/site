@@ -27,6 +27,30 @@
             background: #ffffff;
         }
 
+        .acordos-users-card {
+            position: sticky;
+            top: 1.5rem;
+            max-height: calc(100vh - 3rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .acordos-users-card .card-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+
+        @media (max-width: 991.98px) {
+            .acordos-users-card {
+                position: static;
+                max-height: none;
+            }
+
+            .acordos-users-card .card-body {
+                overflow: visible;
+            }
+        }
+
         .acordos-card .card-header {
             border-bottom: 1px solid rgba(15, 23, 42, 0.08);
             background: #ffffff;
@@ -170,7 +194,7 @@
         </div>
 
         <div class="acordos-layout">
-            <div class="acordos-card h-100">
+            <div class="acordos-card acordos-users-card h-100">
                 <div class="card-header">
                     <h2 class="h6 mb-0 text-primary fw-semibold">Usuários do portal</h2>
                 </div>
