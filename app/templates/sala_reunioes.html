@@ -137,6 +137,37 @@
     .meeting-modal-dialog .additional-date-group {
         min-width: 190px;
     }
+    .meeting-modal-dialog .modal-content {
+        position: relative;
+        overflow: hidden;
+    }
+    .meeting-modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(33, 37, 41, 0.58);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 30;
+        backdrop-filter: blur(1.5px);
+        cursor: wait;
+    }
+    .meeting-modal-overlay.d-none {
+        display: none !important;
+    }
+    .meeting-modal-overlay__alert {
+        width: min(420px, 100%);
+        box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.35);
+    }
+    .meeting-modal-overlay__alert .spinner-border {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+    .meeting-modal-overlay__message {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
     </style>
 {% endblock %}
 
@@ -164,6 +195,28 @@
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-xl meeting-modal-dialog">
                     <div class="modal-content">
+                        <div
+                            class="meeting-modal-overlay d-none"
+                            id="meetingCreationOverlay"
+                            aria-hidden="true"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <div class="meeting-modal-overlay__alert alert alert-info mb-0">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="spinner-border text-info" role="presentation" aria-hidden="true"></div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="bi bi-info-circle-fill fs-5" aria-hidden="true"></i>
+                                            <span class="fw-semibold">Estamos criando sua reunião</span>
+                                        </div>
+                                        <p class="meeting-modal-overlay__message mb-0">
+                                            Aguarde alguns instantes enquanto finalizamos o agendamento.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="modal-header align-items-start">
                             <h5 class="modal-title">Agendar Reunião</h5>
                             <button type="button"
@@ -255,7 +308,7 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                {{ form.submit(class="btn btn-primary") }}
+                                {{ form.submit(class="btn btn-primary", id="meetingSubmitButton") }}
                             </div>
                         </form>
                     </div>
@@ -523,6 +576,55 @@
     var deleteMeetingForm = document.getElementById('deleteMeetingForm');
     var eventDetailsModalEl = document.getElementById('eventDetailsModal');
     var eventDetailsModalInstance = null;
+    var meetingModalEl = document.getElementById('meetingModal');
+    var meetingFormEl = meetingModalEl ? meetingModalEl.querySelector('form') : null;
+    var meetingOverlayEl = document.getElementById('meetingCreationOverlay');
+    var meetingSubmitButton = document.getElementById('meetingSubmitButton');
+    var meetingIdInput = document.getElementById('meeting_id');
+
+    function hideMeetingCreationOverlay() {
+        if (meetingOverlayEl) {
+            meetingOverlayEl.classList.add('d-none');
+            meetingOverlayEl.setAttribute('aria-hidden', 'true');
+        }
+        if (meetingSubmitButton) {
+            meetingSubmitButton.disabled = false;
+            if (meetingSubmitButton.dataset.originalLabel !== undefined) {
+                meetingSubmitButton.value = meetingSubmitButton.dataset.originalLabel;
+                delete meetingSubmitButton.dataset.originalLabel;
+            }
+        }
+    }
+
+    function showMeetingCreationOverlay() {
+        if (meetingOverlayEl) {
+            meetingOverlayEl.classList.remove('d-none');
+            meetingOverlayEl.setAttribute('aria-hidden', 'false');
+        }
+        if (meetingSubmitButton) {
+            meetingSubmitButton.dataset.originalLabel = meetingSubmitButton.value || '';
+            meetingSubmitButton.value = 'Agendando...';
+            meetingSubmitButton.disabled = true;
+        }
+    }
+
+    if (meetingModalEl) {
+        meetingModalEl.addEventListener('show.bs.modal', function() {
+            hideMeetingCreationOverlay();
+        });
+        meetingModalEl.addEventListener('hidden.bs.modal', function() {
+            hideMeetingCreationOverlay();
+        });
+    }
+
+    if (meetingFormEl) {
+        meetingFormEl.addEventListener('submit', function() {
+            if (meetingIdInput && meetingIdInput.value) {
+                return;
+            }
+            showMeetingCreationOverlay();
+        });
+    }
 
     function getMeetConfigModal() {
         if (!meetConfigModalEl) {
@@ -1362,6 +1464,7 @@
     }
     function openNewMeeting(dateStr) {
         var form = document.querySelector('#meetingModal form');
+        hideMeetingCreationOverlay();
         form.reset();
         if (applyMoreDaysCheckbox) {
             applyMoreDaysCheckbox.checked = false;
@@ -1546,6 +1649,7 @@
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
         detailModal.hide();
         var form = document.querySelector('#meetingModal form');
+        hideMeetingCreationOverlay();
         document.getElementById('meeting_id').value = currentEvent.id || '';
         var courseInput = document.getElementById('meeting_course_id');
         if (courseInput) {
