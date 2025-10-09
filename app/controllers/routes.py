@@ -76,7 +76,7 @@ from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String, text, inspect
-from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError
+from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 from google_auth_oauthlib.flow import Flow
@@ -147,6 +147,10 @@ def ensure_diretoria_agreement_schema() -> None:
             constraint["name"]
             for constraint in inspector.get_unique_constraints("diretoria_agreements")
         }
+        indexes = {
+            index["name"]: index for index in inspector.get_indexes("diretoria_agreements")
+        }
+        foreign_keys = inspector.get_foreign_keys("diretoria_agreements")
     except NoSuchTableError:
         # Table is missing entirely – nothing to fix at runtime.
         return
@@ -166,16 +170,85 @@ def ensure_diretoria_agreement_schema() -> None:
 
     dialect = bind.dialect.name
 
+    user_fk = next(
+        (
+            fk
+            for fk in foreign_keys
+            if fk.get("constrained_columns") == ["user_id"]
+        ),
+        None,
+    )
+
+    def quote_identifier(identifier: str) -> str:
+        if dialect == "mysql":
+            return f"`{identifier}`"
+        if dialect == "postgresql":
+            return f'"{identifier}"'
+        return identifier
+
+    has_nonunique_user_index = any(
+        index.get("column_names") == ["user_id"]
+        and not index.get("unique", False)
+        for index in indexes.values()
+        if index.get("name") != "uq_diretoria_agreements_user_id"
+    )
+
     try:
         with bind.begin() as connection:
             if needs_unique_drop:
                 if dialect == "mysql":
+                    fk_name = (user_fk or {}).get("name")
+                    referred_table = (user_fk or {}).get("referred_table")
+                    referred_columns = (user_fk or {}).get("referred_columns") or []
+                    fk_options = (user_fk or {}).get("options") or {}
+
+                    if fk_name:
+                        connection.execute(
+                            text(
+                                "ALTER TABLE diretoria_agreements "
+                                f"DROP FOREIGN KEY {quote_identifier(fk_name)}"
+                            )
+                        )
+
                     connection.execute(
                         text(
                             "ALTER TABLE diretoria_agreements "
                             "DROP INDEX uq_diretoria_agreements_user_id"
                         )
                     )
+
+                    if not has_nonunique_user_index:
+                        try:
+                            connection.execute(
+                                text(
+                                    "ALTER TABLE diretoria_agreements "
+                                    "ADD INDEX ix_diretoria_agreements_user_id (user_id)"
+                                )
+                            )
+                        except OperationalError as add_index_exc:
+                            # Error code 1061 indicates the index already exists.
+                            if getattr(getattr(add_index_exc, "orig", None), "args", [None])[0] != 1061:
+                                raise
+
+                    if fk_name and referred_table and referred_columns:
+                        referenced_cols_sql = ", ".join(
+                            quote_identifier(column) for column in referred_columns
+                        )
+                        constraint_sql = (
+                            "ALTER TABLE diretoria_agreements "
+                            f"ADD CONSTRAINT {quote_identifier(fk_name)} "
+                            "FOREIGN KEY (user_id) "
+                            f"REFERENCES {quote_identifier(referred_table)} "
+                            f"({referenced_cols_sql})"
+                        )
+                        ondelete = fk_options.get("ondelete")
+                        if ondelete:
+                            constraint_sql += f" ON DELETE {ondelete.upper()}"
+                        onupdate = fk_options.get("onupdate")
+                        if onupdate:
+                            constraint_sql += f" ON UPDATE {onupdate.upper()}"
+
+                        connection.execute(text(constraint_sql))
                 else:
                     connection.execute(
                         text(
@@ -212,7 +285,7 @@ def ensure_diretoria_agreement_schema() -> None:
                             "ALTER COLUMN agreement_date SET NOT NULL"
                         )
                     )
-    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
+    except (SQLAlchemyError, OperationalError) as exc:  # pragma: no cover - defensive logging path
         db.session.rollback()
         current_app.logger.error(
             "Não foi possível ajustar a tabela diretoria_agreements automaticamente: %s",
