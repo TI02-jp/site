@@ -3992,6 +3992,7 @@ def logout():
 def list_users():
     """List and register users in the admin panel."""
     form = RegistrationForm()
+    edit_form = EditUserForm(prefix="edit")
     tag_create_form = TagForm(prefix="tag_create")
     tag_create_form.submit.label.text = "Adicionar"
     tag_edit_form = TagForm(prefix="tag_edit")
@@ -3999,11 +4000,16 @@ def list_users():
     tag_query = Tag.query.order_by(Tag.nome)
     tag_list = tag_query.all()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
+    edit_form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
     open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
+    open_edit_modal = request.args.get("open_edit_modal") in ("1", "true", "True")
     edit_tag = None
     edit_tag_id_arg = request.args.get("edit_tag_id", type=int)
+    editing_user = None
+    editing_user_id = request.args.get("edit_user_id", type=int)
+    edit_password_error = None
     if edit_tag_id_arg:
         open_tag_modal = True
         edit_tag = Tag.query.get(edit_tag_id_arg)
@@ -4011,6 +4017,19 @@ def list_users():
             flash("Tag não encontrada.", "warning")
         elif request.method == "GET":
             tag_edit_form.nome.data = edit_tag.nome
+
+    if editing_user_id:
+        editing_user = User.query.get(editing_user_id)
+        if not editing_user:
+            flash("Usuário não encontrado.", "warning")
+            editing_user_id = None
+        else:
+            if editing_user.is_master and current_user.id != editing_user.id:
+                abort(403)
+            if request.method == "GET":
+                edit_form.process(obj=editing_user)
+                edit_form.tags.data = [t.id for t in editing_user.tags]
+            open_edit_modal = True
 
     if request.method == "POST":
         form_name = request.form.get("form_name")
@@ -4042,6 +4061,54 @@ def list_users():
                     db.session.commit()
                     flash("Novo usuário cadastrado com sucesso!", "success")
                     return redirect(url_for("list_users"))
+
+        if form_name == "user_edit":
+            open_edit_modal = True
+            edit_user_id_raw = request.form.get("user_id")
+            try:
+                editing_user_id = int(edit_user_id_raw) if edit_user_id_raw is not None else None
+            except (TypeError, ValueError):
+                editing_user_id = None
+            editing_user = (
+                User.query.options(joinedload(User.tags)).get(editing_user_id)
+                if editing_user_id is not None
+                else None
+            )
+            if not editing_user:
+                flash("Usuário não encontrado.", "warning")
+            else:
+                if editing_user.is_master and current_user.id != editing_user.id:
+                    abort(403)
+                if edit_form.validate_on_submit():
+                    editing_user.username = edit_form.username.data
+                    editing_user.email = edit_form.email.data
+                    editing_user.name = edit_form.name.data
+                    if not editing_user.is_master:
+                        editing_user.role = edit_form.role.data
+                        editing_user.ativo = edit_form.ativo.data
+                    else:
+                        editing_user.ativo = True
+                    if edit_form.tags.data:
+                        editing_user.tags = (
+                            Tag.query.filter(Tag.id.in_(edit_form.tags.data)).all()
+                        )
+                    else:
+                        editing_user.tags = []
+
+                    new_password = request.form.get("new_password")
+                    confirm_new_password = request.form.get("confirm_new_password")
+                    if new_password:
+                        if new_password != confirm_new_password:
+                            edit_password_error = "As senhas devem ser iguais."
+                        else:
+                            editing_user.set_password(new_password)
+
+                    if edit_password_error:
+                        flash(edit_password_error, "danger")
+                    else:
+                        db.session.commit()
+                        flash("Usuário atualizado com sucesso!", "success")
+                        return redirect(url_for("list_users"))
 
         if form_name == "tag_create":
             open_tag_modal = True
@@ -4100,6 +4167,7 @@ def list_users():
         "list_users.html",
         users=users,
         form=form,
+        edit_form=edit_form,
         tag_create_form=tag_create_form,
         tag_edit_form=tag_edit_form,
         edit_tag=edit_tag,
@@ -4107,6 +4175,10 @@ def list_users():
         show_inactive=show_inactive,
         open_tag_modal=open_tag_modal,
         open_user_modal=open_user_modal,
+        open_edit_modal=open_edit_modal,
+        editing_user=editing_user,
+        editing_user_id=editing_user_id,
+        edit_password_error=edit_password_error,
     )
 
 
@@ -4131,49 +4203,20 @@ def novo_usuario():
     return redirect(url_for("list_users", open_user_modal="1"))
 
 
-@app.route("/user/edit/<int:user_id>", methods=["GET", "POST"])
+@app.route("/user/edit/<int:user_id>", methods=["GET"])
 @admin_required
 def edit_user(user_id):
-    """Edit an existing user."""
+    """Redirect to the user list opening the edit modal for the selected user."""
     user = User.query.get_or_404(user_id)
     if user.is_master and current_user.id != user.id:
         abort(403)
-    form = EditUserForm(obj=user)
-    form.tags.choices = [(t.id, t.nome) for t in Tag.query.order_by(Tag.nome).all()]
-    if user.is_master:
-        form.role.data = user.role
-        form.ativo.data = True
-    if request.method == "GET":
-        form.tags.data = [t.id for t in user.tags]
-
-    if form.validate_on_submit():
-        user.username = form.username.data
-        user.email = form.email.data
-        user.name = form.name.data
-        if not user.is_master:
-            user.role = form.role.data
-            user.ativo = form.ativo.data
-        else:
-            user.ativo = True
-        if form.tags.data:
-            user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
-        else:
-            user.tags = []
-
-        # Process optional password change
-        new_password = request.form.get("new_password")
-        confirm_new_password = request.form.get("confirm_new_password")
-        if new_password:
-            if new_password != confirm_new_password:
-                flash("As senhas devem ser iguais.", "danger")
-                return redirect(url_for("edit_user", user_id=user.id))
-            user.set_password(new_password)
-
-        db.session.commit()
-        flash("Usuário atualizado com sucesso!", "success")
-        return redirect(url_for("list_users"))
-
-    return render_template("edit_user.html", form=form, user=user)
+    return redirect(
+        url_for(
+            "list_users",
+            open_edit_modal="1",
+            edit_user_id=user.id,
+        )
+    )
 
 
 # ---------------------- Task Management Routes ----------------------

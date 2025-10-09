@@ -95,11 +95,21 @@
                             </td>
                             <td class="text-start">
                                 {% if not user.is_master or current_user.id == user.id %}
-                                <a href="{{ url_for('edit_user', user_id=user.id) }}"
-                                   class="btn btn-sm btn-outline-primary"
-                                   title="Editar usuário">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        title="Editar usuário"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editarUsuarioModal"
+                                        data-user-id="{{ user.id }}"
+                                        data-user-name="{{ user.name|e }}"
+                                        data-user-email="{{ user.email|e }}"
+                                        data-user-username="{{ user.username|e }}"
+                                        data-user-role="{{ user.role }}"
+                                        data-user-ativo="{{ '1' if user.ativo else '0' }}"
+                                        data-user-master="{{ '1' if user.is_master else '0' }}"
+                                        data-user-tags="{{ user.tags | map(attribute='id') | list | join(',') }}">
                                     <i class="bi bi-pencil"></i>
-                                </a>
+                                </button>
                                 {% else %}
                                     <i class="bi bi-lock text-muted"></i>
                                 {% endif %}
@@ -261,6 +271,152 @@
   </div>
 </div>
 
+<!-- Modal de Editar Usuário -->
+<div class="modal fade" id="editarUsuarioModal" tabindex="-1" aria-labelledby="editarUsuarioModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <form id="editUserForm" method="POST" action="{{ url_for('list_users') }}" novalidate>
+        {{ edit_form.hidden_tag() }}
+        <input type="hidden" name="form_name" value="user_edit">
+        <input type="hidden" name="user_id" id="editUserIdInput" value="{{ editing_user_id or request.form.get('user_id', '') }}">
+        <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
+          <div class="w-100 d-flex align-items-start justify-content-between">
+            <h5 class="modal-title d-flex align-items-center gap-2 text-dark" id="editarUsuarioModalLabel">
+              <i class="bi bi-person-gear me-2"></i>
+              Editar Usuário
+              <span class="text-muted fw-normal ms-2" data-edit-modal-title-name>{{ editing_user.name if editing_user else '' }}</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+        </div>
+        <div class="modal-body px-4 pb-4 text-start">
+          <div class="container-fluid px-0">
+            <div class="row g-4 align-items-end">
+              <div class="col-12">
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Perfil e contato</h6>
+              </div>
+              <div class="col-lg-5 col-md-6">
+                <label class="form-label fw-semibold" for="{{ edit_form.name.id }}">{{ edit_form.name.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                  {{ edit_form.name(class="form-control" + (' is-invalid' if edit_form.name.errors else ''), placeholder="Nome completo") }}
+                </div>
+                {% for error in edit_form.name.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ edit_form.email.id }}">{{ edit_form.email.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                  {{ edit_form.email(class="form-control" + (' is-invalid' if edit_form.email.errors else ''), placeholder="E-mail") }}
+                </div>
+                {% for error in edit_form.email.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold" for="{{ edit_form.role.id }}">{{ edit_form.role.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                  {{ edit_form.role(class="form-select" + (' is-invalid' if edit_form.role.errors else '')) }}
+                </div>
+                {% for error in edit_form.role.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 pt-2 border-top">
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Acesso</h6>
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="{{ edit_form.username.id }}">{{ edit_form.username.label.text }}</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-person"></i></span>
+                  {{ edit_form.username(class="form-control" + (' is-invalid' if edit_form.username.errors else ''), placeholder="Usuário de acesso") }}
+                </div>
+                {% for error in edit_form.username.errors %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="edit_new_password">Nova Senha</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                  <input type="password" class="form-control" name="new_password" id="edit_new_password" placeholder="Digite a nova senha">
+                </div>
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <label class="form-label fw-semibold" for="edit_confirm_new_password">Confirmar Nova Senha</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                  <input type="password" class="form-control{{ ' is-invalid' if edit_password_error else '' }}" name="confirm_new_password" id="edit_confirm_new_password" placeholder="Confirme a nova senha">
+                </div>
+                {% if edit_password_error %}
+                  <div class="form-text text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ edit_password_error }}</div>
+                {% else %}
+                  <div class="form-text text-muted">Deixe os campos em branco para manter a senha atual.</div>
+                {% endif %}
+              </div>
+
+              <div class="col-12 pt-2 border-top">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Tags de usuário</h6>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Organize o usuário com tags</span>
+                    {% if current_user.role == 'admin' %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" title="Gerenciar tags" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#tagsModal">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                {% if edit_form.tags.choices %}
+                  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+                    {% for tag in edit_form.tags %}
+                      <div class="col">
+                        <div class="form-check">
+                          {{ tag(class="form-check-input") }}
+                          {{ tag.label(class="form-check-label") }}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-muted mb-0">Nenhuma tag disponível no momento.</p>
+                {% endif %}
+                {% for error in edit_form.tags.errors %}
+                  <div class="form-text text-danger mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 pt-2 border-top">
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Status</h6>
+              </div>
+              <div class="col-lg-4 col-md-6">
+                <div class="form-check form-switch">
+                  {{ edit_form.ativo(class="form-check-input", role="switch") }}
+                  {{ edit_form.ativo.label(class="form-check-label") }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-1"></i>Salvar alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Tags -->
 <div class="modal fade" id="tagsModal" tabindex="-1" aria-labelledby="tagsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -409,6 +565,171 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
         userModalEl.addEventListener('hidden.bs.modal', cleanupModalArtifacts);
+    }
+
+    const editUserModalEl = document.getElementById('editarUsuarioModal');
+    const editUserForm = document.getElementById('editUserForm');
+    const editModalTitleName = editUserModalEl ? editUserModalEl.querySelector('[data-edit-modal-title-name]') : null;
+    const editUserIdInput = document.getElementById('editUserIdInput');
+    const editNameField = document.getElementById('{{ edit_form.name.id }}');
+    const editEmailField = document.getElementById('{{ edit_form.email.id }}');
+    const editRoleField = document.getElementById('{{ edit_form.role.id }}');
+    const editUsernameField = document.getElementById('{{ edit_form.username.id }}');
+    const editAtivoField = document.getElementById('{{ edit_form.ativo.id }}');
+    const editTagsInputs = editUserForm ? editUserForm.querySelectorAll('input[name="{{ edit_form.tags.name }}"]') : [];
+    const editNewPasswordField = document.getElementById('edit_new_password');
+    const editConfirmNewPasswordField = document.getElementById('edit_confirm_new_password');
+
+    function setEditModalTitle(name) {
+        if (!editModalTitleName) {
+            return;
+        }
+        editModalTitleName.textContent = name ? `— ${name}` : '';
+    }
+
+    function clearEditFormFeedback() {
+        if (!editUserForm) {
+            return;
+        }
+        editUserForm.querySelectorAll('.is-valid, .is-invalid').forEach(function (field) {
+            field.classList.remove('is-valid', 'is-invalid');
+        });
+    }
+
+    function populateEditFormFromDataset(dataset) {
+        if (!dataset || !editUserForm) {
+            return;
+        }
+        clearEditFormFeedback();
+        const tagIds = dataset.userTags ? dataset.userTags.split(',').filter(Boolean) : [];
+        if (editUserIdInput) {
+            editUserIdInput.value = dataset.userId || '';
+        }
+        if (editNameField) {
+            editNameField.value = dataset.userName || '';
+        }
+        if (editEmailField) {
+            editEmailField.value = dataset.userEmail || '';
+        }
+        if (editRoleField && dataset.userRole) {
+            editRoleField.value = dataset.userRole;
+        }
+        if (editUsernameField) {
+            editUsernameField.value = dataset.userUsername || '';
+        }
+        if (editAtivoField) {
+            editAtivoField.checked = dataset.userAtivo === '1';
+        }
+        if (editTagsInputs) {
+            const tagSet = new Set(tagIds);
+            editTagsInputs.forEach(function (input) {
+                input.checked = tagSet.has(input.value);
+            });
+        }
+        if (editNewPasswordField) {
+            editNewPasswordField.value = '';
+        }
+        if (editConfirmNewPasswordField) {
+            editConfirmNewPasswordField.value = '';
+        }
+        setEditModalTitle(dataset.userName || '');
+    }
+
+    if (editUserModalEl) {
+        editUserModalEl.addEventListener('show.bs.modal', function (event) {
+            if (event.relatedTarget) {
+                populateEditFormFromDataset(event.relatedTarget.dataset);
+            }
+        });
+        editUserModalEl.addEventListener('shown.bs.modal', function () {
+            if (editNameField) {
+                editNameField.focus();
+            }
+        });
+        editUserModalEl.addEventListener('hidden.bs.modal', function () {
+            cleanupModalArtifacts();
+            if (editUserIdInput) {
+                editUserIdInput.value = '';
+            }
+            if (editNewPasswordField) {
+                editNewPasswordField.value = '';
+            }
+            if (editConfirmNewPasswordField) {
+                editConfirmNewPasswordField.value = '';
+            }
+            if (editTagsInputs) {
+                editTagsInputs.forEach(function (input) {
+                    input.checked = input.defaultChecked;
+                });
+            }
+            setEditModalTitle('');
+            clearEditFormFeedback();
+        });
+    }
+
+    const shouldOpenEditModal = {{ 'true' if open_edit_modal or edit_form.errors or edit_password_error else 'false' }};
+    if (shouldOpenEditModal && editUserModalEl) {
+        const editModal = new bootstrap.Modal(editUserModalEl);
+        editModal.show();
+        setEditModalTitle(editNameField ? editNameField.value : '');
+    }
+
+    function validateEditPasswordMatch() {
+        if (!editNewPasswordField || !editConfirmNewPasswordField) {
+            return;
+        }
+        const password = editNewPasswordField.value;
+        const confirmPassword = editConfirmNewPasswordField.value;
+        if (!confirmPassword) {
+            editConfirmNewPasswordField.classList.remove('is-valid', 'is-invalid');
+            return;
+        }
+        if (password === confirmPassword) {
+            editConfirmNewPasswordField.classList.add('is-valid');
+            editConfirmNewPasswordField.classList.remove('is-invalid');
+        } else {
+            editConfirmNewPasswordField.classList.add('is-invalid');
+            editConfirmNewPasswordField.classList.remove('is-valid');
+        }
+    }
+    if (editNewPasswordField && editConfirmNewPasswordField) {
+        editNewPasswordField.addEventListener('input', validateEditPasswordMatch);
+        editConfirmNewPasswordField.addEventListener('input', validateEditPasswordMatch);
+    }
+
+    if (editUsernameField) {
+        editUsernameField.addEventListener('input', function () {
+            const value = this.value.trim();
+            if (!value) {
+                this.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            if (value.length >= 3) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
+    }
+
+    if (editEmailField) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        editEmailField.addEventListener('input', function () {
+            const value = this.value.trim();
+            if (!value) {
+                this.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            if (emailRegex.test(value)) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
     }
 
     const passwordField = document.getElementById('password');
