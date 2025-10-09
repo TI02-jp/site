@@ -8,15 +8,76 @@
 {% block extra_css %}
     {{ super() }}
     <style>
+        .acordos-page-root {
+            --acordos-footer-offset: 0px;
+            --acordos-users-card-top: 0px;
+            --acordos-layout-top: 0px;
+            min-height: calc(100vh - var(--acordos-footer-offset));
+            display: flex;
+            flex-direction: column;
+        }
+
+        .acordos-page-root > .container-fluid {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            padding-bottom: 1rem !important;
+        }
+
         .acordos-layout {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: calc(100vh - var(--acordos-footer-offset) - var(--acordos-layout-top, 0px) - 1.5rem);
+            overflow: hidden;
             display: grid;
             grid-template-columns: 300px minmax(0, 1fr);
             gap: 1rem;
         }
 
+        .acordos-content-column {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .acordos-content-column > .acordos-card {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        .acordos-content-column > .acordos-card .card-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
         @media (max-width: 991.98px) {
             .acordos-layout {
                 grid-template-columns: 1fr;
+                max-height: none;
+                overflow: visible;
+            }
+
+            .acordos-content-column {
+                gap: 1rem;
+            }
+
+            .acordos-content-column > .acordos-card {
+                flex: none;
+                max-height: none;
+                overflow: visible;
+            }
+
+            .acordos-content-column > .acordos-card .card-body {
+                overflow: visible;
             }
         }
 
@@ -36,8 +97,8 @@
             top: 1.5rem;
             width: 300px;
             max-width: 100%;
-            height: 620px;
-            max-height: 620px;
+            height: clamp(240px, calc(100vh - var(--acordos-footer-offset) - var(--acordos-users-card-top, 0px) - 1.5rem), 620px);
+            max-height: clamp(240px, calc(100vh - var(--acordos-footer-offset) - var(--acordos-users-card-top, 0px) - 1.5rem), 620px);
             display: flex;
             flex-direction: column;
             flex: none;
@@ -259,7 +320,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-area flex-grow-1">
+<div class="content-area flex-grow-1 acordos-page-root">
     <div class="container-fluid py-3 py-lg-4">
         <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
             <div>
@@ -296,7 +357,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="acordos-content-column">
                 {% if selected_user %}
                 <div class="acordos-card{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
                     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -424,15 +485,15 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
-            {% else %}
-            <div class="acordo-placeholder">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-person-lines-fill"></i>
-                    <h2 class="h5 fw-semibold mb-0">Acordos da Diretoria JP</h2>
+                {% else %}
+                <div class="acordo-placeholder">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <h2 class="h5 fw-semibold mb-0">Acordos da Diretoria JP</h2>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -442,6 +503,36 @@
     {{ super() }}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const acordosPage = document.querySelector('.acordos-page-root');
+            const footer = document.querySelector('footer');
+            const usersCard = document.querySelector('.acordos-users-card');
+            const acordosLayout = document.querySelector('.acordos-layout');
+
+            function updateAcordosViewportMetrics() {
+                if (acordosPage) {
+                    const footerHeight = footer ? footer.offsetHeight : 0;
+                    acordosPage.style.setProperty('--acordos-footer-offset', `${footerHeight}px`);
+                }
+
+                if (acordosPage && usersCard) {
+                    const cardRect = usersCard.getBoundingClientRect();
+                    const topOffset = Math.max(cardRect.top, 0);
+                    acordosPage.style.setProperty('--acordos-users-card-top', `${topOffset}px`);
+                }
+
+                if (acordosPage && acordosLayout) {
+                    const layoutRect = acordosLayout.getBoundingClientRect();
+                    const layoutTop = Math.max(layoutRect.top, 0);
+                    acordosPage.style.setProperty('--acordos-layout-top', `${layoutTop}px`);
+                }
+            }
+
+            updateAcordosViewportMetrics();
+            requestAnimationFrame(updateAcordosViewportMetrics);
+            window.addEventListener('resize', updateAcordosViewportMetrics, { passive: true });
+            window.addEventListener('load', updateAcordosViewportMetrics);
+            window.addEventListener('scroll', updateAcordosViewportMetrics, { passive: true });
+
             const userRadios = document.querySelectorAll('[data-acordo-user]');
             const storageKey = 'diretoriaAcordosUsersScrollTop';
 
