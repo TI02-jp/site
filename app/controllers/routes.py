@@ -75,7 +75,8 @@ import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_, cast, String
+from sqlalchemy import or_, cast, String, text, inspect
+from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 from google_auth_oauthlib.flow import Flow
@@ -126,6 +127,101 @@ GOOGLE_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/gmail.addons.current.message.action",
     "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
 ]
+
+
+def ensure_diretoria_agreement_schema() -> None:
+    """Ensure the Diretoria agreements table has the expected columns."""
+
+    cache_key = "_diretoria_agreement_schema_checked"
+    if app.config.get(cache_key):
+        return
+
+    bind = db.session.get_bind()
+    if bind is None:
+        return
+
+    try:
+        inspector = inspect(bind)
+        columns = {column["name"] for column in inspector.get_columns("diretoria_agreements")}
+        unique_constraints = {
+            constraint["name"]
+            for constraint in inspector.get_unique_constraints("diretoria_agreements")
+        }
+    except NoSuchTableError:
+        # Table is missing entirely – nothing to fix at runtime.
+        return
+    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
+        db.session.rollback()
+        current_app.logger.warning(
+            "Falha ao inspecionar a tabela diretoria_agreements: %s", exc
+        )
+        return
+
+    needs_column = "agreement_date" not in columns
+    needs_unique_drop = "uq_diretoria_agreements_user_id" in unique_constraints
+
+    if not needs_column and not needs_unique_drop:
+        app.config[cache_key] = True
+        return
+
+    dialect = bind.dialect.name
+
+    try:
+        with bind.begin() as connection:
+            if needs_unique_drop:
+                if dialect == "mysql":
+                    connection.execute(
+                        text(
+                            "ALTER TABLE diretoria_agreements "
+                            "DROP INDEX uq_diretoria_agreements_user_id"
+                        )
+                    )
+                else:
+                    connection.execute(
+                        text(
+                            "ALTER TABLE diretoria_agreements "
+                            "DROP CONSTRAINT uq_diretoria_agreements_user_id"
+                        )
+                    )
+
+            if needs_column:
+                connection.execute(
+                    text(
+                        "ALTER TABLE diretoria_agreements "
+                        "ADD COLUMN agreement_date DATE NULL"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "UPDATE diretoria_agreements "
+                        "SET agreement_date = COALESCE(DATE(created_at), CURRENT_DATE)"
+                    )
+                )
+
+                if dialect == "mysql":
+                    connection.execute(
+                        text(
+                            "ALTER TABLE diretoria_agreements "
+                            "MODIFY agreement_date DATE NOT NULL"
+                        )
+                    )
+                else:
+                    connection.execute(
+                        text(
+                            "ALTER TABLE diretoria_agreements "
+                            "ALTER COLUMN agreement_date SET NOT NULL"
+                        )
+                    )
+    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
+        db.session.rollback()
+        current_app.logger.error(
+            "Não foi possível ajustar a tabela diretoria_agreements automaticamente: %s",
+            exc,
+        )
+        return
+
+    db.session.expire_all()
+    app.config[cache_key] = True
 
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
@@ -1087,6 +1183,8 @@ def diretoria_acordos():
 
     if current_user.role != "admin" and not user_has_tag("Gestão"):
         abort(403)
+
+    ensure_diretoria_agreement_schema()
 
     users = (
         User.query.filter(User.ativo.is_(True))
