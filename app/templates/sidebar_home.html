@@ -47,7 +47,7 @@
             </a>
         </li>
         {% if user_has_tag('Gestão') %}
-        {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %}
+        {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar', 'diretoria_acordos'] %}
         <li class="nav-item">
             <a class="nav-link{% if diretoria_active %} active{% endif %}"
                data-bs-toggle="collapse"
@@ -70,6 +70,12 @@
                         <a class="nav-link{% if request.endpoint in ['diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
                            href="{{ url_for('diretoria_eventos_lista') }}">
                             Listar Eventos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'diretoria_acordos' %} active{% endif %}"
+                           href="{{ url_for('diretoria_acordos') }}">
+                            Acordos
                         </a>
                     </li>
                 </ul>
