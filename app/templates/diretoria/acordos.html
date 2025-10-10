@@ -77,6 +77,10 @@
             overflow: visible;
         }
 
+        .acordos-card.acordos-card-search .acordos-search-form .input-group {
+            width: min(100%, 420px);
+        }
+
         .acordos-content-column > .acordos-card .card-body {
             flex: 1 1 auto;
             min-height: 0;
@@ -455,9 +459,6 @@
                                 </button>
                             </div>
                         </form>
-                        {% if not search_query %}
-                        <p class="text-muted small mb-0 mt-3">Informe um termo acima para encontrar acordos cadastrados em todo o portal.</p>
-                        {% endif %}
                     </div>
                 </div>
 
