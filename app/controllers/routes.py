@@ -1302,27 +1302,10 @@ def diretoria_acordos():
                 )
                 .all()
             )
-    agreement_entries: list[dict[str, Any]] = []
-    for agreement_item in agreements:
-        updated_display = agreement_item.updated_at
-        if updated_display:
-            if updated_display.tzinfo is None:
-                updated_display = updated_display.replace(tzinfo=timezone.utc)
-            updated_display = updated_display.astimezone(SAO_PAULO_TZ)
-
-        created_display = agreement_item.created_at
-        if created_display:
-            if created_display.tzinfo is None:
-                created_display = created_display.replace(tzinfo=timezone.utc)
-            created_display = created_display.astimezone(SAO_PAULO_TZ)
-
-        agreement_entries.append(
-            {
-                "record": agreement_item,
-                "updated_display": updated_display,
-                "created_display": created_display,
-            }
-        )
+    agreement_entries: list[dict[str, Any]] = [
+        {"record": agreement_item}
+        for agreement_item in agreements
+    ]
 
     search_entries: list[dict[str, Any]] = []
     if search_query:
@@ -1345,23 +1328,9 @@ def diretoria_acordos():
         )
 
     for agreement_item in search_results:
-        updated_display = agreement_item.updated_at
-        if updated_display:
-            if updated_display.tzinfo is None:
-                updated_display = updated_display.replace(tzinfo=timezone.utc)
-            updated_display = updated_display.astimezone(SAO_PAULO_TZ)
-
-        created_display = agreement_item.created_at
-        if created_display:
-            if created_display.tzinfo is None:
-                created_display = created_display.replace(tzinfo=timezone.utc)
-            created_display = created_display.astimezone(SAO_PAULO_TZ)
-
         search_entries.append(
             {
                 "record": agreement_item,
-                "updated_display": updated_display,
-                "created_display": created_display,
                 "user": agreement_item.user,
             }
         )
