@@ -427,7 +427,6 @@ class OperationalProcedure(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
-    summary = db.Column(db.Text, nullable=False, default="")
     description = db.Column(db.Text, nullable=False)
     created_by_id = db.Column(
         db.Integer,
