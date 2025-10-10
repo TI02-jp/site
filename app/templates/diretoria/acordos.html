@@ -215,7 +215,6 @@
             border: 1px solid rgba(11, 40, 139, 0.25);
             background: #f8f9fa;
             color: var(--primary);
-            font-weight: 600;
             font-size: 0.9rem;
             transition: all 0.2s ease-in-out;
             min-height: 48px;
@@ -425,18 +424,6 @@
                         {% if search_entries %}
                             {% for entry in search_entries %}
                                 {% set agreement = entry.record %}
-                                {% set updated_display = entry.updated_display %}
-                                {% set created_display = entry.created_display %}
-                                {% set created_at_display = (
-                                    created_display.strftime('%d/%m/%Y')
-                                    if created_display
-                                    else None
-                                ) %}
-                                {% set updated_at_display = (
-                                    updated_display.strftime('%d/%m/%Y')
-                                    if updated_display
-                                    else None
-                                ) %}
                                 {% set agreement_date_display = (
                                     agreement.agreement_date.strftime('%d/%m/%Y')
                                     if agreement.agreement_date
@@ -451,12 +438,8 @@
                                                 <span class="acordo-item-user">{{ entry_user.name if entry_user else 'Usuário indisponível' }}</span>
                                                 {% if agreement_date_display %}
                                                 <span class="ms-2 ms-md-3">Data do acordo {{ agreement_date_display }}</span>
-                                                {% endif %}
-                                                {% if created_at_display %}
-                                                <span class="ms-2 ms-md-3">Cadastrado em {{ created_at_display }}</span>
-                                                {% endif %}
-                                                {% if updated_at_display %}
-                                                <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }}</span>
+                                                {% else %}
+                                                <span class="ms-2 ms-md-3">Data do acordo não informada</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -577,16 +560,9 @@
                             {% if agreements %}
                                 {% for entry in agreement_entries %}
                                     {% set agreement = entry.record %}
-                                    {% set updated_display = entry.updated_display %}
-                                    {% set created_display = entry.created_display %}
-                                    {% set created_at_display = (
-                                        created_display.strftime('%d/%m/%Y')
-                                        if created_display
-                                        else None
-                                    ) %}
-                                    {% set updated_at_display = (
-                                        updated_display.strftime('%d/%m/%Y')
-                                        if updated_display
+                                    {% set agreement_date_display = (
+                                        agreement.agreement_date.strftime('%d/%m/%Y')
+                                        if agreement.agreement_date
                                         else None
                                     ) %}
                                     <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}" data-agreement-item>
@@ -594,9 +570,10 @@
                                             <div>
                                                 <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
                                                 <div class="acordo-item-meta">
-                                                    <span>Cadastrado em {{ created_at_display if created_at_display else 'N/D' }}</span>
-                                                    {% if updated_at_display %}
-                                                    <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }}</span>
+                                                    {% if agreement_date_display %}
+                                                    <span>Data do acordo {{ agreement_date_display }}</span>
+                                                    {% else %}
+                                                    <span>Data do acordo não informada</span>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -632,17 +609,7 @@
                 </div>
                 {% else %}
                 <div class="acordos-card acordos-card-placeholder">
-                    <div class="card-body">
-                        <div class="acordo-placeholder">
-                            <div class="d-flex align-items-center gap-3">
-                                <i class="bi bi-person-lines-fill"></i>
-                                <div>
-                                    <h2 class="h5 fw-semibold mb-1">Acordos da Diretoria JP</h2>
-                                    <p class="mb-0 text-muted">Selecione um usuário ao lado para cadastrar ou editar acordos.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card-body d-none"></div>
                 </div>
                 {% endif %}
             </div>
