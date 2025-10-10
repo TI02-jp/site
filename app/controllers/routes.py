@@ -310,6 +310,67 @@ def ensure_diretoria_agreement_schema() -> None:
     app.config[cache_key] = True
 
 
+def ensure_operational_procedure_summary_column() -> None:
+    """Ensure the summary column exists for operational procedures."""
+
+    cache_key = "_operational_procedure_summary_checked"
+    if app.config.get(cache_key):
+        return
+
+    bind = db.session.get_bind()
+    if bind is None:
+        return
+
+    try:
+        inspector = inspect(bind)
+        columns = {
+            column["name"]
+            for column in inspector.get_columns("operational_procedures")
+        }
+    except NoSuchTableError:
+        app.config[cache_key] = True
+        return
+    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
+        db.session.rollback()
+        current_app.logger.warning(
+            "Falha ao inspecionar a tabela operational_procedures: %s", exc
+        )
+        return
+
+    if "summary" in columns:
+        app.config[cache_key] = True
+        return
+
+    dialect = bind.dialect.name
+
+    def quote(identifier: str) -> str:
+        if dialect == "mysql":
+            return f"`{identifier}`"
+        if dialect == "postgresql":
+            return f'"{identifier}"'
+        return identifier
+
+    table = quote("operational_procedures")
+    column = quote("summary")
+
+    add_column_sql = text(f"ALTER TABLE {table} ADD COLUMN {column} TEXT NULL")
+    normalize_sql = text(f"UPDATE {table} SET {column} = '' WHERE {column} IS NULL")
+
+    try:
+        with bind.begin() as connection:
+            connection.execute(add_column_sql)
+            connection.execute(normalize_sql)
+    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
+        db.session.rollback()
+        current_app.logger.warning(
+            "Falha ao adicionar a coluna summary em operational_procedures: %s",
+            exc,
+        )
+        return
+
+    app.config[cache_key] = True
+
+
 EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
 
@@ -1267,6 +1328,8 @@ def mark_announcement_read(announcement_id: int):
 def operational_procedures():
     """List operational procedures with optional search."""
 
+    ensure_operational_procedure_summary_column()
+
     search_term = (request.args.get("q") or "").strip()
 
     base_query = OperationalProcedure.query.options(
@@ -1306,6 +1369,8 @@ def operational_procedures_new():
 
     if current_user.role != "admin":
         abort(403)
+
+    ensure_operational_procedure_summary_column()
 
     form = OperationalProcedureForm()
 
@@ -1366,6 +1431,8 @@ def operational_procedures_edit(procedure_id: int):
     if current_user.role != "admin":
         abort(403)
 
+    ensure_operational_procedure_summary_column()
+
     procedure = OperationalProcedure.query.get_or_404(procedure_id)
     form = OperationalProcedureForm()
 
@@ -1424,6 +1491,8 @@ def operational_procedures_edit(procedure_id: int):
 def operational_procedures_view(procedure_id: int):
     """Display a single operational procedure."""
 
+    ensure_operational_procedure_summary_column()
+
     procedure = (
         OperationalProcedure.query.options(
             joinedload(OperationalProcedure.created_by),
@@ -1450,6 +1519,8 @@ def operational_procedures_delete(procedure_id: int):
 
     if current_user.role != "admin":
         abort(403)
+
+    ensure_operational_procedure_summary_column()
 
     procedure = OperationalProcedure.query.get_or_404(procedure_id)
 
