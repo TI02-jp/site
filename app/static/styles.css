@@ -2584,7 +2584,10 @@ Usuários online
 
 /* --- Procedimentos Operacionais --- */
 .procedures-layout {
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .procedures-search .form-control {
@@ -2639,7 +2642,7 @@ Usuários online
     max-width: 100%;
     height: auto;
     display: block;
-    margin: 1rem auto;
+    margin: 1rem 0;
     border-radius: 0.9rem;
     box-shadow: 0 0.75rem 2rem rgba(11, 40, 139, 0.12);
 }

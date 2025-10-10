@@ -8,45 +8,41 @@
 
 {% block content %}
 <div class="container-fluid py-4 procedures-layout">
-    <div class="row justify-content-center">
-        <div class="col-lg-9 col-xl-8">
-            <a class="btn btn-link text-decoration-none ps-0" href="{{ cancel_url }}">
-                <i class="bi bi-arrow-left me-1"></i>Voltar
-            </a>
-            <div class="card shadow-sm">
-                <div class="card-body p-4 p-lg-5">
-                    <h1 class="h3 mb-4">{{ heading }}</h1>
-                    <form method="post" novalidate>
-                        {{ form.hidden_tag() }}
-                        <div class="mb-4">
-                            {{ form.title.label(class="form-label fw-semibold") }}
-                            {{ form.title(class="form-control form-control-lg" if not form.title.errors else "form-control form-control-lg is-invalid") }}
-                            {% if form.title.errors %}
-                            <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
-                            {% else %}
-                            <div class="form-text">Escolha um nome direto e fácil de identificar.</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-4">
-                            <label for="procedure-description-editor" class="form-label fw-semibold">Descrição</label>
-                            <div class="form-text mb-2">Cole textos, listas ou prints diretamente no campo abaixo.</div>
-                            <div id="procedure-description-editor"
-                                 class="procedure-editor"
-                                 contenteditable="true"
-                                 data-procedure-editor
-                                 data-placeholder="Descreva o passo a passo, inclua imagens e pontos de atenção...">{{ form.description.data|safe }}</div>
-                            {{ form.description(class_="d-none", **{"data-procedure-input": "true"}) }}
-                            {% if form.description.errors %}
-                            <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="d-flex justify-content-end gap-2">
-                            <a class="btn btn-outline-secondary" href="{{ cancel_url }}">Cancelar</a>
-                            <button type="submit" class="btn btn-portal">{{ submit_label }}</button>
-                        </div>
-                    </form>
+    <a class="btn btn-link text-decoration-none ps-0" href="{{ cancel_url }}">
+        <i class="bi bi-arrow-left me-1"></i>Voltar
+    </a>
+    <div class="card shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <h1 class="h3 mb-4">{{ heading }}</h1>
+            <form method="post" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    {{ form.title.label(class="form-label fw-semibold") }}
+                    {{ form.title(class="form-control form-control-lg" if not form.title.errors else "form-control form-control-lg is-invalid") }}
+                    {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
+                    {% else %}
+                    <div class="form-text">Escolha um nome direto e fácil de identificar.</div>
+                    {% endif %}
                 </div>
-            </div>
+                <div class="mb-4">
+                    <label for="procedure-description-editor" class="form-label fw-semibold">Descrição</label>
+                    <div class="form-text mb-2">Cole textos, listas ou prints diretamente no campo abaixo.</div>
+                    <div id="procedure-description-editor"
+                         class="procedure-editor"
+                         contenteditable="true"
+                         data-procedure-editor
+                         data-placeholder="Descreva o passo a passo, inclua imagens e pontos de atenção...">{{ form.description.data|safe }}</div>
+                    {{ form.description(class_="d-none", **{"data-procedure-input": "true"}) }}
+                    {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <a class="btn btn-outline-secondary" href="{{ cancel_url }}">Cancelar</a>
+                    <button type="submit" class="btn btn-portal">{{ submit_label }}</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

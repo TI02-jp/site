@@ -8,46 +8,42 @@
 
 {% block content %}
 <div class="container-fluid py-4 procedures-layout">
-    <div class="row justify-content-center">
-        <div class="col-lg-9 col-xl-8">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-                <div>
-                    <nav aria-label="Breadcrumb" class="small text-muted mb-1">
-                        <a class="text-decoration-none text-muted" href="{{ url_for('operational_procedures') }}">
-                            <i class="bi bi-arrow-left me-1"></i>Voltar para lista
-                        </a>
-                    </nav>
-                    <h1 class="h3 mb-2">{{ procedure.title }}</h1>
-                    <div class="d-flex flex-wrap gap-3 text-muted small">
-                        {% if procedure.created_by %}
-                        <span><i class="bi bi-person me-1"></i>Criado por {{ procedure.created_by.name }}</span>
-                        {% endif %}
-                        <span><i class="bi bi-calendar-event me-1"></i>{{ procedure.created_at_sao_paulo.strftime('%d/%m/%Y %H:%M') if procedure.created_at_sao_paulo else procedure.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
-                        <span><i class="bi bi-clock-history me-1"></i>Atualizado {{ (procedure.updated_at or procedure.created_at)|time_since }}</span>
-                        {% if procedure.updated_by and procedure.updated_by != procedure.created_by %}
-                        <span><i class="bi bi-pencil-square me-1"></i>Por {{ procedure.updated_by.name }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% if can_manage %}
-                <div class="d-flex flex-wrap gap-2">
-                    <a class="btn btn-outline-secondary" href="{{ url_for('operational_procedures_edit', procedure_id=procedure.id) }}">
-                        <i class="bi bi-pencil me-2"></i>Editar
-                    </a>
-                    <form method="post" action="{{ url_for('operational_procedures_delete', procedure_id=procedure.id) }}" onsubmit="return confirm('Tem certeza que deseja remover este procedimento? Essa ação não pode ser desfeita.');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-danger">
-                            <i class="bi bi-trash me-2"></i>Excluir
-                        </button>
-                    </form>
-                </div>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <nav aria-label="Breadcrumb" class="small text-muted mb-1">
+                <a class="text-decoration-none text-muted" href="{{ url_for('operational_procedures') }}">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar para lista
+                </a>
+            </nav>
+            <h1 class="h3 mb-2">{{ procedure.title }}</h1>
+            <div class="d-flex flex-wrap gap-3 text-muted small">
+                {% if procedure.created_by %}
+                <span><i class="bi bi-person me-1"></i>Criado por {{ procedure.created_by.name }}</span>
+                {% endif %}
+                <span><i class="bi bi-calendar-event me-1"></i>{{ procedure.created_at_sao_paulo.strftime('%d/%m/%Y %H:%M') if procedure.created_at_sao_paulo else procedure.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                <span><i class="bi bi-clock-history me-1"></i>Atualizado {{ (procedure.updated_at or procedure.created_at)|time_since }}</span>
+                {% if procedure.updated_by and procedure.updated_by != procedure.created_by %}
+                <span><i class="bi bi-pencil-square me-1"></i>Por {{ procedure.updated_by.name }}</span>
                 {% endif %}
             </div>
-            <div class="card shadow-sm">
-                <div class="card-body p-4 procedure-content">
-                    {{ procedure.description|safe }}
-                </div>
-            </div>
+        </div>
+        {% if can_manage %}
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href="{{ url_for('operational_procedures_edit', procedure_id=procedure.id) }}">
+                <i class="bi bi-pencil me-2"></i>Editar
+            </a>
+            <form method="post" action="{{ url_for('operational_procedures_delete', procedure_id=procedure.id) }}" onsubmit="return confirm('Tem certeza que deseja remover este procedimento? Essa ação não pode ser desfeita.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-2"></i>Excluir
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body p-4 procedure-content">
+            {{ procedure.description|safe }}
         </div>
     </div>
 </div>
