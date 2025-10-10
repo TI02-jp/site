@@ -979,24 +979,58 @@
                 }
             };
 
+            const buildUserNavigationUrl = (userId) => {
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.delete('action');
+                nextUrl.searchParams.delete('agreement_id');
+
+                if (userId) {
+                    nextUrl.searchParams.set('user_id', userId);
+                } else {
+                    nextUrl.searchParams.delete('user_id');
+                }
+
+                return nextUrl.toString();
+            };
+
             const bindUserRadios = () => {
                 detachRadioListeners();
 
                 const radios = document.querySelectorAll('[data-acordo-user]');
                 radios.forEach((radio) => {
-                    const onChange = async () => {
-                        if (!radio.checked) {
+                    const associatedLabel = radio.id
+                        ? document.querySelector(`label[for="${radio.id}"]`)
+                        : null;
+
+                    const clearToggleMarker = () => {
+                        delete radio.dataset.acordoWasChecked;
+                    };
+
+                    const markIfChecked = () => {
+                        if (radio.disabled) {
+                            clearToggleMarker();
                             return;
                         }
 
-                        const nextUrl = new URL(window.location.href);
-                        nextUrl.searchParams.delete('action');
-                        nextUrl.searchParams.delete('agreement_id');
-                        nextUrl.searchParams.set('user_id', radio.value);
+                        if (radio.checked) {
+                            radio.dataset.acordoWasChecked = 'true';
+                        } else {
+                            clearToggleMarker();
+                        }
+                    };
 
-                        const nextUrlString = nextUrl.toString();
+                    const onPointerDown = () => {
+                        markIfChecked();
+                    };
 
-                        if (nextUrlString === window.location.href) {
+                    const onKeyDown = (event) => {
+                        if (event.key === ' ' || event.key === 'Enter') {
+                            markIfChecked();
+                        }
+                    };
+
+                    const navigateToUrl = async (nextUrlString) => {
+                        if (!nextUrlString || nextUrlString === window.location.href) {
                             return;
                         }
 
@@ -1008,8 +1042,49 @@
                         await loadUser(nextUrlString, { pushState: true });
                     };
 
+                    const onClick = async (event) => {
+                        if (radio.dataset.acordoWasChecked === 'true') {
+                            event.preventDefault();
+                            radio.checked = false;
+                            clearToggleMarker();
+
+                            const deselectUrl = buildUserNavigationUrl(null);
+                            await navigateToUrl(deselectUrl);
+                            return;
+                        }
+
+                        clearToggleMarker();
+                    };
+
+                    const onChange = async () => {
+                        clearToggleMarker();
+
+                        if (!radio.checked) {
+                            return;
+                        }
+
+                        const nextUrlString = buildUserNavigationUrl(radio.value);
+                        await navigateToUrl(nextUrlString);
+                    };
+
+                    radio.addEventListener('pointerdown', onPointerDown);
+                    radioCleanup.push(() => radio.removeEventListener('pointerdown', onPointerDown));
+
+                    radio.addEventListener('keydown', onKeyDown);
+                    radioCleanup.push(() => radio.removeEventListener('keydown', onKeyDown));
+
+                    radio.addEventListener('click', onClick);
+                    radioCleanup.push(() => radio.removeEventListener('click', onClick));
+
                     radio.addEventListener('change', onChange);
                     radioCleanup.push(() => radio.removeEventListener('change', onChange));
+
+                    if (associatedLabel) {
+                        associatedLabel.addEventListener('pointerdown', onPointerDown);
+                        radioCleanup.push(() => associatedLabel.removeEventListener('pointerdown', onPointerDown));
+                    }
+
+                    radioCleanup.push(() => clearToggleMarker());
                 });
             };
 
