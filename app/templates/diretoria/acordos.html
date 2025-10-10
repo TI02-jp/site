@@ -77,10 +77,6 @@
             overflow: visible;
         }
 
-        .acordos-card.acordos-card-search .acordos-search-form .input-group {
-            width: min(100%, 420px);
-        }
-
         .acordos-content-column > .acordos-card .card-body {
             flex: 1 1 auto;
             min-height: 0;
@@ -355,44 +351,12 @@
         }
 
         .acordos-search-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: stretch;
-        }
-
-        .acordos-search-form .input-group {
-            flex: 1 1 220px;
-            min-width: 0;
             width: 100%;
+            max-width: 320px;
         }
 
         .acordos-search-form .form-control {
-            border-radius: 0.75rem 0 0 0.75rem;
-        }
-
-        .acordos-search-form .btn {
-            border-radius: 0 0.75rem 0.75rem 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-weight: 600;
-        }
-
-        @media (max-width: 575.98px) {
-            .acordos-search-form .form-control {
-                border-radius: 0.75rem;
-            }
-
-            .acordos-search-form .btn {
-                border-radius: 0.75rem;
-                width: 100%;
-            }
-
-            .acordos-search-form .input-group {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
+            border-radius: 0.75rem;
         }
 
     </style>
@@ -446,18 +410,12 @@
                     </div>
                     <div class="card-body">
                         <form method="get" class="acordos-search-form" data-acordos-search-form>
-                            <div class="input-group">
-                                <input type="search"
-                                       class="form-control"
-                                       name="q"
-                                       value="{{ search_query }}"
-                                       placeholder="Buscar acordos entre todos os usuários"
-                                       aria-label="Buscar acordos">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-search"></i>
-                                    Pesquisar
-                                </button>
-                            </div>
+                            <input type="search"
+                                   class="form-control"
+                                   name="q"
+                                   value="{{ search_query }}"
+                                   placeholder="Buscar acordos entre todos os usuários"
+                                   aria-label="Buscar acordos">
                         </form>
                     </div>
                 </div>
