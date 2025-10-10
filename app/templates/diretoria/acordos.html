@@ -535,35 +535,40 @@
 
             const userRadios = document.querySelectorAll('[data-acordo-user]');
             const storageKey = 'diretoriaAcordosUsersScrollTop';
+            const usersList = document.querySelector('.acordos-users-list');
 
-            const storedScroll = sessionStorage.getItem(storageKey);
-            if (storedScroll !== null) {
-                const scrollValue = parseInt(storedScroll, 10);
-                if (!Number.isNaN(scrollValue)) {
-                    window.scrollTo(0, scrollValue);
+            if (usersList) {
+                const storedScroll = sessionStorage.getItem(storageKey);
+                if (storedScroll !== null) {
+                    const scrollValue = parseInt(storedScroll, 10);
+                    if (!Number.isNaN(scrollValue)) {
+                        usersList.scrollTop = scrollValue;
+                    }
                 }
-            }
 
-            window.addEventListener(
-                'scroll',
-                () => {
-                    sessionStorage.setItem(
-                        storageKey,
-                        Math.round(window.scrollY || window.pageYOffset || 0).toString()
-                    );
-                },
-                { passive: true }
-            );
+                usersList.addEventListener(
+                    'scroll',
+                    () => {
+                        sessionStorage.setItem(
+                            storageKey,
+                            Math.round(usersList.scrollTop || 0).toString()
+                        );
+                    },
+                    { passive: true }
+                );
+            }
 
             userRadios.forEach((radio) => {
                 radio.addEventListener('change', () => {
                     const nextUrl = new URL(window.location.href);
                     nextUrl.searchParams.delete('action');
                     nextUrl.searchParams.delete('agreement_id');
-                    sessionStorage.setItem(
-                        storageKey,
-                        Math.round(window.scrollY || window.pageYOffset || 0).toString()
-                    );
+                    if (usersList) {
+                        sessionStorage.setItem(
+                            storageKey,
+                            Math.round(usersList.scrollTop || 0).toString()
+                        );
+                    }
 
                     if (radio.checked) {
                         nextUrl.searchParams.set('user_id', radio.value);
