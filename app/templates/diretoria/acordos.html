@@ -71,7 +71,6 @@
             max-height: 100%;
         }
 
-        .acordos-card.acordos-card-search .card-body,
         .acordos-card.acordos-card-search-results .card-body,
         .acordos-card.acordos-card-placeholder .card-body {
             overflow: visible;
@@ -353,6 +352,7 @@
         .acordos-search-form {
             width: 100%;
             max-width: 320px;
+            align-self: flex-start;
         }
 
         .acordos-search-form .form-control {
@@ -401,29 +401,24 @@
             </div>
 
             <div class="acordos-content-column" data-acordos-content>
-                <div class="acordos-card acordos-card-search">
-                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <h2 class="h6 mb-0 text-primary fw-semibold">Buscar acordos</h2>
-                        {% if search_query %}
-                        <span class="text-muted small">Termo: "{{ search_query }}"</span>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-                        <form method="get" class="acordos-search-form" data-acordos-search-form>
-                            <input type="search"
-                                   class="form-control"
-                                   name="q"
-                                   value="{{ search_query }}"
-                                   placeholder="Buscar acordos entre todos os usuários"
-                                   aria-label="Buscar acordos">
-                        </form>
-                    </div>
-                </div>
+                <form method="get" class="acordos-search-form" data-acordos-search-form>
+                    <label for="acordos-search-input" class="visually-hidden">Buscar acordos</label>
+                    <input type="search"
+                           id="acordos-search-input"
+                           class="form-control"
+                           name="q"
+                           value="{{ search_query }}"
+                           placeholder="Buscar acordos entre todos os usuários"
+                           aria-label="Buscar acordos">
+                </form>
 
                 {% if search_query %}
                 <div class="acordos-card acordos-card-search-results">
                     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <h3 class="h6 fw-semibold mb-0">Resultados da busca</h3>
+                        <div class="d-flex flex-column flex-sm-row gap-1">
+                            <h3 class="h6 fw-semibold mb-0">Resultados da busca</h3>
+                            <span class="text-muted small">Termo: "{{ search_query }}"</span>
+                        </div>
                         <span class="text-muted small">{{ search_entries|length }} registro{% if search_entries|length != 1 %}s{% endif %}</span>
                     </div>
                     <div class="card-body">
