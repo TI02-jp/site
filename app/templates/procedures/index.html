@@ -81,11 +81,6 @@
                 <p class="text-muted mb-0">Ajuste os termos da busca ou limpe o filtro para ver todos os registros.</p>
                 {% else %}
                 <h2 class="h5 mb-0">Nenhum procedimento cadastrado</h2>
-                {% if can_manage %}
-                <a class="btn btn-portal mt-3" href="{{ url_for('operational_procedures_new') }}">
-                    <i class="bi bi-plus-lg me-2"></i>Criar primeiro procedimento
-                </a>
-                {% endif %}
                 {% endif %}
             </div>
             {% endif %}
