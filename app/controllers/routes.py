@@ -1306,8 +1306,19 @@ def diretoria_acordos():
             if updated_display.tzinfo is None:
                 updated_display = updated_display.replace(tzinfo=timezone.utc)
             updated_display = updated_display.astimezone(SAO_PAULO_TZ)
+
+        created_display = agreement_item.created_at
+        if created_display:
+            if created_display.tzinfo is None:
+                created_display = created_display.replace(tzinfo=timezone.utc)
+            created_display = created_display.astimezone(SAO_PAULO_TZ)
+
         agreement_entries.append(
-            {"record": agreement_item, "updated_display": updated_display}
+            {
+                "record": agreement_item,
+                "updated_display": updated_display,
+                "created_display": created_display,
+            }
         )
 
     if request.method == "POST":

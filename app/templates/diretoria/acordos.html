@@ -331,6 +331,12 @@
             margin-top: 0.75rem;
             color: #343a40;
         }
+
+        .acordo-modal-description p:last-child,
+        .acordo-modal-description ul:last-child,
+        .acordo-modal-description ol:last-child {
+            margin-bottom: 0;
+        }
     </style>
 {% endblock %}
 
@@ -460,18 +466,31 @@
                                 {% for entry in agreement_entries %}
                                     {% set agreement = entry.record %}
                                     {% set updated_display = entry.updated_display %}
-                                    <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}">
+                                    {% set created_display = entry.created_display %}
+                                    {% set created_at_display = created_display.strftime('%d/%m/%Y %H:%M') if created_display else None %}
+                                    {% set updated_at_display = updated_display.strftime('%d/%m/%Y %H:%M') if updated_display else None %}
+                                    <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}" data-agreement-item>
                                         <div class="acordo-item-header">
                                             <div>
                                                 <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
                                                 <div class="acordo-item-meta">
-                                                    Data do acordo: {{ agreement.agreement_date.strftime('%d/%m/%Y') }}
-                                                    {% if updated_display %}
-                                                    · Última atualização {{ updated_display.strftime('%d/%m/%Y %H:%M') }}
+                                                    <span>Cadastrado em {{ created_at_display if created_at_display else 'N/D' }} (America/Sao_Paulo)</span>
+                                                    {% if updated_at_display %}
+                                                    <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }} (America/Sao_Paulo)</span>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                             <div class="acordo-actions">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary"
+                                                        data-agreement-view
+                                                        data-agreement-title="{{ agreement.title | e }}"
+                                                        data-agreement-date="{{ agreement.agreement_date.strftime('%d/%m/%Y') | e }}"
+                                                        data-agreement-created="{{ created_at_display | e if created_at_display else '' }}"
+                                                        data-agreement-updated="{{ updated_at_display | e if updated_at_display else '' }}"
+                                                        data-description-template="agreement-description-{{ agreement.id }}">
+                                                    <i class="bi bi-eye me-1"></i>Visualizar
+                                                </button>
                                                 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='edit', agreement_id=agreement.id) }}">
                                                     <i class="bi bi-pencil me-1"></i>Editar
                                                 </a>
@@ -484,11 +503,7 @@
                                                 </form>
                                             </div>
                                         </div>
-                                        {% if agreement.description %}
-                                        <div class="acordo-item-description">
-                                            {{ agreement.description | safe }}
-                                        </div>
-                                        {% endif %}
+                                        <template id="agreement-description-{{ agreement.id }}" data-agreement-description>{{ agreement.description | safe }}</template>
                                     </div>
                                 {% endfor %}
                             {% else %}
@@ -508,6 +523,27 @@
                     </div>
                 </div>
                 {% endif %}
+            </div>
+            <div class="modal fade" id="acordoDetalhesModal" tabindex="-1" aria-labelledby="acordoDetalhesModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="acordoDetalhesModalLabel" data-modal-title></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="small text-muted mb-2" data-modal-agreement-date></div>
+                            <div class="small text-muted mb-3">
+                                <div data-modal-created-at></div>
+                                <div data-modal-updated-at></div>
+                            </div>
+                            <div class="acordo-modal-description" data-modal-description></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -559,6 +595,7 @@
             let usersList = null;
             let radioCleanup = [];
             let scrollCleanup = [];
+            let viewCleanup = [];
             let pageshowHandler = null;
             let isNavigating = false;
 
@@ -661,6 +698,77 @@
             const detachRadioListeners = () => {
                 radioCleanup.forEach((cleanup) => cleanup());
                 radioCleanup = [];
+            };
+
+            const detachAgreementViewers = () => {
+                viewCleanup.forEach((cleanup) => cleanup());
+                viewCleanup = [];
+            };
+
+            const attachAgreementViewers = () => {
+                detachAgreementViewers();
+
+                const modalElement = document.getElementById('acordoDetalhesModal');
+                const ModalConstructor = window.bootstrap && window.bootstrap.Modal;
+
+                if (!modalElement || !ModalConstructor) {
+                    return;
+                }
+
+                const titleElement = modalElement.querySelector('[data-modal-title]');
+                const agreementDateElement = modalElement.querySelector('[data-modal-agreement-date]');
+                const createdElement = modalElement.querySelector('[data-modal-created-at]');
+                const updatedElement = modalElement.querySelector('[data-modal-updated-at]');
+                const descriptionElement = modalElement.querySelector('[data-modal-description]');
+
+                document.querySelectorAll('[data-agreement-view]').forEach((button) => {
+                    const onClick = () => {
+                        const title = button.getAttribute('data-agreement-title') || 'Acordo';
+                        const agreementDate = button.getAttribute('data-agreement-date') || '';
+                        const createdAt = button.getAttribute('data-agreement-created') || '';
+                        const updatedAt = button.getAttribute('data-agreement-updated') || '';
+                        const templateId = button.getAttribute('data-description-template');
+
+                        let descriptionHtml = '';
+                        if (templateId) {
+                            const template = document.getElementById(templateId);
+                            if (template) {
+                                descriptionHtml = template.innerHTML.trim();
+                            }
+                        }
+
+                        if (titleElement) {
+                            titleElement.textContent = title;
+                        }
+
+                        if (agreementDateElement) {
+                            agreementDateElement.textContent = agreementDate
+                                ? `Data do acordo: ${agreementDate}`
+                                : 'Data do acordo não informado.';
+                        }
+
+                        if (createdElement) {
+                            createdElement.textContent = createdAt
+                                ? `Cadastrado em ${createdAt} (America/Sao_Paulo)`
+                                : 'Cadastrado em: informação indisponível.';
+                        }
+
+                        if (updatedElement) {
+                            updatedElement.textContent = updatedAt
+                                ? `Última atualização ${updatedAt} (America/Sao_Paulo)`
+                                : 'Última atualização: sem registro.';
+                        }
+
+                        if (descriptionElement) {
+                            descriptionElement.innerHTML = descriptionHtml || '<p class="text-muted mb-0">Nenhuma descrição cadastrada.</p>';
+                        }
+
+                        ModalConstructor.getOrCreateInstance(modalElement).show();
+                    };
+
+                    button.addEventListener('click', onClick);
+                    viewCleanup.push(() => button.removeEventListener('click', onClick));
+                });
             };
 
             const initializeEditor = () => {
@@ -811,6 +919,7 @@
                 attachScrollPersistence();
                 restoreUsersScroll();
                 bindUserRadios();
+                attachAgreementViewers();
                 initializeEditor();
             };
 
