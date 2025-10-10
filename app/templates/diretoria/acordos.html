@@ -467,8 +467,16 @@
                                     {% set agreement = entry.record %}
                                     {% set updated_display = entry.updated_display %}
                                     {% set created_display = entry.created_display %}
-                                    {% set created_at_display = created_display.strftime('%d/%m/%Y %H:%M') if created_display else None %}
-                                    {% set updated_at_display = updated_display.strftime('%d/%m/%Y %H:%M') if updated_display else None %}
+                                    {% set created_at_display = (
+                                        created_display.strftime('%d/%m/%Y')
+                                        if created_display
+                                        else None
+                                    ) %}
+                                    {% set updated_at_display = (
+                                        updated_display.strftime('%d/%m/%Y')
+                                        if updated_display
+                                        else None
+                                    ) %}
                                     <div class="acordo-item{% if active_agreement and agreement.id == active_agreement.id %} border-primary shadow-sm{% endif %}" data-agreement-item>
                                         <div class="acordo-item-header">
                                             <div>
