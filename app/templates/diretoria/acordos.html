@@ -29,19 +29,18 @@
         .acordos-layout {
             flex: 1 1 auto;
             min-height: 0;
-            max-height: calc(100vh - var(--acordos-footer-offset) - var(--acordos-layout-top, 0px) - 1.5rem);
-            overflow: hidden;
             display: grid;
             grid-template-columns: 300px minmax(0, 1fr);
             gap: 1rem;
+            align-items: start;
         }
 
         .acordos-content-column {
             min-height: 0;
             display: flex;
             flex-direction: column;
-            gap: 0;
-            overflow: hidden;
+            gap: 1rem;
+            overflow: visible;
             transition: opacity 0.2s ease-in-out;
         }
 
@@ -60,12 +59,22 @@
         }
 
         .acordos-content-column > .acordos-card {
-            flex: 1 1 auto;
+            flex: none;
             min-height: 0;
             display: flex;
             flex-direction: column;
-            max-height: 100%;
             overflow: hidden;
+        }
+
+        .acordos-card.acordos-card-user {
+            flex: 1 1 auto;
+            max-height: 100%;
+        }
+
+        .acordos-card.acordos-card-search .card-body,
+        .acordos-card.acordos-card-search-results .card-body,
+        .acordos-card.acordos-card-placeholder .card-body {
+            overflow: visible;
         }
 
         .acordos-content-column > .acordos-card .card-body {
@@ -77,8 +86,6 @@
         @media (max-width: 991.98px) {
             .acordos-layout {
                 grid-template-columns: 1fr;
-                max-height: none;
-                overflow: visible;
             }
 
             .acordos-content-column {
@@ -87,11 +94,13 @@
 
             .acordos-content-column > .acordos-card {
                 flex: none;
-                max-height: none;
-                overflow: visible;
             }
 
-            .acordos-content-column > .acordos-card .card-body {
+            .acordos-card.acordos-card-user {
+                max-height: none;
+            }
+
+            .acordos-card.acordos-card-user .card-body {
                 overflow: visible;
             }
         }
@@ -322,6 +331,15 @@
             gap: 0.75rem;
         }
 
+        .acordo-item-user {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .acordos-search-results-empty {
+            color: #6c757d;
+        }
+
         .acordo-item-meta {
             font-size: var(--font-sm);
             color: #6c757d;
@@ -415,8 +433,112 @@
             </div>
 
             <div class="acordos-content-column" data-acordos-content>
+                <div class="acordos-card acordos-card-search">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h2 class="h6 mb-0 text-primary fw-semibold">Buscar acordos</h2>
+                        {% if search_query %}
+                        <span class="text-muted small">Termo: "{{ search_query }}"</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <form method="get" class="acordos-search-form" data-acordos-search-form>
+                            <div class="input-group">
+                                <input type="search"
+                                       class="form-control"
+                                       name="q"
+                                       value="{{ search_query }}"
+                                       placeholder="Buscar acordos entre todos os usuários"
+                                       aria-label="Buscar acordos">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i>
+                                    Pesquisar
+                                </button>
+                            </div>
+                        </form>
+                        {% if not search_query %}
+                        <p class="text-muted small mb-0 mt-3">Informe um termo acima para encontrar acordos cadastrados em todo o portal.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if search_query %}
+                <div class="acordos-card acordos-card-search-results">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h3 class="h6 fw-semibold mb-0">Resultados da busca</h3>
+                        <span class="text-muted small">{{ search_entries|length }} registro{% if search_entries|length != 1 %}s{% endif %}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if search_entries %}
+                            {% for entry in search_entries %}
+                                {% set agreement = entry.record %}
+                                {% set updated_display = entry.updated_display %}
+                                {% set created_display = entry.created_display %}
+                                {% set created_at_display = (
+                                    created_display.strftime('%d/%m/%Y')
+                                    if created_display
+                                    else None
+                                ) %}
+                                {% set updated_at_display = (
+                                    updated_display.strftime('%d/%m/%Y')
+                                    if updated_display
+                                    else None
+                                ) %}
+                                {% set agreement_date_display = (
+                                    agreement.agreement_date.strftime('%d/%m/%Y')
+                                    if agreement.agreement_date
+                                    else None
+                                ) %}
+                                {% set entry_user = entry.user %}
+                                <div class="acordo-item mb-0">
+                                    <div class="acordo-item-header">
+                                        <div>
+                                            <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
+                                            <div class="acordo-item-meta">
+                                                <span class="acordo-item-user">{{ entry_user.name if entry_user else 'Usuário indisponível' }}</span>
+                                                {% if agreement_date_display %}
+                                                <span class="ms-2 ms-md-3">Data do acordo {{ agreement_date_display }}</span>
+                                                {% endif %}
+                                                {% if created_at_display %}
+                                                <span class="ms-2 ms-md-3">Cadastrado em {{ created_at_display }}</span>
+                                                {% endif %}
+                                                {% if updated_at_display %}
+                                                <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="acordo-actions">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=agreement.user_id, action='edit', agreement_id=agreement.id) }}">
+                                                <i class="bi bi-pencil me-1"></i>Editar
+                                            </a>
+                                            <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="user_id" value="{{ agreement.user_id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1"></i>Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% set description_text = agreement.description | striptags | trim %}
+                                    {% if description_text %}
+                                    <p class="acordo-item-description mb-0">{{ description_text }}</p>
+                                    {% else %}
+                                    <p class="acordo-item-description text-muted mb-0">Nenhuma descrição cadastrada.</p>
+                                    {% endif %}
+                                </div>
+                                {% if not loop.last %}
+                                <hr class="my-3">
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                        <p class="acordos-search-results-empty mb-0">Nenhum acordo corresponde à busca informada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if selected_user %}
-                <div class="acordos-card{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
+                <div class="acordos-card acordos-card-user{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
                     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
@@ -495,30 +617,8 @@
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <h3 class="h6 fw-semibold mb-0">Acordos cadastrados</h3>
-                                <span class="text-muted small">
-                                    {{ filtered_agreements_count }} registro{% if filtered_agreements_count != 1 %}s{% endif %}
-                                </span>
+                                <span class="text-muted small">{{ agreements|length }} registro{% if agreements|length != 1 %}s{% endif %}</span>
                             </div>
-
-                            <form method="get" class="acordos-search-form mb-3" data-acordos-search-form>
-                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
-                                <div class="input-group">
-                                    <input type="search"
-                                           class="form-control"
-                                           name="q"
-                                           value="{{ search_query }}"
-                                           placeholder="Buscar acordos"
-                                           aria-label="Buscar acordos do usuário">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-search"></i>
-                                        Pesquisar
-                                    </button>
-                                </div>
-                            </form>
-
-                            {% if search_query %}
-                            <p class="text-muted small mb-3">Mostrando resultados para "<strong>{{ search_query }}</strong>".</p>
-                            {% endif %}
 
                             {% if agreements %}
                                 {% for entry in agreement_entries %}
@@ -569,11 +669,7 @@
                                 {% endfor %}
                             {% else %}
                                 <div class="text-start text-muted py-3">
-                                    {% if search_query %}
-                                    Nenhum acordo corresponde à busca informada.
-                                    {% else %}
                                     Nenhum acordo foi registrado para este usuário ainda.
-                                    {% endif %}
                                 </div>
                             {% endif %}
                         </div>
@@ -581,10 +677,17 @@
                     </div>
                 </div>
                 {% else %}
-                <div class="acordo-placeholder">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-person-lines-fill"></i>
-                        <h2 class="h5 fw-semibold mb-0">Acordos da Diretoria JP</h2>
+                <div class="acordos-card acordos-card-placeholder">
+                    <div class="card-body">
+                        <div class="acordo-placeholder">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="bi bi-person-lines-fill"></i>
+                                <div>
+                                    <h2 class="h5 fw-semibold mb-1">Acordos da Diretoria JP</h2>
+                                    <p class="mb-0 text-muted">Selecione um usuário ao lado para cadastrar ou editar acordos.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
