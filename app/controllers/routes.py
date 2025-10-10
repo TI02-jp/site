@@ -1268,6 +1268,10 @@ def diretoria_acordos():
 
     form = DiretoriaAcordoForm()
 
+    search_query = (request.args.get("q", default="", type=str) or "").strip()
+    total_agreements_count = 0
+    filtered_agreements_count = 0
+
     if request.method == "POST":
         selected_user_id = request.form.get("user_id", type=int)
     else:
@@ -1291,14 +1295,30 @@ def diretoria_acordos():
                 return redirect(url_for("diretoria_acordos"))
             flash(message, "danger")
         else:
+            base_query = DiretoriaAgreement.query.filter_by(
+                user_id=selected_user.id
+            )
+            total_agreements_count = base_query.count()
+
+            agreements_query = base_query
+            if search_query:
+                search_term = f"%{search_query}%"
+                agreements_query = agreements_query.filter(
+                    sa.or_(
+                        DiretoriaAgreement.title.ilike(search_term),
+                        DiretoriaAgreement.description.ilike(search_term),
+                    )
+                )
+
             agreements = (
-                DiretoriaAgreement.query.filter_by(user_id=selected_user.id)
+                agreements_query
                 .order_by(
                     DiretoriaAgreement.agreement_date.desc(),
                     DiretoriaAgreement.created_at.desc(),
                 )
                 .all()
             )
+            filtered_agreements_count = len(agreements)
     agreement_entries: list[dict[str, Any]] = []
     for agreement_item in agreements:
         updated_display = agreement_item.updated_at
@@ -1442,6 +1462,9 @@ def diretoria_acordos():
 
             flash("Por favor, corrija os erros do formulário.", "danger")
 
+    if not filtered_agreements_count:
+        filtered_agreements_count = len(agreements)
+
     return render_template(
         "diretoria/acordos.html",
         users=users,
@@ -1451,6 +1474,9 @@ def diretoria_acordos():
         form_mode=form_mode,
         active_agreement=active_agreement,
         agreement_entries=agreement_entries,
+        search_query=search_query,
+        total_agreements_count=total_agreements_count,
+        filtered_agreements_count=filtered_agreements_count,
     )
 
 
