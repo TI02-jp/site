@@ -332,6 +332,47 @@
             color: #343a40;
         }
 
+        .acordos-search-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .acordos-search-form .input-group {
+            flex: 1 1 220px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .acordos-search-form .form-control {
+            border-radius: 0.75rem 0 0 0.75rem;
+        }
+
+        .acordos-search-form .btn {
+            border-radius: 0 0.75rem 0.75rem 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 575.98px) {
+            .acordos-search-form .form-control {
+                border-radius: 0.75rem;
+            }
+
+            .acordos-search-form .btn {
+                border-radius: 0.75rem;
+                width: 100%;
+            }
+
+            .acordos-search-form .input-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
     </style>
 {% endblock %}
 
@@ -452,10 +493,32 @@
 
                         {% if form_mode != 'new' %}
                         <div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <h3 class="h6 fw-semibold mb-0">Acordos cadastrados</h3>
-                                <span class="text-muted small">{{ agreements|length }} registro{% if agreements|length != 1 %}s{% endif %}</span>
+                                <span class="text-muted small">
+                                    {{ filtered_agreements_count }} registro{% if filtered_agreements_count != 1 %}s{% endif %}
+                                </span>
                             </div>
+
+                            <form method="get" class="acordos-search-form mb-3" data-acordos-search-form>
+                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                <div class="input-group">
+                                    <input type="search"
+                                           class="form-control"
+                                           name="q"
+                                           value="{{ search_query }}"
+                                           placeholder="Buscar acordos"
+                                           aria-label="Buscar acordos do usuário">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search"></i>
+                                        Pesquisar
+                                    </button>
+                                </div>
+                            </form>
+
+                            {% if search_query %}
+                            <p class="text-muted small mb-3">Mostrando resultados para "<strong>{{ search_query }}</strong>".</p>
+                            {% endif %}
 
                             {% if agreements %}
                                 {% for entry in agreement_entries %}
@@ -506,7 +569,11 @@
                                 {% endfor %}
                             {% else %}
                                 <div class="text-start text-muted py-3">
+                                    {% if search_query %}
+                                    Nenhum acordo corresponde à busca informada.
+                                    {% else %}
                                     Nenhum acordo foi registrado para este usuário ainda.
+                                    {% endif %}
                                 </div>
                             {% endif %}
                         </div>
@@ -573,6 +640,7 @@
             let radioCleanup = [];
             let scrollCleanup = [];
             let pageshowHandler = null;
+            let searchCleanup = [];
             let isNavigating = false;
 
             const refreshUsersListReference = () => {
@@ -674,6 +742,75 @@
             const detachRadioListeners = () => {
                 radioCleanup.forEach((cleanup) => cleanup());
                 radioCleanup = [];
+            };
+
+            const setSearchFormsDisabled = (disabled) => {
+                document
+                    .querySelectorAll(
+                        '[data-acordos-search-form] input, [data-acordos-search-form] button, [data-acordos-search-form] select, [data-acordos-search-form] textarea'
+                    )
+                    .forEach((element) => {
+                        element.disabled = disabled;
+                    });
+            };
+
+            const detachSearchForms = () => {
+                searchCleanup.forEach((cleanup) => cleanup());
+                searchCleanup = [];
+            };
+
+            const bindSearchForms = () => {
+                detachSearchForms();
+
+                const forms = document.querySelectorAll('[data-acordos-search-form]');
+                forms.forEach((form) => {
+                    const onSubmit = (event) => {
+                        if (
+                            typeof window.fetch !== 'function' ||
+                            typeof window.DOMParser !== 'function'
+                        ) {
+                            return;
+                        }
+
+                        event.preventDefault();
+
+                        const formAction = form.getAttribute('action') || window.location.pathname;
+                        const targetUrl = new URL(formAction, window.location.origin);
+                        const formData = new FormData(form);
+
+                        formData.forEach((value, key) => {
+                            if (typeof value !== 'string') {
+                                targetUrl.searchParams.set(key, value);
+                                return;
+                            }
+
+                            if (key === 'q') {
+                                const trimmedValue = value.trim();
+                                if (trimmedValue) {
+                                    targetUrl.searchParams.set(key, trimmedValue);
+                                } else {
+                                    targetUrl.searchParams.delete(key);
+                                }
+                                return;
+                            }
+
+                            targetUrl.searchParams.set(key, value);
+                        });
+
+                        targetUrl.searchParams.delete('action');
+                        targetUrl.searchParams.delete('agreement_id');
+
+                        const nextUrlString = targetUrl.toString();
+                        if (nextUrlString === window.location.href) {
+                            return;
+                        }
+
+                        loadUser(nextUrlString, { pushState: true });
+                    };
+
+                    form.addEventListener('submit', onSubmit);
+                    searchCleanup.push(() => form.removeEventListener('submit', onSubmit));
+                });
             };
 
             const initializeEditor = () => {
@@ -825,6 +962,7 @@
                 restoreUsersScroll();
                 bindUserRadios();
                 initializeEditor();
+                bindSearchForms();
             };
 
             const loadUser = async (nextUrl, { pushState = false } = {}) => {
@@ -842,6 +980,7 @@
                 isNavigating = true;
                 setContentLoading(true);
                 setRadiosDisabled(true);
+                setSearchFormsDisabled(true);
 
                 try {
                     const response = await fetch(nextUrlString, { headers: fetchHeaders });
@@ -880,6 +1019,7 @@
                     isNavigating = false;
                     setContentLoading(false);
                     setRadiosDisabled(false);
+                    setSearchFormsDisabled(false);
                 }
             };
 
