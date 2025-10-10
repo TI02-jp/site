@@ -420,6 +420,52 @@ class Announcement(db.Model):
         self.attachment_name = None
 
 
+class OperationalProcedure(db.Model):
+    """Operational procedure shared with the entire organization."""
+
+    __tablename__ = "operational_procedures"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    updated_by = db.relationship("User", foreign_keys=[updated_by_id])
+
+    def __repr__(self) -> str:
+        return f"<OperationalProcedure {self.title!r}>"
+
+    @property
+    def created_at_sao_paulo(self) -> datetime | None:
+        """Return the creation timestamp converted to São Paulo timezone."""
+
+        return _to_sao_paulo(self.created_at)
+
+    @property
+    def updated_at_sao_paulo(self) -> datetime | None:
+        """Return the update timestamp converted to São Paulo timezone."""
+
+        reference = self.updated_at or self.created_at
+        return _to_sao_paulo(reference)
+
+
 class Course(db.Model):
     """Internal training course available in the knowledge hub."""
 

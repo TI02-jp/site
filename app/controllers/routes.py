@@ -45,6 +45,7 @@ from app.models.tables import (
     GeneralCalendarEvent,
     Announcement,
     AnnouncementAttachment,
+    OperationalProcedure,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -70,6 +71,7 @@ from app.forms import (
     CourseTagForm,
     AnnouncementForm,
     DiretoriaAcordoForm,
+    OperationalProcedureForm,
 )
 import os, json, re, secrets
 import requests
@@ -128,6 +130,16 @@ GOOGLE_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/gmail.addons.current.message.action",
     "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
 ]
+
+
+def _prepare_procedure_description(raw_value: str | None) -> tuple[str, bool]:
+    """Sanitize and validate a procedure description."""
+
+    cleaned = sanitize_html(raw_value or "")
+    # Remove HTML tags to inspect plain text content
+    text_only = re.sub(r"<[^>]+>", "", cleaned or "").strip()
+    has_images = bool(re.search(r"<img\b", cleaned or "", re.IGNORECASE))
+    return cleaned, bool(text_only or has_images)
 
 
 def ensure_diretoria_agreement_schema() -> None:
@@ -1248,6 +1260,181 @@ def mark_announcement_read(announcement_id: int):
     read = bool(updated or already_read or not notifications)
 
     return jsonify({"status": "ok", "read": read})
+
+
+@app.route("/procedimentos-operacionais", methods=["GET"])
+@login_required
+def operational_procedures():
+    """List operational procedures with optional search."""
+
+    search_term = (request.args.get("q") or "").strip()
+
+    base_query = OperationalProcedure.query.options(
+        joinedload(OperationalProcedure.created_by),
+        joinedload(OperationalProcedure.updated_by),
+    )
+
+    if search_term:
+        ilike_pattern = f"%{search_term}%"
+        base_query = base_query.filter(
+            or_(
+                OperationalProcedure.title.ilike(ilike_pattern),
+                OperationalProcedure.description.ilike(ilike_pattern),
+            )
+        )
+
+    procedures = (
+        base_query.order_by(
+            OperationalProcedure.updated_at.desc(),
+            OperationalProcedure.title.asc(),
+        ).all()
+    )
+
+    return render_template(
+        "procedures/index.html",
+        procedures=procedures,
+        search_term=search_term,
+        can_manage=current_user.role == "admin",
+    )
+
+
+@app.route("/procedimentos-operacionais/novo", methods=["GET", "POST"])
+@login_required
+def operational_procedures_new():
+    """Create a new operational procedure."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    form = OperationalProcedureForm()
+
+    if request.method == "GET":
+        form.description.data = form.description.data or ""
+
+    if form.validate_on_submit():
+        cleaned_description, is_valid = _prepare_procedure_description(
+            form.description.data
+        )
+        form.description.data = cleaned_description
+
+        if not is_valid:
+            form.description.errors.append(
+                "Adicione uma descrição com texto ou imagens para o procedimento."
+            )
+        else:
+            procedure = OperationalProcedure(
+                title=form.title.data,
+                description=cleaned_description,
+                created_by=current_user,
+                updated_by=current_user,
+            )
+            db.session.add(procedure)
+            db.session.commit()
+            flash("Procedimento operacional criado com sucesso.", "success")
+            return redirect(url_for("operational_procedures"))
+
+    return render_template(
+        "procedures/form.html",
+        form=form,
+        procedure=None,
+        heading="Novo procedimento operacional",
+        submit_label="Salvar procedimento",
+        cancel_url=url_for("operational_procedures"),
+    )
+
+
+@app.route(
+    "/procedimentos-operacionais/<int:procedure_id>/editar",
+    methods=["GET", "POST"],
+)
+@login_required
+def operational_procedures_edit(procedure_id: int):
+    """Edit an existing operational procedure."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    procedure = OperationalProcedure.query.get_or_404(procedure_id)
+    form = OperationalProcedureForm()
+
+    if request.method == "GET":
+        form.title.data = procedure.title
+        form.description.data = procedure.description
+
+    if form.validate_on_submit():
+        cleaned_description, is_valid = _prepare_procedure_description(
+            form.description.data
+        )
+        form.description.data = cleaned_description
+
+        if not is_valid:
+            form.description.errors.append(
+                "Adicione uma descrição com texto ou imagens para o procedimento."
+            )
+        else:
+            procedure.title = form.title.data
+            procedure.description = cleaned_description
+            procedure.updated_by = current_user
+            db.session.commit()
+            flash("Procedimento operacional atualizado com sucesso.", "success")
+            return redirect(
+                url_for(
+                    "operational_procedures_view",
+                    procedure_id=procedure.id,
+                )
+            )
+
+    return render_template(
+        "procedures/form.html",
+        form=form,
+        procedure=procedure,
+        heading="Editar procedimento operacional",
+        submit_label="Salvar alterações",
+        cancel_url=url_for(
+            "operational_procedures_view", procedure_id=procedure.id
+        ),
+    )
+
+
+@app.route("/procedimentos-operacionais/<int:procedure_id>")
+@login_required
+def operational_procedures_view(procedure_id: int):
+    """Display a single operational procedure."""
+
+    procedure = (
+        OperationalProcedure.query.options(
+            joinedload(OperationalProcedure.created_by),
+            joinedload(OperationalProcedure.updated_by),
+        )
+        .order_by(None)
+        .get_or_404(procedure_id)
+    )
+
+    return render_template(
+        "procedures/view.html",
+        procedure=procedure,
+        can_manage=current_user.role == "admin",
+    )
+
+
+@app.route(
+    "/procedimentos-operacionais/<int:procedure_id>/excluir",
+    methods=["POST"],
+)
+@login_required
+def operational_procedures_delete(procedure_id: int):
+    """Remove an existing operational procedure."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    procedure = OperationalProcedure.query.get_or_404(procedure_id)
+
+    db.session.delete(procedure)
+    db.session.commit()
+
+    flash("Procedimento operacional removido com sucesso.", "success")
+    return redirect(url_for("operational_procedures"))
 
 
 @app.route("/diretoria/acordos", methods=["GET", "POST"])

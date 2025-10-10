@@ -46,6 +46,13 @@
                 AGENDA
             </a>
         </li>
+        {% set procedures_nav = ['operational_procedures', 'operational_procedures_new', 'operational_procedures_edit', 'operational_procedures_view'] %}
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint in procedures_nav %} active{% endif %}" href="{{ url_for('operational_procedures') }}">
+                <i class="bi bi-journal-text"></i>
+                PROC. OPERACIONAIS
+            </a>
+        </li>
         {% if user_has_tag('Gestão') %}
         {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar', 'diretoria_acordos'] %}
         <li class="nav-item">
