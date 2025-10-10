@@ -21,18 +21,15 @@
                     {{ form.title(class="form-control form-control-lg" if not form.title.errors else "form-control form-control-lg is-invalid") }}
                     {% if form.title.errors %}
                     <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
-                    {% else %}
-                    <div class="form-text">Escolha um nome direto e fácil de identificar.</div>
                     {% endif %}
                 </div>
                 <div class="mb-4">
                     <label for="procedure-description-editor" class="form-label fw-semibold">Descrição</label>
-                    <div class="form-text mb-2">Cole textos, listas ou prints diretamente no campo abaixo.</div>
                     <div id="procedure-description-editor"
                          class="procedure-editor"
                          contenteditable="true"
                          data-procedure-editor
-                         data-placeholder="Descreva o passo a passo, inclua imagens e pontos de atenção...">{{ form.description.data|safe }}</div>
+                    >{{ form.description.data|safe }}</div>
                     {{ form.description(class_="d-none", **{"data-procedure-input": "true"}) }}
                     {% if form.description.errors %}
                     <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
