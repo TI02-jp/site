@@ -42,6 +42,21 @@
             flex-direction: column;
             gap: 0;
             overflow: hidden;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .acordos-content-column[data-acordos-content].is-loading {
+            position: relative;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        .acordos-content-column[data-acordos-content].is-loading::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(248, 249, 252, 0.55));
+            backdrop-filter: blur(2px);
         }
 
         .acordos-content-column > .acordos-card {
@@ -357,7 +372,7 @@
                 </div>
             </div>
 
-            <div class="acordos-content-column">
+            <div class="acordos-content-column" data-acordos-content>
                 {% if selected_user %}
                 <div class="acordos-card{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
                     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -501,6 +516,7 @@
 
 {% block scripts %}
     {{ super() }}
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const acordosPage = document.querySelector('.acordos-page-root');
@@ -527,22 +543,45 @@
                 }
             }
 
-            updateAcordosViewportMetrics();
-            requestAnimationFrame(updateAcordosViewportMetrics);
-            window.addEventListener('resize', updateAcordosViewportMetrics, { passive: true });
-            window.addEventListener('load', updateAcordosViewportMetrics);
-            window.addEventListener('scroll', updateAcordosViewportMetrics, { passive: true });
+            if (acordosPage) {
+                updateAcordosViewportMetrics();
+                requestAnimationFrame(updateAcordosViewportMetrics);
+                window.addEventListener('resize', updateAcordosViewportMetrics, { passive: true });
+                window.addEventListener('load', updateAcordosViewportMetrics);
+                window.addEventListener('scroll', updateAcordosViewportMetrics, { passive: true });
+            }
 
-            const userRadios = document.querySelectorAll('[data-acordo-user]');
             const storageKey = 'diretoriaAcordosUsersScrollTop';
-            const usersList = document.querySelector('.acordos-users-list');
             const pagePath = window.location.pathname;
+            const contentSelector = '[data-acordos-content]';
+            const fetchHeaders = { 'X-Requested-With': 'XMLHttpRequest' };
+
+            let usersList = null;
+            let radioCleanup = [];
+            let scrollCleanup = [];
+            let pageshowHandler = null;
+            let isNavigating = false;
+
+            const refreshUsersListReference = () => {
+                usersList = document.querySelector('.acordos-users-list');
+            };
+
+            const getContentColumn = () => document.querySelector(contentSelector);
+
+            const setContentLoading = (active) => {
+                const column = getContentColumn();
+                if (column) {
+                    column.classList.toggle('is-loading', Boolean(active));
+                }
+            };
+
+            const setRadiosDisabled = (disabled) => {
+                document.querySelectorAll('[data-acordo-user]').forEach((radio) => {
+                    radio.disabled = disabled;
+                });
+            };
 
             const persistUsersScroll = (value) => {
-                if (!usersList) {
-                    return;
-                }
-
                 const payload = {
                     scrollTop: Math.max(0, Math.round(value || 0)),
                     path: pagePath
@@ -574,17 +613,15 @@
                 }
 
                 const { scrollTop, path } = parsed || {};
-                if (
-                    path !== pagePath ||
-                    typeof scrollTop !== 'number' ||
-                    Number.isNaN(scrollTop)
-                ) {
+                if (path !== pagePath || typeof scrollTop !== 'number' || Number.isNaN(scrollTop)) {
                     sessionStorage.removeItem(storageKey);
                     return;
                 }
 
                 const applyScroll = () => {
-                    usersList.scrollTop = scrollTop;
+                    if (usersList) {
+                        usersList.scrollTop = scrollTop;
+                    }
                 };
 
                 requestAnimationFrame(() => {
@@ -593,42 +630,54 @@
                 });
             };
 
-            if (usersList) {
-                restoreUsersScroll();
+            const detachScrollPersistence = () => {
+                scrollCleanup.forEach((cleanup) => cleanup());
+                scrollCleanup = [];
 
-                usersList.addEventListener(
-                    'scroll',
-                    () => {
-                        persistUsersScroll(usersList.scrollTop || 0);
-                    },
-                    { passive: true }
-                );
+                if (pageshowHandler) {
+                    window.removeEventListener('pageshow', pageshowHandler);
+                    pageshowHandler = null;
+                }
+            };
 
-                window.addEventListener('pageshow', restoreUsersScroll);
-            }
+            const attachScrollPersistence = () => {
+                detachScrollPersistence();
 
-            userRadios.forEach((radio) => {
-                radio.addEventListener('change', () => {
-                    const nextUrl = new URL(window.location.href);
-                    nextUrl.searchParams.delete('action');
-                    nextUrl.searchParams.delete('agreement_id');
-                    if (usersList) {
-                        persistUsersScroll(usersList.scrollTop || 0);
-                    }
+                if (!usersList) {
+                    return;
+                }
 
-                    if (radio.checked) {
-                        nextUrl.searchParams.set('user_id', radio.value);
-                    }
+                const onScroll = () => {
+                    persistUsersScroll(usersList.scrollTop || 0);
+                };
 
-                    window.location.href = nextUrl.toString();
-                });
-            });
+                usersList.addEventListener('scroll', onScroll, { passive: true });
+                scrollCleanup.push(() => usersList.removeEventListener('scroll', onScroll));
 
-            const editorContainer = document.querySelector('#acordo-editor');
-            const hiddenInput = document.querySelector('#acordo-descricao');
-            const imageInput = document.querySelector('#acordo-image-input');
+                pageshowHandler = () => restoreUsersScroll();
+                window.addEventListener('pageshow', pageshowHandler);
+            };
 
-            if (editorContainer && hiddenInput) {
+            const detachRadioListeners = () => {
+                radioCleanup.forEach((cleanup) => cleanup());
+                radioCleanup = [];
+            };
+
+            const initializeEditor = () => {
+                const editorContainer = document.querySelector('#acordo-editor');
+                const hiddenInput = document.querySelector('#acordo-descricao');
+                const imageInput = document.querySelector('#acordo-image-input');
+
+                if (!editorContainer || !hiddenInput) {
+                    return;
+                }
+
+                if (editorContainer.dataset.quillInitialized === 'true') {
+                    return;
+                }
+
+                editorContainer.dataset.quillInitialized = 'true';
+
                 const csrfToken = "{{ csrf_token() }}";
 
                 function uploadImage(file) {
@@ -640,15 +689,15 @@
                             headers: { 'X-CSRFToken': csrfToken },
                             body: formData
                         })
-                        .then(response => response.json())
-                        .then(result => {
-                            if (result.image_url) {
-                                resolve(result.image_url);
-                            } else {
-                                reject(result.error || 'Erro ao enviar a imagem.');
-                            }
-                        })
-                        .catch(() => reject('Não foi possível enviar a imagem.'));
+                            .then((response) => response.json())
+                            .then((result) => {
+                                if (result.image_url) {
+                                    resolve(result.image_url);
+                                } else {
+                                    reject(result.error || 'Erro ao enviar a imagem.');
+                                }
+                            })
+                            .catch(() => reject('Não foi possível enviar a imagem.'));
                     });
                 }
 
@@ -665,11 +714,11 @@
                         toolbar: {
                             container: [
                                 ['bold', 'italic', 'underline'],
-                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
                                 ['link', 'image'],
                                 ['clean']
                             ],
-                            handlers: { 'image': selectLocalImage }
+                            handlers: { image: selectLocalImage }
                         }
                     }
                 });
@@ -678,19 +727,21 @@
                     quill.root.innerHTML = hiddenInput.value;
                 }
 
-                if (imageInput) {
+                if (imageInput && imageInput.dataset.listenerAttached !== 'true') {
                     imageInput.addEventListener('change', () => {
                         if (imageInput.files && imageInput.files[0]) {
                             const file = imageInput.files[0];
                             const range = quill.getSelection(true);
                             const reader = new FileReader();
-                            reader.onload = (e) => {
-                                const previewImage = e.target?.result;
+                            reader.onload = (event) => {
+                                const previewImage = event.target?.result;
                                 if (!previewImage) {
                                     return;
                                 }
+
                                 quill.insertEmbed(range.index, 'image', previewImage);
                                 quill.setSelection(range.index + 1);
+
                                 uploadImage(file)
                                     .then((serverUrl) => {
                                         const tempImage = quill.root.querySelector(`img[src="${previewImage}"]`);
@@ -709,15 +760,130 @@
                             imageInput.value = '';
                         }
                     });
+                    imageInput.dataset.listenerAttached = 'true';
                 }
 
                 const formElement = editorContainer.closest('form');
-                if (formElement) {
+                if (formElement && formElement.dataset.acordoEditorBound !== 'true') {
                     formElement.addEventListener('submit', () => {
                         hiddenInput.value = quill.root.innerHTML;
                     });
+                    formElement.dataset.acordoEditorBound = 'true';
                 }
-            }
+            };
+
+            const bindUserRadios = () => {
+                detachRadioListeners();
+
+                const radios = document.querySelectorAll('[data-acordo-user]');
+                radios.forEach((radio) => {
+                    const onChange = async () => {
+                        if (!radio.checked) {
+                            return;
+                        }
+
+                        const nextUrl = new URL(window.location.href);
+                        nextUrl.searchParams.delete('action');
+                        nextUrl.searchParams.delete('agreement_id');
+                        nextUrl.searchParams.set('user_id', radio.value);
+
+                        const nextUrlString = nextUrl.toString();
+
+                        if (nextUrlString === window.location.href) {
+                            return;
+                        }
+
+                        if (typeof window.fetch !== 'function' || typeof window.DOMParser !== 'function') {
+                            window.location.href = nextUrlString;
+                            return;
+                        }
+
+                        await loadUser(nextUrlString, { pushState: true });
+                    };
+
+                    radio.addEventListener('change', onChange);
+                    radioCleanup.push(() => radio.removeEventListener('change', onChange));
+                });
+            };
+
+            const rebindDynamicSection = () => {
+                refreshUsersListReference();
+                attachScrollPersistence();
+                restoreUsersScroll();
+                bindUserRadios();
+                initializeEditor();
+            };
+
+            const loadUser = async (nextUrl, { pushState = false } = {}) => {
+                if (isNavigating || !nextUrl) {
+                    return;
+                }
+
+                const nextUrlString = typeof nextUrl === 'string' ? nextUrl : nextUrl.toString();
+                if (!nextUrlString) {
+                    return;
+                }
+
+                persistUsersScroll(usersList ? usersList.scrollTop || 0 : 0);
+
+                isNavigating = true;
+                setContentLoading(true);
+                setRadiosDisabled(true);
+
+                try {
+                    const response = await fetch(nextUrlString, { headers: fetchHeaders });
+                    if (!response.ok) {
+                        throw new Error(`Status ${response.status}`);
+                    }
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const nextDocument = parser.parseFromString(html, 'text/html');
+                    const incomingContent = nextDocument.querySelector(contentSelector);
+                    const incomingUsersList = nextDocument.querySelector('.acordos-users-list');
+
+                    if (!incomingContent) {
+                        throw new Error('Estrutura da página inesperada.');
+                    }
+
+                    const currentContent = getContentColumn();
+                    if (currentContent) {
+                        currentContent.innerHTML = incomingContent.innerHTML;
+                    }
+
+                    if (usersList && incomingUsersList) {
+                        usersList.innerHTML = incomingUsersList.innerHTML;
+                    }
+
+                    if (pushState) {
+                        window.history.pushState({}, '', nextUrlString);
+                    }
+
+                    rebindDynamicSection();
+                } catch (error) {
+                    console.error('Não foi possível carregar os dados do usuário selecionado.', error);
+                    window.location.href = nextUrlString;
+                } finally {
+                    isNavigating = false;
+                    setContentLoading(false);
+                    setRadiosDisabled(false);
+                }
+            };
+
+            rebindDynamicSection();
+
+            window.addEventListener('popstate', () => {
+                if (!document.querySelector(contentSelector)) {
+                    return;
+                }
+
+                if (typeof window.fetch !== 'function' || typeof window.DOMParser !== 'function') {
+                    return;
+                }
+
+                loadUser(window.location.href, { pushState: false });
+            });
         });
     </script>
+
 {% endblock %}
