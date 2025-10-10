@@ -17,8 +17,7 @@
                 <span class="mx-2">/</span>
                 <span class="fw-semibold text-secondary">Procedimentos operacionais</span>
             </nav>
-            <h1 class="h3 mb-1">Procedimentos operacionais</h1>
-            <p class="text-muted mb-0">Consulte e compartilhe fluxos atualizados para o dia a dia da equipe.</p>
+            <h1 class="h3 mb-0">Procedimentos operacionais</h1>
         </div>
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <form class="procedures-search" method="get" action="{{ url_for('operational_procedures') }}" role="search">
@@ -81,8 +80,7 @@
                 <h2 class="h5 mb-2">Nenhum procedimento encontrado</h2>
                 <p class="text-muted mb-0">Ajuste os termos da busca ou limpe o filtro para ver todos os registros.</p>
                 {% else %}
-                <h2 class="h5 mb-2">Nenhum procedimento cadastrado</h2>
-                <p class="text-muted mb-0">Registre fluxos e orientações importantes para toda a equipe.</p>
+                <h2 class="h5 mb-0">Nenhum procedimento cadastrado</h2>
                 {% if can_manage %}
                 <a class="btn btn-portal mt-3" href="{{ url_for('operational_procedures_new') }}">
                     <i class="bi bi-plus-lg me-2"></i>Criar primeiro procedimento
