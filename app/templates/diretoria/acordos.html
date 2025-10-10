@@ -482,9 +482,9 @@
                                             <div>
                                                 <h4 class="h6 fw-semibold mb-1">{{ agreement.title }}</h4>
                                                 <div class="acordo-item-meta">
-                                                    <span>Cadastrado em {{ created_at_display if created_at_display else 'N/D' }} (America/Sao_Paulo)</span>
+                                                    <span>Cadastrado em {{ created_at_display if created_at_display else 'N/D' }}</span>
                                                     {% if updated_at_display %}
-                                                    <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }} (America/Sao_Paulo)</span>
+                                                    <span class="ms-2 ms-md-3">Última atualização {{ updated_at_display }}</span>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -757,13 +757,13 @@
 
                         if (createdElement) {
                             createdElement.textContent = createdAt
-                                ? `Cadastrado em ${createdAt} (America/Sao_Paulo)`
+                                ? `Cadastrado em ${createdAt}`
                                 : 'Cadastrado em: informação indisponível.';
                         }
 
                         if (updatedElement) {
                             updatedElement.textContent = updatedAt
-                                ? `Última atualização ${updatedAt} (America/Sao_Paulo)`
+                                ? `Última atualização ${updatedAt}`
                                 : 'Última atualização: sem registro.';
                         }
 
