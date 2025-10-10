@@ -24,13 +24,25 @@
                     {% endif %}
                 </div>
                 <div class="mb-4">
+                    <label for="procedure-summary-editor" class="form-label fw-semibold">Descrição</label>
+                    <div id="procedure-summary-editor"
+                         class="procedure-editor"
+                         contenteditable="true"
+                         data-procedure-editor="summary"
+                    >{{ form.summary.data|safe }}</div>
+                    {{ form.summary(class_="d-none", **{"data-procedure-input": "summary"}) }}
+                    {% if form.summary.errors %}
+                    <div class="invalid-feedback d-block">{{ form.summary.errors[0] }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
                     <label for="procedure-description-editor" class="form-label fw-semibold">Procedimentos utilizados nas empresas</label>
                     <div id="procedure-description-editor"
                          class="procedure-editor"
                          contenteditable="true"
-                         data-procedure-editor
+                         data-procedure-editor="description"
                     >{{ form.description.data|safe }}</div>
-                    {{ form.description(class_="d-none", **{"data-procedure-input": "true"}) }}
+                    {{ form.description(class_="d-none", **{"data-procedure-input": "description"}) }}
                     {% if form.description.errors %}
                     <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
                     {% endif %}

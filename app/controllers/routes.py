@@ -1279,6 +1279,7 @@ def operational_procedures():
         base_query = base_query.filter(
             or_(
                 OperationalProcedure.title.ilike(ilike_pattern),
+                OperationalProcedure.summary.ilike(ilike_pattern),
                 OperationalProcedure.description.ilike(ilike_pattern),
             )
         )
@@ -1309,21 +1310,32 @@ def operational_procedures_new():
     form = OperationalProcedureForm()
 
     if request.method == "GET":
+        form.summary.data = form.summary.data or ""
         form.description.data = form.description.data or ""
 
     if form.validate_on_submit():
+        cleaned_summary, has_summary = _prepare_procedure_description(
+            form.summary.data
+        )
         cleaned_description, is_valid = _prepare_procedure_description(
             form.description.data
         )
+        form.summary.data = cleaned_summary
         form.description.data = cleaned_description
+
+        if not has_summary:
+            form.summary.errors.append(
+                "Adicione uma descrição com texto ou imagens para o procedimento."
+            )
 
         if not is_valid:
             form.description.errors.append(
                 "Adicione uma descrição com texto ou imagens para o procedimento."
             )
-        else:
+        if has_summary and is_valid:
             procedure = OperationalProcedure(
                 title=form.title.data,
+                summary=cleaned_summary,
                 description=cleaned_description,
                 created_by=current_user,
                 updated_by=current_user,
@@ -1359,20 +1371,31 @@ def operational_procedures_edit(procedure_id: int):
 
     if request.method == "GET":
         form.title.data = procedure.title
+        form.summary.data = procedure.summary
         form.description.data = procedure.description
 
     if form.validate_on_submit():
+        cleaned_summary, has_summary = _prepare_procedure_description(
+            form.summary.data
+        )
         cleaned_description, is_valid = _prepare_procedure_description(
             form.description.data
         )
+        form.summary.data = cleaned_summary
         form.description.data = cleaned_description
+
+        if not has_summary:
+            form.summary.errors.append(
+                "Adicione uma descrição com texto ou imagens para o procedimento."
+            )
 
         if not is_valid:
             form.description.errors.append(
                 "Adicione uma descrição com texto ou imagens para o procedimento."
             )
-        else:
+        if has_summary and is_valid:
             procedure.title = form.title.data
+            procedure.summary = cleaned_summary
             procedure.description = cleaned_description
             procedure.updated_by = current_user
             db.session.commit()

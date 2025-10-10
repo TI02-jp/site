@@ -43,7 +43,16 @@
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-4 procedure-content">
-            {{ procedure.description|safe }}
+            {% if procedure.summary %}
+            <section class="mb-4 procedure-content__summary">
+                <h2 class="h5 mb-3">Descrição</h2>
+                <div>{{ procedure.summary|safe }}</div>
+            </section>
+            {% endif %}
+            <section class="procedure-content__details">
+                <h2 class="h5 mb-3">Procedimentos utilizados nas empresas</h2>
+                <div>{{ procedure.description|safe }}</div>
+            </section>
         </div>
     </div>
 </div>

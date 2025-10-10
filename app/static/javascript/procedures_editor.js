@@ -24,7 +24,7 @@
         return paragraph;
     }
 
-    function handleImagePaste(editor, files) {
+    function handleImagePaste(editor, files, hiddenInput) {
         files.forEach((file) => {
             if (!file || !file.type.startsWith('image/')) {
                 return;
@@ -37,7 +37,7 @@
                 image.classList.add('procedure-editor__image');
                 insertNodeAtCaret(editor, image);
                 image.insertAdjacentElement('afterend', createSpacerParagraph());
-                syncHiddenInput(editor);
+                syncHiddenInput(editor, hiddenInput);
             };
             reader.readAsDataURL(file);
         });
@@ -49,12 +49,36 @@
         }
     }
 
-    function syncHiddenInput(editor) {
+    function findHiddenInput(editor) {
         const form = editor.closest('form');
         if (!form) {
-            return;
+            return null;
         }
-        const hiddenInput = form.querySelector('[data-procedure-input]');
+
+        const key = editor.getAttribute('data-procedure-editor');
+        if (key) {
+            try {
+                const selector = `[data-procedure-input="${CSS.escape(key)}"]`;
+                const targeted = form.querySelector(selector);
+                if (targeted) {
+                    return targeted;
+                }
+            } catch (error) {
+                // CSS.escape may not be available in very old browsers; fallback below.
+            }
+
+            const fallbackTargeted = form.querySelector(
+                `[data-procedure-input="${key}"]`
+            );
+            if (fallbackTargeted) {
+                return fallbackTargeted;
+            }
+        }
+
+        return form.querySelector('[data-procedure-input]');
+    }
+
+    function syncHiddenInput(editor, hiddenInput) {
         if (!hiddenInput) {
             return;
         }
@@ -64,16 +88,20 @@
     document.addEventListener('DOMContentLoaded', () => {
         const editors = document.querySelectorAll('[data-procedure-editor]');
         editors.forEach((editor) => {
+            const hiddenInput = findHiddenInput(editor);
+            if (!hiddenInput) {
+                return;
+            }
             normaliseEditorContent(editor);
-            syncHiddenInput(editor);
+            syncHiddenInput(editor, hiddenInput);
 
             editor.addEventListener('input', () => {
                 normaliseEditorContent(editor);
-                syncHiddenInput(editor);
+                syncHiddenInput(editor, hiddenInput);
             });
 
             editor.addEventListener('blur', () => {
-                syncHiddenInput(editor);
+                syncHiddenInput(editor, hiddenInput);
             });
 
             editor.addEventListener('paste', (event) => {
@@ -103,17 +131,17 @@
                     .filter(Boolean);
 
                 if (files.length) {
-                    handleImagePaste(editor, files);
+                    handleImagePaste(editor, files, hiddenInput);
                 }
 
-                syncHiddenInput(editor);
+                syncHiddenInput(editor, hiddenInput);
             });
 
             const form = editor.closest('form');
             if (form) {
                 form.addEventListener('submit', () => {
                     normaliseEditorContent(editor);
-                    syncHiddenInput(editor);
+                    syncHiddenInput(editor, hiddenInput);
                 });
             }
         });

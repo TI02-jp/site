@@ -60,7 +60,8 @@
                             Atualizado {{ (procedure.updated_at or procedure.created_at)|time_since }}
                         </small>
                     </div>
-                    <p class="mb-2 text-muted procedures-item__excerpt">{{ procedure.description|striptags|truncate(180, True, '…') }}</p>
+                    {% set excerpt_source = procedure.summary if procedure.summary else procedure.description %}
+                    <p class="mb-2 text-muted procedures-item__excerpt">{{ excerpt_source|striptags|truncate(180, True, '…') }}</p>
                     <div class="d-flex flex-wrap gap-3 text-muted small">
                         {% set editor = procedure.updated_by or procedure.created_by %}
                         {% set last_update = procedure.updated_at_sao_paulo or procedure.created_at_sao_paulo or procedure.updated_at or procedure.created_at %}

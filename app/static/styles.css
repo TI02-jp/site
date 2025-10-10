@@ -2665,6 +2665,10 @@ Usuários online
     color: var(--primary);
 }
 
+.procedure-content__summary h2:first-child {
+    margin-top: 0;
+}
+
 .procedure-content ul,
 .procedure-content ol {
     padding-left: 1.25rem;

@@ -256,6 +256,14 @@ class OperationalProcedureForm(FlaskForm):
         filters=[lambda value: value.strip() if value else value],
         render_kw={"placeholder": "Ex.: Fluxo de atendimento a novos clientes"},
     )
+    summary = HiddenField(
+        "Descrição",
+        validators=[
+            DataRequired(
+                message="Adicione uma descrição com texto ou imagens para o procedimento."
+            )
+        ],
+    )
     description = HiddenField(
         "Descrição",
         validators=[DataRequired(message="Adicione uma descrição ou um print.")],
