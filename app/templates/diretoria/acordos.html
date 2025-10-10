@@ -536,26 +536,75 @@
             const userRadios = document.querySelectorAll('[data-acordo-user]');
             const storageKey = 'diretoriaAcordosUsersScrollTop';
             const usersList = document.querySelector('.acordos-users-list');
+            const pagePath = window.location.pathname;
+
+            const persistUsersScroll = (value) => {
+                if (!usersList) {
+                    return;
+                }
+
+                const payload = {
+                    scrollTop: Math.max(0, Math.round(value || 0)),
+                    path: pagePath
+                };
+
+                try {
+                    sessionStorage.setItem(storageKey, JSON.stringify(payload));
+                } catch (error) {
+                    console.warn('Não foi possível salvar o scroll da lista de usuários.', error);
+                }
+            };
+
+            const restoreUsersScroll = () => {
+                if (!usersList) {
+                    return;
+                }
+
+                const storedScroll = sessionStorage.getItem(storageKey);
+                if (!storedScroll) {
+                    return;
+                }
+
+                let parsed;
+                try {
+                    parsed = JSON.parse(storedScroll);
+                } catch (error) {
+                    sessionStorage.removeItem(storageKey);
+                    return;
+                }
+
+                const { scrollTop, path } = parsed || {};
+                if (
+                    path !== pagePath ||
+                    typeof scrollTop !== 'number' ||
+                    Number.isNaN(scrollTop)
+                ) {
+                    sessionStorage.removeItem(storageKey);
+                    return;
+                }
+
+                const applyScroll = () => {
+                    usersList.scrollTop = scrollTop;
+                };
+
+                requestAnimationFrame(() => {
+                    applyScroll();
+                    requestAnimationFrame(applyScroll);
+                });
+            };
 
             if (usersList) {
-                const storedScroll = sessionStorage.getItem(storageKey);
-                if (storedScroll !== null) {
-                    const scrollValue = parseInt(storedScroll, 10);
-                    if (!Number.isNaN(scrollValue)) {
-                        usersList.scrollTop = scrollValue;
-                    }
-                }
+                restoreUsersScroll();
 
                 usersList.addEventListener(
                     'scroll',
                     () => {
-                        sessionStorage.setItem(
-                            storageKey,
-                            Math.round(usersList.scrollTop || 0).toString()
-                        );
+                        persistUsersScroll(usersList.scrollTop || 0);
                     },
                     { passive: true }
                 );
+
+                window.addEventListener('pageshow', restoreUsersScroll);
             }
 
             userRadios.forEach((radio) => {
@@ -564,10 +613,7 @@
                     nextUrl.searchParams.delete('action');
                     nextUrl.searchParams.delete('agreement_id');
                     if (usersList) {
-                        sessionStorage.setItem(
-                            storageKey,
-                            Math.round(usersList.scrollTop || 0).toString()
-                        );
+                        persistUsersScroll(usersList.scrollTop || 0);
                     }
 
                     if (radio.checked) {
