@@ -494,8 +494,6 @@
                                                         data-agreement-view
                                                         data-agreement-title="{{ agreement.title | e }}"
                                                         data-agreement-date="{{ agreement.agreement_date.strftime('%d/%m/%Y') | e }}"
-                                                        data-agreement-created="{{ created_at_display | e if created_at_display else '' }}"
-                                                        data-agreement-updated="{{ updated_at_display | e if updated_at_display else '' }}"
                                                         data-description-template="agreement-description-{{ agreement.id }}">
                                                     <i class="bi bi-eye me-1"></i>Visualizar
                                                 </button>
@@ -540,11 +538,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                         </div>
                         <div class="modal-body">
-                            <div class="small text-muted mb-2" data-modal-agreement-date></div>
-                            <div class="small text-muted mb-3">
-                                <div data-modal-created-at></div>
-                                <div data-modal-updated-at></div>
-                            </div>
+                            <div class="small text-muted mb-3" data-modal-agreement-date></div>
                             <div class="acordo-modal-description" data-modal-description></div>
                         </div>
                         <div class="modal-footer">
@@ -725,16 +719,12 @@
 
                 const titleElement = modalElement.querySelector('[data-modal-title]');
                 const agreementDateElement = modalElement.querySelector('[data-modal-agreement-date]');
-                const createdElement = modalElement.querySelector('[data-modal-created-at]');
-                const updatedElement = modalElement.querySelector('[data-modal-updated-at]');
                 const descriptionElement = modalElement.querySelector('[data-modal-description]');
 
                 document.querySelectorAll('[data-agreement-view]').forEach((button) => {
                     const onClick = () => {
                         const title = button.getAttribute('data-agreement-title') || 'Acordo';
                         const agreementDate = button.getAttribute('data-agreement-date') || '';
-                        const createdAt = button.getAttribute('data-agreement-created') || '';
-                        const updatedAt = button.getAttribute('data-agreement-updated') || '';
                         const templateId = button.getAttribute('data-description-template');
 
                         let descriptionHtml = '';
@@ -753,18 +743,6 @@
                             agreementDateElement.textContent = agreementDate
                                 ? `Data do acordo: ${agreementDate}`
                                 : 'Data do acordo não informado.';
-                        }
-
-                        if (createdElement) {
-                            createdElement.textContent = createdAt
-                                ? `Cadastrado em ${createdAt}`
-                                : 'Cadastrado em: informação indisponível.';
-                        }
-
-                        if (updatedElement) {
-                            updatedElement.textContent = updatedAt
-                                ? `Última atualização ${updatedAt}`
-                                : 'Última atualização: sem registro.';
                         }
 
                         if (descriptionElement) {
