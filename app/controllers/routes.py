@@ -11,6 +11,7 @@ from flask import (
     current_app,
     session,
     has_request_context,
+    g,
 )
 from functools import wraps
 from collections import Counter
@@ -959,6 +960,51 @@ def admin_required(f):
 def user_has_tag(tag_name: str) -> bool:
     """Return True if current user has a tag with the given name."""
     return any(tag.nome.lower() == tag_name.lower() for tag in current_user.tags)
+
+
+def _get_ti_tag() -> Tag | None:
+    """Return the TI tag if it exists (cached per request)."""
+
+    if not has_request_context():
+        return Tag.query.filter(sa.func.lower(Tag.nome) == "ti").first()
+
+    if not hasattr(g, "_ti_tag"):
+        g._ti_tag = Tag.query.filter(sa.func.lower(Tag.nome) == "ti").first()
+    return g._ti_tag
+
+
+def _can_user_access_tag(tag: Tag | None, user: User | None = None) -> bool:
+    """Return True if ``user`` (or the current user) may access ``tag``."""
+
+    if tag is None:
+        return False
+    if user is None:
+        user = current_user if current_user.is_authenticated else None
+    if user is None:
+        return False
+    if getattr(user, "role", None) == "admin":
+        return True
+    user_tags = getattr(user, "tags", []) or []
+    if tag in user_tags:
+        return True
+    ti_tag = _get_ti_tag()
+    return ti_tag is not None and tag.id == ti_tag.id
+
+
+def _get_accessible_tag_ids(user: User | None = None) -> list[int]:
+    """Return the tag IDs the given user can access."""
+
+    if user is None:
+        user = current_user if current_user.is_authenticated else None
+    if user is None:
+        return []
+    ids = {t.id for t in getattr(user, "tags", []) or []}
+    if getattr(user, "role", None) == "admin":
+        return list(ids)
+    ti_tag = _get_ti_tag()
+    if ti_tag:
+        ids.add(ti_tag.id)
+    return list(ids)
 
 
 @app.context_processor
@@ -4983,13 +5029,28 @@ def tasks_overview():
 
 
 @app.route("/tasks/new", methods=["GET", "POST"])
-@admin_required
+@login_required
 def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
+    is_admin = current_user.role == "admin"
+    requested_tag_id = request.args.get("tag_id", type=int)
+    choices: list[tuple[int, str]] = []
+    ti_tag: Tag | None = None
+    ti_tag_id: int | None = None
+    if not is_admin:
+        ti_tag = _get_ti_tag()
+        if not ti_tag:
+            abort(403)
+        ti_tag_id = ti_tag.id
+        if parent_task and parent_task.tag_id != ti_tag_id:
+            abort(403)
+        if requested_tag_id and requested_tag_id != ti_tag_id:
+            requested_tag_id = ti_tag_id
+
     form = TaskForm()
     tag = parent_task.tag if parent_task else None
     if parent_task:
@@ -5002,23 +5063,42 @@ def tasks_new():
             (u.id, u.name) for u in users
         ]
     else:
-        tags_query = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
-        )
-        form.tag_id.choices = [(t.id, t.nome) for t in tags_query.all()]
-        if form.tag_id.data:
-            tag = Tag.query.get(form.tag_id.data)
+        if is_admin:
+            tags_query = (
+                Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
+            )
+            choices = [(t.id, t.nome) for t in tags_query.all()]
+        else:
+            choices = [(ti_tag_id, ti_tag.nome)] if ti_tag else []
+        form.tag_id.choices = choices
+        selected_tag_id = form.tag_id.data
+        if not selected_tag_id and requested_tag_id:
+            selected_tag_id = requested_tag_id
+            if request.method == "GET":
+                form.tag_id.data = selected_tag_id
+        if not selected_tag_id and choices:
+            selected_tag_id = choices[0][0]
+            if request.method == "GET":
+                form.tag_id.data = selected_tag_id
+        if selected_tag_id:
+            tag = Tag.query.get(selected_tag_id)
             if tag:
                 users = [u for u in tag.users if u.ativo]
                 form.assigned_to.choices = [(0, "Sem responsável")] + [
                     (u.id, u.name) for u in users
                 ]
+            else:
+                form.assigned_to.choices = [(0, "Sem responsável")]
         else:
             form.assigned_to.choices = [(0, "Sem responsável")]
     if form.validate_on_submit():
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         if not parent_task and (tag is None or tag.id != tag_id):
             tag = Tag.query.get(tag_id)
+        if tag is None:
+            abort(400)
+        if not is_admin and ti_tag_id and tag.id != ti_tag_id:
+            abort(403)
         assignee_id = form.assigned_to.data or None
         task = Task(
             title=form.title.data,
@@ -5036,11 +5116,18 @@ def tasks_new():
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
         return redirect(url_for("tasks_sector", tag_id=tag_id))
-    cancel_url = (
-        url_for("tasks_sector", tag_id=parent_task.tag_id)
-        if parent_task
-        else url_for("tasks_overview")
-    )
+    if parent_task:
+        cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
+    elif is_admin:
+        cancel_url = url_for("tasks_overview")
+    else:
+        selected_tag_id = form.tag_id.data
+        if not selected_tag_id:
+            if choices:
+                selected_tag_id = choices[0][0]
+            else:
+                selected_tag_id = ti_tag_id
+        cancel_url = url_for("tasks_sector", tag_id=selected_tag_id)
     return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
 
 
@@ -5064,8 +5151,11 @@ def tasks_sector(tag_id):
     tag = Tag.query.get_or_404(tag_id)
     if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if current_user.role != "admin" and tag not in current_user.tags:
+    user_is_admin = current_user.role == "admin"
+    if not _can_user_access_tag(tag, current_user):
         abort(403)
+    ti_tag = _get_ti_tag()
+    ti_tag_id = ti_tag.id if ti_tag else None
     assigned_param = (request.args.get("assigned_to_me", "") or "").lower()
     assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
     query = Task.query.filter(Task.tag_id == tag_id, Task.parent_id.is_(None))
@@ -5110,6 +5200,7 @@ def tasks_sector(tag_id):
         TaskStatus=TaskStatus,
         history_count=history_count,
         assigned_to_me=assigned_to_me,
+        ti_tag_id=ti_tag_id,
     )
 
 
@@ -5126,7 +5217,7 @@ def tasks_history(tag_id=None):
         tag = Tag.query.get_or_404(tag_id)
         if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
             abort(404)
-        if current_user.role != "admin" and tag not in current_user.tags:
+        if not _can_user_access_tag(tag, current_user):
             abort(403)
         query = Task.query.filter(
             Task.tag_id == tag_id,
@@ -5140,22 +5231,28 @@ def tasks_history(tag_id=None):
                 Task.parent_id.is_(None), Task.status == TaskStatus.DONE
             )
         else:
-            tag_ids = [t.id for t in current_user.tags]
-            query = Task.query.filter(
-                Task.parent_id.is_(None),
-                Task.status == TaskStatus.DONE,
-                Task.tag_id.in_(tag_ids),
-            )
-    if assigned_to_me:
-        query = query.filter(Task.assigned_to == current_user.id)
-    if assigned_by_me:
-        query = query.filter(Task.created_by == current_user.id)
-    tasks = (
-        query.order_by(Task.completed_at.desc())
-        .options(joinedload(Task.tag), joinedload(Task.finisher))
-        .offset(5)
-        .all()
-    )
+            tag_ids = _get_accessible_tag_ids(current_user)
+            if not tag_ids:
+                query = None
+            else:
+                query = Task.query.filter(
+                    Task.parent_id.is_(None),
+                    Task.status == TaskStatus.DONE,
+                    Task.tag_id.in_(tag_ids),
+                )
+    if query is not None:
+        if assigned_to_me:
+            query = query.filter(Task.assigned_to == current_user.id)
+        if assigned_by_me:
+            query = query.filter(Task.created_by == current_user.id)
+        tasks = (
+            query.order_by(Task.completed_at.desc())
+            .options(joinedload(Task.tag), joinedload(Task.finisher))
+            .offset(5)
+            .all()
+        )
+    else:
+        tasks = []
     return render_template(
         "tasks_history.html",
         tag=tag,
@@ -5181,7 +5278,7 @@ def tasks_view(task_id):
     )
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if current_user.role != "admin" and task.tag not in current_user.tags:
+    if not _can_user_access_tag(task.tag, current_user):
         abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
     priority_order = ["low", "medium", "high"]
@@ -5202,7 +5299,7 @@ def update_task_status(task_id):
     task = Task.query.get_or_404(task_id)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if current_user.role != "admin" and task.tag not in current_user.tags:
+    if not _can_user_access_tag(task.tag, current_user):
         abort(403)
     data = request.get_json() or {}
     status_value = data.get("status")
