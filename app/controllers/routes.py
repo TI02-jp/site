@@ -45,6 +45,7 @@ from app.models.tables import (
     GeneralCalendarEvent,
     Announcement,
     AnnouncementAttachment,
+    OperationalProcedure,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -70,6 +71,7 @@ from app.forms import (
     CourseTagForm,
     AnnouncementForm,
     DiretoriaAcordoForm,
+    OperationalProcedureForm,
 )
 import os, json, re, secrets
 import requests
@@ -819,7 +821,7 @@ def upload_image():
         try:
             os.makedirs(upload_folder, exist_ok=True)
             file.save(file_path)
-            file_url = url_for("static", filename=f"uploads/{unique_name}")
+            file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
             return jsonify({"image_url": file_url})
         except Exception as e:
             return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
@@ -2092,6 +2094,104 @@ def acessos_categoria_novo(categoria_slug: str):
     if not form.category.data:
         form.category.data = categoria_slug
     return _handle_access_shortcut_submission(form)
+
+
+@app.route("/procedimentos", methods=["GET", "POST"])
+@login_required
+def procedimentos_operacionais():
+    """Lista e permite criação de procedimentos operacionais (admin)."""
+
+    form = OperationalProcedureForm()
+    search_term = (request.args.get("q") or "").strip()
+
+    query = OperationalProcedure.query
+    if search_term:
+        pattern = f"%{search_term}%"
+        query = query.filter(
+            sa.or_(
+                OperationalProcedure.title.ilike(pattern),
+                OperationalProcedure.description.ilike(pattern),
+            )
+        )
+
+    procedures = query.order_by(OperationalProcedure.updated_at.desc()).all()
+
+    if request.method == "POST":
+        if current_user.role != "admin":
+            abort(403)
+        if form.validate_on_submit():
+            proc = OperationalProcedure(
+                title=form.title.data,
+                description= sanitize_html(form.description.data or "") or None,
+                created_by_id=current_user.id,
+            )
+            db.session.add(proc)
+            db.session.commit()
+            flash("Procedimento criado com sucesso.", "success")
+            return redirect(url_for("procedimentos_operacionais"))
+        flash("Não foi possível criar o procedimento. Corrija os erros do formulário.", "danger")
+
+    return render_template(
+        "procedimentos.html",
+        form=form if current_user.role == "admin" else None,
+        procedures=procedures,
+        search_term=search_term,
+    )
+
+
+@app.route("/procedimentos/<int:proc_id>")
+@login_required
+def procedimentos_operacionais_redirect(proc_id: int):
+    """Compatibilidade: redireciona para a visualização dedicada."""
+    return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc_id))
+
+
+@app.route("/procedimentos/<int:proc_id>/visualizar")
+@login_required
+def procedimentos_operacionais_ver(proc_id: int):
+    """Exibe somente a visualização do procedimento."""
+    proc = OperationalProcedure.query.get_or_404(proc_id)
+    return render_template("procedimento_view.html", procedure=proc)
+
+
+@app.route("/procedimentos/<int:proc_id>/editar", methods=["GET", "POST"])
+@login_required
+def procedimentos_operacionais_editar(proc_id: int):
+    """Página de edição do procedimento (apenas admin)."""
+    if current_user.role != "admin":
+        abort(403)
+
+    proc = OperationalProcedure.query.get_or_404(proc_id)
+    form = OperationalProcedureForm()
+    if request.method == "GET":
+        form.title.data = proc.title
+        form.description.data = proc.description or ""
+        return render_template("procedimento_edit.html", procedure=proc, form=form)
+
+    if form.validate_on_submit():
+        proc.title = form.title.data
+        proc.description = sanitize_html(form.description.data or "") or None
+        db.session.commit()
+        flash("Procedimento atualizado com sucesso.", "success")
+        return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc.id))
+
+    flash("Não foi possível atualizar. Verifique os campos.", "danger")
+    return redirect(url_for("procedimentos_operacionais_editar", proc_id=proc.id))
+
+
+@app.route("/procedimentos/<int:proc_id>/excluir", methods=["POST"])
+@login_required
+def procedimentos_operacionais_excluir(proc_id: int):
+    """Remove um procedimento (apenas admin)."""
+
+    if current_user.role != "admin":
+        abort(403)
+
+    proc = OperationalProcedure.query.get_or_404(proc_id)
+    db.session.delete(proc)
+    db.session.commit()
+    flash("Procedimento excluído com sucesso.", "success")
+    return redirect(url_for("procedimentos_operacionais"))
 
 
 @app.route("/ping")

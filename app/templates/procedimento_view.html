@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Procedimento: {{ procedure.title }}{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 px-2">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0"><i class="bi bi-journal-text me-2"></i>{{ procedure.title }}</h1>
+    <div class="d-flex gap-2">
+      {% if current_user.role == 'admin' %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('procedimentos_operacionais_editar', proc_id=procedure.id) }}">
+        <i class="bi bi-pencil-square me-1"></i>Editar
+      </a>
+      {% endif %}
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('procedimentos_operacionais') }}"><i class="bi bi-arrow-left me-1"></i>Voltar</a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      {% if procedure.description %}
+      <div class="editor-content">{{ procedure.description|sanitize }}</div>
+      {% else %}
+      <div class="text-muted">Sem descrição cadastrada.</div>
+      {% endif %}
+      
+    </div>
+  </div>
+
+  
+  {% if form %}
+  <div class="card shadow-sm">
+    <div class="card-header bg-light"><strong>Editar</strong></div>
+    <div class="card-body">
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          <label class="form-label">{{ form.title.label }}</label>
+          {{ form.title(class="form-control") }}
+          {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ form.description.label }}</label>
+          <div id="proc-editor" style="height: 220px;"></div>
+          {{ form.description(id="proc-description", style="display:none;") }}
+          <input type="file" id="proc-image-input" accept="image/*" style="display:none;">
+        </div>
+        <div class="d-flex justify-content-between">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Salvar alterações</button>
+        </div>
+      </form>
+      <form method="post" action="{{ url_for('procedimentos_operacionais_excluir', proc_id=procedure.id) }}" onsubmit="return confirm('Excluir este procedimento?');" class="mt-3 text-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>Excluir</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function(){
+  // Normaliza endereços de imagens relativos (ex.: "static/uploads/..." ou "uploads/...")
+  document.querySelectorAll('.editor-content img').forEach(img => {
+    const raw = img.getAttribute('src') || '';
+    // Se começar com "static/" => prefixa com origem
+    if (/^static\//i.test(raw)) {
+      img.src = `${window.location.origin}/${raw}`;
+      return;
+    }
+    // Se não começa com http(s), data: ou / => prefixa com /
+    if (!/^https?:\/\//i.test(raw) && !/^data:/i.test(raw) && !raw.startsWith('/')) {
+      img.src = `/${raw}`;
+    }
+  });
+
+  // Abrir imagem em nova aba para melhor visualização
+  document.querySelectorAll('.editor-content img').forEach(img => {
+    img.addEventListener('click', () => {
+      const src = img.getAttribute('src');
+      if (src) {
+        window.open(src, '_blank');
+      }
+    });
+  });
+
+  const csrfToken = window.csrfToken;
+  function uploadImage(file){
+    return new Promise((resolve, reject)=>{
+      const data = new FormData();
+      data.append('image', file);
+      fetch('{{ url_for('upload_image') }}', { method:'POST', headers:{'X-CSRFToken': csrfToken}, body:data })
+        .then(r=>r.json()).then(j=>{ if(j.image_url) resolve(j.image_url); else reject(j.error||'Falha'); })
+        .catch(()=>reject('Erro de rede'));
+    });
+  }
+  function initQuill(editorSel, hiddenSel, fileSel){
+    const editor = document.querySelector(editorSel);
+    const hidden = document.querySelector(hiddenSel);
+    const file = document.querySelector(fileSel);
+    if(!editor || !hidden || !file) return;
+    function selectLocalImage(){ file.click(); }
+    const quill = new Quill(editor, {
+      theme: 'snow',
+      placeholder: 'Descreva o procedimento. Você pode colar prints.',
+      modules: { toolbar: { container: [ ['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], ['link','image'], ['clean'] ], handlers: { image: selectLocalImage } } }
+    });
+    if(hidden.value){ quill.root.innerHTML = hidden.value; }
+    file.addEventListener('change', ()=>{
+      if(file.files && file.files[0]){
+        const f = file.files[0];
+        const range = quill.getSelection(true) || { index: quill.getLength() };
+        const reader = new FileReader();
+        reader.onload = e => {
+          const b64 = e.target.result;
+          quill.insertEmbed(range.index, 'image', b64);
+          quill.setSelection(range.index + 1);
+          uploadImage(f).then(url=>{
+            const img = quill.root.querySelector(`img[src="${b64}"]`);
+            if(img) img.src = url;
+          }).catch(()=>{
+            const img = quill.root.querySelector(`img[src="${b64}"]`);
+            if(img) img.remove();
+          });
+        };
+        reader.readAsDataURL(f);
+        file.value = '';
+      }
+    });
+    editor.closest('form')?.addEventListener('submit', ()=>{ hidden.value = quill.root.innerHTML; });
+  }
+  initQuill('#proc-editor', '#proc-description', '#proc-image-input');
+})();
+</script>
+{% endblock %}

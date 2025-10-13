@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Procedimentos Operacionais{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 px-2">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3 mb-0"><i class="bi bi-journal-text me-2"></i>Procedimentos Operacionais</h1>
+    <div class="d-flex align-items-center gap-2">
+      {% if form %}
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProcedureModal">
+        <i class="bi bi-plus-lg me-1"></i>Novo procedimento
+      </button>
+      {% endif %}
+      <form class="d-flex" method="get" action="{{ url_for('procedimentos_operacionais') }}">
+        <input class="form-control form-control-sm me-2" type="search" name="q" placeholder="Buscar por título ou descrição" value="{{ search_term }}">
+        <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+      </form>
+    </div>
+  </div>
+
+  {% if form %}
+  <!-- Modal: Novo Procedimento -->
+  <div class="modal fade" id="newProcedureModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: min(1400px, calc(100vw - 4rem)); margin: 0.5rem auto;">
+      <div class="modal-content" style="overflow: hidden;">
+        <div class="modal-header">
+          <h5 class="modal-title">Novo procedimento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body" style="overflow: hidden;">
+          <form method="POST" id="new-proc-form">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              <label class="form-label">{{ form.title.label }}</label>
+              {{ form.title(class="form-control", placeholder="Título do procedimento") }}
+              {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">{{ form.description.label }}</label>
+              <div id="proc-editor-modal" style="height: 48vh;"></div>
+              {{ form.description(id="proc-description", style="display:none;") }}
+              <input type="file" id="proc-image-input" accept="image/*" style="display:none;">
+              <div class="form-text">Cole prints diretamente ou use o botão de imagem. Imagens são enviadas ao salvar o conteúdo.</div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" form="new-proc-form" class="btn btn-primary"><i class="bi bi-save me-1"></i>{{ form.submit.label.text }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Somente administradores podem criar procedimentos. Você pode pesquisar e visualizar os existentes.</div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-light">
+      <strong>Procedimentos</strong>
+    </div>
+    <ul class="list-group list-group-flush">
+      {% if procedures %}
+        {% for p in procedures %}
+        <li class="list-group-item d-flex align-items-center justify-content-between">
+          <div>
+            <a class="fw-semibold text-decoration-none" href="{{ url_for('procedimentos_operacionais_ver', proc_id=p.id) }}">{{ p.title }}</a>
+          </div>
+          {% if current_user.role == 'admin' %}
+          <form method="post" action="{{ url_for('procedimentos_operacionais_excluir', proc_id=p.id) }}" onsubmit="return confirm('Excluir este procedimento?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+          </form>
+          {% endif %}
+        </li>
+        {% endfor %}
+      {% else %}
+        <li class="list-group-item text-muted">Nenhum procedimento encontrado.</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function(){
+  const csrfToken = window.csrfToken;
+  function uploadImage(file){
+    return new Promise((resolve, reject)=>{
+      const data = new FormData();
+      data.append('image', file);
+      fetch('{{ url_for('upload_image') }}', { method:'POST', headers:{'X-CSRFToken': csrfToken}, body:data })
+        .then(r=>r.json()).then(j=>{ if(j.image_url) resolve(j.image_url); else reject(j.error||'Falha'); })
+        .catch(()=>reject('Erro de rede'));
+    });
+  }
+  let quillInitialized = false;
+  function initQuillModal(){
+    if(quillInitialized) return;
+    const editor = document.querySelector('#proc-editor-modal');
+    const hidden = document.querySelector('#proc-description');
+    const file = document.querySelector('#proc-image-input');
+    if(!editor || !hidden || !file) return;
+    function selectLocalImage(){ file.click(); }
+    const quill = new Quill(editor, {
+      theme: 'snow',
+      placeholder: 'Descreva o procedimento. Você pode colar prints.',
+      modules: { toolbar: { container: [ ['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], ['link','image'], ['clean'] ], handlers: { image: selectLocalImage } } }
+    });
+    if(hidden.value){ quill.root.innerHTML = hidden.value; }
+    file.addEventListener('change', ()=>{
+      if(file.files && file.files[0]){
+        const f = file.files[0];
+        const range = quill.getSelection(true) || { index: quill.getLength() };
+        const reader = new FileReader();
+        reader.onload = e => {
+          const b64 = e.target.result;
+          quill.insertEmbed(range.index, 'image', b64);
+          quill.setSelection(range.index + 1);
+          uploadImage(f).then(url=>{
+            const img = quill.root.querySelector(`img[src="${b64}"]`);
+            if(img) img.src = url;
+          }).catch(()=>{
+            const img = quill.root.querySelector(`img[src="${b64}"]`);
+            if(img) img.remove();
+          });
+        };
+        reader.readAsDataURL(f);
+        file.value = '';
+      }
+    });
+    document.getElementById('new-proc-form')?.addEventListener('submit', ()=>{ hidden.value = quill.root.innerHTML; });
+    quillInitialized = true;
+  }
+  const modalEl = document.getElementById('newProcedureModal');
+  if(modalEl){
+    modalEl.addEventListener('shown.bs.modal', initQuillModal);
+    // Autoabrir modal se houver erros de validação
+    {% if form and (form.title.errors or form.description.errors) %}
+    const m = new bootstrap.Modal(modalEl);
+    m.show();
+    {% endif %}
+  }
+})();
+</script>
+{% endblock %}
