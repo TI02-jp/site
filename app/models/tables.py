@@ -961,6 +961,28 @@ class TaskNotification(db.Model):
         )
 
 
+class OperationalProcedure(db.Model):
+    """Operational procedure with rich description supporting images."""
+
+    __tablename__ = "operational_procedures"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    created_by = db.relationship(
+        "User", backref=db.backref("operational_procedures", lazy=True)
+    )
+
+    def __repr__(self):
+        return f"<OperationalProcedure {self.title}>"
+
+
 def _get_assignment_context(connection, task: Task) -> tuple[str, str | None]:
     """Return the task title and related tag name for assignment messaging."""
 

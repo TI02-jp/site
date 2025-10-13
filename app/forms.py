@@ -247,6 +247,21 @@ class AnnouncementForm(FlaskForm):
     submit = SubmitField("Salvar")
 
 
+class OperationalProcedureForm(FlaskForm):
+    """Formulário para cadastrar/editar procedimentos operacionais."""
+
+    title = StringField(
+        "Título",
+        validators=[DataRequired(), Length(max=200)],
+        filters=[lambda v: v.strip() if v else v],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[Optional()],
+    )
+    submit = SubmitField("Salvar procedimento")
+
+
 class DiretoriaAcordoForm(FlaskForm):
     """Formulário para registrar acordos individuais da Diretoria JP."""
 
