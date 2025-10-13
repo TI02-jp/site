@@ -2,6 +2,8 @@
 
 import os
 import time
+import logging
+import secrets
 from datetime import datetime, timedelta
 
 import sqlalchemy as sa
@@ -20,15 +22,49 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
-)
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "umsegredoforteaqui123")
+logger = logging.getLogger(__name__)
+
+db_user = os.getenv('DB_USER')
+db_password = os.getenv('DB_PASSWORD')
+db_host = os.getenv('DB_HOST')
+db_name = os.getenv('DB_NAME')
+
+missing_db_vars = [
+    name for name, value in (
+        ('DB_USER', db_user),
+        ('DB_PASSWORD', db_password),
+        ('DB_HOST', db_host),
+        ('DB_NAME', db_name),
+    )
+    if value is None
+]
+
+if missing_db_vars:
+    logger.warning(
+        "Variáveis de banco ausentes (%s); usando SQLite local em modo de fallback.",
+        ", ".join(missing_db_vars),
+    )
+    os.makedirs(app.instance_path, exist_ok=True)
+    fallback_db = os.path.join(app.instance_path, 'app.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{fallback_db}"
+else:
+    if db_password == "":
+        logger.warning("DB_PASSWORD está vazio; conectando ao MySQL sem senha (apenas recomendado para desenvolvimento local).")
+    database_uri = f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}"
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+
+secret_key = os.getenv("SECRET_KEY")
+if not secret_key or secret_key == "umsegredoforteaqui123":
+    secret_key = secrets.token_urlsafe(32)
+    logger.warning("SECRET_KEY não definida; gerando valor temporário apenas para ambiente local.")
+app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB upload limit
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 # ``SameSite=None`` requires the ``Secure`` flag; falling back to ``Lax``
 # when HTTPS is not enforced prevents browsers from rejecting the cookie
 # entirely, which would break logins in development environments.
@@ -42,6 +78,12 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
+app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24  # 24 horas
+app.config['WTF_CSRF_SSL_STRICT'] = app.config['ENFORCE_HTTPS']
+app.config['SESSION_COOKIE_NAME'] = os.getenv('SESSION_COOKIE_NAME', 'jp_portal_session')
+app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_pre_ping', True)
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_recycle', 1800)
 app.config['GOOGLE_CLIENT_ID'] = os.getenv('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
@@ -110,6 +152,29 @@ def _set_security_headers(response):
             'Strict-Transport-Security',
             'max-age=31536000; includeSubDomains',
         )
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    response.headers.setdefault('X-XSS-Protection', '0')
+    response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+    response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-origin')
+
+    csp = (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.quilljs.com https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.quilljs.com https://cdn.plot.ly https://accounts.google.com https://apis.google.com; "
+        "connect-src 'self' https://www.googleapis.com https://accounts.google.com; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'; "
+        "worker-src 'self' blob:; "
+        "upgrade-insecure-requests"
+    )
+    response.headers.setdefault('Content-Security-Policy', csp)
     return response
 
 # Importa rotas e modelos depois da criação do db

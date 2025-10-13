@@ -41,14 +41,14 @@
     <div class="card shadow-sm border-0">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table align-middle mb-0" id="access-table">
                     <thead class="table-light">
                         <tr>
-                            {% for slug, categoria in categorias.items() %}
+                            {% for column in display_columns %}
                             <th scope="col" class="text-uppercase small text-muted">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="fs-5 text-primary"><i class="{{ categoria.icon }}"></i></span>
-                                    <span class="fw-semibold">{{ categoria.title }}</span>
+                                    <span class="fs-5 text-primary"><i class="{{ column.icon }}"></i></span>
+                                    <span class="fw-semibold">{{ column.title }}</span>
                                 </div>
                             </th>
                             {% endfor %}
@@ -56,10 +56,10 @@
                     </thead>
                     <tbody>
                         <tr>
-                            {% for slug, categoria in categorias.items() %}
+                            {% for column in display_columns %}
                             <td class="align-top">
                                 <div class="d-flex flex-column gap-3">
-                                    {% for link in categoria_links.get(slug, []) %}
+                                    {% for link in column.links %}
                                     <div class="access-shortcut-wrapper d-flex flex-column gap-2">
                                         <div class="access-shortcut{% if link.description %} has-description{% endif %}">
                                             <a
@@ -188,6 +188,44 @@
 
 {% block scripts %}
 {{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.getElementById('access-table');
+        if (!table) {
+            return;
+        }
+
+        const updateColumnWidths = () => {
+            if (!table) {
+                return;
+            }
+            const headerCells = table.querySelectorAll('thead th');
+            if (!headerCells.length) {
+                return;
+            }
+            const columnCount = headerCells.length;
+            const targetWidth = (100 / columnCount) + '%';
+
+            table.style.tableLayout = 'fixed';
+            table.style.width = '100%';
+
+            headerCells.forEach((cell) => {
+                cell.style.width = targetWidth;
+            });
+
+            table.querySelectorAll('tbody td').forEach((cell) => {
+                cell.style.width = targetWidth;
+            });
+        };
+
+        const scheduleUpdate = () => window.requestAnimationFrame(updateColumnWidths);
+
+        scheduleUpdate();
+        window.addEventListener('resize', scheduleUpdate);
+        document.addEventListener('shown.bs.collapse', scheduleUpdate);
+        document.addEventListener('hidden.bs.collapse', scheduleUpdate);
+    });
+</script>
 {% if current_user.role == 'admin' and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
