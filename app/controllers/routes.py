@@ -73,7 +73,7 @@ from app.forms import (
     DiretoriaAcordoForm,
     OperationalProcedureForm,
 )
-import os, json, re, secrets
+import os, json, re, secrets, imghdr
 import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
@@ -325,6 +325,21 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
     },
 }
 
+ACESSOS_DISPLAY_GROUPS: list[dict[str, Any]] = [
+    {
+        "slug": "fiscal_contabil",
+        "title": "Fiscal & Contábil",
+        "icon": "bi bi-clipboard-check",
+        "categories": ("fiscal", "contabil"),
+    },
+    {
+        "slug": "pessoal",
+        "title": "Pessoal",
+        "icon": ACESSOS_CATEGORIES["pessoal"]["icon"],
+        "categories": ("pessoal",),
+    },
+]
+
 
 EVENT_TYPE_LABELS = {
     "treinamento": "Treinamento",
@@ -358,8 +373,10 @@ def _normalize_photo_entry(value: str) -> str | None:
 
     parsed = urlparse(trimmed)
 
-    if parsed.scheme in {"http", "https"} and parsed.netloc:
+    if parsed.scheme == "https" and parsed.netloc:
         return parsed.geturl()
+    if parsed.scheme and parsed.scheme != "https":
+        return None
 
     if not parsed.scheme and not parsed.netloc:
         if trimmed.startswith("/"):
@@ -749,19 +766,67 @@ def inject_stats():
 
 
 # Allowed image file extensions for uploads
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 # Allowed file extensions for uploads (images + PDFs)
-ALLOWED_EXTENSIONS_WITH_PDF = {"png", "jpg", "jpeg", "gif", "pdf"}
+ALLOWED_EXTENSIONS_WITH_PDF = IMAGE_EXTENSIONS | {"pdf"}
+
+IMAGE_SIGNATURE_MAP = {
+    "jpeg": {"jpg", "jpeg"},
+    "png": {"png"},
+    "gif": {"gif"},
+}
+IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/gif"}
+PDF_MIME_TYPES = {"application/pdf"}
+
+
+def _peek_stream(filestorage, size=512):
+    """Return the first ``size`` bytes of the upload without consuming the stream."""
+
+    stream = filestorage.stream
+    position = stream.tell()
+    chunk = stream.read(size)
+    stream.seek(position)
+    return chunk
 
 
 def allowed_file(filename):
-    """Check if a filename has an allowed extension."""
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    """Check if a filename has an allowed image extension."""
+
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in IMAGE_EXTENSIONS
 
 
 def allowed_file_with_pdf(filename):
     """Check if a filename has an allowed extension (including PDF)."""
+
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS_WITH_PDF
+
+
+def is_safe_image_upload(file):
+    """Validate image uploads against MIME type and file signature."""
+
+    filename = file.filename or ""
+    extension = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+    if extension not in IMAGE_EXTENSIONS:
+        return False
+
+    if file.mimetype not in IMAGE_MIME_TYPES:
+        return False
+
+    header = _peek_stream(file)
+    detected = imghdr.what(None, header)
+    if not detected:
+        return False
+
+    return extension in IMAGE_SIGNATURE_MAP.get(detected, set())
+
+
+def is_safe_pdf_upload(file):
+    """Validate PDF uploads by MIME type and header signature."""
+
+    if file.mimetype not in PDF_MIME_TYPES:
+        return False
+    header = _peek_stream(file, size=5)
+    return header.startswith(b"%PDF")
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -816,24 +881,25 @@ def upload_image():
         return jsonify({"error": "Nenhuma imagem enviada"}), 400
 
     file = request.files["image"]
-    if file.filename == "":
+    if not file.filename:
         return jsonify({"error": "Nome de arquivo vazio"}), 400
 
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        unique_name = f"{uuid4().hex}_{filename}"
-        upload_folder = os.path.join(current_app.root_path, "static", "uploads")
-        file_path = os.path.join(upload_folder, unique_name)
+    if not allowed_file(file.filename) or not is_safe_image_upload(file):
+        return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
 
-        try:
-            os.makedirs(upload_folder, exist_ok=True)
-            file.save(file_path)
-            file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
-            return jsonify({"image_url": file_url})
-        except Exception as e:
-            return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
+    filename = secure_filename(file.filename)
+    unique_name = f"{uuid4().hex}_{filename}"
+    upload_folder = os.path.join(current_app.root_path, "static", "uploads")
+    file_path = os.path.join(upload_folder, unique_name)
 
-    return jsonify({"error": "Arquivo inválido ou não permitido"}), 400
+    try:
+        os.makedirs(upload_folder, exist_ok=True)
+        file.save(file_path)
+        file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+        return jsonify({"image_url": file_url})
+    except Exception as exc:
+        current_app.logger.exception("Falha ao salvar upload de imagem", exc_info=exc)
+        return jsonify({"error": "Erro no servidor ao salvar arquivo"}), 500
 
 
 @app.route("/upload_file", methods=["POST"])
@@ -844,33 +910,37 @@ def upload_file():
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
 
     file = request.files["file"]
-    if file.filename == "":
+    if not file.filename:
         return jsonify({"error": "Nome de arquivo vazio"}), 400
 
-    if file and allowed_file_with_pdf(file.filename):
-        filename = secure_filename(file.filename)
-        unique_name = f"{uuid4().hex}_{filename}"
-        upload_folder = os.path.join(current_app.root_path, "static", "uploads")
-        file_path = os.path.join(upload_folder, unique_name)
+    if not allowed_file_with_pdf(file.filename):
+        return jsonify({"error": "Extensao de arquivo nao permitida"}), 400
 
-        try:
-            os.makedirs(upload_folder, exist_ok=True)
-            file.save(file_path)
-            file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+    is_pdf = file.filename.lower().endswith(".pdf")
+    if is_pdf:
+        if not is_safe_pdf_upload(file):
+            return jsonify({"error": "PDF invalido ou corrompido"}), 400
+    else:
+        if not is_safe_image_upload(file):
+            return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
 
-            # Determina o tipo de arquivo
-            file_ext = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
-            is_pdf = file_ext == "pdf"
+    filename = secure_filename(file.filename)
+    unique_name = f"{uuid4().hex}_{filename}"
+    upload_folder = os.path.join(current_app.root_path, "static", "uploads")
+    file_path = os.path.join(upload_folder, unique_name)
 
-            return jsonify({
-                "file_url": file_url,
-                "is_pdf": is_pdf,
-                "filename": filename
-            })
-        except Exception as e:
-            return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
-
-    return jsonify({"error": "Arquivo inválido ou não permitido. Apenas imagens (PNG, JPG, JPEG, GIF) e PDFs são aceitos."}), 400
+    try:
+        os.makedirs(upload_folder, exist_ok=True)
+        file.save(file_path)
+        file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+        return jsonify({
+            "file_url": file_url,
+            "is_pdf": is_pdf,
+            "filename": filename,
+        })
+    except Exception as exc:
+        current_app.logger.exception("Falha ao salvar upload de arquivo", exc_info=exc)
+        return jsonify({"error": "Erro no servidor ao salvar arquivo"}), 500
 
 
 def admin_required(f):
@@ -2028,9 +2098,38 @@ def _build_acessos_context(
         )
         for slug in ACESSOS_CATEGORIES
     }
+
+    display_columns: list[dict[str, Any]] = []
+    for group in ACESSOS_DISPLAY_GROUPS:
+        combined_links = []
+        for category_slug in group["categories"]:
+            combined_links.extend(categoria_links.get(category_slug, []))
+
+        description = group.get("description")
+        if not description:
+            descriptions = [
+                ACESSOS_CATEGORIES[category_slug].get("description")
+                for category_slug in group["categories"]
+                if ACESSOS_CATEGORIES.get(category_slug, {}).get("description")
+            ]
+            if descriptions:
+                # Preserva ordem e remove duplicados
+                description = " ".join(dict.fromkeys(descriptions))
+
+        display_columns.append(
+            {
+                "slug": group["slug"],
+                "title": group["title"],
+                "icon": group.get("icon"),
+                "description": description,
+                "links": combined_links,
+            }
+        )
+
     return {
         "categorias": ACESSOS_CATEGORIES,
         "categoria_links": categoria_links,
+        "display_columns": display_columns,
         "form": form,
         "open_modal": open_modal,
     }
