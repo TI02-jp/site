@@ -51,6 +51,7 @@
     const emptyEl = document.getElementById('notificationEmpty');
     const markAllBtn = document.getElementById('notificationMarkAll');
     const navBadge = document.querySelector('[data-notifications-badge]');
+    const toastContainer = document.getElementById('notificationToastContainer');
     const supportsDropdown =
       wrapper && button && dropdown && listEl && emptyEl;
 
@@ -61,6 +62,8 @@
     const csrfToken = window.csrfToken || '';
     let isOpen = false;
     let isFetching = false;
+    let knownNotificationIds = new Set();
+    let initialFetchComplete = false;
 
     function setBadge(count) {
       const hasUnread = Boolean(count && count > 0);
@@ -125,6 +128,87 @@
       });
     }
 
+    function hideToast(toast) {
+      if (!toast) {
+        return;
+      }
+      toast.classList.add('hide');
+      toast.addEventListener(
+        'transitionend',
+        () => {
+          toast.remove();
+        },
+        { once: true }
+      );
+    }
+
+    function showNotificationToast(item) {
+      if (!toastContainer || !item) {
+        return;
+      }
+      const message = escapeHtml(item.message || 'Nova notificação');
+      const time = formatRelativeTime(item.created_at);
+      const actionLabel = escapeHtml(item.action_label || 'Abrir');
+      const toast = document.createElement('div');
+      toast.className = 'notification-toast';
+      toast.innerHTML = `
+        <span class="notification-toast__title">${message}</span>
+        <div class="notification-toast__meta">
+          <span>${time || 'agora'}</span>
+          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notificação">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        ${
+          item.url
+            ? `<div class="notification-toast__actions">
+                <button type="button" class="btn btn-primary btn-sm notification-toast__open">${actionLabel}</button>
+              </div>`
+            : ''
+        }
+      `;
+      toastContainer.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      const handleOpen = () => {
+        if (!item.url) {
+          hideToast(toast);
+          return;
+        }
+        markNotificationRead(item.id)
+          .catch(() => {})
+          .finally(() => {
+            hideToast(toast);
+            window.location.href = item.url;
+          });
+      };
+
+      const dismissBtn = toast.querySelector('.notification-toast__dismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          hideToast(toast);
+        });
+      }
+
+      const openBtn = toast.querySelector('.notification-toast__open');
+      if (openBtn) {
+        openBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          handleOpen();
+        });
+        toast.addEventListener('click', () => {
+          handleOpen();
+        });
+      }
+
+      setTimeout(() => {
+        hideToast(toast);
+      }, 6500);
+    }
+
     function fetchNotifications() {
       if (isFetching) {
         return Promise.resolve();
@@ -138,8 +222,28 @@
           return response.json();
         })
         .then((data) => {
-          const notifications = data.notifications || [];
+          const notifications = Array.isArray(data.notifications)
+            ? data.notifications
+            : [];
           const unread = data.unread || 0;
+          if (initialFetchComplete) {
+            const newItems = notifications.filter((item) => {
+              const id = item ? String(item.id) : null;
+              return (
+                item &&
+                !item.is_read &&
+                id &&
+                !knownNotificationIds.has(id)
+              );
+            });
+            newItems.forEach(showNotificationToast);
+          }
+          knownNotificationIds = new Set(
+            notifications
+              .map((item) => (item && item.id != null ? String(item.id) : null))
+              .filter(Boolean)
+          );
+          initialFetchComplete = true;
           setBadge(unread);
           renderNotifications(notifications);
         })

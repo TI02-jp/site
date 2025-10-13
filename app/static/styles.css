@@ -2557,6 +2557,69 @@ Usuários online
     color: rgba(13, 110, 253, 0.25);
 }
 
+.notification-toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 1100;
+    pointer-events: none;
+}
+
+.notification-toast {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+    padding: 0.9rem 1rem;
+    min-width: 280px;
+    max-width: 360px;
+    border-left: 4px solid var(--accent);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto;
+}
+
+.notification-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification-toast.hide {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.notification-toast__title {
+    font-weight: 600;
+    color: #0b4fb0;
+    margin-bottom: 0.35rem;
+    display: block;
+}
+
+.notification-toast__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--font-sm);
+    color: #6b7280;
+}
+
+.notification-toast__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.notification-toast__actions .btn {
+    font-size: var(--font-sm);
+    padding: 0.35rem 0.65rem;
+}
+
 @media (max-width: 991.98px) {
     .announcement-modal .modal-dialog {
         margin: 1rem;
