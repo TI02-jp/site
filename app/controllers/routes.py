@@ -750,11 +750,18 @@ def inject_stats():
 
 # Allowed image file extensions for uploads
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+# Allowed file extensions for uploads (images + PDFs)
+ALLOWED_EXTENSIONS_WITH_PDF = {"png", "jpg", "jpeg", "gif", "pdf"}
 
 
 def allowed_file(filename):
     """Check if a filename has an allowed extension."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def allowed_file_with_pdf(filename):
+    """Check if a filename has an allowed extension (including PDF)."""
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS_WITH_PDF
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -827,6 +834,43 @@ def upload_image():
             return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
 
     return jsonify({"error": "Arquivo inválido ou não permitido"}), 400
+
+
+@app.route("/upload_file", methods=["POST"])
+@login_required
+def upload_file():
+    """Handle file uploads (images + PDFs) from the WYSIWYG editor."""
+    if "file" not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "Nome de arquivo vazio"}), 400
+
+    if file and allowed_file_with_pdf(file.filename):
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid4().hex}_{filename}"
+        upload_folder = os.path.join(current_app.root_path, "static", "uploads")
+        file_path = os.path.join(upload_folder, unique_name)
+
+        try:
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(file_path)
+            file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+
+            # Determina o tipo de arquivo
+            file_ext = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+            is_pdf = file_ext == "pdf"
+
+            return jsonify({
+                "file_url": file_url,
+                "is_pdf": is_pdf,
+                "filename": filename
+            })
+        except Exception as e:
+            return jsonify({"error": f"Erro no servidor ao salvar: {e}"}), 500
+
+    return jsonify({"error": "Arquivo inválido ou não permitido. Apenas imagens (PNG, JPG, JPEG, GIF) e PDFs são aceitos."}), 400
 
 
 def admin_required(f):
@@ -2154,6 +2198,19 @@ def procedimentos_operacionais_ver(proc_id: int):
     return render_template("procedimento_view.html", procedure=proc)
 
 
+@app.route("/procedimentos/<int:proc_id>/json")
+@login_required
+def procedimentos_operacionais_json(proc_id: int):
+    """Retorna dados do procedimento em JSON para modal."""
+    proc = OperationalProcedure.query.get_or_404(proc_id)
+    return jsonify({
+        "id": proc.id,
+        "title": proc.title,
+        "description": proc.description or "",
+        "updated_at": proc.updated_at.strftime('%d/%m/%Y às %H:%M') if proc.updated_at else None
+    })
+
+
 @app.route("/procedimentos/<int:proc_id>/editar", methods=["GET", "POST"])
 @login_required
 def procedimentos_operacionais_editar(proc_id: int):
@@ -2192,6 +2249,22 @@ def procedimentos_operacionais_excluir(proc_id: int):
     db.session.commit()
     flash("Procedimento excluído com sucesso.", "success")
     return redirect(url_for("procedimentos_operacionais"))
+
+
+@app.route("/procedimentos/search")
+@login_required
+def procedimentos_search():
+    """Retorna procedimentos por título para menções (JSON)."""
+    q = (request.args.get("q") or "").strip()
+    query = OperationalProcedure.query
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(OperationalProcedure.title.ilike(pattern))
+    results = query.order_by(OperationalProcedure.updated_at.desc()).limit(10).all()
+    return jsonify([
+        {"id": p.id, "title": p.title, "url": url_for("procedimentos_operacionais_ver", proc_id=p.id)}
+        for p in results
+    ])
 
 
 @app.route("/ping")
@@ -3844,6 +3917,9 @@ def visualizar_empresa(id):
         if can_access_financeiro
         else None
     )
+    notas_fiscais = Departamento.query.filter_by(
+        empresa_id=id, tipo="Departamento Notas Fiscais"
+    ).first()
 
     def _prepare_envio_fisico(departamento):
         if not departamento:
@@ -3914,6 +3990,7 @@ def visualizar_empresa(id):
         pessoal=pessoal,
         administrativo=administrativo,
         financeiro=financeiro,
+        notas_fiscais=notas_fiscais,
         can_access_financeiro=can_access_financeiro,
     )
 
@@ -3947,6 +4024,9 @@ def gerenciar_departamentos(empresa_id):
         if can_access_financeiro
         else None
     )
+    notas_fiscais = Departamento.query.filter_by(
+        empresa_id=empresa_id, tipo="Departamento Notas Fiscais"
+    ).first()
 
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
@@ -4099,6 +4179,18 @@ def gerenciar_departamentos(empresa_id):
                 flash("Departamento Financeiro salvo com sucesso!", "success")
                 form_processed_successfully = True
 
+        elif form_type == "notas_fiscais":
+            if not notas_fiscais:
+                notas_fiscais = Departamento(
+                    empresa_id=empresa_id, tipo="Departamento Notas Fiscais"
+                )
+                db.session.add(notas_fiscais)
+
+            particularidades_texto = request.form.get("particularidades_texto", "")
+            notas_fiscais.particularidades_texto = particularidades_texto
+            flash("Departamento Notas Fiscais salvo com sucesso!", "success")
+            form_processed_successfully = True
+
         if form_processed_successfully:
             try:
                 db.session.commit()
@@ -4109,6 +4201,7 @@ def gerenciar_departamentos(empresa_id):
                     "pessoal": "pessoal",
                     "administrativo": "administrativo",
                     "financeiro": "financeiro",
+                    "notas_fiscais": "notas-fiscais",
                 }
                 hash_ancora = hash_ancoras.get(form_type, "")
 
@@ -4149,6 +4242,7 @@ def gerenciar_departamentos(empresa_id):
         pessoal=pessoal,
         administrativo=administrativo,
         financeiro=financeiro,
+        notas_fiscais=notas_fiscais,
         can_access_financeiro=can_access_financeiro,
     )
 
