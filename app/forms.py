@@ -383,6 +383,35 @@ class CourseTagForm(FlaskForm):
     )
     submit = SubmitField("Adicionar tag")
 
+
+class OperationalProcedureForm(FlaskForm):
+    """Formulário para criação e edição de procedimentos operacionais."""
+
+    procedure_id = HiddenField()
+    title = StringField(
+        "Título",
+        validators=[
+            DataRequired(message="Informe um título."),
+            Length(max=255, message="O título deve ter no máximo 255 caracteres."),
+        ],
+        filters=[lambda value: value.strip() if value else value],
+    )
+    description = TextAreaField(
+        "Descrição",
+        validators=[
+            DataRequired(message="Descreva o procedimento."),
+        ],
+    )
+    submit = SubmitField("Salvar procedimento")
+
+
+class OperationalProcedureDeleteForm(FlaskForm):
+    """Formulário auxiliar para exclusão de procedimentos operacionais."""
+
+    procedure_id = HiddenField(validators=[DataRequired()])
+    submit = SubmitField("Excluir")
+
+
 class DepartamentoContabilForm(DepartamentoForm):
     """Formulário para o Departamento Contábil."""
     metodo_importacao = SelectMultipleField('Formas de Importação', choices=[

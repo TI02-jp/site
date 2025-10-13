@@ -7,6 +7,12 @@
                 PARTICULARIDADES
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'procedimentos_operacionais' %} active{% endif %}" href="{{ url_for('procedimentos_operacionais') }}">
+                <i class="bi bi-journal-text"></i>
+                PROC. OPERACIONAIS
+            </a>
+        </li>
         {% if current_user.role == 'admin' %}
         {% set user_nav_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
         <li class="nav-item">

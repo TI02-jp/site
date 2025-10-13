@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}PROC. OPERACIONAIS{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+    .procedures-search-form .input-group {
+        width: 100%;
+    }
+
+    @media (min-width: 768px) {
+        .procedures-search-form .input-group {
+            width: auto;
+        }
+    }
+
+    .procedures-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .procedure-card {
+        border-radius: 0.85rem;
+        border: 1px solid rgba(13, 110, 253, 0.1);
+    }
+
+    .procedure-card .card-body {
+        padding: 1.5rem;
+    }
+
+    .procedure-description {
+        font-size: var(--font-base);
+        color: #495057;
+    }
+
+    .procedure-description img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0.75rem auto;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.75rem 2rem -1.25rem rgba(13, 110, 253, 0.45);
+    }
+
+    .procedure-description p {
+        margin-bottom: 0.75rem;
+    }
+
+    .quill-editor {
+        min-height: 220px;
+        background: #ffffff;
+    }
+
+    .quill-editor .ql-editor {
+        min-height: 180px;
+    }
+
+    .procedures-empty-icon {
+        color: rgba(13, 110, 253, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 text-primary mb-1">Procedimentos Operacionais</h1>
+            <p class="text-muted mb-0">Centralize instruções passo a passo acessíveis para toda a equipe.</p>
+        </div>
+        <form method="GET" action="{{ url_for('procedimentos_operacionais') }}" class="procedures-search-form">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text"
+                       class="form-control border-start-0"
+                       name="q"
+                       value="{{ search_query }}"
+                       placeholder="Buscar por título ou descrição..."
+                       aria-label="Buscar procedimentos">
+                <button class="btn btn-outline-primary" type="submit">
+                    <span class="d-none d-md-inline">Buscar</span>
+                    <i class="bi bi-arrow-right-short d-md-none"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+        <div class="text-muted">
+            <i class="bi bi-journal-text me-1"></i>
+            {{ procedures_total }} procedimento{{ 's' if procedures_total != 1 else '' }} encontrado{{ 's' if procedures_total != 1 else '' }}
+            {% if search_query %}
+                para "{{ search_query }}"
+            {% endif %}.
+        </div>
+        {% if can_manage %}
+        <button type="button"
+                class="btn btn-primary ms-md-auto"
+                data-bs-toggle="modal"
+                data-bs-target="#procedureModal"
+                data-procedure-modal="create">
+            <i class="bi bi-plus-lg me-1"></i>
+            Novo Procedimento
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="procedures-grid">
+        {% for procedure in procedures %}
+        <article class="card shadow-sm procedure-card">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                    <div class="procedure-card-content">
+                        <h2 class="h5 text-primary mb-2">{{ procedure.title }}</h2>
+                        <div class="procedure-description editor-content">
+                            {{ procedure.description|sanitize }}
+                        </div>
+                    </div>
+                    <div class="text-md-end">
+                        <div class="small text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            Atualizado em {{ (procedure.updated_at or procedure.created_at).strftime('%d/%m/%Y às %H:%M') }}
+                        </div>
+                        {% if can_manage %}
+                        <div class="btn-group mt-2" role="group">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    title="Editar procedimento"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#procedureModal"
+                                    data-procedure-modal="edit"
+                                    data-procedure-id="{{ procedure.id }}"
+                                    data-procedure-title="{{ procedure.title|e }}"
+                                    data-procedure-description='{{ procedure.description|tojson }}'>
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('procedimentos_operacionais') }}" class="d-inline">
+                                {{ delete_form.csrf_token }}
+                                <input type="hidden" name="form_name" value="procedure_delete">
+                                <input type="hidden" name="{{ delete_form.procedure_id.name }}" value="{{ procedure.id }}">
+                                <button type="submit"
+                                        class="btn btn-outline-danger btn-sm"
+                                        title="Excluir procedimento"
+                                        data-confirm-delete>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-inboxes procedures-empty-icon fs-1 d-block mb-3"></i>
+                {% if search_query %}
+                    Nenhum procedimento encontrado para <strong>{{ search_query }}</strong>.
+                {% else %}
+                    Nenhum procedimento cadastrado até o momento.
+                {% endif %}
+                {% if can_manage %}
+                    <p class="mt-3 mb-0">Utilize o botão <strong>Novo Procedimento</strong> para registrar o primeiro conteúdo.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if can_manage %}
+<div class="modal fade" id="procedureModal" tabindex="-1" aria-labelledby="procedureModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('procedimentos_operacionais') }}" novalidate>
+                {{ procedure_form.csrf_token }}
+                {{ procedure_form.procedure_id(id='procedureIdField') }}
+                <input type="hidden" name="form_name" id="procedureFormName" value="{{ form_mode }}">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="w-100 d-flex justify-content-between align-items-start">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="procedureModalLabel">
+                            <i class="bi bi-journal-text"></i>
+                            <span id="procedureModalTitle">{{ 'Editar Procedimento' if form_mode == 'procedure_update' else 'Novo Procedimento' }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="mb-3">
+                        <label for="procedure-title" class="form-label fw-semibold">{{ procedure_form.title.label.text }}</label>
+                        {{ procedure_form.title(class='form-control' + (' is-invalid' if procedure_form.title.errors else ''), id='procedure-title', placeholder='Título do procedimento') }}
+                        {% for error in procedure_form.title.errors %}
+                        <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">{{ procedure_form.description.label.text }}</label>
+                        <div id="procedure-editor" class="quill-editor border rounded-3"></div>
+                        {{ procedure_form.description(id='procedure-description', style='display:none;') }}
+                        <input type="file" accept="image/*" id="procedure-image-input" class="d-none">
+                        {% for error in procedure_form.description.errors %}
+                        <div class="invalid-feedback d-block mt-2"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                        {% endfor %}
+                        <small class="text-muted d-block mt-2">Cole capturas de tela diretamente no editor (Ctrl+V) ou utilize o botão de imagem.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ procedure_form.submit(class='btn btn-primary', id='procedure-submit-button') }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if can_manage %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('procedureModal');
+    if (!modalEl) {
+        return;
+    }
+
+    const uploadUrl = "{{ url_for('upload_image') }}";
+    const form = modalEl.querySelector('form');
+    const titleInput = document.getElementById('procedure-title');
+    const hiddenDescription = document.getElementById('procedure-description');
+    const formNameInput = document.getElementById('procedureFormName');
+    const idField = document.getElementById('procedureIdField');
+    const modalTitle = document.getElementById('procedureModalTitle');
+    const submitButton = document.getElementById('procedure-submit-button');
+    const imageInput = document.getElementById('procedure-image-input');
+    const initialMode = {{ form_mode|tojson }};
+    const shouldOpenModal = {{ 'true' if open_modal else 'false' }};
+
+    function selectLocalImage() {
+        imageInput.click();
+    }
+
+    const quill = new Quill('#procedure-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean']
+                ],
+                handlers: {
+                    image: selectLocalImage
+                }
+            }
+        }
+    });
+
+    if (hiddenDescription.value) {
+        quill.root.innerHTML = hiddenDescription.value;
+    }
+
+    imageInput.addEventListener('change', () => {
+        const file = imageInput.files && imageInput.files[0];
+        if (!file) {
+            return;
+        }
+        const range = quill.getSelection(true) || { index: quill.getLength() };
+        const placeholderText = 'Carregando imagem...';
+        quill.insertText(range.index, placeholderText, 'italic', true);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch(uploadUrl, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                quill.deleteText(range.index, placeholderText.length);
+                if (result.image_url) {
+                    quill.insertEmbed(range.index, 'image', result.image_url);
+                    quill.setSelection(range.index + 1);
+                } else {
+                    quill.insertText(range.index, '[Falha ao carregar imagem]', { color: 'red' });
+                }
+            })
+            .catch(() => {
+                quill.deleteText(range.index, placeholderText.length);
+                quill.insertText(range.index, '[Erro ao carregar imagem]', { color: 'red' });
+            })
+            .finally(() => {
+                imageInput.value = '';
+            });
+    });
+
+    form.addEventListener('submit', () => {
+        hiddenDescription.value = quill.root.innerHTML;
+    });
+
+    modalEl.addEventListener('show.bs.modal', event => {
+        const trigger = event.relatedTarget;
+        let mode = trigger ? trigger.getAttribute('data-procedure-modal') : formNameInput.value || 'procedure_create';
+        if (mode === 'edit') {
+            mode = 'procedure_update';
+        }
+
+        if (mode === 'procedure_update') {
+            formNameInput.value = 'procedure_update';
+            modalTitle.textContent = 'Editar Procedimento';
+            submitButton.textContent = 'Salvar alterações';
+
+            if (trigger) {
+                const dataTitle = trigger.getAttribute('data-procedure-title') || '';
+                const dataDescription = trigger.getAttribute('data-procedure-description') || '""';
+                let parsedDescription = '';
+                try {
+                    parsedDescription = JSON.parse(dataDescription);
+                } catch (err) {
+                    parsedDescription = '';
+                }
+                titleInput.value = dataTitle;
+                hiddenDescription.value = parsedDescription || '';
+                quill.root.innerHTML = hiddenDescription.value;
+                idField.value = trigger.getAttribute('data-procedure-id') || '';
+            } else {
+                quill.root.innerHTML = hiddenDescription.value;
+            }
+        } else {
+            formNameInput.value = 'procedure_create';
+            modalTitle.textContent = 'Novo Procedimento';
+            submitButton.textContent = 'Salvar procedimento';
+
+            if (trigger) {
+                titleInput.value = '';
+                hiddenDescription.value = '';
+                quill.root.innerHTML = '';
+                idField.value = '';
+            } else {
+                quill.root.innerHTML = hiddenDescription.value;
+            }
+        }
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        formNameInput.value = 'procedure_create';
+        modalTitle.textContent = 'Novo Procedimento';
+        submitButton.textContent = 'Salvar procedimento';
+        titleInput.value = '';
+        hiddenDescription.value = '';
+        idField.value = '';
+        quill.root.innerHTML = '';
+        imageInput.value = '';
+    });
+
+    if (shouldOpenModal) {
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (initialMode === 'procedure_update') {
+            formNameInput.value = 'procedure_update';
+            modalTitle.textContent = 'Editar Procedimento';
+            submitButton.textContent = 'Salvar alterações';
+        } else {
+            formNameInput.value = 'procedure_create';
+            modalTitle.textContent = 'Novo Procedimento';
+            submitButton.textContent = 'Salvar procedimento';
+        }
+        modalInstance.show();
+        quill.root.innerHTML = hiddenDescription.value;
+    }
+
+    document.querySelectorAll('[data-confirm-delete]').forEach(button => {
+        button.addEventListener('click', event => {
+            if (!confirm('Tem certeza de que deseja excluir este procedimento?')) {
+                event.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% else %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-confirm-delete]').forEach(button => {
+        button.addEventListener('click', event => event.preventDefault());
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

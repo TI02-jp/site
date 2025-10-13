@@ -45,6 +45,7 @@ from app.models.tables import (
     GeneralCalendarEvent,
     Announcement,
     AnnouncementAttachment,
+    OperationalProcedure,
 )
 from app.forms import (
     # Formulários de autenticação
@@ -70,6 +71,8 @@ from app.forms import (
     CourseTagForm,
     AnnouncementForm,
     DiretoriaAcordoForm,
+    OperationalProcedureForm,
+    OperationalProcedureDeleteForm,
 )
 import os, json, re, secrets
 import requests
@@ -2285,6 +2288,123 @@ def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
     render_kw["autocomplete"] = "off"
     form.senha.render_kw = render_kw
     return form
+
+
+@app.route("/procedimentos-operacionais", methods=["GET", "POST"])
+@login_required
+def procedimentos_operacionais():
+    """Display operational procedures and allow admins to manage them."""
+
+    procedure_form = OperationalProcedureForm(prefix="procedure")
+    delete_form = OperationalProcedureDeleteForm(prefix="procedure_delete")
+    form_mode = "procedure_create"
+    open_modal = False
+
+    search_query = (request.args.get("q") or "").strip()
+
+    procedures_query = OperationalProcedure.query
+    if search_query:
+        like_pattern = f"%{search_query}%"
+        procedures_query = procedures_query.filter(
+            or_(
+                OperationalProcedure.title.ilike(like_pattern),
+                OperationalProcedure.description.ilike(like_pattern),
+            )
+        )
+
+    procedures = procedures_query.order_by(
+        OperationalProcedure.updated_at.desc(),
+        OperationalProcedure.created_at.desc(),
+    ).all()
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+
+        if form_name in {"procedure_create", "procedure_update"}:
+            open_modal = True
+            form_mode = form_name
+
+            if current_user.role != "admin":
+                abort(403)
+
+            if form_name == "procedure_update":
+                procedure_id_raw = procedure_form.procedure_id.data
+                try:
+                    procedure_id = int(procedure_id_raw or "")
+                except (TypeError, ValueError):
+                    abort(400)
+                editing_procedure = OperationalProcedure.query.get_or_404(
+                    procedure_id
+                )
+            else:
+                editing_procedure = None
+
+            if procedure_form.validate_on_submit():
+                cleaned_description = sanitize_html(
+                    procedure_form.description.data or ""
+                )
+                procedure_form.description.data = cleaned_description
+                plain_text = re.sub(r"<[^>]+>", "", cleaned_description).strip()
+
+                if not plain_text:
+                    procedure_form.description.errors.append(
+                        "Descreva o procedimento com pelo menos uma informação."
+                    )
+                else:
+                    if form_name == "procedure_update" and editing_procedure:
+                        editing_procedure.title = procedure_form.title.data
+                        editing_procedure.description = cleaned_description
+                        db.session.commit()
+                        flash("Procedimento atualizado com sucesso.", "success")
+                    else:
+                        procedure = OperationalProcedure(
+                            title=procedure_form.title.data,
+                            description=cleaned_description,
+                            created_by=current_user,
+                        )
+                        db.session.add(procedure)
+                        db.session.commit()
+                        flash("Procedimento criado com sucesso.", "success")
+
+                    return redirect(url_for("procedimentos_operacionais"))
+
+            flash(
+                "Não foi possível salvar o procedimento. Verifique os dados informados.",
+                "danger",
+            )
+
+        elif form_name == "procedure_delete":
+            if current_user.role != "admin":
+                abort(403)
+
+            if delete_form.validate_on_submit():
+                try:
+                    procedure_id = int(delete_form.procedure_id.data or "")
+                except (TypeError, ValueError):
+                    abort(400)
+
+                procedure = OperationalProcedure.query.get_or_404(procedure_id)
+                db.session.delete(procedure)
+                db.session.commit()
+                flash("Procedimento excluído com sucesso.", "success")
+                return redirect(url_for("procedimentos_operacionais"))
+
+            flash(
+                "Não foi possível excluir o procedimento. Tente novamente.",
+                "danger",
+            )
+
+    return render_template(
+        "procedimentos_operacionais.html",
+        procedures=procedures,
+        procedures_total=len(procedures),
+        search_query=search_query,
+        procedure_form=procedure_form,
+        delete_form=delete_form,
+        open_modal=open_modal,
+        form_mode=form_mode,
+        can_manage=current_user.role == "admin",
+    )
 
 
 @app.route("/consultorias", methods=["GET", "POST"])

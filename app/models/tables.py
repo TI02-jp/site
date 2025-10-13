@@ -568,6 +568,36 @@ class Consultoria(db.Model):
         return f"<Consultoria {self.nome}>"
 
 
+class OperationalProcedure(db.Model):
+    """Centralized operational procedures shared with the organization."""
+
+    __tablename__ = "operational_procedures"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    created_by = db.relationship(
+        "User",
+        backref=db.backref("operational_procedures", lazy=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<OperationalProcedure id={self.id} title={self.title!r}>"
+
+
 class Tag(db.Model):
     """Represents a tag for user categorization."""
     __tablename__ = 'tags'
