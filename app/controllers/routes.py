@@ -12,6 +12,8 @@ from flask import (
     session,
     has_request_context,
     g,
+    Response,
+    stream_with_context,
 )
 from functools import wraps
 from collections import Counter
@@ -74,7 +76,7 @@ from app.forms import (
     DiretoriaAcordoForm,
     OperationalProcedureForm,
 )
-import os, json, re, secrets, imghdr
+import os, json, re, secrets, imghdr, time
 import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
@@ -2420,6 +2422,77 @@ def ping():
     return ("", 204)
 
 
+def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
+    """Serialize a :class:`TaskNotification` into a JSON-friendly dict."""
+
+    raw_type = notification.type or NotificationType.TASK.value
+    try:
+        notification_type = NotificationType(raw_type)
+    except ValueError:
+        notification_type = NotificationType.TASK
+
+    message = (notification.message or "").strip() or None
+    action_label = None
+    target_url = None
+
+    if notification_type is NotificationType.ANNOUNCEMENT:
+        announcement = notification.announcement
+        if announcement:
+            if not message:
+                subject = (announcement.subject or "").strip()
+                if subject:
+                    message = f"Novo comunicado: {subject}"
+                else:
+                    message = "Novo comunicado publicado."
+            target_url = url_for("announcements") + f"#announcement-{announcement.id}"
+        else:
+            if not message:
+                message = "Comunicado removido."
+        action_label = "Abrir comunicado" if target_url else None
+    else:
+        task = notification.task
+        if task:
+            task_title = (task.title or "").strip()
+            target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
+            if not message:
+                prefix = (
+                    "Tarefa atualizada"
+                    if notification_type is NotificationType.TASK
+                    else "Notificação"
+                )
+                if task_title:
+                    message = f"{prefix}: {task_title}"
+                else:
+                    message = f"{prefix} atribuída a você."
+        else:
+            if not message:
+                message = "Tarefa removida."
+        if not action_label:
+            action_label = "Abrir tarefa" if target_url else None
+
+    if not message:
+        message = "Atualização disponível."
+
+    created_at = notification.created_at or datetime.utcnow()
+    if created_at.tzinfo is None:
+        created_at_iso = created_at.isoformat() + "Z"
+        display_dt = created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+    else:
+        created_at_iso = created_at.isoformat()
+        display_dt = created_at.astimezone(SAO_PAULO_TZ)
+
+    return {
+        "id": notification.id,
+        "type": notification_type.value,
+        "message": message,
+        "created_at": created_at_iso,
+        "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
+        "is_read": notification.is_read,
+        "url": target_url,
+        "action_label": action_label,
+    }
+
+
 def _get_user_notification_items(limit: int | None = 20):
     """Return serialized notifications and unread totals for the current user."""
 
@@ -2451,57 +2524,7 @@ def _get_user_notification_items(limit: int | None = 20):
         action_label = None
         target_url = None
 
-        if notification_type is NotificationType.ANNOUNCEMENT:
-            announcement = notification.announcement
-            if announcement:
-                if not message:
-                    subject = (announcement.subject or "").strip()
-                    if subject:
-                        message = f"Novo comunicado: {subject}"
-                    else:
-                        message = "Novo comunicado publicado."
-                target_url = url_for("announcements") + f"#announcement-{announcement.id}"
-            else:
-                if not message:
-                    message = "Comunicado removido."
-            action_label = "Abrir comunicado" if target_url else None
-        else:
-            task = notification.task
-            task_title = None
-            tag_name = None
-            if task:
-                task_title = task.title
-                tag_name = task.tag.nome if task.tag else None
-                target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
-            if not message:
-                if task_title and tag_name:
-                    message = f"Tarefa \"{task_title}\" atribuída no setor {tag_name}."
-                elif task_title:
-                    message = f"Tarefa \"{task_title}\" atribuída a você."
-                else:
-                    message = "Nova tarefa atribuída a você."
-            action_label = "Abrir tarefa" if target_url else None
-
-        created_at = notification.created_at
-        if created_at.tzinfo is None:
-            created_at_iso = created_at.isoformat() + "Z"
-            display_dt = created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
-        else:
-            created_at_iso = created_at.isoformat()
-            display_dt = created_at.astimezone(SAO_PAULO_TZ)
-
-        items.append(
-            {
-                "id": notification.id,
-                "type": notification_type.value,
-                "message": message,
-                "created_at": created_at_iso,
-                "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
-                "is_read": notification.is_read,
-                "url": target_url,
-                "action_label": action_label,
-            }
-        )
+        items.append(_serialize_notification(notification))
 
     return items, unread_total
 
@@ -2547,6 +2570,74 @@ def list_notifications():
 
     items, unread_total = _get_user_notification_items(limit=20)
     return jsonify({"notifications": items, "unread": unread_total})
+
+
+@app.route("/notifications/stream")
+@login_required
+def notifications_stream():
+    """Server-Sent Events stream delivering real-time notifications."""
+
+    since_id = request.args.get("since", type=int) or 0
+    user_id = current_user.id
+
+    def event_stream() -> Any:
+        last_sent_id = since_id
+        if not last_sent_id:
+            last_existing = (
+                TaskNotification.query.filter(TaskNotification.user_id == user_id)
+                .order_by(TaskNotification.id.desc())
+                .with_entities(TaskNotification.id)
+                .limit(1)
+                .scalar()
+            )
+            last_sent_id = last_existing or 0
+
+        try:
+            while True:
+                new_notifications = (
+                    TaskNotification.query.filter(
+                        TaskNotification.user_id == user_id,
+                        TaskNotification.id > last_sent_id,
+                    )
+                    .options(
+                        joinedload(TaskNotification.task).joinedload(Task.tag),
+                        joinedload(TaskNotification.announcement),
+                    )
+                    .order_by(TaskNotification.id.asc())
+                    .all()
+                )
+
+                if new_notifications:
+                    serialized = [
+                        _serialize_notification(notification)
+                        for notification in new_notifications
+                    ]
+                    last_sent_id = max(notification.id for notification in new_notifications)
+                    unread_total = TaskNotification.query.filter(
+                        TaskNotification.user_id == user_id,
+                        TaskNotification.read_at.is_(None),
+                    ).count()
+                    payload = json.dumps(
+                        {
+                            "notifications": serialized,
+                            "unread": unread_total,
+                            "last_id": last_sent_id,
+                        }
+                    )
+                    yield f"data: {payload}\n\n"
+                else:
+                    yield ": keep-alive\n\n"
+
+                time.sleep(1)
+        except GeneratorExit:
+            return
+
+    response = Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+    )
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.route("/notificacoes")
