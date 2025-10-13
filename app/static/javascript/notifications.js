@@ -59,11 +59,25 @@
       return;
     }
 
+    const supportsSSE = 'EventSource' in window;
     const csrfToken = window.csrfToken || '';
     let isOpen = false;
     let isFetching = false;
-    let knownNotificationIds = new Set();
+    const knownNotificationIds = new Set();
     let initialFetchComplete = false;
+    let lastKnownNotificationId = 0;
+
+    const displayedNotificationIds = new Set();
+
+    function updateLastKnownId(id) {
+      if (!id) {
+        return;
+      }
+      const numeric = Number(id);
+      if (!Number.isNaN(numeric)) {
+        lastKnownNotificationId = Math.max(lastKnownNotificationId, numeric);
+      }
+    }
 
     function setBadge(count) {
       const hasUnread = Boolean(count && count > 0);
@@ -142,8 +156,24 @@
       );
     }
 
+    function rememberNotification(id) {
+      if (!id) {
+        return;
+      }
+      displayedNotificationIds.add(id);
+    }
+
     function showNotificationToast(item) {
-      if (!toastContainer || !item) {
+      if (!item) {
+        return;
+      }
+      const id = item.id != null ? String(item.id) : null;
+      if (id) {
+        rememberNotification(id);
+        updateLastKnownId(id);
+        knownNotificationIds.add(id);
+      }
+      if (!toastContainer) {
         return;
       }
       const message = escapeHtml(item.message || 'Nova notificação');
@@ -209,12 +239,22 @@
       }, 6500);
     }
 
-    function fetchNotifications() {
+    function fetchNotifications(options = {}) {
+      const suppressToasts = Boolean(options.suppressToasts);
       if (isFetching) {
         return Promise.resolve();
       }
+      if (!window.navigator.onLine) {
+        return Promise.resolve();
+      }
       isFetching = true;
-      return fetch('/notifications', { cache: 'no-store' })
+      return fetch('/notifications', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      })
         .then((response) => {
           if (!response.ok) {
             throw new Error('Erro ao carregar notificações');
@@ -226,24 +266,40 @@
             ? data.notifications
             : [];
           const unread = data.unread || 0;
-          if (initialFetchComplete) {
-            const newItems = notifications.filter((item) => {
-              const id = item ? String(item.id) : null;
-              return (
-                item &&
-                !item.is_read &&
-                id &&
-                !knownNotificationIds.has(id)
-              );
+
+          notifications.forEach((item) => {
+            if (!item) {
+              return;
+            }
+            const id = item.id != null ? String(item.id) : null;
+            if (!id) {
+              return;
+            }
+            updateLastKnownId(id);
+            knownNotificationIds.add(id);
+          });
+
+          if (!initialFetchComplete) {
+            notifications.forEach((item) => {
+              const id = item && item.id != null ? String(item.id) : null;
+              if (id) {
+                rememberNotification(id);
+              }
             });
-            newItems.forEach(showNotificationToast);
+            initialFetchComplete = true;
+          } else if (!suppressToasts) {
+            notifications.forEach((item) => {
+              if (!item || item.is_read) {
+                return;
+              }
+              const id = item.id != null ? String(item.id) : null;
+              if (!id || displayedNotificationIds.has(id)) {
+                return;
+              }
+              showNotificationToast(item);
+            });
           }
-          knownNotificationIds = new Set(
-            notifications
-              .map((item) => (item && item.id != null ? String(item.id) : null))
-              .filter(Boolean)
-          );
-          initialFetchComplete = true;
+
           setBadge(unread);
           renderNotifications(notifications);
         })
@@ -359,7 +415,103 @@
       }
     }
 
-    fetchNotifications();
-    setInterval(fetchNotifications, 60000);
+    const POLL_INTERVAL_MS = 2000;
+    let pollTimer = null;
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    function startPolling() {
+      stopPolling();
+      pollTimer = setInterval(() => {
+        if (!document.hidden) {
+          fetchNotifications();
+        }
+      }, POLL_INTERVAL_MS);
+    }
+
+    function connectEventStream() {
+      if (!supportsSSE) {
+        startPolling();
+        return;
+      }
+
+      let source;
+
+      const establishConnection = () => {
+        const url =
+          lastKnownNotificationId > 0
+            ? `/notifications/stream?since=${encodeURIComponent(lastKnownNotificationId)}`
+            : '/notifications/stream';
+        source = new EventSource(url, { withCredentials: true });
+
+        source.addEventListener('message', (event) => {
+          if (!event.data) {
+            return;
+          }
+          let payload;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (error) {
+            console.warn('Falha ao interpretar evento de notificação.', error);
+            return;
+          }
+
+          const incoming = Array.isArray(payload.notifications)
+            ? payload.notifications
+            : [];
+          incoming.forEach((item) => {
+            if (!item) {
+              return;
+            }
+            const id = item.id != null ? String(item.id) : null;
+            if (!id) {
+              return;
+            }
+            updateLastKnownId(id);
+            if (!seenNotificationIds.has(id)) {
+              showNotificationToast(item);
+            }
+            knownNotificationIds.add(id);
+          });
+
+          if (typeof payload.unread === 'number') {
+            setBadge(payload.unread);
+          }
+
+          fetchNotifications({ suppressToasts: true });
+        });
+
+        source.addEventListener('error', () => {
+          if (source) {
+            source.close();
+          }
+          setTimeout(establishConnection, 5000);
+        });
+      };
+
+      establishConnection();
+    }
+
+    fetchNotifications()
+      .catch(() => {})
+      .finally(() => {
+        connectEventStream();
+        startPolling();
+      });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        fetchNotifications({ suppressToasts: true }).finally(() => {
+          startPolling();
+        });
+      } else {
+        stopPolling();
+      }
+    });
   });
 })();

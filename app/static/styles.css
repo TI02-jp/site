@@ -2559,27 +2559,28 @@ Usuários online
 
 .notification-toast-container {
     position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
+    bottom: 1.75rem;
+    right: 1.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    z-index: 1100;
+    gap: 1rem;
+    z-index: 1200;
     pointer-events: none;
 }
 
 .notification-toast {
-    background: #ffffff;
-    border-radius: 0.75rem;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-    padding: 0.9rem 1rem;
-    min-width: 280px;
-    max-width: 360px;
-    border-left: 4px solid var(--accent);
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(8, 47, 73, 0.86));
+    border-radius: 1.05rem;
+    box-shadow: 0 24px 50px rgba(8, 47, 73, 0.35);
+    padding: 1.05rem 1.25rem;
+    min-width: 300px;
+    max-width: 380px;
+    border-left: 5px solid rgba(255, 159, 67, 0.95);
     opacity: 0;
     transform: translateY(10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.22s ease, transform 0.22s ease;
     pointer-events: auto;
+    color: #f8fafc;
 }
 
 .notification-toast.show {
@@ -2593,31 +2594,23 @@ Usuários online
 }
 
 .notification-toast__title {
-    font-weight: 600;
-    color: #0b4fb0;
-    margin-bottom: 0.35rem;
+    font-weight: 700;
+    color: #fef9f5;
+    letter-spacing: 0.01em;
     display: block;
+    line-height: 1.4;
 }
 
 .notification-toast__meta {
-    display: flex;
+    display: inline-flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.75rem;
-    font-size: var(--font-sm);
-    color: #6b7280;
-}
-
-.notification-toast__actions {
-    display: flex;
-    justify-content: flex-end;
     gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-.notification-toast__actions .btn {
     font-size: var(--font-sm);
-    padding: 0.35rem 0.65rem;
+    color: rgba(248, 250, 252, 0.85);
+    background: rgba(255, 159, 67, 0.18);
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
 }
 
 @media (max-width: 991.98px) {

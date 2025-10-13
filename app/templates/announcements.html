@@ -845,6 +845,18 @@
 {% if current_user.role == 'admin' and not is_history %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-stop-propagation]').forEach((element) => {
+      ['click', 'keydown'].forEach((eventName) => {
+        element.addEventListener(
+          eventName,
+          (event) => {
+            event.stopPropagation();
+          },
+          true,
+        );
+      });
+    });
+
     const supportsDataTransfer = typeof DataTransfer !== 'undefined';
 
     const formatDate = (value, placeholder) => {
