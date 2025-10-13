@@ -62,30 +62,33 @@
                                     {% for link in column.links %}
                                     <div class="access-shortcut-wrapper d-flex flex-column gap-2">
                                         <div class="access-shortcut{% if link.description %} has-description{% endif %}">
-                                            <a
-                                                class="btn btn-outline-primary access-shortcut-link d-flex align-items-center justify-content-between gap-2"
-                                                href="{{ link.url }}"
-                                                target="_blank"
-                                                rel="noopener"
-                                            >
-                                                <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
-                                                <i class="bi bi-box-arrow-up-right"></i>
-                                            </a>
-                                            {% if link.description %}
-                                            <button
-                                                class="access-description-toggle collapsed"
-                                                type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#access-description-{{ link.id }}"
-                                                aria-expanded="false"
-                                                aria-controls="access-description-{{ link.id }}"
-                                                title="Alternar descrição"
-                                                aria-label="Alternar descrição"
-                                            >
-                                                <span class="visually-hidden">Alternar descrição do atalho {{ link.label }}</span>
-                                                <i class="bi bi-chevron-down"></i>
-                                            </button>
-                                            {% endif %}
+                                            <div class="d-flex align-items-center gap-2">
+                                                <a
+                                                    class="btn btn-outline-primary access-shortcut-link d-flex align-items-center justify-content-between gap-2 flex-grow-1"
+                                                    href="{{ link.url }}"
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                >
+                                                    <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                                {% if link.description %}
+                                                <button
+                                                    class="access-description-toggle collapsed"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#access-description-{{ link.id }}"
+                                                    aria-expanded="false"
+                                                    aria-controls="access-description-{{ link.id }}"
+                                                    title="Alternar descrição"
+                                                    aria-label="Alternar descrição"
+                                                >
+                                                    <span class="visually-hidden">Alternar descrição do atalho {{ link.label }}</span>
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                                {% endif %}
+
+                                            </div>
                                         </div>
                                         {% if link.description %}
                                         <div class="collapse access-description" id="access-description-{{ link.id }}">

@@ -276,33 +276,35 @@
                                         {{ form.notify_attendees(class="form-check-input", id="notify_attendees") }}
                                         <label class="form-check-label" for="notify_attendees">{{ form.notify_attendees.label.text }}</label>
                                     </div>
-                                    <div class="form-check form-check-inline">
-                                        {{ form.apply_more_days(class="form-check-input", id="apply_more_days") }}
-                                        <label class="form-check-label" for="apply_more_days">{{ form.apply_more_days.label.text }}</label>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.recorrencia_tipo.label(class="form-label") }}
+                                        {{ form.recorrencia_tipo(class="form-select", id="recorrencia_tipo") }}
+                                        {% if form.recorrencia_tipo.errors %}
+                                            <div class="text-danger small mt-1">{{ form.recorrencia_tipo.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 d-none" id="recorrenciaFimWrapper">
+                                        {{ form.recorrencia_fim.label(class="form-label") }}
+                                        {{ form.recorrencia_fim(class="form-control", type="date", id="recorrencia_fim") }}
+                                        {% if form.recorrencia_fim.errors %}
+                                            <div class="text-danger small mt-1">{{ form.recorrencia_fim.errors[0] }}</div>
+                                        {% endif %}
                                     </div>
                                 </div>
-                                <div class="mb-3 d-none" id="additionalDatesWrapper">
-                                    <label class="form-label" for="additional_dates-0">Aplicar também em</label>
-                                    <div class="additional-dates-grid" id="additionalDatesContainer" data-next-index="{{ form.additional_dates|length }}">
-                                        {% for date_field in form.additional_dates %}
-                                            <div class="additional-date-item">
-                                                <div class="input-group additional-date-group">
-                                                    {{ date_field(class="form-control additional-date-input", type="date", id=date_field.id) }}
-                                                    <button type="button" class="btn btn-outline-danger remove-additional-date">
-                                                        <i class="bi bi-x-lg"></i>
-                                                    </button>
-                                                </div>
-                                                {% if date_field.errors %}
-                                                    <div class="text-danger small mt-1 additional-date-error">{{ date_field.errors[0] }}</div>
-                                                {% endif %}
+                                <div class="mb-3 d-none" id="recorrenciaDiasWrapper">
+                                    {{ form.recorrencia_dias_semana.label(class="form-label") }}
+                                    <div class="border rounded p-2" style="max-height: 140px; overflow-y: auto;">
+                                        {% for subfield in form.recorrencia_dias_semana %}
+                                            <div class="form-check">
+                                                {{ subfield(class="form-check-input", id=subfield.id) }}
+                                                <label class="form-check-label" for="{{ subfield.id }}">{{ subfield.label.text }}</label>
                                             </div>
                                         {% endfor %}
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addAdditionalDateBtn">
-                                        <i class="bi bi-plus-lg me-1"></i>Adicionar outro dia
-                                    </button>
-                                    {% if form.additional_dates.errors %}
-                                        <div class="text-danger mt-2 additional-dates-error">{{ form.additional_dates.errors[0] }}</div>
+                                    {% if form.recorrencia_dias_semana.errors %}
+                                        <div class="text-danger small mt-1">{{ form.recorrencia_dias_semana.errors[0] }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -524,6 +526,40 @@
     var currentEvent;
     var currentMeetConfig;
     var calendarEl = document.getElementById('calendar');
+    var recorrenciaTipoSelect = document.getElementById('recorrencia_tipo');
+    var recorrenciaFimWrapper = document.getElementById('recorrenciaFimWrapper');
+    var recorrenciaDiasWrapper = document.getElementById('recorrenciaDiasWrapper');
+
+    // Controlar visibilidade dos campos de recorrência
+    function toggleRecurrenceFields() {
+        if (!recorrenciaTipoSelect || !recorrenciaFimWrapper) {
+            return;
+        }
+        var tipoValue = recorrenciaTipoSelect.value;
+
+        // Mostrar campo "Repetir até" se não for NENHUMA
+        if (tipoValue && tipoValue !== 'NENHUMA') {
+            recorrenciaFimWrapper.classList.remove('d-none');
+        } else {
+            recorrenciaFimWrapper.classList.add('d-none');
+        }
+
+        // Mostrar seleção de dias da semana apenas para recorrência semanal
+        if (recorrenciaDiasWrapper) {
+            if (tipoValue === 'SEMANAL') {
+                recorrenciaDiasWrapper.classList.remove('d-none');
+            } else {
+                recorrenciaDiasWrapper.classList.add('d-none');
+            }
+        }
+    }
+
+    // Adicionar listener para mudanças no select de recorrência
+    if (recorrenciaTipoSelect) {
+        recorrenciaTipoSelect.addEventListener('change', toggleRecurrenceFields);
+        toggleRecurrenceFields(); // Inicializar no carregamento
+    }
+
     var applyMoreDaysCheckbox = document.getElementById('apply_more_days');
     var additionalDatesWrapper = document.getElementById('additionalDatesWrapper');
     var additionalDatesContainer = document.getElementById('additionalDatesContainer');

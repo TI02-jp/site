@@ -13,7 +13,12 @@ from app.models.tables import (
     Reuniao,
     ReuniaoParticipante,
     ReuniaoStatus,
+    ReuniaoRecorrenciaTipo,
     default_meet_settings,
+)
+from app.services.meeting_recurrence import (
+    generate_recurrence_dates,
+    generate_recurrence_group_id,
 )
 from app.services.google_calendar import (
     list_upcoming_events,
@@ -24,6 +29,7 @@ from app.services.google_calendar import (
     get_calendar_timezone,
     update_meet_space_preferences,
 )
+from app.services.calendar_cache import calendar_cache
 
 CALENDAR_TZ = get_calendar_timezone()
 
@@ -148,8 +154,24 @@ def populate_participants_choices(form):
 
 
 def fetch_raw_events():
-    """Fetch upcoming events from Google Calendar."""
-    return list_upcoming_events(max_results=250)
+    """Fetch upcoming events from Google Calendar with caching."""
+    # Try to get from cache first
+    cached_events = calendar_cache.get("raw_calendar_events")
+    if cached_events is not None:
+        return cached_events
+
+    # Fetch from Google Calendar API
+    events = list_upcoming_events(max_results=250)
+
+    # Cache for 30 seconds
+    calendar_cache.set("raw_calendar_events", events, ttl=30)
+
+    return events
+
+
+def invalidate_calendar_cache():
+    """Invalidate the calendar cache after meeting changes."""
+    calendar_cache.delete("raw_calendar_events")
 
 
 def _next_available(
@@ -467,33 +489,53 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         )
         return False, None
 
-    additional_dates_field = getattr(form, "additional_dates", None)
-    apply_more_days_field = getattr(form, "apply_more_days", None)
-    additional_dates: list[date] = []
+    # Verificar se há recorrência configurada
+    recorrencia_tipo_field = getattr(form, "recorrencia_tipo", None)
+    recorrencia_fim_field = getattr(form, "recorrencia_fim", None)
+    recorrencia_dias_semana_field = getattr(form, "recorrencia_dias_semana", None)
+
+    recurrence_dates: list[date] = []
+    group_id: str | None = None
+    recorrencia_tipo_value = ReuniaoRecorrenciaTipo.NENHUMA
+    recorrencia_fim_value: date | None = None
+    recorrencia_dias_semana_value: str | None = None
+
     if (
-        apply_more_days_field
-        and additional_dates_field
-        and apply_more_days_field.data
+        recorrencia_tipo_field
+        and recorrencia_tipo_field.data
+        and recorrencia_tipo_field.data != "NENHUMA"
+        and recorrencia_fim_field
+        and recorrencia_fim_field.data
     ):
-        for field in additional_dates_field:
-            if not field.data:
-                continue
-            extra_start = datetime.combine(
-                field.data, form.start_time.data, tzinfo=CALENDAR_TZ
+        try:
+            recorrencia_tipo_value = ReuniaoRecorrenciaTipo(recorrencia_tipo_field.data)
+            recorrencia_fim_value = recorrencia_fim_field.data
+
+            # Para recorrência semanal com dias específicos
+            weekdays = None
+            if recorrencia_tipo_value == ReuniaoRecorrenciaTipo.SEMANAL and recorrencia_dias_semana_field:
+                if recorrencia_dias_semana_field.data:
+                    weekdays = [int(d) for d in recorrencia_dias_semana_field.data]
+                    recorrencia_dias_semana_value = ','.join(recorrencia_dias_semana_field.data)
+
+            # Gerar todas as datas de recorrência
+            all_dates = generate_recurrence_dates(
+                start_date=form.date.data,
+                end_date=recorrencia_fim_value,
+                recurrence_type=recorrencia_tipo_value,
+                weekdays=weekdays
             )
-            extra_adjusted_start, extra_messages = _calculate_adjusted_start(
-                extra_start, duration, intervals, now
-            )
-            if extra_adjusted_start != extra_start:
-                formatted_date = field.data.strftime("%d/%m/%Y")
-                flash(
-                    "Não foi possível agendar a reunião adicional na data selecionada. "
-                    + " ".join(extra_messages)
-                    + f" Ajuste o horário do dia {formatted_date} e tente novamente.",
-                    "warning",
-                )
-                return False, None
-            additional_dates.append(field.data)
+
+            # Remover a primeira data (será criada como reunião principal)
+            recurrence_dates = [d for d in all_dates if d != form.date.data]
+
+            # Gerar ID de grupo para a série
+            if recurrence_dates:
+                group_id = generate_recurrence_group_id()
+
+        except (ValueError, AttributeError) as e:
+            flash(f"Erro ao processar recorrência: {str(e)}", "danger")
+            return False, None
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
     participant_emails = [u.email for u in selected_users if u.email]
@@ -535,6 +577,10 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         google_event_id=event["id"],
         criador_id=user_id,
         course_id=course_id_value,
+        recorrencia_tipo=recorrencia_tipo_value,
+        recorrencia_fim=recorrencia_fim_value,
+        recorrencia_grupo_id=group_id,
+        recorrencia_dias_semana=recorrencia_dias_semana_value,
     )
     meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
@@ -552,31 +598,112 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             "Não foi possível aplicar as configurações do Meet automaticamente.",
             "warning",
         )
+
     additional_meet_link = None
-    if meet_link:
-        flash(
-            Markup(
-                f'Reunião criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
-            ),
-            "success",
-        )
-    else:
-        flash("Reunião criada com sucesso!", "success")
-    if additional_dates:
-        for extra_date in additional_dates:
-            link = _create_additional_meeting(
-                extra_date,
-                form,
-                duration,
-                selected_users,
-                description,
-                participant_emails,
-                should_notify,
-                user_id,
-                course_id_value,
+
+    # Criar reuniões recorrentes
+    if recurrence_dates:
+        recurrence_count = 0
+        for recurrence_date in recurrence_dates:
+            start_dt_recurrent = datetime.combine(
+                recurrence_date, form.start_time.data, tzinfo=CALENDAR_TZ
             )
-            if not meet_link and link and not additional_meet_link:
-                additional_meet_link = link
+            end_dt_recurrent = datetime.combine(
+                recurrence_date, form.end_time.data, tzinfo=CALENDAR_TZ
+            )
+
+            # Criar evento no Google Calendar
+            if form.create_meet.data:
+                event_recurrent = create_meet_event(
+                    form.subject.data,
+                    start_dt_recurrent,
+                    end_dt_recurrent,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+                meet_link_recurrent = event_recurrent.get("hangoutLink")
+            else:
+                event_recurrent = create_event(
+                    form.subject.data,
+                    start_dt_recurrent,
+                    end_dt_recurrent,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+                meet_link_recurrent = None
+
+            # Criar reunião recorrente
+            recurrent_meeting = Reuniao(
+                inicio=start_dt_recurrent,
+                fim=end_dt_recurrent,
+                assunto=form.subject.data,
+                descricao=form.description.data,
+                status=ReuniaoStatus.AGENDADA,
+                meet_link=meet_link_recurrent,
+                google_event_id=event_recurrent["id"],
+                criador_id=user_id,
+                course_id=course_id_value,
+                recorrencia_tipo=recorrencia_tipo_value,
+                recorrencia_fim=recorrencia_fim_value,
+                recorrencia_grupo_id=group_id,
+                recorrencia_dias_semana=recorrencia_dias_semana_value,
+            )
+            recurrent_meeting.meet_settings = _normalize_meet_settings()
+            db.session.add(recurrent_meeting)
+            db.session.flush()
+
+            # Adicionar participantes
+            for u in selected_users:
+                db.session.add(
+                    ReuniaoParticipante(
+                        reuniao_id=recurrent_meeting.id,
+                        id_usuario=u.id,
+                        username_usuario=u.username
+                    )
+                )
+
+            # Aplicar configurações do Meet
+            sync_result_recurrent = _apply_meet_preferences(recurrent_meeting)
+            if sync_result_recurrent is False:
+                current_app.logger.warning(
+                    f"Não foi possível aplicar configurações do Meet para reunião recorrente {recurrent_meeting.id}"
+                )
+
+            if not meet_link and meet_link_recurrent and not additional_meet_link:
+                additional_meet_link = meet_link_recurrent
+
+            recurrence_count += 1
+
+        db.session.commit()
+
+        # Mensagem de sucesso
+        total_meetings = recurrence_count + 1
+        if meet_link:
+            flash(
+                Markup(
+                    f'Série de {total_meetings} reuniões recorrentes criada com sucesso! '
+                    f'<a href="{meet_link}" target="_blank">Link do Meet da primeira reunião</a>'
+                ),
+                "success",
+            )
+        else:
+            flash(f"Série de {total_meetings} reuniões recorrentes criada com sucesso!", "success")
+    else:
+        if meet_link:
+            flash(
+                Markup(
+                    f'Reunião criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
+                ),
+                "success",
+            )
+        else:
+            flash("Reunião criada com sucesso!", "success")
+
+    # Invalidar cache após criar reunião
+    invalidate_calendar_cache()
+
     return True, MeetingOperationResult(meeting.id, meet_link or additional_meet_link)
 
 
@@ -697,6 +824,10 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             "warning",
         )
     flash("Reunião atualizada com sucesso!", "success")
+
+    # Invalidar cache após atualizar reunião
+    invalidate_calendar_cache()
+
     return True, MeetingOperationResult(meeting.id, meeting.meet_link)
 
 
@@ -801,6 +932,10 @@ def change_meeting_status(
             auto_progress=False,
         )
         db.session.commit()
+
+        # Invalidar cache após mudar status da reunião
+        invalidate_calendar_cache()
+
         return event_data
     except Exception:
         db.session.rollback()
@@ -822,6 +957,10 @@ def delete_meeting(meeting: Reuniao) -> bool:
             return False
     db.session.delete(meeting)
     db.session.commit()
+
+    # Invalidar cache após deletar reunião
+    invalidate_calendar_cache()
+
     return True
 
 
@@ -836,10 +975,32 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
 
     updated = False
 
+    # Otimizar: buscar apenas reuniões dos últimos 6 meses e próximos 6 meses
+    # com eager loading de relacionamentos
+    six_months_ago = now - timedelta(days=180)
+    six_months_ahead = now + timedelta(days=180)
+
+    # Use eager loading para reduzir queries N+1
+    from sqlalchemy.orm import joinedload
+
+    meetings = (
+        Reuniao.query
+        .options(
+            joinedload(Reuniao.participantes).joinedload(ReuniaoParticipante.usuario),
+            joinedload(Reuniao.criador),
+            joinedload(Reuniao.meet_host)
+        )
+        .filter(
+            Reuniao.inicio >= six_months_ago,
+            Reuniao.inicio <= six_months_ahead
+        )
+        .all()
+    )
+
     # Prioritize locally stored meetings so their metadata (including
     # edit permissions) is preserved. Google events are added later only
     # if they don't match an existing local meeting.
-    for r in Reuniao.query.all():
+    for r in meetings:
         event_data, status_changed = serialize_meeting_event(
             r, now, current_user_id, is_admin
         )
@@ -852,6 +1013,26 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     if updated:
         db.session.commit()
 
+    # Cache user emails para evitar múltiplas queries
+    all_emails = set()
+    for e in raw_events:
+        attendee_objs = e.get("attendees", [])
+        for a in attendee_objs:
+            email = a.get("email")
+            if email:
+                all_emails.add(email)
+        creator_info = e.get("creator") or e.get("organizer", {})
+        creator_email = creator_info.get("email")
+        if creator_email:
+            all_emails.add(creator_email)
+
+    # Buscar todos os usuários de uma vez
+    user_map = {}
+    if all_emails:
+        users = User.query.filter(User.email.in_(list(all_emails))).all()
+        user_map = {u.email: u.username for u in users}
+
+    # Processar eventos do Google
     for e in raw_events:
         start_str = e["start"].get("dateTime") or e["start"].get("date")
         end_str = e["end"].get("dateTime") or e["end"].get("date")
@@ -870,11 +1051,6 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             color = "#dc3545"
             status_label = "Realizada"
         attendee_objs = e.get("attendees", [])
-        emails = [a.get("email") for a in attendee_objs if a.get("email")]
-        user_map = {
-            u.email: u.username
-            for u in User.query.filter(User.email.in_(emails)).all()
-        } if emails else {}
         attendees: list[str] = []
         for a in attendee_objs:
             email = a.get("email")
