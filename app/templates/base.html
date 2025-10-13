@@ -585,6 +585,51 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(sendPing, 60000);
         sendPing();
     })();
+
+    // Ordenar alfabeticamente os itens de menu das sidebars
+    (function sortSidebarMenus() {
+        function normalizeText(str) {
+            try {
+                return (str || '')
+                    .trim()
+                    .toLocaleUpperCase('pt-BR')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+            } catch (_) {
+                return (str || '').trim().toUpperCase();
+            }
+        }
+
+        function getItemLabel(li) {
+            const link = li.querySelector('a.nav-link');
+            // Considera apenas o texto visível do link
+            return normalizeText(link ? link.innerText : li.innerText);
+        }
+
+        // Seleciona todas as listas de navegação da sidebar (inclui submenus)
+        const navLists = document.querySelectorAll('.sidebar .nav.flex-column');
+        navLists.forEach(ul => {
+            // Pular listas que explicitamente não devem ser ordenadas
+            if (ul.hasAttribute('data-no-sort')) return;
+
+            const items = Array.from(ul.children)
+                .filter(el => el.matches('li.nav-item'));
+
+            if (items.length < 2) return; // nada para ordenar
+
+            // Ordena por rótulo
+            const sorted = items.slice().sort((a, b) => {
+                const A = getItemLabel(a);
+                const B = getItemLabel(b);
+                if (A < B) return -1;
+                if (A > B) return 1;
+                return 0;
+            });
+
+            // Reanexa na nova ordem
+            sorted.forEach(li => ul.appendChild(li));
+        });
+    })();
 });
 </script>
 
