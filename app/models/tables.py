@@ -687,6 +687,17 @@ def default_meet_settings() -> dict[str, bool]:
     }
 
 
+class ReuniaoRecorrenciaTipo(str, Enum):
+    """Enumeration of recurrence types for meetings."""
+
+    NENHUMA = "NENHUMA"
+    DIARIA = "DIARIA"
+    SEMANAL = "SEMANAL"
+    QUINZENAL = "QUINZENAL"
+    MENSAL = "MENSAL"
+    ANUAL = "ANUAL"
+
+
 class Reuniao(db.Model):
     """Meeting scheduled in the system."""
     __tablename__ = 'reunioes'
@@ -723,6 +734,15 @@ class Reuniao(db.Model):
         db.DateTime(timezone=True),
         default=lambda: datetime.now(CALENDAR_TZ),
     )
+    # Campos de recorrência
+    recorrencia_tipo = db.Column(
+        db.Enum(ReuniaoRecorrenciaTipo, name="reuniao_recorrencia_tipo"),
+        nullable=False,
+        default=ReuniaoRecorrenciaTipo.NENHUMA,
+    )
+    recorrencia_fim = db.Column(db.Date, nullable=True)
+    recorrencia_grupo_id = db.Column(db.String(36), nullable=True)
+    recorrencia_dias_semana = db.Column(db.String(20), nullable=True)  # Ex: "1,3,5" para segunda, quarta, sexta
 
     participantes = db.relationship(
         'ReuniaoParticipante',

@@ -487,49 +487,59 @@ class MeetingForm(FlaskForm):
         "Notificar participantes por e-mail",
         default=True,
     )
-    apply_more_days = BooleanField("Aplicar a mais dias")
-    additional_dates = FieldList(
-        DateField(
-            "Aplicar também em",
-            format="%Y-%m-%d",
-            validators=[Optional()],
-        ),
-        min_entries=1,
+    # Campos de recorrência
+    recorrencia_tipo = SelectField(
+        "Repetir",
+        choices=[
+            ('NENHUMA', 'Não repetir'),
+            ('DIARIA', 'Diariamente'),
+            ('SEMANAL', 'Semanalmente'),
+            ('QUINZENAL', 'A cada 2 semanas'),
+            ('MENSAL', 'Mensalmente'),
+            ('ANUAL', 'Anualmente'),
+        ],
+        default='NENHUMA',
+        validators=[Optional()],
+    )
+    recorrencia_fim = DateField(
+        "Repetir até",
+        format="%Y-%m-%d",
+        validators=[Optional()],
+    )
+    recorrencia_dias_semana = SelectMultipleField(
+        "Repetir nos dias",
+        choices=[
+            ('0', 'Segunda-feira'),
+            ('1', 'Terça-feira'),
+            ('2', 'Quarta-feira'),
+            ('3', 'Quinta-feira'),
+            ('4', 'Sexta-feira'),
+            ('5', 'Sábado'),
+            ('6', 'Domingo'),
+        ],
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
     )
     submit = SubmitField("Agendar")
 
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
             return False
-        if self.apply_more_days.data:
-            valid_dates: list[date] = []
-            has_error = False
-            for idx, field in enumerate(self.additional_dates):
-                if not field.data:
-                    continue
-                if field.data == self.date.data:
-                    field.errors.append(
-                        "Escolha uma data diferente da reunião original."
-                    )
-                    has_error = True
-                    continue
-                if field.data in valid_dates:
-                    field.errors.append("Datas duplicadas não são permitidas.")
-                    has_error = True
-                    continue
-                valid_dates.append(field.data)
-            if not valid_dates:
-                if self.additional_dates:
-                    self.additional_dates[0].errors.append(
-                        "Selecione pelo menos uma data adicional para replicar a reunião."
-                    )
-                else:
-                    self.additional_dates.errors.append(
-                        "Selecione pelo menos uma data adicional para replicar a reunião."
-                    )
+
+        # Validar recorrência
+        if self.recorrencia_tipo.data and self.recorrencia_tipo.data != 'NENHUMA':
+            if not self.recorrencia_fim.data:
+                self.recorrencia_fim.errors.append(
+                    "Informe até quando a reunião deve se repetir."
+                )
                 return False
-            if has_error:
+            if self.recorrencia_fim.data <= self.date.data:
+                self.recorrencia_fim.errors.append(
+                    "A data final deve ser posterior à data inicial."
+                )
                 return False
+
         return True
 
 
