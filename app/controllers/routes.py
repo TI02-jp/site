@@ -85,6 +85,7 @@ from sqlalchemy import or_, cast, String, text, inspect
 from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
+from threading import Lock
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -117,7 +118,7 @@ from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 from urllib.parse import urlunsplit
 from mimetypes import guess_type
 
@@ -750,22 +751,84 @@ def credentials_to_dict(credentials):
     }
 
 
+_STATS_CACHE_TTL_SECONDS = 60
+_stats_cache: dict[str, dict[str, Any]] = {}
+_stats_cache_lock = Lock()
+
+_NOTIFICATION_CACHE_TTL_SECONDS = 15
+_notification_count_cache: dict[int, dict[str, Any]] = {}
+_notification_cache_lock = Lock()
+
+
+def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
+    """Return lightweight portal stats with a short-lived cache."""
+    cache_key = "admin" if include_admin_metrics else "basic"
+    now = time.monotonic()
+    with _stats_cache_lock:
+        cached = _stats_cache.get(cache_key)
+        if cached and cached["expires_at"] > now:
+            return dict(cached["value"])
+
+    stats: dict[str, int] = {
+        "total_empresas": Empresa.query.count(),
+        "total_usuarios": 0,
+        "online_users_count": 0,
+    }
+    if include_admin_metrics:
+        stats["total_usuarios"] = User.query.count()
+        cutoff = datetime.utcnow() - timedelta(minutes=5)
+        stats["online_users_count"] = User.query.filter(User.last_seen >= cutoff).count()
+
+    with _stats_cache_lock:
+        _stats_cache[cache_key] = {
+            "value": dict(stats),
+            "expires_at": now + _STATS_CACHE_TTL_SECONDS,
+        }
+    return stats
+
+
+def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
+    """Retrieve unread notification count with a small cache window."""
+    now = time.monotonic()
+    if allow_cache:
+        with _notification_cache_lock:
+            cached = _notification_count_cache.get(user_id)
+            if cached and cached["expires_at"] > now:
+                return int(cached["value"])
+
+    unread = TaskNotification.query.filter(
+        TaskNotification.user_id == user_id,
+        TaskNotification.read_at.is_(None),
+    ).count()
+
+    with _notification_cache_lock:
+        _notification_count_cache[user_id] = {
+            "value": unread,
+            "expires_at": now + _NOTIFICATION_CACHE_TTL_SECONDS,
+        }
+    return unread
+
+
+def _invalidate_notification_cache(user_id: Optional[int] = None) -> None:
+    """Drop cached unread counts for a specific user or everyone."""
+    with _notification_cache_lock:
+        if user_id is None:
+            _notification_count_cache.clear()
+        else:
+            _notification_count_cache.pop(user_id, None)
+
+
 @app.context_processor
 def inject_stats():
-    """Inject global statistics into templates."""
-    if current_user.is_authenticated:
-        total_empresas = Empresa.query.count()
-        total_usuarios = User.query.count() if current_user.role == "admin" else 0
-        online_count = 0
-        if current_user.role == "admin":
-            cutoff = datetime.utcnow() - timedelta(minutes=5)
-            online_count = User.query.filter(User.last_seen >= cutoff).count()
-        return {
-            "total_empresas": total_empresas,
-            "total_usuarios": total_usuarios,
-            "online_users_count": online_count,
-        }
-    return {}
+    """Inject global statistics into templates without hammering the DB."""
+    if not current_user.is_authenticated:
+        return {}
+    stats = _get_cached_stats(include_admin_metrics=current_user.role == "admin")
+    if current_user.role != "admin":
+        stats = dict(stats)
+        stats["total_usuarios"] = 0
+        stats["online_users_count"] = 0
+    return stats
 
 
 # Allowed image file extensions for uploads
@@ -1033,10 +1096,7 @@ def inject_notification_counts():
 
     if not current_user.is_authenticated:
         return {"unread_notifications_count": 0}
-    unread = TaskNotification.query.filter(
-        TaskNotification.user_id == current_user.id,
-        TaskNotification.read_at.is_(None),
-    ).count()
+    unread = _get_unread_notifications_count(current_user.id)
     return {"unread_notifications_count": unread}
 
 
@@ -2507,10 +2567,7 @@ def _get_user_notification_items(limit: int | None = 20):
     if limit is not None:
         notifications_query = notifications_query.limit(limit)
     notifications = notifications_query.all()
-    unread_total = TaskNotification.query.filter(
-        TaskNotification.user_id == current_user.id,
-        TaskNotification.read_at.is_(None),
-    ).count()
+    unread_total = _get_unread_notifications_count(current_user.id)
 
     items = []
     for notification in notifications:
@@ -2561,6 +2618,7 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
     ]
 
     db.session.bulk_save_objects(notifications)
+    _invalidate_notification_cache()
 
 
 @app.route("/notifications", methods=["GET"])
@@ -2613,10 +2671,7 @@ def notifications_stream():
                         for notification in new_notifications
                     ]
                     last_sent_id = max(notification.id for notification in new_notifications)
-                    unread_total = TaskNotification.query.filter(
-                        TaskNotification.user_id == user_id,
-                        TaskNotification.read_at.is_(None),
-                    ).count()
+                    unread_total = _get_unread_notifications_count(user_id, allow_cache=False)
                     payload = json.dumps(
                         {
                             "notifications": serialized,
@@ -2665,6 +2720,7 @@ def mark_notification_read(notification_id):
     if not notification.read_at:
         notification.read_at = datetime.utcnow()
         db.session.commit()
+        _invalidate_notification_cache(current_user.id)
     return jsonify({"success": True})
 
 
@@ -2683,6 +2739,8 @@ def mark_all_notifications_read():
         )
     )
     db.session.commit()
+    if updated:
+        _invalidate_notification_cache(current_user.id)
     return jsonify({"success": True, "updated": updated or 0})
 
 

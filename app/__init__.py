@@ -99,6 +99,8 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+LAST_SEEN_REFRESH_INTERVAL = timedelta(seconds=60)
+
 
 @app.url_defaults
 def add_cache_buster(endpoint, values):
@@ -121,27 +123,57 @@ def _update_last_seen():
     if current_user.is_authenticated:
         from app.models.tables import Session, SAO_PAULO_TZ
 
+        now_utc = datetime.utcnow()
+        last_refresh_raw = session.get('_last_seen_refreshed_at')
+        last_refresh = None
+        if isinstance(last_refresh_raw, str):
+            try:
+                last_refresh = datetime.fromisoformat(last_refresh_raw)
+            except ValueError:
+                last_refresh = None
+        if last_refresh and now_utc - last_refresh < LAST_SEEN_REFRESH_INTERVAL:
+            return
+
+        session['_last_seen_refreshed_at'] = now_utc.isoformat(timespec='seconds')
         now_sp = datetime.now(SAO_PAULO_TZ)
-        current_user.last_seen = datetime.utcnow()
+        current_user.last_seen = now_utc
 
         sid = session.get('sid')
+        session_updated = False
         if sid:
             sess = Session.query.get(sid)
+            user_agent = request.headers.get('User-Agent')
             if sess:
-                sess.last_activity = now_sp
-                sess.ip_address = request.remote_addr
-                sess.user_agent = request.headers.get('User-Agent')
-                sess.session_data = dict(session)
+                serialized_session = dict(session)
+                if sess.last_activity != now_sp:
+                    sess.last_activity = now_sp
+                    session_updated = True
+                if sess.ip_address != request.remote_addr:
+                    sess.ip_address = request.remote_addr
+                    session_updated = True
+                if sess.user_agent != user_agent:
+                    sess.user_agent = user_agent
+                    session_updated = True
+                if sess.session_data != serialized_session:
+                    sess.session_data = serialized_session
+                    session_updated = True
             else:
                 sess = Session(
                     session_id=sid,
                     user_id=current_user.id,
                     ip_address=request.remote_addr,
-                    user_agent=request.headers.get('User-Agent'),
+                    user_agent=user_agent,
                     last_activity=now_sp,
+                    session_data=dict(session),
                 )
                 db.session.add(sess)
-        db.session.commit()
+                session_updated = True
+
+        try:
+            if session_updated or current_user.last_seen == now_utc:
+                db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
 
 
 @app.after_request
