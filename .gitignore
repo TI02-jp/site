@@ -38,3 +38,6 @@ nosetests.xml
 *.gif
 *.svg
 *.ico
+
+# Ignorar arquivos do Claude AI
+.claude/

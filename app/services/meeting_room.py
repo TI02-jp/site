@@ -1,5 +1,6 @@
 """Helpers for meeting room scheduling logic."""
 
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Sequence
@@ -43,7 +44,39 @@ def get_calendar_tz():
 
 CALENDAR_TZ = get_calendar_tz()
 
+# Cache de mapeamento email→username para evitar múltiplas queries
+_user_email_cache: dict[str, str] = {}
+_user_cache_expires: datetime | None = None
+_user_cache_ttl = timedelta(minutes=5)  # Mesmo TTL do cache de eventos
+
 MIN_GAP = timedelta(minutes=2)
+
+
+def get_users_by_email_cached(emails: set[str]) -> dict[str, str]:
+    """Return email→username mapping with caching to reduce database queries.
+
+    Cache expires after 5 minutes (same as calendar events cache).
+    """
+    global _user_email_cache, _user_cache_expires
+
+    now = datetime.now(CALENDAR_TZ)
+
+    # Check if cache expired
+    if _user_cache_expires is None or now >= _user_cache_expires:
+        _user_email_cache = {}
+        _user_cache_expires = now + _user_cache_ttl
+
+    # Find emails not yet in cache
+    missing_emails = emails - set(_user_email_cache.keys())
+
+    # Query database only for missing emails
+    if missing_emails:
+        users = User.query.filter(User.email.in_(list(missing_emails))).all()
+        for u in users:
+            _user_email_cache[u.email] = u.username
+
+    # Return only requested emails from cache
+    return {email: _user_email_cache[email] for email in emails if email in _user_email_cache}
 
 STATUS_SEQUENCE = [
     ReuniaoStatus.AGENDADA,
@@ -128,19 +161,51 @@ def _normalize_meet_settings(raw: Any | None = None) -> dict[str, bool]:
 
 
 def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
-    """Sync stored Meet preferences with the Google Meet space."""
+    """Sync stored Meet preferences with the Google Meet space.
 
+    Implements retry logic with exponential backoff (3 attempts with 1s, 2s, 4s delays).
+    Returns:
+        - True: Settings successfully applied
+        - False: Failed after all retries
+        - None: No Meet link (nothing to configure)
+    """
     if not meeting.meet_link:
         return None
+
     settings = _normalize_meet_settings(meeting.meet_settings)
-    try:
-        update_meet_space_preferences(meeting.meet_link, settings)
-    except Exception:
-        current_app.logger.exception(
-            "Failed to apply Meet settings for meeting %s", meeting.id
-        )
-        return False
-    return True
+    max_retries = 3
+    base_delay = 1.0  # seconds
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            current_app.logger.info(
+                f"Applying Meet settings for meeting {meeting.id} (attempt {attempt}/{max_retries})"
+            )
+            update_meet_space_preferences(meeting.meet_link, settings)
+            current_app.logger.info(
+                f"Successfully applied Meet settings for meeting {meeting.id} on attempt {attempt}"
+            )
+            return True
+
+        except Exception as e:
+            error_msg = f"Attempt {attempt}/{max_retries} failed to apply Meet settings for meeting {meeting.id}: {type(e).__name__}: {str(e)}"
+
+            if attempt < max_retries:
+                # Calculate exponential backoff delay
+                delay = base_delay * (2 ** (attempt - 1))
+                current_app.logger.warning(
+                    f"{error_msg}. Retrying in {delay}s..."
+                )
+                time.sleep(delay)
+            else:
+                # Final attempt failed - log full exception
+                current_app.logger.exception(
+                    f"{error_msg}. All retry attempts exhausted."
+                )
+                return False
+
+    # Should never reach here, but just in case
+    return False
 
 
 def _parse_course_id(form) -> int | None:
@@ -1037,11 +1102,8 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         if creator_email:
             all_emails.add(creator_email)
 
-    # Buscar todos os usuários de uma vez
-    user_map = {}
-    if all_emails:
-        users = User.query.filter(User.email.in_(list(all_emails))).all()
-        user_map = {u.email: u.username for u in users}
+    # Buscar todos os usuários de uma vez usando cache
+    user_map = get_users_by_email_cached(all_emails) if all_emails else {}
 
     # Processar eventos do Google
     for e in raw_events:

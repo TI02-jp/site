@@ -539,6 +539,10 @@ class DiretoriaAgreement(db.Model):
 class Session(db.Model):
     """Shared user session for Python and PHP applications."""
     __tablename__ = "sessions"
+    __table_args__ = (
+        db.Index('idx_sessions_user_id', 'user_id'),
+        db.Index('idx_sessions_last_activity', 'last_activity'),
+    )
 
     session_id = db.Column(db.String(128), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
