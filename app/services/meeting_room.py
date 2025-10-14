@@ -31,7 +31,17 @@ from app.services.google_calendar import (
 )
 from app.services.calendar_cache import calendar_cache
 
-CALENDAR_TZ = get_calendar_timezone()
+# Lazy-load calendar timezone to avoid API call at module import
+_CALENDAR_TZ = None
+
+def get_calendar_tz():
+    """Get calendar timezone with lazy initialization."""
+    global _CALENDAR_TZ
+    if _CALENDAR_TZ is None:
+        _CALENDAR_TZ = get_calendar_timezone()
+    return _CALENDAR_TZ
+
+CALENDAR_TZ = get_calendar_tz()
 
 MIN_GAP = timedelta(minutes=2)
 
@@ -163,8 +173,9 @@ def fetch_raw_events():
     # Fetch from Google Calendar API
     events = list_upcoming_events(max_results=250)
 
-    # Cache for 30 seconds
-    calendar_cache.set("raw_calendar_events", events, ttl=30)
+    # Cache for 5 minutes (300 seconds) to reduce API calls
+    # This significantly improves performance while keeping data fresh enough
+    calendar_cache.set("raw_calendar_events", events, ttl=300)
 
     return events
 

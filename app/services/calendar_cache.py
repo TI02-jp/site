@@ -60,5 +60,6 @@ class SimpleCache:
 
 
 # Global cache instance for calendar events
-# Cache for 30 seconds by default - balances freshness with performance
-calendar_cache = SimpleCache(default_ttl=30)
+# Cache for 5 minutes by default - balances freshness with performance
+# Reduced API calls significantly while keeping data reasonably fresh
+calendar_cache = SimpleCache(default_ttl=300)

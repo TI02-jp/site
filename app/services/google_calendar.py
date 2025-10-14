@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import socket
 
 _MEET_CODE_PATTERN = re.compile(r"[a-z0-9]{3,}(?:-[a-z0-9]{3,}){2}|[a-z0-9]{10,}")
 
@@ -58,6 +59,8 @@ def _build_service():
     """Create a Calendar API service authorized as the meeting room account."""
 
     delegated = _build_delegated_credentials(CALENDAR_SCOPES)
+    # Set socket timeout to prevent hanging requests
+    socket.setdefaulttimeout(10)
     return build("calendar", "v3", credentials=delegated)
 
 
@@ -88,20 +91,29 @@ def get_calendar_timezone() -> ZoneInfo:
 
 def list_upcoming_events(max_results: int = 10):
     """Return upcoming events for the meeting room calendar."""
-    service = _build_service()
-    now = datetime.now(get_calendar_timezone()).isoformat()
-    events_result = (
-        service.events()
-        .list(
-            calendarId=MEETING_ROOM_EMAIL,
-            timeMin=now,
-            maxResults=max_results,
-            singleEvents=True,
-            orderBy="startTime",
+    try:
+        service = _build_service()
+        now = datetime.now(get_calendar_timezone()).isoformat()
+        events_result = (
+            service.events()
+            .list(
+                calendarId=MEETING_ROOM_EMAIL,
+                timeMin=now,
+                maxResults=max_results,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
         )
-        .execute()
-    )
-    return events_result.get("items", [])
+        return events_result.get("items", [])
+    except (socket.timeout, socket.error) as e:
+        # Return empty list on timeout to prevent blocking the application
+        print(f"Google Calendar API timeout: {e}")
+        return []
+    except Exception as e:
+        # Log error but don't crash the application
+        print(f"Error fetching calendar events: {e}")
+        return []
 
 
 def _send_updates_flag(notify_attendees: bool | None) -> str:
@@ -119,34 +131,44 @@ def create_meet_event(
     notify_attendees: bool | None = None,
 ):
     """Create a calendar event with a Google Meet link."""
-    service = _build_service()
-    tz_name = get_calendar_timezone().key
-    event = {
-        "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
-        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
-        "conferenceData": {
-            "createRequest": {
-                "requestId": uuid4().hex,
-                "conferenceSolutionKey": {"type": "hangoutsMeet"},
-            }
-        },
-    }
-    if description:
-        event["description"] = description
-    if attendees:
-        event["attendees"] = [{"email": email} for email in attendees]
-    created_event = (
-        service.events()
-        .insert(
-            calendarId=MEETING_ROOM_EMAIL,
-            body=event,
-            conferenceDataVersion=1,
-            sendUpdates=_send_updates_flag(notify_attendees),
+    try:
+        service = _build_service()
+        tz_name = get_calendar_timezone().key
+        event = {
+            "summary": summary,
+            "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+            "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
+            "conferenceData": {
+                "createRequest": {
+                    "requestId": uuid4().hex,
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                }
+            },
+        }
+        if description:
+            event["description"] = description
+        if attendees:
+            event["attendees"] = [{"email": email} for email in attendees]
+        created_event = (
+            service.events()
+            .insert(
+                calendarId=MEETING_ROOM_EMAIL,
+                body=event,
+                conferenceDataVersion=1,
+                sendUpdates=_send_updates_flag(notify_attendees),
+            )
+            .execute()
         )
-        .execute()
-    )
-    return created_event
+        return created_event
+    except (socket.timeout, socket.error) as e:
+        print(f"Google Calendar API timeout on create_meet_event: {e}")
+        raise RuntimeError("Timeout ao criar evento no Google Calendar. Tente novamente.")
+    except HttpError as e:
+        print(f"Google Calendar API error on create_meet_event: {e}")
+        raise RuntimeError(f"Erro ao criar evento no Google Calendar: {e}")
+    except Exception as e:
+        print(f"Unexpected error on create_meet_event: {e}")
+        raise
 
 
 def create_event(
@@ -158,27 +180,37 @@ def create_event(
     notify_attendees: bool | None = None,
 ):
     """Create a calendar event without a Google Meet link."""
-    service = _build_service()
-    tz_name = get_calendar_timezone().key
-    event = {
-        "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
-        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
-    }
-    if description:
-        event["description"] = description
-    if attendees:
-        event["attendees"] = [{"email": email} for email in attendees]
-    created_event = (
-        service.events()
-        .insert(
-            calendarId=MEETING_ROOM_EMAIL,
-            body=event,
-            sendUpdates=_send_updates_flag(notify_attendees),
+    try:
+        service = _build_service()
+        tz_name = get_calendar_timezone().key
+        event = {
+            "summary": summary,
+            "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+            "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
+        }
+        if description:
+            event["description"] = description
+        if attendees:
+            event["attendees"] = [{"email": email} for email in attendees]
+        created_event = (
+            service.events()
+            .insert(
+                calendarId=MEETING_ROOM_EMAIL,
+                body=event,
+                sendUpdates=_send_updates_flag(notify_attendees),
+            )
+            .execute()
         )
-        .execute()
-    )
-    return created_event
+        return created_event
+    except (socket.timeout, socket.error) as e:
+        print(f"Google Calendar API timeout on create_event: {e}")
+        raise RuntimeError("Timeout ao criar evento no Google Calendar. Tente novamente.")
+    except HttpError as e:
+        print(f"Google Calendar API error on create_event: {e}")
+        raise RuntimeError(f"Erro ao criar evento no Google Calendar: {e}")
+    except Exception as e:
+        print(f"Unexpected error on create_event: {e}")
+        raise
 
 
 def update_event(
@@ -197,41 +229,51 @@ def update_event(
     the event. When ``False``, any existing conference data is removed. If
     ``None``, the conference configuration is left unchanged.
     """
-    service = _build_service()
-    tz_name = get_calendar_timezone().key
-    event = {
-        "summary": summary,
-        "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
-        "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
-    }
-    if description:
-        event["description"] = description
-    if attendees is not None:
-        event["attendees"] = [{"email": email} for email in attendees]
-    kwargs = {}
-    if create_meet is True:
-        event["conferenceData"] = {
-            "createRequest": {
-                "requestId": uuid4().hex,
-                "conferenceSolutionKey": {"type": "hangoutsMeet"},
-            }
+    try:
+        service = _build_service()
+        tz_name = get_calendar_timezone().key
+        event = {
+            "summary": summary,
+            "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
+            "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
         }
-        kwargs["conferenceDataVersion"] = 1
-    elif create_meet is False:
-        event["conferenceData"] = None
-        kwargs["conferenceDataVersion"] = 1
-    updated_event = (
-        service.events()
-        .patch(
-            calendarId=MEETING_ROOM_EMAIL,
-            eventId=event_id,
-            body=event,
-            sendUpdates=_send_updates_flag(notify_attendees),
-            **kwargs,
+        if description:
+            event["description"] = description
+        if attendees is not None:
+            event["attendees"] = [{"email": email} for email in attendees]
+        kwargs = {}
+        if create_meet is True:
+            event["conferenceData"] = {
+                "createRequest": {
+                    "requestId": uuid4().hex,
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                }
+            }
+            kwargs["conferenceDataVersion"] = 1
+        elif create_meet is False:
+            event["conferenceData"] = None
+            kwargs["conferenceDataVersion"] = 1
+        updated_event = (
+            service.events()
+            .patch(
+                calendarId=MEETING_ROOM_EMAIL,
+                eventId=event_id,
+                body=event,
+                sendUpdates=_send_updates_flag(notify_attendees),
+                **kwargs,
+            )
+            .execute()
         )
-        .execute()
-    )
-    return updated_event
+        return updated_event
+    except (socket.timeout, socket.error) as e:
+        print(f"Google Calendar API timeout on update_event: {e}")
+        raise RuntimeError("Timeout ao atualizar evento no Google Calendar. Tente novamente.")
+    except HttpError as e:
+        print(f"Google Calendar API error on update_event: {e}")
+        raise RuntimeError(f"Erro ao atualizar evento no Google Calendar: {e}")
+    except Exception as e:
+        print(f"Unexpected error on update_event: {e}")
+        raise
 
 
 def delete_event(event_id: str):
