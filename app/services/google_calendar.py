@@ -55,19 +55,26 @@ def _build_delegated_credentials(scopes: Sequence[str]):
     return creds.with_subject(MEETING_ROOM_EMAIL)
 
 
+@lru_cache(maxsize=2)
 def _build_service():
-    """Create a Calendar API service authorized as the meeting room account."""
+    """Create a Calendar API service authorized as the meeting room account.
 
+    Cached to avoid recreating the service on every request.
+    """
     delegated = _build_delegated_credentials(CALENDAR_SCOPES)
-    # Set socket timeout to prevent hanging requests
-    socket.setdefaulttimeout(10)
+    # Set socket timeout to prevent hanging requests (reduced from 10s to 5s)
+    socket.setdefaulttimeout(5)
     return build("calendar", "v3", credentials=delegated)
 
 
+@lru_cache(maxsize=2)
 def _build_meet_service():
-    """Create a Meet API service authorized as the meeting room account."""
+    """Create a Meet API service authorized as the meeting room account.
 
+    Cached to avoid recreating the service on every request.
+    """
     delegated = _build_delegated_credentials(MEET_SCOPES)
+    socket.setdefaulttimeout(5)
     return build("meet", "v2", credentials=delegated)
 
 
@@ -352,16 +359,77 @@ def _build_space_config_payload(settings: dict[str, bool]) -> tuple[dict, str]:
 def update_meet_space_preferences(
     meet_link: str, settings: dict[str, bool]
 ) -> dict | None:
-    """Apply Meet configuration flags to the underlying meeting space."""
+    """Apply Meet configuration flags to the underlying meeting space.
 
+    Returns the API response or None on failure. Logs detailed error information.
+
+    Note: Google Meet API has timing restrictions - settings can only be applied
+    BEFORE the first person joins the meeting. After someone joins, the settings
+    become locked.
+    """
     meeting_code = _extract_meeting_code(meet_link)
     if meeting_code is None:
+        print(f"Invalid Google Meet link: {meet_link}")
         raise ValueError("Invalid Google Meet link")
+
     body, update_mask = _build_space_config_payload(settings)
-    service = _build_meet_service()
-    return (
-        service.spaces()
-        .patch(name=f"spaces/{meeting_code}", updateMask=update_mask, body=body)
-        .execute()
-    )
+    space_name = f"spaces/{meeting_code}"
+
+    print(f"Applying Meet settings to {space_name}: {settings}")
+
+    try:
+        service = _build_meet_service()
+        response = (
+            service.spaces()
+            .patch(name=space_name, updateMask=update_mask, body=body)
+            .execute()
+        )
+        print(f"Successfully applied Meet settings to {space_name}")
+        return response
+    except HttpError as e:
+        error_details = {
+            "status_code": e.resp.status if hasattr(e, 'resp') else None,
+            "reason": e.error_details if hasattr(e, 'error_details') else str(e),
+            "space": space_name,
+            "settings": settings
+        }
+        print(f"HttpError applying Meet settings: {error_details}")
+        raise
+    except (socket.timeout, socket.error) as e:
+        print(f"Timeout applying Meet settings to {space_name}: {e}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error applying Meet settings to {space_name}: {type(e).__name__}: {e}")
+        raise
+
+
+def verify_meet_space_config(meet_link: str) -> dict | None:
+    """Verify and return the current configuration of a Meet space.
+
+    Returns the space configuration or None if unable to retrieve.
+    This can be used to confirm that settings were successfully applied.
+    """
+    meeting_code = _extract_meeting_code(meet_link)
+    if meeting_code is None:
+        print(f"Invalid Google Meet link for verification: {meet_link}")
+        return None
+
+    space_name = f"spaces/{meeting_code}"
+
+    try:
+        service = _build_meet_service()
+        response = service.spaces().get(name=space_name).execute()
+
+        config = response.get("config", {})
+        print(f"Retrieved Meet space config for {space_name}: {config}")
+        return config
+    except HttpError as e:
+        print(f"HttpError retrieving Meet config for {space_name}: {e}")
+        return None
+    except (socket.timeout, socket.error) as e:
+        print(f"Timeout retrieving Meet config for {space_name}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error retrieving Meet config for {space_name}: {type(e).__name__}: {e}")
+        return None
 

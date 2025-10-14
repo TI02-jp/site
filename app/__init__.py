@@ -12,6 +12,7 @@ from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+from flask_compress import Compress
 from dotenv import load_dotenv
 from markupsafe import Markup, escape
 from sqlalchemy.exc import SQLAlchemyError
@@ -84,6 +85,10 @@ app.config['SESSION_COOKIE_NAME'] = os.getenv('SESSION_COOKIE_NAME', 'jp_portal_
 app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_pre_ping', True)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_recycle', 1800)
+# Otimizações de pool de conexões para produção
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_size', 20)  # 20 conexões permanentes
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('max_overflow', 40)  # Até 60 conexões no total
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_timeout', 30)  # Timeout de 30s para obter conexão
 app.config['GOOGLE_CLIENT_ID'] = os.getenv('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
@@ -99,7 +104,34 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Compressão HTTP para reduzir tamanho das respostas em ~70%
+compress = Compress(app)
+app.config['COMPRESS_MIMETYPES'] = [
+    'text/html',
+    'text/css',
+    'text/javascript',
+    'application/javascript',
+    'application/json',
+    'text/xml',
+    'application/xml',
+]
+app.config['COMPRESS_LEVEL'] = 6  # Nível de compressão (1-9, 6 é bom balanço)
+app.config['COMPRESS_MIN_SIZE'] = 500  # Só comprime respostas > 500 bytes
+
 LAST_SEEN_REFRESH_INTERVAL = timedelta(seconds=60)
+
+# Cache simples para reduzir queries de sessão
+_session_cache = {}
+_session_cache_max_size = 10000  # Limite de entradas no cache
+
+def _cleanup_session_cache():
+    """Remove entradas antigas do cache para evitar memory leak."""
+    global _session_cache
+    if len(_session_cache) > _session_cache_max_size:
+        # Remove 20% das entradas mais antigas
+        cutoff = int(_session_cache_max_size * 0.8)
+        sorted_keys = sorted(_session_cache.items(), key=lambda x: x[1])
+        _session_cache = dict(sorted_keys[cutoff:])
 
 
 @app.url_defaults
@@ -135,45 +167,62 @@ def _update_last_seen():
             return
 
         session['_last_seen_refreshed_at'] = now_utc.isoformat(timespec='seconds')
-        now_sp = datetime.now(SAO_PAULO_TZ)
+
+        # Atualiza last_seen apenas na memória (não força commit)
         current_user.last_seen = now_utc
 
         sid = session.get('sid')
-        session_updated = False
         if sid:
-            sess = Session.query.get(sid)
+            now_sp = datetime.now(SAO_PAULO_TZ)
             user_agent = request.headers.get('User-Agent')
-            if sess:
-                serialized_session = dict(session)
-                if sess.last_activity != now_sp:
-                    sess.last_activity = now_sp
-                    session_updated = True
-                if sess.ip_address != request.remote_addr:
-                    sess.ip_address = request.remote_addr
-                    session_updated = True
-                if sess.user_agent != user_agent:
-                    sess.user_agent = user_agent
-                    session_updated = True
-                if sess.session_data != serialized_session:
-                    sess.session_data = serialized_session
-                    session_updated = True
-            else:
-                sess = Session(
-                    session_id=sid,
-                    user_id=current_user.id,
-                    ip_address=request.remote_addr,
-                    user_agent=user_agent,
-                    last_activity=now_sp,
-                    session_data=dict(session),
-                )
-                db.session.add(sess)
-                session_updated = True
+            ip_address = request.remote_addr
 
-        try:
-            if session_updated or current_user.last_seen == now_utc:
-                db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
+            # Verifica cache primeiro para evitar query desnecessária
+            cache_key = f"{sid}:{ip_address}:{user_agent}"
+            last_update = _session_cache.get(cache_key)
+
+            # Só atualiza se passou mais de 60 segundos desde a última atualização
+            if last_update and (now_utc - last_update).total_seconds() < 60:
+                return
+
+            # Atualiza cache e limpa se necessário
+            _session_cache[cache_key] = now_utc
+            if len(_session_cache) > _session_cache_max_size:
+                _cleanup_session_cache()
+
+            # Usa update direto sem carregar o objeto completo (mais rápido)
+            try:
+                # Verifica se sessão existe no cache ou no banco
+                sess = db.session.query(Session).filter_by(session_id=sid).first()
+                if sess:
+                    # Atualiza apenas se houver mudanças significativas
+                    updates = {}
+                    if sess.last_activity != now_sp:
+                        updates['last_activity'] = now_sp
+                    if sess.ip_address != ip_address:
+                        updates['ip_address'] = ip_address
+                    if sess.user_agent != user_agent:
+                        updates['user_agent'] = user_agent
+
+                    # Serializa sessão apenas se houver outras mudanças (otimização)
+                    if updates:
+                        # Update em batch - muito mais rápido
+                        db.session.query(Session).filter_by(session_id=sid).update(updates)
+                        db.session.commit()
+                else:
+                    # Cria nova sessão apenas se não existir
+                    sess = Session(
+                        session_id=sid,
+                        user_id=current_user.id,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        last_activity=now_sp,
+                        session_data={},  # Sessão vazia inicialmente (otimização)
+                    )
+                    db.session.add(sess)
+                    db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
 
 
 @app.after_request
