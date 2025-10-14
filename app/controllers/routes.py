@@ -3003,7 +3003,8 @@ def sala_reunioes():
                 participant_ids.append(parsed_id)
         if participant_ids:
             form.participants.data = participant_ids
-        form.apply_more_days.data = False
+        if hasattr(form, "apply_more_days"):
+            form.apply_more_days.data = False
         form.notify_attendees.data = True
         form.course_id.data = request.args.get("course_id", "")
         show_modal = True
