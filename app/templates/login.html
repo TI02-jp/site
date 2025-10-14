@@ -40,7 +40,7 @@
             <div class="mb-3">
                 <label for="username" class="form-label">{{ form.username.label }}</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
                     {{ form.username(class="form-control", id="username", placeholder="Digite seu usuário") }}
                 </div>
                 {% for error in form.username.errors %}
@@ -51,10 +51,10 @@
             <div class="mb-3">
                 <label for="password" class="form-label">{{ form.password.label }}</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
                     {{ form.password(class="form-control", id="password", placeholder="Digite sua senha") }}
                     <span class="input-group-text" style="cursor: pointer;">
-                        <i class="fas fa-eye" id="togglePassword"></i>
+                        <i class="bi bi-eye" id="togglePassword"></i>
                     </span>
                 </div>
                 {% for error in form.password.errors %}
@@ -64,7 +64,7 @@
 
             <div class="form-check mb-4">
                 {{ form.remember_me(class="form-check-input", id="remember_me") }}
-                <label class="form-check-label" for="remember_me">{{ form.remember_me.label }}</label>
+                <label class="form-check-label" for="remember_me">{{ form.remember_me.label.text }}</label>
             </div>
 
             <button type="submit" class="btn btn-primary w-100">
@@ -98,8 +98,8 @@
                 togglePassword.addEventListener('click', function () {
                     const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
                     passwordField.setAttribute('type', type);
-                    this.classList.toggle('fa-eye');
-                    this.classList.toggle('fa-eye-slash');
+                    this.classList.toggle('bi-eye');
+                    this.classList.toggle('bi-eye-slash');
                 });
             }
         });
