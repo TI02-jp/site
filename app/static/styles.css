@@ -1054,11 +1054,25 @@ body.login-page {
     display: block;
 }
 
+.login-container .form-check-input {
+    accent-color: var(--primary);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.login-container .form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
 /* Ícones nos inputs do login */
 .login-container .input-group-text {
     background-color: #f8f9fa;
     border-color: #dee2e6;
-    color: #6c757d;
+    color: #0b288b;
+}
+
+.login-container .input-group-text i {
+    font-size: 1rem;
 }
 
 /* Inputs do formulário de login */
