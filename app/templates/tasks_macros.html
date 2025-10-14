@@ -1,5 +1,6 @@
 {% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False) %}
-<li id="task-{{ task.id }}" class="task-card{% if task.children %} has-children{% endif %}">
+{% set status_class = ' task-status-' ~ task.status.value %}
+<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if task.children %} has-children{% endif %}">
   <div class="task-header">
     {% if task.children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
@@ -8,6 +9,13 @@
       <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
       {% if show_tag %}
       <span class="task-tag">{{ task.tag.nome }}</span>
+      {% endif %}
+      {% set creator_display = (task.creator.name if task.creator and task.creator.name else (task.creator.username if task.creator else None)) %}
+      {% if creator_display %}
+      <div class="task-meta">
+        <span class="meta-label">Criada por:</span>
+        <span class="meta-value">{{ creator_display }}</span>
+      </div>
       {% endif %}
       {% if task.due_date %}
       <div class="task-meta">
