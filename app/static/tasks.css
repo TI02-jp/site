@@ -321,6 +321,18 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.task-card.task-status-done .task-actions .action,
+.task-card.task-status-pending .task-actions .action {
+  width: 1.05rem;
+  height: 1.05rem;
+  font-size: 0.85rem;
+}
+
+.task-card.task-status-done .task-actions .action i,
+.task-card.task-status-pending .task-actions .action i {
+  font-size: 0.8rem;
+}
+
 .task-actions.compact .action {
   width: 1.05rem;
   height: 1.05rem;

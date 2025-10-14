@@ -5139,9 +5139,11 @@ def tasks_overview():
     tasks = (
         query.options(
             joinedload(Task.tag),
+            joinedload(Task.creator),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
+            joinedload(Task.children).joinedload(Task.creator),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
@@ -5313,9 +5315,11 @@ def tasks_sector(tag_id):
     tasks = (
         query.options(
             joinedload(Task.tag),
+            joinedload(Task.creator),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
+            joinedload(Task.children).joinedload(Task.creator),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
