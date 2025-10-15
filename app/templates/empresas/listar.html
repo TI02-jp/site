@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Empresas Cadastradas{% endblock %}
+{% block title %}Clientes Cadastrados{% endblock %}
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1200px;">
@@ -10,13 +10,13 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1 class="text-primary mb-1">
-                        <i class="bi bi-buildings me-2"></i>Empresas Cadastradas
+                        <i class="bi bi-buildings me-2"></i>Clientes Cadastrados
                         <span class="badge bg-primary ms-2">{{ pagination.total }}</span>
                     </h1>
-                    <p class="text-muted mb-0">Gerencie as empresas e seus departamentos</p>
+                    <p class="text-muted mb-0">Gerencie os clientes e seus departamentos</p>
                 </div>
                 <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Nova Empresa
+                    <i class="bi bi-plus-lg me-1"></i>Novo Cliente
                 </a>
             </div>
         </div>
@@ -24,7 +24,7 @@
 
     <!-- Barra de Pesquisa -->
     <form method="GET" class="d-flex mb-3">
-        <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar empresa" value="{{ search or '' }}">
+        <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar cliente" value="{{ search or '' }}">
         <input type="hidden" name="sort" value="{{ sort }}">
         <input type="hidden" name="order" value="{{ order }}">
         <button class="btn btn-outline-secondary" type="submit">
@@ -48,7 +48,7 @@
                                 </a>
                             </th>
                             <th>
-                                Nome da Empresa
+                                Nome do Cliente
                                 <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc', page=pagination.page) }}" class="text-white ms-1" title="Nome A-Z">
                                     <i class="bi bi-sort-alpha-down"></i>
                                 </a>
@@ -93,12 +93,12 @@
                             </a>
                             <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}"
                                class="btn btn-custom btn-sm"
-                               title="Visualizar Empresa">
+                               title="Visualizar Cliente">
                                 <i class="bi bi-eye"></i>
                             </a>
                             <a href="{{ url_for('editar_empresa', id=empresa.id) }}"
                                class="btn btn-custom btn-sm"
-                               title="Editar Empresa">
+                               title="Editar Cliente">
                                 <i class="bi bi-pencil"></i>
                             </a>
                         </td>
@@ -108,10 +108,10 @@
                         <td colspan="5" class="text-center py-5">
                             <div class="text-muted">
                                 <i class="bi bi-building-slash fs-1 d-block mb-3"></i>
-                                <h5>Nenhuma empresa cadastrada</h5>
-                                <p class="mb-3">Comece cadastrando sua primeira empresa</p>
+                                <h5>Nenhum cliente cadastrado</h5>
+                                <p class="mb-3">Comece cadastrando seu primeiro cliente</p>
                                 <a href="{{ url_for('cadastrar_empresa') }}" class="btn btn-primary">
-                                    <i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira Empresa
+                                    <i class="bi bi-plus-lg me-2"></i>Cadastrar Primeiro Cliente
                                 </a>
                             </div>
                         </td>
