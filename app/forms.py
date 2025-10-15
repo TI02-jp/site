@@ -464,6 +464,14 @@ class TagForm(FlaskForm):
     nome = StringField('Tag', validators=[DataRequired()])
     submit = SubmitField('Salvar')
 
+
+class TagDeleteForm(FlaskForm):
+    """Formulário para exclusão de tags."""
+
+    tag_id = HiddenField(validators=[DataRequired()])
+    submit = SubmitField('Excluir')
+
+
 class MeetingForm(FlaskForm):
     """Formulário para agendamento de reuniões."""
     participants = SelectMultipleField(
