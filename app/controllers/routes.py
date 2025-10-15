@@ -2100,6 +2100,9 @@ def cursos():
                 name_value = (form.name.data or "").strip()
                 if name_value:
                     meeting_query_params["subject"] = name_value
+                observation_value = (form.observation.data or "").strip()
+                if observation_value:
+                    meeting_query_params["description"] = observation_value
                 if form.start_date.data:
                     meeting_query_params["date"] = form.start_date.data.isoformat()
                 if form.schedule_start.data:
@@ -2974,6 +2977,9 @@ def sala_reunioes():
         subject = (request.args.get("subject") or "").strip()
         if subject:
             form.subject.data = subject
+        description = (request.args.get("description") or "").strip()
+        if description:
+            form.description.data = description
         date_raw = request.args.get("date")
         if date_raw:
             try:
@@ -3004,7 +3010,8 @@ def sala_reunioes():
                 participant_ids.append(parsed_id)
         if participant_ids:
             form.participants.data = participant_ids
-        form.apply_more_days.data = False
+        if hasattr(form, "apply_more_days"):
+            form.apply_more_days.data = False
         form.notify_attendees.data = True
         form.course_id.data = request.args.get("course_id", "")
         show_modal = True
