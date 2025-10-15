@@ -38,77 +38,103 @@
         </div>
     </div>
 
+
+
     <div class="card shadow-sm border-0">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0" id="access-table">
-                    <thead class="table-light">
-                        <tr>
-                            {% for column in display_columns %}
-                            <th scope="col" class="text-uppercase small text-muted">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="fs-5 text-primary"><i class="{{ column.icon }}"></i></span>
-                                    <span class="fw-semibold">{{ column.title }}</span>
-                                </div>
-                            </th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            {% for column in display_columns %}
-                            <td class="align-top">
-                                <div class="d-flex flex-column gap-3">
-                                    {% for link in column.links %}
-                                    <div class="access-shortcut-wrapper d-flex flex-column gap-2">
-                                        <div class="access-shortcut{% if link.description %} has-description{% endif %}">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <a
-                                                    class="btn btn-outline-primary access-shortcut-link d-flex align-items-center justify-content-between gap-2 flex-grow-1"
-                                                    href="{{ link.url }}"
-                                                    target="_blank"
-                                                    rel="noopener"
-                                                >
-                                                    <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
-                                                    <i class="bi bi-box-arrow-up-right"></i>
-                                                </a>
-                                                {% if link.description %}
-                                                <button
-                                                    class="access-description-toggle collapsed"
-                                                    type="button"
-                                                    data-bs-toggle="collapse"
-                                                    data-bs-target="#access-description-{{ link.id }}"
-                                                    aria-expanded="false"
-                                                    aria-controls="access-description-{{ link.id }}"
-                                                    title="Alternar descrição"
-                                                    aria-label="Alternar descrição"
-                                                >
-                                                    <span class="visually-hidden">Alternar descrição do atalho {{ link.label }}</span>
-                                                    <i class="bi bi-chevron-down"></i>
-                                                </button>
-                                                {% endif %}
-
-                                            </div>
-                                        </div>
-                                        {% if link.description %}
-                                        <div class="collapse access-description" id="access-description-{{ link.id }}">
-                                            <div class="small text-muted">{{ link.description | replace('\n', '<br>') | safe }}</div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                    {% else %}
-                                    <p class="text-muted small mb-0">Nenhum atalho cadastrado.</p>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                            {% endfor %}
-                        </tr>
-                    </tbody>
-                </table>
+            {% if total_links == 0 %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-search display-6 mb-3"></i>
+                <p class="mb-0">Nenhum atalho cadastrado.</p>
             </div>
+            {% else %}
+            <div class="row row-cols-1 row-cols-lg-3 g-4" id="access-grid">
+                {% for column in link_columns if column %}
+                <div class="col">
+                    <div class="d-flex flex-column gap-3">
+                        {% for link in column %}
+                        <div class="access-shortcut-wrapper d-flex flex-column gap-2">
+                            <div class="access-shortcut{% if link.description %} has-description{% endif %}">
+                                <div class="d-flex align-items-center gap-2">
+                                    <a
+                                        class="btn btn-outline-primary access-shortcut-link d-flex align-items-center justify-content-between gap-2 flex-grow-1"
+                                        href="{{ link.url }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    {% if link.description %}
+                                    <button
+                                        class="access-description-toggle collapsed"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#access-description-{{ link.id }}"
+                                        aria-expanded="false"
+                                        aria-controls="access-description-{{ link.id }}"
+                                        title="Alternar descricao"
+                                        aria-label="Alternar descricao"
+                                    >
+                                        <span class="visually-hidden">Alternar descricao do atalho {{ link.label }}</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if link.description %}
+                            <div
+                                class="collapse access-description mt-2"
+                                id="access-description-{{ link.id }}"
+                            >
+                                <div class="small text-muted">
+                                    {{ link.description }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if pagination.total_pages > 1 %}
+            <nav class="mt-4" aria-label="Paginacao dos atalhos">
+                <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item{% if not pagination.has_previous %} disabled{% endif %}">
+                        <a
+                            class="page-link"
+                            href="{% if pagination.has_previous %}{{ url_for('acessos', page=pagination.current_page - 1) }}{% else %}#{% endif %}"
+                            {% if not pagination.has_previous %}tabindex="-1" aria-disabled="true"{% endif %}
+                        >
+                            Anterior
+                        </a>
+                    </li>
+                    {% for page_number in pagination.pages %}
+                    <li class="page-item{% if page_number == pagination.current_page %} active{% endif %}">
+                        <a
+                            class="page-link"
+                            href="{{ url_for('acessos', page=page_number) }}"
+                        >
+                            {{ page_number }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
+                        <a
+                            class="page-link"
+                            href="{% if pagination.has_next %}{{ url_for('acessos', page=pagination.current_page + 1) }}{% else %}#{% endif %}"
+                            {% if not pagination.has_next %}tabindex="-1" aria-disabled="true"{% endif %}
+                        >
+                            Proxima
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
         </div>
     </div>
-</div>
 
 {% if current_user.role == 'admin' and form %}
 <div
@@ -189,46 +215,10 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
 {% block scripts %}
 {{ super() }}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const table = document.getElementById('access-table');
-        if (!table) {
-            return;
-        }
-
-        const updateColumnWidths = () => {
-            if (!table) {
-                return;
-            }
-            const headerCells = table.querySelectorAll('thead th');
-            if (!headerCells.length) {
-                return;
-            }
-            const columnCount = headerCells.length;
-            const targetWidth = (100 / columnCount) + '%';
-
-            table.style.tableLayout = 'fixed';
-            table.style.width = '100%';
-
-            headerCells.forEach((cell) => {
-                cell.style.width = targetWidth;
-            });
-
-            table.querySelectorAll('tbody td').forEach((cell) => {
-                cell.style.width = targetWidth;
-            });
-        };
-
-        const scheduleUpdate = () => window.requestAnimationFrame(updateColumnWidths);
-
-        scheduleUpdate();
-        window.addEventListener('resize', scheduleUpdate);
-        document.addEventListener('shown.bs.collapse', scheduleUpdate);
-        document.addEventListener('hidden.bs.collapse', scheduleUpdate);
-    });
-</script>
 {% if current_user.role == 'admin' and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -247,5 +237,4 @@
     });
 </script>
 {% endif %}
-{% endblock %}
 {% endblock %}

@@ -119,6 +119,7 @@ from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
+from math import ceil
 from typing import Any, Iterable, Optional
 from urllib.parse import urlunsplit
 from mimetypes import guess_type
@@ -329,21 +330,6 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
         "icon": "bi bi-people",
     },
 }
-
-ACESSOS_DISPLAY_GROUPS: list[dict[str, Any]] = [
-    {
-        "slug": "fiscal_contabil",
-        "title": "Fiscal & Contábil",
-        "icon": "bi bi-clipboard-check",
-        "categories": ("fiscal", "contabil"),
-    },
-    {
-        "slug": "pessoal",
-        "title": "Pessoal",
-        "icon": ACESSOS_CATEGORIES["pessoal"]["icon"],
-        "categories": ("pessoal",),
-    },
-]
 
 
 EVENT_TYPE_LABELS = {
@@ -2199,51 +2185,54 @@ def _build_acessos_context(
     form: "AccessLinkForm | None" = None,
     *,
     open_modal: bool = False,
+    page: int = 1,
 ):
-    """Return the template data used by the access hub pages."""
+    """Return template data for the access hub with alphabetical pagination."""
 
-    categoria_links = {
-        slug: (
-            AccessLink.query.filter_by(category=slug)
-            .order_by(AccessLink.created_at.desc())
-            .all()
+    per_page = 30
+    columns_count = 3
+    column_capacity = per_page // columns_count
+
+    base_query = AccessLink.query.order_by(
+        sa.func.lower(AccessLink.label), AccessLink.label
+    )
+    total_links = base_query.count()
+
+    if total_links:
+        total_pages = ceil(total_links / per_page)
+        page = max(1, min(page, total_pages))
+        paginated_links = (
+            base_query.offset((page - 1) * per_page).limit(per_page).all()
         )
-        for slug in ACESSOS_CATEGORIES
+    else:
+        total_pages = 1
+        page = 1
+        paginated_links = []
+
+    columns = [
+        paginated_links[i * column_capacity : (i + 1) * column_capacity]
+        for i in range(columns_count)
+    ]
+    while len(columns) < columns_count:
+        columns.append([])
+
+    pagination = {
+        "current_page": page,
+        "total_pages": total_pages,
+        "has_previous": page > 1,
+        "has_next": page < total_pages,
+        "pages": list(range(1, total_pages + 1)),
+        "per_page": per_page,
+        "total_items": total_links,
     }
 
-    display_columns: list[dict[str, Any]] = []
-    for group in ACESSOS_DISPLAY_GROUPS:
-        combined_links = []
-        for category_slug in group["categories"]:
-            combined_links.extend(categoria_links.get(category_slug, []))
-
-        description = group.get("description")
-        if not description:
-            descriptions = [
-                ACESSOS_CATEGORIES[category_slug].get("description")
-                for category_slug in group["categories"]
-                if ACESSOS_CATEGORIES.get(category_slug, {}).get("description")
-            ]
-            if descriptions:
-                # Preserva ordem e remove duplicados
-                description = " ".join(dict.fromkeys(descriptions))
-
-        display_columns.append(
-            {
-                "slug": group["slug"],
-                "title": group["title"],
-                "icon": group.get("icon"),
-                "description": description,
-                "links": combined_links,
-            }
-        )
-
     return {
-        "categorias": ACESSOS_CATEGORIES,
-        "categoria_links": categoria_links,
-        "display_columns": display_columns,
         "form": form,
         "open_modal": open_modal,
+        "link_columns": columns,
+        "pagination": pagination,
+        "total_links": total_links,
+        "per_page": per_page,
     }
 
 
@@ -2254,6 +2243,12 @@ def acessos():
 
     open_modal = request.args.get("modal") == "novo"
     preselected_category = request.args.get("category")
+    try:
+        page = int(request.args.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    if page < 1:
+        page = 1
 
     form: AccessLinkForm | None = None
     if current_user.role == "admin":
@@ -2266,7 +2261,7 @@ def acessos():
         ):
             form.category.data = preselected_category
 
-    context = _build_acessos_context(form=form, open_modal=open_modal)
+    context = _build_acessos_context(form=form, open_modal=open_modal, page=page)
     return render_template("acessos.html", **context)
 
 
