@@ -56,29 +56,63 @@
                         <div class="access-shortcut-wrapper d-flex flex-column gap-2">
                             <div class="access-shortcut{% if link.description %} has-description{% endif %}">
                                 <div class="d-flex align-items-center gap-2">
-                                    <a
-                                        class="btn btn-outline-primary access-shortcut-link d-flex align-items-center justify-content-between gap-2 flex-grow-1"
-                                        href="{{ link.url }}"
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        <span class="fw-semibold flex-grow-1 text-start">{{ link.label }}</span>
-                                        <i class="bi bi-box-arrow-up-right"></i>
-                                    </a>
-                                    {% if link.description %}
-                                    <button
-                                        class="access-description-toggle collapsed"
-                                        type="button"
-                                        data-bs-toggle="collapse"
-                                        data-bs-target="#access-description-{{ link.id }}"
-                                        aria-expanded="false"
-                                        aria-controls="access-description-{{ link.id }}"
-                                        title="Alternar descricao"
-                                        aria-label="Alternar descricao"
-                                    >
-                                        <span class="visually-hidden">Alternar descricao do atalho {{ link.label }}</span>
-                                        <i class="bi bi-chevron-down"></i>
-                                    </button>
+                                    <div class="btn btn-outline-primary d-flex align-items-stretch gap-0 flex-grow-1 p-0 overflow-hidden">
+                                        <a
+                                            class="access-shortcut-link d-flex align-items-center flex-grow-1 text-decoration-none"
+                                            href="{{ link.url }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            style="padding: 0.5rem 0.75rem; color: inherit;"
+                                        >
+                                            <span class="fw-semibold text-start">{{ link.label }}</span>
+                                        </a>
+                                        {% if link.description %}
+                                        <button
+                                            class="btn border-0 border-start collapsed d-flex align-items-center justify-content-center"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#access-description-{{ link.id }}"
+                                            aria-expanded="false"
+                                            aria-controls="access-description-{{ link.id }}"
+                                            title="Ver descrição"
+                                            style="background-color: rgba(0,0,0,0.03); padding: 0 0.75rem; margin: 0; transition: all 0.2s ease;"
+                                            onmouseover="this.style.backgroundColor='rgba(0,0,0,0.08)'"
+                                            onmouseout="this.style.backgroundColor='rgba(0,0,0,0.03)'"
+                                        >
+                                            <i class="bi bi-chevron-down" style="font-size: 0.875rem;"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% if current_user.role == 'admin' %}
+                                    <div class="dropdown">
+                                        <button
+                                            class="btn btn-sm btn-outline-secondary"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            title="Gerenciar atalho"
+                                        >
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('acessos', modal='editar', link_id=link.id) }}">
+                                                    <i class="bi bi-pencil me-2"></i>Editar
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button
+                                                    class="dropdown-item text-danger"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteModal{{ link.id }}"
+                                                >
+                                                    <i class="bi bi-trash me-2"></i>Excluir
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -93,6 +127,32 @@
                             </div>
                             {% endif %}
                         </div>
+
+                        {% if current_user.role == 'admin' %}
+                        <!-- Modal de confirmação de exclusão -->
+                        <div class="modal fade" id="deleteModal{{ link.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header border-0">
+                                        <h5 class="modal-title">Confirmar exclusão</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-0">Tem certeza que deseja excluir o atalho <strong>"{{ link.label }}"</strong>?</p>
+                                        <p class="text-muted small mt-2 mb-0">Esta ação não pode ser desfeita.</p>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                        <form method="post" action="{{ url_for('acessos_excluir', link_id=link.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-trash me-2"></i>Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -137,6 +197,7 @@
     </div>
 
 {% if current_user.role == 'admin' and form %}
+<!-- Modal de criação de novo atalho -->
 <div
     class="modal fade"
     id="novoAtalhoModal"
@@ -213,6 +274,86 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de edição de atalho -->
+{% if editing_link %}
+<div
+    class="modal fade"
+    id="editarAtalhoModal"
+    tabindex="-1"
+    aria-labelledby="editarAtalhoModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content text-start">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex flex-column">
+                    <h2 class="modal-title h5 mb-0 text-start" id="editarAtalhoModalLabel">Editar atalho</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="post" action="{{ url_for('acessos_editar', link_id=editing_link.id) }}" novalidate>
+                <div class="modal-body text-start">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.category.id }}">
+                                {{ form.category.label }}
+                            </label>
+                            {{ form.category(class='form-select form-select-sm' + (' is-invalid' if form.category.errors else '')) }}
+                            {% if form.category.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.category.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.label.id }}">
+                                {{ form.label.label }}
+                            </label>
+                            {{ form.label(class='form-control form-control-sm' + (' is-invalid' if form.label.errors else '')) }}
+                            {% if form.label.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.label.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.url.id }}">
+                                {{ form.url.label }}
+                            </label>
+                            {{ form.url(class='form-control form-control-sm' + (' is-invalid' if form.url.errors else ''), inputmode='url') }}
+                            {% if form.url.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.url.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-uppercase fw-semibold text-muted" for="{{ form.description.id }}">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description(class='form-control form-control-sm' + (' is-invalid' if form.description.errors else ''), rows=3) }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block text-start">
+                                {{ form.description.errors[0] }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-end gap-2 pt-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg me-2"></i>
+                        Atualizar atalho
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 
 {% endblock %}
@@ -222,7 +363,9 @@
 {% if current_user.role == 'admin' and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var modalElement = document.getElementById('novoAtalhoModal');
+        var modalType = '{{ modal_type }}';
+        var modalId = modalType === 'editar' ? 'editarAtalhoModal' : 'novoAtalhoModal';
+        var modalElement = document.getElementById(modalId);
         if (!modalElement) {
             return;
         }
