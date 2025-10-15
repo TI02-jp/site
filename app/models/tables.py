@@ -1081,3 +1081,75 @@ def _task_assignment_after_update(mapper, connection, target):
 
     _create_task_assignment_notification(connection, target, new_assignee)
 
+
+def _build_completion_message(title: str, completer_name: str, tag_name: str | None) -> str:
+    """Return a human-friendly notification message for task completion."""
+
+    if tag_name:
+        return f'Tarefa "{title}" concluída por {completer_name} no setor {tag_name}.'
+    return f'Tarefa "{title}" concluída por {completer_name}.'
+
+
+def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> None:
+    """Notify the task creator when the task is completed by another user."""
+
+    # Don't notify if creator is the same as completer or no creator exists
+    if not task.created_by or task.created_by == completer_id:
+        return
+
+    # Get task title
+    title = (task.title or "Tarefa").strip() or "Tarefa"
+
+    # Get completer name
+    completer = connection.execute(
+        select(User.name).where(User.id == completer_id)
+    ).scalar_one_or_none()
+
+    # Get tag name if exists
+    tag_name = None
+    if task.tag_id:
+        tag_name = connection.execute(
+            select(Tag.nome).where(Tag.id == task.tag_id)
+        ).scalar_one_or_none()
+
+    # Build message
+    completer_name = completer or "Usuário"
+    message = _build_completion_message(title, completer_name, tag_name)
+
+    # Create notification
+    connection.execute(
+        TaskNotification.__table__.insert().values(
+            user_id=task.created_by,
+            task_id=task.id,
+            type=NotificationType.TASK.value,
+            message=message[:255] if message else None,
+            created_at=datetime.utcnow(),
+        )
+    )
+
+
+@event.listens_for(Task, "after_update")
+def _task_completion_notification(mapper, connection, target):
+    """Notify task creator when task is marked as completed."""
+
+    state = inspect(target)
+    status_history = state.attrs.status.history
+
+    # Check if status has changed
+    if not status_history.has_changes():
+        return
+
+    # Check if status changed TO "DONE"
+    new_status = next((s for s in status_history.added if s is not None), None)
+    if new_status != TaskStatus.DONE:
+        return
+
+    # Check if it wasn't already DONE (don't notify on re-completion)
+    old_status = next((s for s in status_history.deleted if s is not None), None)
+    if old_status == TaskStatus.DONE:
+        return
+
+    # Notify creator
+    if target.completed_by:
+        _notify_creator_on_completion(connection, target, target.completed_by)
+
