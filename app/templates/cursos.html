@@ -13,14 +13,14 @@
             <div class="courses-hero__content">
                 <div>
                     <span class="courses-hero__eyebrow">Controle de Cursos</span>
-                    <h1 class="courses-hero__title">JP Cont├íbil</h1>
+                    <h1 class="courses-hero__title">JP Contábil</h1>
                     <p class="courses-hero__subtitle">
-                        Acompanhe a jornada de aprendizado da equipe com os principais cursos planejados e conclu├¡dos.
+                        Acompanhe a jornada de aprendizado da equipe com os principais cursos planejados e concluídos.
                     </p>
                 </div>
                 <div class="courses-summary">
                     <div class="courses-summary__item courses-summary__item--completed" data-status-filter="{{ CourseStatus.COMPLETED.value }}">
-                        <span class="courses-summary__label">Conclu├¡dos</span>
+                        <span class="courses-summary__label">Concluídos</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.COMPLETED, 0) }}</strong>
                     </div>
                     <div class="courses-summary__item courses-summary__item--planned" data-status-filter="{{ CourseStatus.PLANNED.value }}">
