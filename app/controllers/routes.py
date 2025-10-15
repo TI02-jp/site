@@ -2100,6 +2100,9 @@ def cursos():
                 name_value = (form.name.data or "").strip()
                 if name_value:
                     meeting_query_params["subject"] = name_value
+                observation_value = (form.observation.data or "").strip()
+                if observation_value:
+                    meeting_query_params["description"] = observation_value
                 if form.start_date.data:
                     meeting_query_params["date"] = form.start_date.data.isoformat()
                 if form.schedule_start.data:
@@ -2974,6 +2977,9 @@ def sala_reunioes():
         subject = (request.args.get("subject") or "").strip()
         if subject:
             form.subject.data = subject
+        description = (request.args.get("description") or "").strip()
+        if description:
+            form.description.data = description
         date_raw = request.args.get("date")
         if date_raw:
             try:
@@ -3004,7 +3010,8 @@ def sala_reunioes():
                 participant_ids.append(parsed_id)
         if participant_ids:
             form.participants.data = participant_ids
-        form.apply_more_days.data = False
+        if hasattr(form, "apply_more_days"):
+            form.apply_more_days.data = False
         form.notify_attendees.data = True
         form.course_id.data = request.args.get("course_id", "")
         show_modal = True
@@ -4905,7 +4912,17 @@ def list_users():
     tag_list = tag_query.all()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     edit_form.tags.choices = [(t.id, t.nome) for t in tag_list]
-    show_inactive = request.args.get("show_inactive") in ("1", "on")
+    show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
+    raw_tag_ids = request.args.getlist("tag_id")
+    selected_tag_ids = []
+    for raw_id in raw_tag_ids:
+        try:
+            tag_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if tag_id not in selected_tag_ids:
+            selected_tag_ids.append(tag_id)
+    selected_tag_id = selected_tag_ids[0] if len(selected_tag_ids) == 1 else None
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
     open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
     open_edit_modal = request.args.get("open_edit_modal") in ("1", "true", "True")
@@ -5078,16 +5095,30 @@ def list_users():
                     if not tag_to_delete:
                         flash("Tag não encontrada.", "warning")
                     else:
-                        db.session.delete(tag_to_delete)
-                        db.session.commit()
-                        flash("Tag removida com sucesso!", "success")
+                        try:
+                            db.session.delete(tag_to_delete)
+                            db.session.commit()
+                        except SQLAlchemyError:
+                            db.session.rollback()
+                            flash(
+                                "Não foi possível excluir a tag selecionada.",
+                                "danger",
+                            )
+                        else:
+                            flash("Tag excluída com sucesso!", "success")
                 return redirect(url_for("list_users", open_tag_modal="1"))
             else:
                 flash("Não foi possível excluir a tag selecionada.", "danger")
 
-    users_query = User.query
+    users_query = User.query.options(joinedload(User.tags))
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
+    if selected_tag_ids:
+        users_query = (
+            users_query.join(User.tags)
+            .filter(Tag.id.in_(selected_tag_ids))
+            .distinct()
+        )
     users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template(
         "list_users.html",
@@ -5100,6 +5131,8 @@ def list_users():
         edit_tag=edit_tag,
         tag_list=tag_list,
         show_inactive=show_inactive,
+        selected_tag_id=selected_tag_id,
+        selected_tag_ids=selected_tag_ids,
         open_tag_modal=open_tag_modal,
         open_user_modal=open_user_modal,
         open_edit_modal=open_edit_modal,
