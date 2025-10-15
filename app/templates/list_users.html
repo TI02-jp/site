@@ -585,6 +585,26 @@ document.addEventListener("DOMContentLoaded", function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
+    // Mantém o dropdown de filtro aberto durante a seleção e fecha apenas ao aplicar
+    const tagFilterDropdownToggle = document.getElementById('tagFilterDropdown');
+    const tagFilterForm = document.querySelector('.tag-filter-form');
+    if (tagFilterDropdownToggle && tagFilterForm) {
+        const tagFilterDropdown = bootstrap.Dropdown.getOrCreateInstance(tagFilterDropdownToggle);
+        tagFilterForm.addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+        tagFilterForm.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+            checkbox.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        });
+        tagFilterForm.addEventListener('submit', function () {
+            setTimeout(function () {
+                tagFilterDropdown.hide();
+            }, 0);
+        });
+    }
+
     function cleanupModalArtifacts() {
         if (document.querySelectorAll('.modal.show').length > 0) {
             return;
