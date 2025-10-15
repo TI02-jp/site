@@ -20,18 +20,12 @@
                     <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
                 </div>
                 <div class="d-flex align-items-center justify-content-end gap-3 flex-wrap">
-                    <form method="get" class="d-flex align-items-center gap-3 mb-0">
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="form-label mb-0" for="tagFilter">Filtrar por tag</label>
-                            <select id="tagFilter" name="tag_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                                <option value="">Todas</option>
-                                {% for tag in tag_list %}
-                                    <option value="{{ tag.id }}" {% if selected_tag_id == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <form method="get" class="d-flex align-items-center mb-0">
+                        {% for tag_id in selected_tag_ids %}
+                            <input type="hidden" name="tag_id" value="{{ tag_id }}">
+                        {% endfor %}
                         <div class="form-check mb-0">
-                            <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
+                            <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" value="1" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
                             <label class="form-check-label" for="showInactive">Mostrar inativos</label>
                         </div>
                     </form>
@@ -61,7 +55,48 @@
                             <th class="text-start" style="width: 300px;">Email</th>
                             <th class="text-start" style="width: 150px;">Usuário</th>
                             <th class="text-start" style="width: 120px;">Perfil</th>
-                            <th class="text-start" style="width: 200px;">Tags</th>
+                            <th class="text-start" style="width: 200px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>Tags</span>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button class="btn btn-sm {% if selected_tag_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                type="button"
+                                                id="tagFilterDropdown"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Filtrar por tags">
+                                            <i class="bi {% if selected_tag_ids %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if selected_tag_ids %}
+                                                <span class="badge bg-light text-dark ms-1">{{ selected_tag_ids|length }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow" aria-labelledby="tagFilterDropdown" style="min-width: 240px;">
+                                            <form method="get" class="tag-filter-form">
+                                                {% if show_inactive %}
+                                                    <input type="hidden" name="show_inactive" value="1">
+                                                {% endif %}
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tag</p>
+                                                <div class="tag-filter-options" style="max-height: 220px; overflow-y: auto;">
+                                                    {% if tag_list %}
+                                                        {% for tag in tag_list %}
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="{{ tag.id }}" id="tagFilterOption{{ tag.id }}" name="tag_id" {% if tag.id in selected_tag_ids %}checked{% endif %}>
+                                                                <label class="form-check-label" for="tagFilterOption{{ tag.id }}">{{ tag.nome }}</label>
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <p class="text-muted small mb-0">Nenhuma tag cadastrada.</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0" href="{{ url_for('list_users', show_inactive='1') if show_inactive else url_for('list_users') }}">Limpar</a>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
                             <th class="text-start" style="width: 100px;">Ações</th>
                         </tr>
                     </thead>
