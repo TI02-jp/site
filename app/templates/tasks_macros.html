@@ -54,7 +54,7 @@
       <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
       {% if current_user.role == 'admin' %}
-      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
+      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
       {% if allow_delete %}
       <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
       {% endif %}

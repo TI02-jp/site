@@ -5297,6 +5297,7 @@ def tasks_overview():
 def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
+    return_url = request.args.get("return_url") or request.referrer
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
@@ -5379,6 +5380,10 @@ def tasks_new():
         db.session.add(task)
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
+
+        # Redirecionar de volta para a página original ou para o setor da tarefa
+        if return_url and return_url != request.url:
+            return redirect(return_url)
         return redirect(url_for("tasks_sector", tag_id=tag_id))
     if parent_task:
         cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
