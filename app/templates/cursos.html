@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}CURSOS{% endblock %}
 
@@ -13,14 +13,14 @@
             <div class="courses-hero__content">
                 <div>
                     <span class="courses-hero__eyebrow">Controle de Cursos</span>
-                    <h1 class="courses-hero__title">JP Contábil</h1>
+                    <h1 class="courses-hero__title">JP Cont├íbil</h1>
                     <p class="courses-hero__subtitle">
-                        Acompanhe a jornada de aprendizado da equipe com os principais cursos planejados e concluídos.
+                        Acompanhe a jornada de aprendizado da equipe com os principais cursos planejados e conclu├¡dos.
                     </p>
                 </div>
                 <div class="courses-summary">
                     <div class="courses-summary__item courses-summary__item--completed" data-status-filter="{{ CourseStatus.COMPLETED.value }}">
-                        <span class="courses-summary__label">Concluídos</span>
+                        <span class="courses-summary__label">Conclu├¡dos</span>
                         <strong class="courses-summary__value">{{ status_counts.get(CourseStatus.COMPLETED, 0) }}</strong>
                     </div>
                     <div class="courses-summary__item courses-summary__item--planned" data-status-filter="{{ CourseStatus.PLANNED.value }}">
@@ -160,7 +160,7 @@
                                     </tr>
                                 {% else %}
                                     <tr>
-                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso cadastrado até o momento.</td>
+                                        <td colspan="9" class="text-center py-4 text-muted">Nenhum curso cadastrado at├® o momento.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -184,7 +184,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label" for="{{ tag_form.name.id }}">{{ tag_form.name.label }}</label>
-                        {{ tag_form.name(class="form-control" + (' is-invalid' if tag_form.name.errors else ''), placeholder="Ex.: Inteligência Artificial") }}
+                        {{ tag_form.name(class="form-control" + (' is-invalid' if tag_form.name.errors else ''), placeholder="Ex.: Intelig├¬ncia Artificial") }}
                         {% if tag_form.name.errors %}
                         <div class="invalid-feedback d-block">
                             {{ tag_form.name.errors[0] }}
@@ -285,7 +285,7 @@
                                     </div>
                                     {% endfor %}
                                 {% else %}
-                                <p class="text-muted small mb-0">Cadastre novas tags usando o botão "Adicionar tag" ao lado de "Cadastrar curso".</p>
+                                <p class="text-muted small mb-0">Cadastre novas tags usando o bot├úo "Adicionar tag" ao lado de "Cadastrar curso".</p>
                                 {% endif %}
                             </div>
                             {% if form.tags.errors %}
@@ -350,19 +350,19 @@
                         </div>
                         <div class="col-12 d-none" data-role="reschedule-fields" aria-hidden="true">
                             <div class="alert alert-info small mb-3" role="alert">
-                                Ajuste a nova data e horários sempre que o curso for marcado como <strong>Adiado</strong>.
+                                Ajuste a nova data e hor├írios sempre que o curso for marcado como <strong>Adiado</strong>.
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label text-start" for="reschedule-date">Nova data de início</label>
+                                    <label class="form-label text-start" for="reschedule-date">Nova data de in├¡cio</label>
                                     <input type="date" class="form-control" id="reschedule-date" data-target-field="{{ form.start_date.id }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label text-start" for="reschedule-start">Novo horário de início</label>
+                                    <label class="form-label text-start" for="reschedule-start">Novo hor├írio de in├¡cio</label>
                                     <input type="time" class="form-control" id="reschedule-start" step="300" data-target-field="{{ form.schedule_start.id }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label text-start" for="reschedule-end">Novo horário de fim</label>
+                                    <label class="form-label text-start" for="reschedule-end">Novo hor├írio de fim</label>
                                     <input type="time" class="form-control" id="reschedule-end" step="300" data-target-field="{{ form.schedule_end.id }}">
                                 </div>
                             </div>
@@ -813,7 +813,7 @@
                 enterEditMode(data);
                 courseModal.show();
             } catch (error) {
-                console.error('Erro ao carregar o curso para edição.', error);
+                console.error('Erro ao carregar o curso para edi├º├úo.', error);
             }
         }
 
@@ -864,7 +864,7 @@
                     event.preventDefault();
                     return;
                 }
-                var confirmed = window.confirm('Tem certeza que deseja excluir este curso? Esta ação não poderá ser desfeita.');
+                var confirmed = window.confirm('Tem certeza que deseja excluir este curso? Esta a├º├úo n├úo poder├í ser desfeita.');
                 if (!confirmed) {
                     event.preventDefault();
                 }

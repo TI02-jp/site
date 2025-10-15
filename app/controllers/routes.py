@@ -65,6 +65,7 @@ from app.forms import (
     ConsultoriaForm,
     SetorForm,
     TagForm,
+    TagDeleteForm,
     MeetingForm,
     MeetConfigurationForm,
     GeneralCalendarEventForm,
@@ -3003,8 +3004,7 @@ def sala_reunioes():
                 participant_ids.append(parsed_id)
         if participant_ids:
             form.participants.data = participant_ids
-        if hasattr(form, "apply_more_days"):
-            form.apply_more_days.data = False
+        form.apply_more_days.data = False
         form.notify_attendees.data = True
         form.course_id.data = request.args.get("course_id", "")
         show_modal = True
@@ -4900,6 +4900,7 @@ def list_users():
     tag_create_form.submit.label.text = "Adicionar"
     tag_edit_form = TagForm(prefix="tag_edit")
     tag_edit_form.submit.label.text = "Salvar alterações"
+    tag_delete_form = TagDeleteForm()
     tag_query = Tag.query.order_by(Tag.nome)
     tag_list = tag_query.all()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
@@ -5062,6 +5063,28 @@ def list_users():
                         flash("Tag atualizada com sucesso!", "success")
                         return redirect(url_for("list_users", open_tag_modal="1"))
 
+        if form_name == "tag_delete":
+            open_tag_modal = True
+            if tag_delete_form.validate_on_submit():
+                tag_id_raw = tag_delete_form.tag_id.data
+                try:
+                    tag_id = int(str(tag_id_raw).strip())
+                except (TypeError, ValueError):
+                    tag_id = None
+                if tag_id is None:
+                    flash("Tag selecionada é inválida.", "danger")
+                else:
+                    tag_to_delete = Tag.query.get(tag_id)
+                    if not tag_to_delete:
+                        flash("Tag não encontrada.", "warning")
+                    else:
+                        db.session.delete(tag_to_delete)
+                        db.session.commit()
+                        flash("Tag removida com sucesso!", "success")
+                return redirect(url_for("list_users", open_tag_modal="1"))
+            else:
+                flash("Não foi possível excluir a tag selecionada.", "danger")
+
     users_query = User.query
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
@@ -5073,6 +5096,7 @@ def list_users():
         edit_form=edit_form,
         tag_create_form=tag_create_form,
         tag_edit_form=tag_edit_form,
+        tag_delete_form=tag_delete_form,
         edit_tag=edit_tag,
         tag_list=tag_list,
         show_inactive=show_inactive,
@@ -5140,11 +5164,9 @@ def tasks_overview():
     tasks = (
         query.options(
             joinedload(Task.tag),
-            joinedload(Task.creator),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
-            joinedload(Task.children).joinedload(Task.creator),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
@@ -5316,11 +5338,9 @@ def tasks_sector(tag_id):
     tasks = (
         query.options(
             joinedload(Task.tag),
-            joinedload(Task.creator),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
-            joinedload(Task.children).joinedload(Task.creator),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
