@@ -13,25 +13,30 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="mb-2">
+                    <h1 class="mb-2 text-keep-accent">
                         <i class="bi bi-people me-3"></i>Usuários
                         <span class="badge bg-primary ms-2">{{ users|length }}</span>
                     </h1>
                     <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
                 </div>
-                <div class="d-flex align-items-center justify-content-end gap-3">
-                    <form method="get" class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
-                        <label class="form-check-label" for="showInactive">Mostrar inativos</label>
+                <div class="d-flex align-items-center justify-content-end gap-3 flex-wrap">
+                    <form method="get" class="d-flex align-items-center mb-0">
+                        {% for tag_id in selected_tag_ids %}
+                            <input type="hidden" name="tag_id" value="{{ tag_id }}">
+                        {% endfor %}
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="showInactive" name="show_inactive" value="1" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="showInactive">Mostrar inativos</label>
+                        </div>
                     </form>
                     <a href="{{ url_for('online_users') }}"
-                       class="btn btn-outline-success">
+                       class="btn btn-outline-success text-keep-accent">
                         <i class="bi bi-person-check me-1"></i>Usuários online
                     </a>
                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tagsModal">
                         <i class="bi bi-tags me-1"></i>Tags
                     </button>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
+                    <button type="button" class="btn btn-primary text-keep-accent" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
                         <i class="bi bi-person-plus me-1"></i>Novo Usuário
                     </button>
                 </div>
@@ -46,12 +51,53 @@
                 <table class="table table-bordered table-hover mb-0 text-start">
                     <thead class="table-primary">
                         <tr>
-                            <th class="text-start">Nome</th>
-                            <th class="text-start" style="width: 300px;">Email</th>
-                            <th class="text-start" style="width: 150px;">Usuário</th>
-                            <th class="text-start" style="width: 120px;">Perfil</th>
-                            <th class="text-start" style="width: 200px;">Tags</th>
-                            <th class="text-start" style="width: 100px;">Ações</th>
+                            <th class="text-start text-keep-accent">Nome</th>
+                            <th class="text-start text-keep-accent" style="width: 300px;">E-mail</th>
+                            <th class="text-start text-keep-accent" style="width: 150px;">Usuário</th>
+                            <th class="text-start text-keep-accent" style="width: 120px;">Perfil</th>
+                            <th class="text-start" style="width: 200px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>Tags</span>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button class="btn btn-icon-xs {% if selected_tag_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                type="button"
+                                                id="tagFilterDropdown"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Filtrar por tags">
+                                            <i class="bi {% if selected_tag_ids %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if selected_tag_ids %}
+                                                <span class="badge bg-light text-dark ms-1">{{ selected_tag_ids|length }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow" aria-labelledby="tagFilterDropdown" style="min-width: 240px;">
+                                            <form method="get" class="tag-filter-form">
+                                                {% if show_inactive %}
+                                                    <input type="hidden" name="show_inactive" value="1">
+                                                {% endif %}
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tag</p>
+                                                <div class="tag-filter-options" style="max-height: 220px; overflow-y: auto;">
+                                                    {% if tag_list %}
+                                                        {% for tag in tag_list %}
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="{{ tag.id }}" id="tagFilterOption{{ tag.id }}" name="tag_id" {% if tag.id in selected_tag_ids %}checked{% endif %}>
+                                                                <label class="form-check-label" for="tagFilterOption{{ tag.id }}">{{ tag.nome }}</label>
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <p class="text-muted small mb-0">Nenhuma tag cadastrada.</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0" href="{{ url_for('list_users', show_inactive='1') if show_inactive else url_for('list_users') }}">Limpar</a>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
+                            <th class="text-start text-keep-accent" style="width: 100px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,10 +108,10 @@
                                     <i class="bi bi-person-circle me-2 text-muted"></i>
                                     <div class="fw-semibold">{{ user.name }}</div>
                                     {% if not user.ativo %}
-                                        <span class="badge bg-secondary ms-2">Inativo</span>
+                                        <span class="badge bg-secondary ms-2 text-keep-accent">Inativo</span>
                                     {% endif %}
                                     {% if user.is_master %}
-                                        <span class="badge bg-secondary text-dark ms-2">dev</span>
+                                        <span class="badge bg-secondary text-dark ms-2 text-keep-accent">dev</span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -77,17 +123,17 @@
                             </td>
                             <td class="text-start">
                                 {% if user.role == 'admin' %}
-                                    <span class="badge bg-success">Administrador</span>
+                                    <span class="badge bg-success text-keep-accent">Administrador</span>
                                 {% elif user.role == 'user' %}
-                                    <span class="badge bg-info">Usuário</span>
+                                    <span class="badge bg-info text-keep-accent">Usuário</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ user.role }}</span>
+                                    <span class="badge bg-secondary text-keep-accent">{{ user.role }}</span>
                                 {% endif %}
                             </td>
                             <td class="text-start">
                                 {% if user.tags %}
                                     {% for tag in user.tags %}
-                                        <span class="badge bg-secondary">{{ tag.nome }}</span>
+                                        <span class="badge bg-secondary text-keep-accent">{{ tag.nome }}</span>
                                     {% endfor %}
                                 {% else %}
                                     <span class="text-muted">—</span>
@@ -120,9 +166,9 @@
                             <td colspan="6" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-person-slash fs-1 d-block mb-3"></i>
-                                    <h5>Nenhum usuário cadastrado</h5>
-                                    <p class="mb-3">Comece cadastrando o primeiro usuário</p>
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
+                                    <h5 class="text-keep-accent">Nenhum usuário cadastrado</h5>
+                                    <p class="mb-3 text-keep-accent">Comece cadastrando o primeiro usuário</p>
+                                    <button type="button" class="btn btn-primary text-keep-accent" data-bs-toggle="modal" data-bs-target="#novoUsuarioModal">
                                         <i class="bi bi-person-plus me-2"></i>Cadastrar Primeiro Usuário
                                     </button>
                                 </div>
@@ -145,7 +191,7 @@
         <input type="hidden" name="form_name" value="user">
         <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
           <div class="w-100 d-flex align-items-start justify-content-between">
-            <h5 class="modal-title d-flex align-items-center gap-2 text-dark" id="novoUsuarioModalLabel">
+            <h5 class="modal-title d-flex align-items-center gap-2 text-dark text-keep-accent" id="novoUsuarioModalLabel">
               <i class="bi bi-person-plus-fill me-2"></i>
               Cadastrar Novo Usuário
             </h5>
@@ -156,7 +202,7 @@
           <div class="container-fluid px-0">
             <div class="row g-4 align-items-end">
               <div class="col-12">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Perfil e contato</h6>
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Perfil e contato</h6>
               </div>
               <div class="col-lg-5 col-md-6">
                 <label class="form-label fw-semibold" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
@@ -190,7 +236,7 @@
               </div>
 
               <div class="col-12 pt-2 border-top">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Acesso</h6>
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Acesso</h6>
               </div>
               <div class="col-lg-4 col-md-6">
                 <label class="form-label fw-semibold" for="{{ form.username.id }}">{{ form.username.label.text }}</label>
@@ -225,9 +271,9 @@
 
               <div class="col-12 pt-2 border-top">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Tags de usuário</h6>
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Tags de usuário</h6>
                   <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted small">Organize o usuário com tags</span>
+                    <span class="text-muted small text-keep-accent">Organize o usuário com tags</span>
                     {% if current_user.role == 'admin' %}
                     <button type="button" class="btn btn-sm btn-outline-primary" title="Gerenciar tags" data-bs-toggle="modal" data-bs-target="#tagsModal">
                       <i class="bi bi-plus-lg"></i>
@@ -249,7 +295,7 @@
                     {% endfor %}
                   </div>
                 {% else %}
-                  <p class="text-muted mb-0">Nenhuma tag disponível no momento.</p>
+                  <p class="text-muted mb-0 text-keep-accent">Nenhuma tag disponível no momento.</p>
                 {% endif %}
                 {% for error in form.tags.errors %}
                   <div class="form-text text-danger mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
@@ -262,7 +308,7 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="bi bi-x-circle me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary text-keep-accent">
             <i class="bi bi-person-check me-1"></i>{{ form.submit.label.text }}
           </button>
         </div>
@@ -281,7 +327,7 @@
         <input type="hidden" name="user_id" id="editUserIdInput" value="{{ editing_user_id or request.form.get('user_id', '') }}">
         <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
           <div class="w-100 d-flex align-items-start justify-content-between">
-            <h5 class="modal-title d-flex align-items-center gap-2 text-dark" id="editarUsuarioModalLabel">
+            <h5 class="modal-title d-flex align-items-center gap-2 text-dark text-keep-accent" id="editarUsuarioModalLabel">
               <i class="bi bi-person-gear me-2"></i>
               Editar Usuário
               <span class="text-muted fw-normal ms-2" data-edit-modal-title-name>{{ editing_user.name if editing_user else '' }}</span>
@@ -293,7 +339,7 @@
           <div class="container-fluid px-0">
             <div class="row g-4 align-items-end">
               <div class="col-12">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Perfil e contato</h6>
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Perfil e contato</h6>
               </div>
               <div class="col-lg-5 col-md-6">
                 <label class="form-label fw-semibold" for="{{ edit_form.name.id }}">{{ edit_form.name.label.text }}</label>
@@ -327,7 +373,7 @@
               </div>
 
               <div class="col-12 pt-2 border-top">
-                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Acesso</h6>
+                <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Acesso</h6>
               </div>
               <div class="col-lg-4 col-md-6">
                 <label class="form-label fw-semibold" for="{{ edit_form.username.id }}">{{ edit_form.username.label.text }}</label>
@@ -361,9 +407,9 @@
 
               <div class="col-12 pt-2 border-top">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start">Tags de usuário</h6>
+                  <h6 class="text-uppercase text-muted fw-semibold mb-0 text-start text-keep-accent">Tags de usuário</h6>
                   <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted small">Organize o usuário com tags</span>
+                    <span class="text-muted small text-keep-accent">Organize o usuário com tags</span>
                     {% if current_user.role == 'admin' %}
                     <button type="button" class="btn btn-sm btn-outline-primary" title="Gerenciar tags" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#tagsModal">
                       <i class="bi bi-plus-lg"></i>
@@ -385,7 +431,7 @@
                     {% endfor %}
                   </div>
                 {% else %}
-                  <p class="text-muted mb-0">Nenhuma tag disponível no momento.</p>
+                  <p class="text-muted mb-0 text-keep-accent">Nenhuma tag disponível no momento.</p>
                 {% endif %}
                 {% for error in edit_form.tags.errors %}
                   <div class="form-text text-danger mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
@@ -408,7 +454,7 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="bi bi-x-circle me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary text-keep-accent">
             <i class="bi bi-check-circle me-1"></i>Salvar alterações
           </button>
         </div>
@@ -423,28 +469,38 @@
     <div class="modal-content">
       <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
         <div class="w-100 d-flex align-items-start justify-content-between">
-          <h5 class="modal-title d-flex align-items-center gap-2" id="tagsModalLabel"><i class="bi bi-tags me-2"></i>Tags de Usuários</h5>
+          <h5 class="modal-title d-flex align-items-center gap-2 text-keep-accent" id="tagsModalLabel"><i class="bi bi-tags me-2"></i>Tags de Usuários</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
       </div>
       <div class="modal-body px-4 pb-4">
         <div class="row g-4">
           <div class="col-lg-6">
-            <h6 class="text-uppercase text-muted small text-start">Tags cadastradas</h6>
+            <h6 class="text-uppercase text-muted small text-start text-keep-accent">Tags cadastradas</h6>
             <div class="border rounded-3 p-3 bg-light-subtle">
               {% if tag_list %}
                 <ul class="list-unstyled mb-0">
                   {% for tag in tag_list %}
                   <li class="d-flex justify-content-between align-items-center py-2 border-bottom{% if loop.last %} border-bottom-0{% endif %}">
-                    <span class="fw-semibold text-body">{{ tag.nome }}</span>
-                    <a href="{{ url_for('list_users', open_tag_modal='1', edit_tag_id=tag.id) }}" class="btn btn-sm btn-outline-primary">
-                      <i class="bi bi-pencil"></i>
-                    </a>
+                    <span class="fw-semibold text-body text-keep-accent">{{ tag.nome }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                      <a href="{{ url_for('list_users', open_tag_modal='1', edit_tag_id=tag.id) }}" class="btn btn-sm btn-outline-primary" title="Editar tag">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <form method="POST" action="{{ url_for('list_users') }}" class="d-inline">
+                        {{ tag_delete_form.csrf_token }}
+                        {{ tag_delete_form.tag_id(value=tag.id, id='tagDeleteId' ~ tag.id) }}
+                        <input type="hidden" name="form_name" value="tag_delete">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir tag">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </div>
                   </li>
                   {% endfor %}
                 </ul>
               {% else %}
-                <div class="text-center text-muted py-4">
+                <div class="text-center text-muted py-4 text-keep-accent">
                   <i class="bi bi-tags fs-1 d-block mb-2"></i>
                   Nenhuma tag cadastrada
                 </div>
@@ -453,7 +509,7 @@
           </div>
           <div class="col-lg-6">
             <div class="border rounded-3 p-3 h-100">
-              <h6 class="text-uppercase text-muted small text-start">Adicionar nova tag</h6>
+              <h6 class="text-uppercase text-muted small text-start text-keep-accent">Adicionar nova tag</h6>
               <form method="POST" action="{{ url_for('list_users') }}" novalidate class="mt-2">
                 {{ tag_create_form.hidden_tag() }}
                 <input type="hidden" name="form_name" value="tag_create">
@@ -461,16 +517,16 @@
                   {{ tag_create_form.nome.label(class="form-label") }}
                   {{ tag_create_form.nome(class="form-control", placeholder="Nome da tag") }}
                   {% for error in tag_create_form.nome.errors %}
-                    <div class="text-danger small">{{ error }}</div>
+                    <div class="text-danger small text-keep-accent">{{ error }}</div>
                   {% endfor %}
                 </div>
                 <div class="d-flex justify-content-end gap-2">
-                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                  {{ tag_create_form.submit(class="btn btn-primary") }}
+                  <button type="button" class="btn btn-outline-secondary text-keep-accent" data-bs-dismiss="modal">Cancelar</button>
+                  {{ tag_create_form.submit(class="btn btn-primary text-keep-accent") }}
                 </div>
               </form>
               <hr class="text-muted">
-              <h6 class="text-uppercase text-muted small text-start">Editar tag</h6>
+              <h6 class="text-uppercase text-muted small text-start text-keep-accent">Editar tag</h6>
               {% if edit_tag %}
               <form method="POST" action="{{ url_for('list_users') }}" novalidate class="mt-2">
                 {{ tag_edit_form.hidden_tag() }}
@@ -479,17 +535,17 @@
                 <div class="mb-3">
                   {{ tag_edit_form.nome.label(class="form-label") }}
                   {{ tag_edit_form.nome(class="form-control", placeholder="Nome da tag") }}
-                  {% for error in tag_edit_form.nome.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                  {% endfor %}
+                    {% for error in tag_edit_form.nome.errors %}
+                      <div class="text-danger small text-keep-accent">{{ error }}</div>
+                    {% endfor %}
                 </div>
                 <div class="d-flex justify-content-between gap-2">
-                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary btn-sm">Cancelar edição</a>
-                  {{ tag_edit_form.submit(class="btn btn-primary btn-sm") }}
+                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary btn-sm text-keep-accent">Cancelar edição</a>
+                  {{ tag_edit_form.submit(class="btn btn-primary btn-sm text-keep-accent") }}
                 </div>
               </form>
               {% else %}
-              <p class="text-muted small mt-2 mb-0">Selecione uma tag na lista ao lado para editar.</p>
+                <p class="text-muted small mt-2 mb-0 text-keep-accent">Selecione uma tag na lista ao lado para editar.</p>
               {% endif %}
             </div>
           </div>
@@ -528,6 +584,26 @@ document.addEventListener("DOMContentLoaded", function () {
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Mantém o dropdown de filtro aberto durante a seleção e fecha apenas ao aplicar
+    const tagFilterDropdownToggle = document.getElementById('tagFilterDropdown');
+    const tagFilterForm = document.querySelector('.tag-filter-form');
+    if (tagFilterDropdownToggle && tagFilterForm) {
+        const tagFilterDropdown = bootstrap.Dropdown.getOrCreateInstance(tagFilterDropdownToggle);
+        tagFilterForm.addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+        tagFilterForm.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+            checkbox.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        });
+        tagFilterForm.addEventListener('submit', function () {
+            setTimeout(function () {
+                tagFilterDropdown.hide();
+            }, 0);
+        });
+    }
 
     function cleanupModalArtifacts() {
         if (document.querySelectorAll('.modal.show').length > 0) {
