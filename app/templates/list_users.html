@@ -488,9 +488,9 @@
                         <i class="bi bi-pencil"></i>
                       </a>
                       <form method="POST" action="{{ url_for('list_users') }}" class="d-inline">
-                        {{ tag_delete_form.hidden_tag() }}
+                        {{ tag_delete_form.csrf_token }}
+                        {{ tag_delete_form.tag_id(value=tag.id, id='tagDeleteId' ~ tag.id) }}
                         <input type="hidden" name="form_name" value="tag_delete">
-                        <input type="hidden" name="{{ tag_delete_form.tag_id.name }}" value="{{ tag.id }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir tag">
                           <i class="bi bi-trash"></i>
                         </button>
