@@ -4913,6 +4913,7 @@ def list_users():
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     edit_form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on")
+    selected_tag_id = request.args.get("tag_id", type=int)
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
     open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
     open_edit_modal = request.args.get("open_edit_modal") in ("1", "true", "True")
@@ -5092,9 +5093,11 @@ def list_users():
             else:
                 flash("Não foi possível excluir a tag selecionada.", "danger")
 
-    users_query = User.query
+    users_query = User.query.options(joinedload(User.tags))
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
+    if selected_tag_id:
+        users_query = users_query.join(User.tags).filter(Tag.id == selected_tag_id)
     users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template(
         "list_users.html",
@@ -5107,6 +5110,7 @@ def list_users():
         edit_tag=edit_tag,
         tag_list=tag_list,
         show_inactive=show_inactive,
+        selected_tag_id=selected_tag_id,
         open_tag_modal=open_tag_modal,
         open_user_modal=open_user_modal,
         open_edit_modal=open_edit_modal,
