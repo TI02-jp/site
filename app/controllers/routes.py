@@ -4912,8 +4912,17 @@ def list_users():
     tag_list = tag_query.all()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     edit_form.tags.choices = [(t.id, t.nome) for t in tag_list]
-    show_inactive = request.args.get("show_inactive") in ("1", "on")
-    selected_tag_id = request.args.get("tag_id", type=int)
+    show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
+    raw_tag_ids = request.args.getlist("tag_id")
+    selected_tag_ids = []
+    for raw_id in raw_tag_ids:
+        try:
+            tag_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if tag_id not in selected_tag_ids:
+            selected_tag_ids.append(tag_id)
+    selected_tag_id = selected_tag_ids[0] if len(selected_tag_ids) == 1 else None
     open_tag_modal = request.args.get("open_tag_modal") in ("1", "true", "True")
     open_user_modal = request.args.get("open_user_modal") in ("1", "true", "True")
     open_edit_modal = request.args.get("open_edit_modal") in ("1", "true", "True")
@@ -5096,8 +5105,12 @@ def list_users():
     users_query = User.query.options(joinedload(User.tags))
     if not show_inactive:
         users_query = users_query.filter_by(ativo=True)
-    if selected_tag_id:
-        users_query = users_query.join(User.tags).filter(Tag.id == selected_tag_id)
+    if selected_tag_ids:
+        users_query = (
+            users_query.join(User.tags)
+            .filter(Tag.id.in_(selected_tag_ids))
+            .distinct()
+        )
     users = users_query.order_by(User.ativo.desc(), User.name).all()
     return render_template(
         "list_users.html",
@@ -5111,6 +5124,7 @@ def list_users():
         tag_list=tag_list,
         show_inactive=show_inactive,
         selected_tag_id=selected_tag_id,
+        selected_tag_ids=selected_tag_ids,
         open_tag_modal=open_tag_modal,
         open_user_modal=open_user_modal,
         open_edit_modal=open_edit_modal,
