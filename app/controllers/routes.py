@@ -5095,9 +5095,17 @@ def list_users():
                     if not tag_to_delete:
                         flash("Tag não encontrada.", "warning")
                     else:
-                        db.session.delete(tag_to_delete)
-                        db.session.commit()
-                        flash("Tag removida com sucesso!", "success")
+                        try:
+                            db.session.delete(tag_to_delete)
+                            db.session.commit()
+                        except SQLAlchemyError:
+                            db.session.rollback()
+                            flash(
+                                "Não foi possível excluir a tag selecionada.",
+                                "danger",
+                            )
+                        else:
+                            flash("Tag removida com sucesso!", "success")
                 return redirect(url_for("list_users", open_tag_modal="1"))
             else:
                 flash("Não foi possível excluir a tag selecionada.", "danger")
