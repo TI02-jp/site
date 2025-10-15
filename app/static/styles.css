@@ -210,6 +210,20 @@ Botões e Ações
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.btn-icon-xs {
+    padding: 0.2rem 0.45rem;
+    font-size: var(--font-sm);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.btn-icon-xs .badge {
+    margin-left: 0;
+}
+
 .btn:hover, .btn-custom:hover, .submit-btn:hover {
     background-color: var(--primary);
 }
