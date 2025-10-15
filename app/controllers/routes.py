@@ -1966,9 +1966,11 @@ def cursos():
     form = CourseForm()
     tag_form = CourseTagForm(prefix="tag")
     can_manage_courses = current_user.role == "admin"
+
+    # Usar Tags de usuários no campo "Setores Participantes"
     sector_choices = [
-        (sector.id, sector.nome)
-        for sector in Setor.query.order_by(Setor.nome.asc()).all()
+        (tag.id, tag.nome)
+        for tag in Tag.query.order_by(Tag.nome.asc()).all()
     ]
     participant_choices = [
         (user.id, user.name)
@@ -1983,6 +1985,13 @@ def cursos():
     sector_lookup = {value: label for value, label in sector_choices}
     participant_lookup = {value: label for value, label in participant_choices}
     tag_lookup = {tag.id: tag for tag in course_tags}
+
+    # Criar mapeamento de usuários para suas tags (IDs)
+    users_with_tags = User.query.filter_by(ativo=True).options(db.joinedload(User.tags)).all()
+    user_tags_map = {
+        user.id: [tag.id for tag in user.tags]
+        for user in users_with_tags
+    }
 
     course_id_raw = (form.course_id.data or "").strip()
     is_tag_submission = request.method == "POST" and "tag-submit" in request.form
@@ -2178,6 +2187,7 @@ def cursos():
         course_tags=course_tags,
         editing_course_id=course_id_raw,
         can_manage_courses=can_manage_courses,
+        user_tags_map=user_tags_map,
     )
 
 

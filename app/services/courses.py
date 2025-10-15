@@ -41,6 +41,7 @@ class CourseRecord:
     observation: str | None = None
     tags: tuple[str, ...] = tuple()
     tag_ids: tuple[int, ...] = tuple()
+    participant_sectors: tuple[str, ...] = tuple()  # Setores/tags incluídos por completo
 
     @property
     def start_date_label(self) -> str:
@@ -113,6 +114,12 @@ class CourseRecord:
         """Return the tag identifiers as a mutable list for serialization."""
 
         return list(self.tag_ids)
+
+    @property
+    def participant_sectors_list(self) -> list[str]:
+        """Return the sectors with complete membership as a list."""
+
+        return list(self.participant_sectors)
 
     @property
     def workload_value(self) -> str:
@@ -209,7 +216,7 @@ def _coerce_date(value: date | datetime | None) -> date | None:
 def get_courses_overview() -> list[CourseRecord]:
     """Return all registered courses prioritizing upcoming plans and fresh completions."""
 
-    from app.models.tables import Course
+    from app.models.tables import Course, Tag, User
 
     status_priority = sa.case(
         (Course.status == CourseStatus.COMPLETED.value, 1),
@@ -227,6 +234,20 @@ def get_courses_overview() -> list[CourseRecord]:
         .order_by(status_priority.asc(), most_recent_date.desc(), Course.id.desc())
     )
 
+    # Carregar todos os usuários com suas tags para análise
+    users_with_tags = db.session.execute(
+        sa.select(User).where(User.ativo == True).options(selectinload(User.tags))
+    ).scalars().all()
+
+    # Criar mapa de tag -> usuários
+    tag_users_map: dict[str, set[str]] = {}
+    for user in users_with_tags:
+        for tag in user.tags:
+            tag_name = tag.nome.strip()
+            if tag_name not in tag_users_map:
+                tag_users_map[tag_name] = set()
+            tag_users_map[tag_name].add(user.name.strip())
+
     records: list[CourseRecord] = []
     for course in db.session.execute(stmt).scalars():
         try:
@@ -234,13 +255,36 @@ def get_courses_overview() -> list[CourseRecord]:
         except ValueError:
             status = CourseStatus.PLANNED
         tags_sorted = sorted(course.tags, key=lambda tag: tag.name.lower())
+
+        # Analisar participantes do curso
+        course_sectors = _split_values(course.sectors or "")
+        course_participants = set(p.strip() for p in _split_values(course.participants or ""))
+
+        # Detectar quais setores/tags estão completamente incluídos
+        optimized_participants: list[str] = []
+        complete_sectors: list[str] = []
+        remaining_participants = set(course_participants)
+
+        for sector in course_sectors:
+            sector_users = tag_users_map.get(sector.strip(), set())
+            if sector_users and sector_users.issubset(course_participants):
+                # Todos os usuários desta tag estão incluídos
+                sector_name = sector.strip()
+                optimized_participants.append(sector_name)
+                complete_sectors.append(sector_name)
+                # Remover estes usuários da lista de participantes individuais
+                remaining_participants -= sector_users
+
+        # Adicionar participantes individuais restantes
+        optimized_participants.extend(sorted(remaining_participants))
+
         records.append(
             CourseRecord(
                 id=course.id,
                 name=course.name,
                 instructor=course.instructor,
-                sectors=_split_values(course.sectors or ""),
-                participants=_split_values(course.participants or ""),
+                sectors=course_sectors,
+                participants=tuple(optimized_participants),
                 workload=_parse_time(course.workload),
                 start_date=course.start_date,
                 schedule_start=_parse_time(course.schedule_start),
@@ -251,6 +295,7 @@ def get_courses_overview() -> list[CourseRecord]:
                 observation=course.observation,
                 tags=tuple(tag.name for tag in tags_sorted),
                 tag_ids=tuple(tag.id for tag in tags_sorted),
+                participant_sectors=tuple(complete_sectors),
             )
         )
     return records

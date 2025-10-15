@@ -377,6 +377,7 @@ class CourseForm(FlaskForm):
         "Status",
         choices=[(status.value, status.value.capitalize()) for status in CourseStatus],
         validators=[DataRequired()],
+        default=CourseStatus.PLANNED.value,
     )
     observation = TextAreaField(
         "Observação",
