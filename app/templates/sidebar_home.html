@@ -2,9 +2,9 @@
     <div class="nav-section-title">PRINCIPAL</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link{% if request.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}">
+            <a class="nav-link{% if request.endpoint == 'listar_empresas' %} active{% endif %}" href="{{ url_for('listar_empresas') }}">
                 <i class="bi bi-list-task"></i>
-                PARTICULARIDADES
+                CLIENTES
             </a>
         </li>
         {% if current_user.role == 'admin' %}

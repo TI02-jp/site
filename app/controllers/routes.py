@@ -4072,13 +4072,6 @@ def login():
     return render_template("login.html", form=form, google_enabled=google_enabled)
 
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    """Admin dashboard placeholder page."""
-    return render_template("dashboard.html")
-
-
 @app.route("/api/cnpj/<cnpj>")
 @login_required
 def api_cnpj(cnpj):
