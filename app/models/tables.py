@@ -630,6 +630,7 @@ class Empresa(db.Model):
     acessos = db.Column(JsonString(255))
     observacao_acessos = db.Column(db.String(200))
     codigo_empresa = db.Column(db.String(100), nullable=False)
+    contatos = db.Column(JsonString(255))
 
     def __repr__(self):
         return f"<Empresa {self.nome_empresa}>"

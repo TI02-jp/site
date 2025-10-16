@@ -139,6 +139,7 @@ class EmpresaForm(FlaskForm):
     ], validators=[Optional()])
     sistema_utilizado = StringField('Sistema Utilizado', validators=[Optional()])
     acessos_json = HiddenField('Acessos', validators=[Optional()])
+    contatos_json = HiddenField('Contatos', validators=[Optional()])
     submit = SubmitField('Cadastrar Empresa')
 
 class EditUserForm(FlaskForm):

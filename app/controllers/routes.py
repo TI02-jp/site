@@ -4217,6 +4217,7 @@ def editar_empresa(id):
         empresa_form.sistemas_consultorias.data = empresa.sistemas_consultorias or []
         empresa_form.regime_lancamento.data = empresa.regime_lancamento or []
         empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
+        empresa_form.contatos_json.data = json.dumps(empresa.contatos or [])
 
     if request.method == "POST":
         if empresa_form.validate():
@@ -4227,11 +4228,15 @@ def editar_empresa(id):
                 empresa.acessos = json.loads(empresa_form.acessos_json.data or "[]")
             except Exception:
                 empresa.acessos = []
+            try:
+                empresa.contatos = json.loads(empresa_form.contatos_json.data or "[]")
+            except Exception:
+                empresa.contatos = []
             db.session.add(empresa)
             try:
                 db.session.commit()
-                flash("Dados da Empresa salvos com sucesso!", "success")
-                return redirect(url_for("visualizar_empresa", id=id) + "#dados-empresa")
+                flash("Dados do Cliente salvos com sucesso!", "success")
+                return redirect(url_for("visualizar_empresa", id=id) + "#dados-cliente")
             except Exception as e:
                 db.session.rollback()
                 flash(f"Erro ao salvar: {str(e)}", "danger")
@@ -4301,24 +4306,26 @@ def visualizar_empresa(id):
             ]
         return lista
 
-    # monta contatos_list
-    if fiscal and getattr(fiscal, "contatos", None):
+    # monta contatos_list from empresa.contatos
+    if getattr(empresa, "contatos", None):
         try:
             contatos_list = (
-                json.loads(fiscal.contatos)
-                if isinstance(fiscal.contatos, str)
-                else fiscal.contatos
+                json.loads(empresa.contatos)
+                if isinstance(empresa.contatos, str)
+                else empresa.contatos
             )
         except Exception:
             contatos_list = []
     else:
         contatos_list = []
     contatos_list = normalize_contatos(contatos_list)
+    # injeta contatos_list na empresa para acesso no template
+    empresa.contatos_list = contatos_list
 
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
         fiscal_view = SimpleNamespace(
-            formas_importacao=[], contatos_list=contatos_list, envio_fisico=[]
+            formas_importacao=[], envio_fisico=[]
         )
     else:
         fiscal_view = fiscal
@@ -4332,7 +4339,6 @@ def visualizar_empresa(id):
         elif not formas:
             fiscal_view.formas_importacao = []
         # injeta listas sem risco
-        setattr(fiscal_view, "contatos_list", contatos_list)
         setattr(fiscal_view, "envio_fisico", _prepare_envio_fisico(fiscal_view))
 
     if contabil:
