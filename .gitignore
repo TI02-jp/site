@@ -12,6 +12,7 @@ venv/
 venv-test/
 env/
 env.test/
+uploads/
 
 # Ignorar o arquivo SQLite (se você estiver usando SQLite para o desenvolvimento local)
 *.db
