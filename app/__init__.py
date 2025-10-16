@@ -60,7 +60,7 @@ if not secret_key or secret_key == "umsegredoforteaqui123":
     logger.warning("SECRET_KEY não definida; gerando valor temporário apenas para ambiente local.")
 app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB upload limit
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
@@ -518,6 +518,34 @@ with app.app_context():
                             "ALTER TABLE task_notifications MODIFY COLUMN task_id INTEGER NULL"
                         )
                     )
+
+        # Migration: Add contatos column to tbl_empresas and migrate data from departamentos
+        if inspector.has_table("tbl_empresas"):
+            empresa_columns = {
+                col["name"] for col in inspector.get_columns("tbl_empresas")
+            }
+            if "contatos" not in empresa_columns:
+                with db.engine.begin() as conn:
+                    # Add contatos column to tbl_empresas
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_empresas ADD COLUMN contatos VARCHAR(255) NULL"
+                        )
+                    )
+
+                    # Migrate contatos from departamento fiscal to empresa
+                    # Only migrate if departamentos table exists
+                    if inspector.has_table("departamentos"):
+                        conn.execute(
+                            sa.text(
+                                """
+                                UPDATE tbl_empresas e
+                                INNER JOIN departamentos d ON d.empresa_id = e.id
+                                SET e.contatos = d.contatos
+                                WHERE d.tipo = 'fiscal' AND d.contatos IS NOT NULL
+                                """
+                            )
+                        )
     except SQLAlchemyError as exc:
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc
