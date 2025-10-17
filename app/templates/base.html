@@ -53,7 +53,7 @@
       .main-content {
         flex: 1 0 auto;
         display: flex;
-        overflow: hidden;
+        align-items: flex-start;
       }
 
       /* Sidebar Principal */
@@ -65,7 +65,11 @@
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
-        position: relative;
+        position: sticky;
+        top: 0;
+        align-self: flex-start;
+        height: 100vh;
+        max-height: 100vh;
         transition: all 0.3s ease;
         overflow-x: hidden;
       }
@@ -142,6 +146,8 @@
         flex: 1;
         padding: 0.85rem 0;
         overflow-y: auto;
+        min-height: 0;
+        overscroll-behavior: contain;
       }
 
       .nav-section {
@@ -209,7 +215,7 @@
 
       /* Área de Conteúdo */
       .content-area {
-        flex-grow: 1;
+        flex: 1 1 auto;
         background-color: #f8f9fa;
         position: relative;
       }
@@ -285,6 +291,10 @@
           padding: 0.75rem 1rem;
           font-size: var(--font-base);
           gap: 0.6rem;
+        }
+
+        .content-area {
+          height: auto;
         }
       }
 
