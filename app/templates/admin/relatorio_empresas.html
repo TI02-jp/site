@@ -1,67 +1,105 @@
 {% extends "base.html" %}
 
-{% block title %}Relatório de Empresas{% endblock %}
+{% block title %}Relatorio de Empresas{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Empresas por Regime de Tributação</h1>
-    <div id="chart-container">
-        {{ chart_div|safe }}
+    <h1 class="mb-2">Empresas por Regime de Tributacao</h1>
+    <p class="text-muted small mb-3">Total de empresas: {{ tributacao_chart.total }}</p>
+    <div class="rounded border bg-white" style="height: 260px;">
+        <canvas id="empresa-tributacao-chart" class="p-3"></canvas>
     </div>
-    <div id="empresa-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
+
 <div class="container mt-5">
-    <h1 class="mb-4">Empresas por Sistema Utilizado</h1>
-    <div id="chart-sistema-container">
-        {{ chart_div_sistema|safe }}
+    <h1 class="mb-2">Empresas por Sistema Utilizado</h1>
+    <p class="text-muted small mb-3">Total de empresas: {{ sistema_chart.total }}</p>
+    <div class="rounded border bg-white" style="height: 260px;">
+        <canvas id="empresa-sistema-chart" class="p-3"></canvas>
     </div>
-    <div id="empresa-sistema-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script>
-    const empresasBySlice = {{ empresas_por_slice|tojson }};
-    const empresasBySistema = {{ empresas_por_sistema|tojson }};
-    const chart = document.getElementById('empresa-tributacao-chart');
-    if (chart) {
-        chart.on('plotly_click', function(data){
-            const label = data.points[0].x || data.points[0].label;
-            const empresas = empresasBySlice[label] || [];
-            const container = document.getElementById('empresa-list');
-            if (!empresas.length) {
-                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
-                return;
-            }
-            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th><th>CNPJ</th></tr></thead><tbody>';
-            empresas.forEach(e => {
-                const nome = e.nome ? e.nome.toUpperCase() : '';
-                const cnpj = e.cnpj || '';
-                const codigo = e.codigo || '';
-                html += `<tr><td>${codigo}</td><td>${nome}</td><td>${cnpj}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
-            container.innerHTML = html;
+    const chartPalette = ['#2563eb','#22c55e','#f97316','#a855f7','#facc15','#38bdf8','#ef4444','#14b8a6','#f472b6','#8b5cf6','#0ea5e9','#65a30d'];
+
+    function shadeColor(color, percent) {
+        const num = parseInt(color.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        let r = (num >> 16) + amt;
+        let g = (num >> 8 & 0x00ff) + amt;
+        let b = (num & 0x0000ff) + amt;
+        r = Math.max(Math.min(r, 255), 0);
+        g = Math.max(Math.min(g, 255), 0);
+        b = Math.max(Math.min(b, 255), 0);
+        return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+    }
+
+    function buildPalette(size) {
+        const colors = [];
+        for (let i = 0; i < size; i++) {
+            colors.push(chartPalette[i % chartPalette.length]);
+        }
+        return colors;
+    }
+
+    function createBarChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !config) {
+            return;
+        }
+        const colors = buildPalette(config.labels?.length || 0);
+        new Chart(canvas, {
+            type: config.type || 'bar',
+            data: {
+                labels: config.labels || [],
+                datasets: [{
+                    label: config.datasetLabel || '',
+                    data: config.values || [],
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors.map(color => shadeColor(color, 12)),
+                    borderRadius: 12,
+                    maxBarThickness: 48,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 320, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: Boolean(config.title),
+                        text: config.title,
+                        font: { size: 16, weight: '600' },
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleFont: { size: 12, weight: '600' },
+                        bodyFont: { size: 11 },
+                        padding: 10,
+                    },
+                },
+                scales: {
+                    x: {
+                        title: config.xTitle ? { display: true, text: config.xTitle } : undefined,
+                        ticks: { font: { size: 10 } },
+                        grid: { display: false },
+                    },
+                    y: {
+                        title: config.yTitle ? { display: true, text: config.yTitle } : undefined,
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0, font: { size: 10 } },
+                        grid: { color: '#e5e7eb' },
+                    },
+                },
+            },
         });
     }
 
-    const chartSistema = document.getElementById('empresa-sistema-chart');
-    if (chartSistema) {
-        chartSistema.on('plotly_click', function(data){
-            const label = data.points[0].x || data.points[0].label;
-            const empresas = empresasBySistema[label] || [];
-            const container = document.getElementById('empresa-sistema-list');
-            if (!empresas.length) {
-                container.innerHTML = '<p class="text-center">Nenhuma empresa encontrada.</p>';
-                return;
-            }
-            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Código</th><th>Nome</th><th>CNPJ</th></tr></thead><tbody>';
-            empresas.forEach(e => {
-                const nome = e.nome ? e.nome.toUpperCase() : '';
-                const cnpj = e.cnpj || '';
-                const codigo = e.codigo || '';
-                html += `<tr><td>${codigo}</td><td>${nome}</td><td>${cnpj}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
-            container.innerHTML = html;
-        });
-    }
+    createBarChart('empresa-tributacao-chart', {{ tributacao_chart|tojson }});
+    createBarChart('empresa-sistema-chart', {{ sistema_chart|tojson }});
 </script>
 {% endblock %}
