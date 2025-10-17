@@ -60,7 +60,9 @@ if not secret_key or secret_key == "umsegredoforteaqui123":
     logger.warning("SECRET_KEY não definida; gerando valor temporário apenas para ambiente local.")
 app.config['SECRET_KEY'] = secret_key
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024  # 5 GB (evita 413 por tamanho)
+app.config['MAX_FORM_MEMORY_SIZE'] = app.config['MAX_CONTENT_LENGTH']
+app.config['WYSIWYG_UPLOAD_SOFT_LIMIT_MB'] = int(os.getenv("WYSIWYG_UPLOAD_SOFT_LIMIT_MB", "512"))
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
@@ -505,8 +507,8 @@ with app.app_context():
                                 FOREIGN KEY (announcement_id) REFERENCES announcements (id)
                                 ON DELETE CASCADE
                                 """
+                                )
                             )
-                        )
             task_id_column = next(
                 (col for col in inspector.get_columns("task_notifications") if col["name"] == "task_id"),
                 None,
@@ -516,6 +518,19 @@ with app.app_context():
                     conn.execute(
                         sa.text(
                             "ALTER TABLE task_notifications MODIFY COLUMN task_id INTEGER NULL"
+                        )
+                    )
+
+        if db.engine.dialect.name == "mysql" and inspector.has_table("operational_procedures"):
+            descricao_column = next(
+                (col for col in inspector.get_columns("operational_procedures") if col["name"] == "descricao"),
+                None,
+            )
+            if descricao_column and "longtext" not in str(descricao_column["type"]).lower():
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE operational_procedures MODIFY COLUMN descricao LONGTEXT NULL"
                         )
                     )
 

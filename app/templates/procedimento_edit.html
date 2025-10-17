@@ -30,14 +30,14 @@
           {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
         </div>
         <div class="mb-3">
-          <label class="form-label">{{ form.description.label }}</label>
+          <label class="form-label">{{ form.descricao.label }}</label>
           <div id="proc-editor" style="height: 260px;"></div>
-          {{ form.description(id="proc-description", style="display:none;") }}
+          {{ form.descricao(id="proc-descricao", style="display:none;") }}
           <input type="file" id="proc-file-input" accept="image/*,.pdf" style="display:none;">
           <button type="button" id="proc-pdf-btn" class="btn btn-sm btn-outline-secondary mt-2">
             <i class="bi bi-file-pdf me-1"></i>Anexar PDF
           </button>
-          <div class="form-text">Cole prints diretamente, use o botão de imagem ou anexe PDFs.</div>
+          <div class="form-text">Cole prints diretamente ou use o botao de imagem; anexos grandes (ate 5 GB por envio) sao suportados.</div>
         </div>
         <div class="d-flex justify-content-between">
           <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Salvar</button>
@@ -135,7 +135,7 @@
     });
     editor.closest('form')?.addEventListener('submit', ()=>{ hidden.value = quill.root.innerHTML; });
   }
-  initQuill('#proc-editor', '#proc-description', '#proc-file-input', '#proc-pdf-btn');
+  initQuill('#proc-editor', '#proc-descricao', '#proc-file-input', '#proc-pdf-btn');
 })();
 </script>
 {% endblock %}

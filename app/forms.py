@@ -234,7 +234,7 @@ class AnnouncementForm(FlaskForm):
     )
     content = TextAreaField(
         "Mensagem",
-        validators=[DataRequired(), Length(min=1, max=2000)],
+        validators=[DataRequired(), Length(min=1, max=20000)],
         render_kw={
             "rows": 4,
         },
@@ -256,10 +256,7 @@ class OperationalProcedureForm(FlaskForm):
         validators=[DataRequired(), Length(max=200)],
         filters=[lambda v: v.strip() if v else v],
     )
-    description = TextAreaField(
-        "Descrição",
-        validators=[Optional()],
-    )
+    descricao = TextAreaField("Descrição", validators=[Optional()])
     submit = SubmitField("Salvar procedimento")
 
 
