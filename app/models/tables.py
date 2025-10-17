@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
+from sqlalchemy.dialects import mysql
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -993,7 +994,10 @@ class OperationalProcedure(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
+    descricao = db.Column(
+        db.Text().with_variant(mysql.LONGTEXT, "mysql"),
+        nullable=True,
+    )
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(

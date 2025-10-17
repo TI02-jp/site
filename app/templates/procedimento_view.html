@@ -22,8 +22,8 @@
 
   <div class="card shadow-sm mb-4">
     <div class="card-body">
-      {% if procedure.description %}
-      <div class="editor-content">{{ procedure.description|sanitize }}</div>
+      {% if procedure.descricao %}
+      <div class="editor-content">{{ procedure.descricao|sanitize }}</div>
       {% else %}
       <div class="text-muted">Sem descrição cadastrada.</div>
       {% endif %}
@@ -44,9 +44,9 @@
           {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
         </div>
         <div class="mb-3">
-          <label class="form-label">{{ form.description.label }}</label>
+          <label class="form-label">{{ form.descricao.label }}</label>
           <div id="proc-editor" style="height: 220px;"></div>
-          {{ form.description(id="proc-description", style="display:none;") }}
+          {{ form.descricao(id="proc-descricao", style="display:none;") }}
           <input type="file" id="proc-image-input" accept="image/*" style="display:none;">
         </div>
         <div class="d-flex justify-content-between">
@@ -136,7 +136,7 @@
     });
     editor.closest('form')?.addEventListener('submit', ()=>{ hidden.value = quill.root.innerHTML; });
   }
-  initQuill('#proc-editor', '#proc-description', '#proc-image-input');
+  initQuill('#proc-editor', '#proc-descricao', '#proc-image-input');
 })();
 </script>
 {% endblock %}

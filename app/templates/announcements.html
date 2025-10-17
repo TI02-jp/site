@@ -640,7 +640,7 @@
                         <label class="upload-dropzone{% if edit_form.attachments.errors %} is-invalid{% endif %}" for="{{ edit_form.attachments.id }}" role="button" tabindex="0" data-dropzone>
                           <span class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></span>
                           <span class="fw-semibold">Adicionar arquivos</span>
-                          <span class="text-muted">Arraste e solte ou clique para selecionar (máx. 2 MB cada).</span>
+                          <span class="text-muted">Arraste e solte ou clique para selecionar (suporta arquivos grandes, até 5 GB por envio).</span>
                         </label>
                         {{ edit_form.attachments(class="form-control d-none") }}
                         {% for error in edit_form.attachments.errors %}
@@ -801,7 +801,7 @@
                     <label class="upload-dropzone{% if form.attachments.errors %} is-invalid{% endif %}" for="{{ form.attachments.id }}" role="button" tabindex="0" data-dropzone>
                       <span class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></span>
                       <span class="fw-semibold">Adicionar arquivos</span>
-                      <span class="text-muted">Arraste e solte ou clique para selecionar (máx. 2 MB cada).</span>
+                      <span class="text-muted">Arraste e solte ou clique para selecionar (suporta arquivos grandes, até 5 GB por envio).</span>
                     </label>
                     {{ form.attachments(class="form-control d-none") }}
                     {% for error in form.attachments.errors %}

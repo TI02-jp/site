@@ -41,9 +41,9 @@
               {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
             <div class="mb-3">
-              <label class="form-label">{{ form.description.label }}</label>
+              <label class="form-label">{{ form.descricao.label }}</label>
               <div id="proc-editor-modal" style="height: 48vh;"></div>
-              {{ form.description(id="proc-description", style="display:none;") }}
+              {{ form.descricao(id="proc-descricao", style="display:none;") }}
               <input type="file" id="proc-file-input" accept="image/*,.pdf" style="display:none;">
               <button type="button" id="proc-pdf-btn" class="btn btn-sm btn-outline-secondary mt-2">
                 <i class="bi bi-file-pdf me-1"></i>Anexar PDF
@@ -108,7 +108,7 @@
   function initQuillModal(){
     if(quillInitialized) return;
     const editor = document.querySelector('#proc-editor-modal');
-    const hidden = document.querySelector('#proc-description');
+    const hidden = document.querySelector('#proc-descricao');
     const fileInput = document.querySelector('#proc-file-input');
     const pdfBtn = document.querySelector('#proc-pdf-btn');
     if(!editor || !hidden || !fileInput) return;
@@ -180,7 +180,7 @@
   if(modalEl){
     modalEl.addEventListener('shown.bs.modal', initQuillModal);
     // Autoabrir modal se houver erros de validação
-    {% if form and (form.title.errors or form.description.errors) %}
+    {% if form and (form.title.errors or form.descricao.errors) %}
     const m = new bootstrap.Modal(modalEl);
     m.show();
     {% endif %}

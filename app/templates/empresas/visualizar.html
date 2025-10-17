@@ -858,7 +858,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const contentEl = document.getElementById('proc-modal-content');
         const errorEl = document.getElementById('proc-modal-error');
         const titleEl = document.getElementById('proc-modal-title');
-        const descriptionEl = document.getElementById('proc-modal-description');
+        const descricaoEl = document.getElementById('proc-modal-description');
 
         // Interceptar cliques em links de procedimentos nas particularidades
         document.addEventListener('click', (e) => {
@@ -900,7 +900,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     contentEl.style.display = 'block';
 
                     titleEl.textContent = data.title;
-                    descriptionEl.innerHTML = data.description;
+            descricaoEl.innerHTML = data.descricao;
                 })
                 .catch(error => {
                     console.error('Erro ao carregar procedimento:', error);

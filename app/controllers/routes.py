@@ -842,6 +842,17 @@ def _peek_stream(filestorage, size=512):
     return chunk
 
 
+def _get_file_size_bytes(filestorage) -> int:
+    """Return the size of the uploaded file without consuming the stream."""
+
+    stream = filestorage.stream
+    position = stream.tell()
+    stream.seek(0, os.SEEK_END)
+    size = stream.tell()
+    stream.seek(position)
+    return size
+
+
 def allowed_file(filename):
     """Check if a filename has an allowed image extension."""
 
@@ -885,7 +896,13 @@ def is_safe_pdf_upload(file):
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
     """Return JSON error when uploaded file exceeds limit."""
-    return jsonify({"error": "Arquivo excede o tamanho permitido"}), 413
+    max_len = current_app.config.get("MAX_CONTENT_LENGTH")
+    if max_len:
+        limit_mb = max_len / (1024 * 1024)
+        message = f"Arquivo excede o tamanho permitido ({limit_mb:.0f} MB)."
+    else:
+        message = "Arquivo excede o tamanho permitido."
+    return jsonify({"error": message}), 413
 
 
 def format_phone(digits: str) -> str:
@@ -941,6 +958,14 @@ def upload_image():
         return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
 
     filename = secure_filename(file.filename)
+    file_size = _get_file_size_bytes(file)
+    soft_limit_mb = current_app.config.get("WYSIWYG_UPLOAD_SOFT_LIMIT_MB")
+    if soft_limit_mb and file_size > soft_limit_mb * 1024 * 1024:
+        current_app.logger.warning(
+            "Upload de imagem excedeu limite orientativo: %s (%.2f MB)",
+            filename,
+            file_size / (1024 * 1024),
+        )
     unique_name = f"{uuid4().hex}_{filename}"
     upload_folder = os.path.join(current_app.root_path, "static", "uploads")
     file_path = os.path.join(upload_folder, unique_name)
@@ -978,6 +1003,14 @@ def upload_file():
             return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
 
     filename = secure_filename(file.filename)
+    file_size = _get_file_size_bytes(file)
+    soft_limit_mb = current_app.config.get("WYSIWYG_UPLOAD_SOFT_LIMIT_MB")
+    if soft_limit_mb and file_size > soft_limit_mb * 1024 * 1024:
+        current_app.logger.warning(
+            "Upload de arquivo excedeu limite orientativo: %s (%.2f MB)",
+            filename,
+            file_size / (1024 * 1024),
+        )
     unique_name = f"{uuid4().hex}_{filename}"
     upload_folder = os.path.join(current_app.root_path, "static", "uploads")
     file_path = os.path.join(upload_folder, unique_name)
@@ -2432,7 +2465,7 @@ def procedimentos_operacionais():
         query = query.filter(
             sa.or_(
                 OperationalProcedure.title.ilike(pattern),
-                OperationalProcedure.description.ilike(pattern),
+                OperationalProcedure.descricao.ilike(pattern),
             )
         )
 
@@ -2444,7 +2477,7 @@ def procedimentos_operacionais():
         if form.validate_on_submit():
             proc = OperationalProcedure(
                 title=form.title.data,
-                description= sanitize_html(form.description.data or "") or None,
+                descricao=sanitize_html(form.descricao.data or "") or None,
                 created_by_id=current_user.id,
             )
             db.session.add(proc)
@@ -2484,7 +2517,7 @@ def procedimentos_operacionais_json(proc_id: int):
     return jsonify({
         "id": proc.id,
         "title": proc.title,
-        "description": proc.description or "",
+        "descricao": proc.descricao or "",
         "updated_at": proc.updated_at.strftime('%d/%m/%Y às %H:%M') if proc.updated_at else None
     })
 
@@ -2500,12 +2533,12 @@ def procedimentos_operacionais_editar(proc_id: int):
     form = OperationalProcedureForm()
     if request.method == "GET":
         form.title.data = proc.title
-        form.description.data = proc.description or ""
+        form.descricao.data = proc.descricao or ""
         return render_template("procedimento_edit.html", procedure=proc, form=form)
 
     if form.validate_on_submit():
         proc.title = form.title.data
-        proc.description = sanitize_html(form.description.data or "") or None
+        proc.descricao = sanitize_html(form.descricao.data or "") or None
         db.session.commit()
         flash("Procedimento atualizado com sucesso.", "success")
         return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc.id))
