@@ -3023,7 +3023,10 @@ def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], st
     candidates: list[dict[str, Any]] = []
     seen_ids: set[int] = set()
     for participant in meeting.participantes:
-        seen_ids.add(participant.id_usuario)
+        participant_id = participant.id_usuario
+        if participant_id in seen_ids:
+            continue
+        seen_ids.add(participant_id)
         name = (
             participant.usuario.name
             if participant.usuario and participant.usuario.name
@@ -3031,35 +3034,18 @@ def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], st
         )
         candidates.append(
             {
-                "id": participant.id_usuario,
+                "id": participant_id,
                 "name": name,
                 "username": participant.username_usuario,
                 "email": participant.usuario.email if participant.usuario else None,
             }
         )
-    creator_name = meeting.criador.name or meeting.criador.username
-    creator_entry = {
-        "id": meeting.criador_id,
-        "name": creator_name,
-        "username": meeting.criador.username,
-        "email": meeting.criador.email,
-    }
-    if meeting.criador_id not in seen_ids:
-        candidates.append(creator_entry)
-        seen_ids.add(meeting.criador_id)
-    if meeting.meet_host_id and meeting.meet_host_id not in seen_ids:
-        host_obj = meeting.meet_host
-        host_name = (
-            host_obj.name if host_obj and host_obj.name else (host_obj.username if host_obj else creator_name)
-        )
-        candidates.append(
-            {
-                "id": meeting.meet_host_id,
-                "name": host_name,
-                "username": host_obj.username if host_obj else "",
-                "email": host_obj.email if host_obj else None,
-            }
-        )
+    creator_obj = meeting.criador
+    creator_name = (
+        creator_obj.name
+        if creator_obj and creator_obj.name
+        else (creator_obj.username if creator_obj else "")
+    )
     candidates.sort(key=lambda entry: (entry["name"] or "").lower())
     return candidates, creator_name
 
@@ -3194,7 +3180,7 @@ def sala_reunioes():
                     "meet_link": meet_link,
                     "subject": meeting.assunto,
                     "host_candidates": participant_options,
-                    "current_host_id": meeting.meet_host_id or 0,
+                    "current_host_id": meeting.meet_host_id,
                     "meet_settings": settings_dict,
                     "creator_name": creator_name,
                     "can_configure": can_configure,
@@ -3229,9 +3215,7 @@ def configure_meet_call(meeting_id: int):
         abort(403)
     form = MeetConfigurationForm()
     candidate_entries, creator_name = _meeting_host_candidates(meeting)
-    host_choices = [(0, f"Conta padrão ({creator_name})")] + [
-        (entry["id"], entry["name"]) for entry in candidate_entries
-    ]
+    host_choices = [(entry["id"], entry["name"]) for entry in candidate_entries]
     form.host_id.choices = host_choices
     form.meeting_id.data = str(meeting.id)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -3246,53 +3230,62 @@ def configure_meet_call(meeting_id: int):
             form.meeting_id.errors.append(error_message)
         else:
             selected_host_raw = form.host_id.data
-            allowed_host_ids = {choice for choice, _ in host_choices if choice}
-            if selected_host_raw and selected_host_raw not in allowed_host_ids:
+            allowed_host_ids = {choice for choice, _ in host_choices}
+            if not allowed_host_ids:
+                form.host_id.errors.append(
+                    "Adicione participantes à reunião antes de definir o proprietário."
+                )
+            elif selected_host_raw not in allowed_host_ids:
                 form.host_id.errors.append("Selecione um proprietário válido para o Meet.")
             else:
-                host_id = selected_host_raw or None
+                host_id = selected_host_raw
                 settings_payload = {
                     "quick_access_enabled": form.quick_access_enabled.data,
                     "mute_on_join": form.mute_on_join.data,
                     "allow_chat": form.allow_chat.data,
                     "allow_screen_share": form.allow_screen_share.data,
                 }
-                (
-                    normalized_settings,
-                    host,
-                    sync_result,
-                ) = update_meeting_configuration(
-                    meeting, host_id, settings_payload
-                )
-                host_name = (
-                    host.name or host.username
-                    if host
-                    else creator_name
-                )
-                warning_message = None
-                if sync_result is False:
-                    warning_message = (
-                        "Não foi possível aplicar as configurações do Meet automaticamente. "
-                        "Verifique manualmente na sala do Google Meet."
+                try:
+                    (
+                        normalized_settings,
+                        host,
+                        sync_result,
+                    ) = update_meeting_configuration(
+                        meeting, host_id, settings_payload
                     )
-                response_payload = {
-                    "success": True,
-                    "message": "Configurações do Meet atualizadas com sucesso!",
-                    "meet_settings": normalized_settings,
-                    "meet_host": {
-                        "id": host.id if host else None,
-                        "name": host_name,
-                    },
-                    "meet_settings_applied": sync_result is not False,
-                }
-                if warning_message:
-                    response_payload["warning"] = warning_message
-                if is_ajax:
-                    return jsonify(response_payload)
-                if warning_message:
-                    flash(warning_message, "warning")
-                flash(response_payload["message"], "success")
-                return redirect(url_for("sala_reunioes"))
+                except ValueError as exc:
+                    form.host_id.errors.append(str(exc))
+                else:
+                    host_name = (
+                        host.name or host.username
+                        if host
+                        else ""
+                    )
+                    warning_message = None
+                    if sync_result is False:
+                        warning_message = (
+                            "Não foi possível aplicar as configurações do Meet automaticamente. "
+                            "Verifique manualmente na sala do Google Meet."
+                        )
+                    response_payload = {
+                        "success": True,
+                        "message": "Configurações do Meet atualizadas com sucesso!",
+                        "meet_settings": normalized_settings,
+                        "meet_host": {
+                            "id": host.id if host else None,
+                            "name": host_name,
+                        },
+                        "meet_settings_applied": sync_result is not False,
+                    }
+                    if warning_message:
+                        response_payload["warning"] = warning_message
+                    if is_ajax:
+                        return jsonify(response_payload)
+                    if warning_message:
+                        flash(warning_message, "warning")
+                    flash(response_payload["message"], "success")
+                    return redirect(url_for("sala_reunioes"))
+
     if is_ajax:
         return jsonify({"success": False, "errors": form.errors}), 400
     for field_errors in form.errors.values():

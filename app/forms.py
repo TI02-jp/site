@@ -559,7 +559,7 @@ class MeetConfigurationForm(FlaskForm):
         choices=[],
         coerce=int,
         validators=[InputRequired()],
-        default=0,
+        default=None,
     )
     quick_access_enabled = BooleanField("Acesso rápido habilitado", default=True)
     mute_on_join = BooleanField("Silenciar participantes ao entrar")
