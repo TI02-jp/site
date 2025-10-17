@@ -341,9 +341,11 @@ def _meeting_participant_metadata(meeting: Reuniao):
     participant_emails: list[str] = []
     host_candidates: list[dict[str, Any]] = []
     seen_host_ids: set[int] = set()
+    participant_id_set: set[int] = set()
     for participant in meeting.participantes:
         participant_usernames.append(participant.username_usuario)
         participant_ids.append(participant.id_usuario)
+        participant_id_set.add(participant.id_usuario)
         if participant.usuario and participant.usuario.name:
             display_name = participant.usuario.name
         else:
@@ -368,7 +370,10 @@ def _meeting_participant_metadata(meeting: Reuniao):
         creator_username = meeting.criador.username
         if meeting.criador.email:
             participant_emails.append(meeting.criador.email)
-        if meeting.criador.id not in seen_host_ids:
+        if (
+            meeting.criador.id in participant_id_set
+            and meeting.criador.id not in seen_host_ids
+        ):
             host_candidates.append({"id": meeting.criador.id, "name": creator_name})
             seen_host_ids.add(meeting.criador.id)
     host_display: str | None = None
@@ -380,11 +385,13 @@ def _meeting_participant_metadata(meeting: Reuniao):
                 if detail["id"] == meeting.meet_host_id:
                     host_display = detail["name"]
                     break
-        if meeting.meet_host_id not in seen_host_ids and host_display:
+        if (
+            meeting.meet_host_id in participant_id_set
+            and meeting.meet_host_id not in seen_host_ids
+            and host_display
+        ):
             host_candidates.append({"id": meeting.meet_host_id, "name": host_display})
             seen_host_ids.add(meeting.meet_host_id)
-    elif creator_name:
-        host_display = creator_name
     return {
         "usernames": participant_usernames,
         "ids": participant_ids,
@@ -917,12 +924,14 @@ def update_meeting_configuration(
     normalized_settings = _normalize_meet_settings(settings)
     meeting.meet_settings = normalized_settings
     host: User | None = None
-    if host_id:
+    participant_ids = {p.id_usuario for p in meeting.participantes}
+    if host_id is not None:
+        if host_id not in participant_ids:
+            raise ValueError("O proprietário da sala precisa ser um participante da reunião.")
         host = User.query.get(host_id)
         if host is None:
-            meeting.meet_host_id = None
-        else:
-            meeting.meet_host_id = host.id
+            raise ValueError("Participante selecionado não foi encontrado.")
+        meeting.meet_host_id = host.id
     else:
         meeting.meet_host_id = None
     db.session.commit()

@@ -704,19 +704,23 @@
         }
         if (meetConfigHostSelect) {
             meetConfigHostSelect.innerHTML = '';
-            var defaultOption = document.createElement('option');
-            defaultOption.value = '0';
-            var defaultLabel = config.creator_name ? `Conta padrão (${config.creator_name})` : 'Conta padrão';
-            defaultOption.textContent = defaultLabel;
-            meetConfigHostSelect.appendChild(defaultOption);
+            var placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = 'Selecione um participante';
+            placeholderOption.disabled = true;
+            if (config.current_host_id === null || typeof config.current_host_id === 'undefined') {
+                placeholderOption.selected = true;
+            }
+            meetConfigHostSelect.appendChild(placeholderOption);
             (config.host_candidates || []).forEach(function(entry) {
                 var option = document.createElement('option');
                 option.value = String(entry.id);
                 option.textContent = entry.name || entry.username || entry.email || `ID ${entry.id}`;
                 meetConfigHostSelect.appendChild(option);
             });
-            var desiredHost = config.current_host_id ? String(config.current_host_id) : '0';
-            meetConfigHostSelect.value = desiredHost;
+            if (config.current_host_id !== null && typeof config.current_host_id !== 'undefined') {
+                meetConfigHostSelect.value = String(config.current_host_id);
+            }
             meetConfigHostSelect.disabled = config.can_configure === false;
         }
         var settings = config.meet_settings || {};
@@ -1070,11 +1074,15 @@
         }
         if (event.extendedProps.meet_link && event.extendedProps.can_configure) {
             configureMeetBtn.classList.remove('d-none');
+            var currentHostId = event.extendedProps.meet_host_id;
+            if (typeof currentHostId === 'undefined') {
+                currentHostId = null;
+            }
             var configPayload = {
                 meeting_id: event.extendedProps.meeting_id,
                 meet_link: event.extendedProps.meet_link,
                 host_candidates: event.extendedProps.host_candidates || [],
-                current_host_id: event.extendedProps.meet_host_id || 0,
+                current_host_id: currentHostId,
                 meet_settings: event.extendedProps.meet_settings || {},
                 creator_name: event.extendedProps.creator,
                 subject: event.title,
@@ -1640,7 +1648,8 @@
                         existing.setExtendedProp('participant_details', evData.participant_details || []);
                         existing.setExtendedProp('host_candidates', evData.host_candidates || []);
                         existing.setExtendedProp('meet_settings', evData.meet_settings || {});
-                        existing.setExtendedProp('meet_host_id', evData.meet_host_id || 0);
+                        var updatedHostId = Object.prototype.hasOwnProperty.call(evData, 'meet_host_id') ? evData.meet_host_id : null;
+                        existing.setExtendedProp('meet_host_id', updatedHostId);
                         existing.setExtendedProp('meet_host_name', evData.meet_host_name || '');
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
