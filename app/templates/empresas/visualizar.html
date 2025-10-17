@@ -160,6 +160,29 @@
             <div class="row g-4 mt-2">
                 <div class="col-12">
                     <div class="info-group">
+                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contatos do Cliente</h6>
+                        <div class="info-value">
+                            {% if empresa.contatos_list %}
+                                <ul class="list-unstyled mb-0">
+                                    {% for contato in empresa.contatos_list %}
+                                        <li class="mb-3">
+                                            {% if contato.nome %}<div class="fw-semibold text-start">{{ contato.nome }}</div>{% endif %}
+                                            {% for meio in contato.meios %}
+                                                <div class="text-start text-nowrap"><span class="fw-semibold">{{ meio.tipo|capitalize }}</span> - {{ meio.endereco }}</div>
+                                            {% endfor %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-4 mt-2">
+                <div class="col-12">
+                    <div class="info-group">
                         <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-building me-2"></i>Acessos do Cliente</h6>
                         {% if empresa.acessos %}
                             <div class="row g-2 fw-semibold mb-1">
@@ -196,29 +219,6 @@
                         {% else %}
                             <div class="info-item"><span class="text-muted">Não informado</span></div>
                         {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="row g-4 mt-2">
-                <div class="col-12">
-                    <div class="info-group">
-                        <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill me-2"></i>Contatos do Cliente</h6>
-                        <div class="info-value">
-                            {% if empresa.contatos_list %}
-                                <ul class="list-unstyled mb-0">
-                                    {% for contato in empresa.contatos_list %}
-                                        <li class="mb-3">
-                                            {% if contato.nome %}<div class="fw-semibold text-start">{{ contato.nome }}</div>{% endif %}
-                                            {% for meio in contato.meios %}
-                                                <div class="text-start text-nowrap"><span class="fw-semibold">{{ meio.tipo|capitalize }}</span> - {{ meio.endereco }}</div>
-                                            {% endfor %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <span class="text-muted">Não informado</span>
-                            {% endif %}
-                        </div>
                     </div>
                 </div>
             </div>
