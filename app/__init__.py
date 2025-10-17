@@ -521,12 +521,33 @@ with app.app_context():
                         )
                     )
 
-        if db.engine.dialect.name == "mysql" and inspector.has_table("operational_procedures"):
-            descricao_column = next(
-                (col for col in inspector.get_columns("operational_procedures") if col["name"] == "descricao"),
-                None,
-            )
-            if descricao_column and "longtext" not in str(descricao_column["type"]).lower():
+        if inspector.has_table("operational_procedures"):
+            procedure_columns = {
+                col["name"]: col for col in inspector.get_columns("operational_procedures")
+            }
+
+            descricao_column = procedure_columns.get("descricao")
+            description_column = procedure_columns.get("description")
+
+            if (
+                db.engine.dialect.name == "mysql"
+                and not descricao_column
+                and description_column
+            ):
+                # Legacy databases still use the old ``description`` column name; rename it for compatibility.
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE operational_procedures CHANGE COLUMN description descricao LONGTEXT NULL"
+                        )
+                    )
+                descricao_column = description_column
+
+            if (
+                db.engine.dialect.name == "mysql"
+                and descricao_column
+                and "longtext" not in str(descricao_column["type"]).lower()
+            ):
                 with db.engine.begin() as conn:
                     conn.execute(
                         sa.text(
