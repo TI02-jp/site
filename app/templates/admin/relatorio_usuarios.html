@@ -1,37 +1,86 @@
 {% extends "base.html" %}
 
-{% block title %}Relatório de Usuários{% endblock %}
+{% block title %}Relatorio de Usuarios{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Usuários por Tipo e Status</h1>
-    <div id="chart-container">
-        {{ chart_div|safe }}
+    <h1 class="mb-2">Usuarios por Tipo e Status</h1>
+    <p class="text-muted small mb-3">Total de usuarios: {{ users_chart.total }}</p>
+    <div class="rounded border bg-white" style="height: 260px;">
+        <canvas id="user-role-chart" class="p-3"></canvas>
     </div>
-    <div id="user-list" class="mt-4 d-flex justify-content-center"></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script>
-    const usersBySlice = {{ users_by_slice|tojson }};
-    const chart = document.getElementById('user-role-chart');
-    if (chart) {
-        chart.on('plotly_click', function(data){
-            const label = data.points[0].label;
-            const users = usersBySlice[label] || [];
-            const container = document.getElementById('user-list');
-            if (!users.length) {
-                container.innerHTML = '<p class="text-center">Nenhum usuário encontrado.</p>';
-                return;
-            }
-            let html = '<div class="table-responsive"><table class="table table-striped w-auto text-start"><thead><tr><th>Nome</th><th>Email</th><th>Usuário</th></tr></thead><tbody>';
-            users.forEach(u => {
-                const name = u.name ? u.name.toUpperCase() : '';
-                const email = u.email ? u.email.toLowerCase() : '';
-                const username = u.username ? u.username.toLowerCase() : '';
-                html += `<tr><td>${name}</td><td>${email}</td><td>${username}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
-            container.innerHTML = html;
-        });
+    const chartPalette = ['#2563eb','#22c55e','#f97316','#a855f7','#facc15','#38bdf8','#ef4444','#14b8a6','#f472b6','#8b5cf6','#0ea5e9','#65a30d'];
+
+    function shadeColor(color, percent) {
+        const num = parseInt(color.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        let r = (num >> 16) + amt;
+        let g = (num >> 8 & 0x00ff) + amt;
+        let b = (num & 0x0000ff) + amt;
+        r = Math.max(Math.min(r, 255), 0);
+        g = Math.max(Math.min(g, 255), 0);
+        b = Math.max(Math.min(b, 255), 0);
+        return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
     }
+
+    function buildPalette(size) {
+        const colors = [];
+        for (let i = 0; i < size; i++) {
+            colors.push(chartPalette[i % chartPalette.length]);
+        }
+        return colors;
+    }
+
+    (function createChart() {
+        const canvas = document.getElementById('user-role-chart');
+        const config = {{ users_chart|tojson }};
+        if (!canvas || !config) {
+            return;
+        }
+        const colors = buildPalette(config.labels?.length || 0);
+        new Chart(canvas, {
+            type: config.type || 'doughnut',
+            data: {
+                labels: config.labels || [],
+                datasets: [{
+                    label: config.datasetLabel || '',
+                    data: config.values || [],
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors.map(color => shadeColor(color, 12)),
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                animation: { duration: 320, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, padding: 12, font: { size: 11 } },
+                    },
+                    title: {
+                        display: Boolean(config.title),
+                        text: config.title,
+                        font: { size: 16, weight: '600' },
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleFont: { size: 12, weight: '600' },
+                        bodyFont: { size: 11 },
+                        padding: 10,
+                    },
+                },
+            },
+        });
+    })();
 </script>
 {% endblock %}

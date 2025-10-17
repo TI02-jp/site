@@ -114,8 +114,6 @@ from app.services.general_calendar import (
     delete_calendar_event,
     serialize_events_for_calendar,
 )
-import plotly.graph_objects as go
-from plotly.colors import qualitative
 from werkzeug.exceptions import RequestEntityTooLarge
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -942,7 +940,6 @@ def normalize_contatos(contatos):
         contato["meios"].append({"tipo": tipo, "endereco": endereco})
     return list(grouped.values())
 
-
 @app.route("/upload_image", methods=["POST"])
 @login_required
 def upload_image():
@@ -978,7 +975,6 @@ def upload_image():
     except Exception as exc:
         current_app.logger.exception("Falha ao salvar upload de imagem", exc_info=exc)
         return jsonify({"error": "Erro no servidor ao salvar arquivo"}), 500
-
 
 @app.route("/upload_file", methods=["POST"])
 @login_required
@@ -1119,7 +1115,6 @@ def inject_notification_counts():
     unread = _get_unread_notifications_count(current_user.id)
     return {"unread_notifications_count": unread}
 
-
 @app.route("/")
 def index():
     """Redirect users to the appropriate first page."""
@@ -1132,13 +1127,11 @@ def index():
         return redirect(url_for("home"))
     return redirect(url_for("login"))
 
-
 @app.route("/home")
 @login_required
 def home():
     """Render the authenticated home page."""
     return render_template("home.html")
-
 
 @app.route("/announcements", methods=["GET", "POST"])
 @login_required
@@ -1271,7 +1264,6 @@ def announcements():
         history_back_url=None,
     )
 
-
 @app.route("/announcements/history", methods=["GET"])
 @login_required
 def announcement_history():
@@ -1360,7 +1352,6 @@ def announcement_history():
         history_back_url=url_for("announcements"),
     )
 
-
 @app.route("/announcements/<int:announcement_id>/update", methods=["POST"])
 @login_required
 def update_announcement(announcement_id: int):
@@ -1432,7 +1423,6 @@ def update_announcement(announcement_id: int):
     )
     return redirect(url_for("announcements"))
 
-
 @app.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
 @login_required
 def delete_announcement(announcement_id: int):
@@ -1463,7 +1453,6 @@ def delete_announcement(announcement_id: int):
     flash("Comunicado removido com sucesso.", "success")
     return redirect(url_for("announcements"))
 
-
 @app.route("/announcements/<int:announcement_id>/read", methods=["POST"])
 @login_required
 def mark_announcement_read(announcement_id: int):
@@ -1492,7 +1481,6 @@ def mark_announcement_read(announcement_id: int):
     read = bool(updated or already_read or not notifications)
 
     return jsonify({"status": "ok", "read": read})
-
 
 @app.route("/diretoria/acordos", methods=["GET", "POST"])
 @login_required
@@ -1713,7 +1701,6 @@ def diretoria_acordos():
         search_entries=search_entries,
     )
 
-
 @app.route("/diretoria/acordos/<int:agreement_id>/excluir", methods=["POST"])
 @login_required
 def diretoria_acordos_excluir(agreement_id: int):
@@ -1734,7 +1721,6 @@ def diretoria_acordos_excluir(agreement_id: int):
     flash("Acordo removido com sucesso.", "success")
 
     return redirect(url_for("diretoria_acordos", user_id=redirect_user_id))
-
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])
 @login_required
@@ -1775,7 +1761,6 @@ def diretoria_eventos():
         )
 
     return render_template("diretoria/eventos.html")
-
 
 @app.route("/diretoria/eventos/<int:event_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -1855,7 +1840,6 @@ def diretoria_eventos_editar(event_id: int):
 
     return render_template("diretoria/eventos.html", event_data=event_payload)
 
-
 @app.route("/diretoria/eventos/<int:event_id>/visualizar")
 @login_required
 def diretoria_eventos_visualizar(event_id: int):
@@ -1927,7 +1911,6 @@ def diretoria_eventos_visualizar(event_id: int):
         updated_at_display=_format_event_timestamp(event.updated_at),
     )
 
-
 @app.route("/diretoria/eventos/lista")
 @login_required
 def diretoria_eventos_lista():
@@ -1963,7 +1946,6 @@ def diretoria_eventos_lista():
         category_labels=EVENT_CATEGORY_LABELS,
     )
 
-
 @app.route("/diretoria/eventos/<int:event_id>/excluir", methods=["POST"])
 @login_required
 def diretoria_eventos_excluir(event_id: int):
@@ -1989,7 +1971,6 @@ def diretoria_eventos_excluir(event_id: int):
     flash(f'Evento "{event_name}" removido com sucesso.', "success")
 
     return redirect(url_for("diretoria_eventos_lista"))
-
 
 @app.route("/cursos", methods=["GET", "POST"])
 @login_required
@@ -2278,7 +2259,6 @@ def _build_acessos_context(
         "per_page": per_page,
     }
 
-
 @app.route("/acessos")
 @login_required
 def acessos():
@@ -2352,7 +2332,6 @@ def _handle_access_shortcut_submission(form: "AccessLinkForm"):
     context = _build_acessos_context(form=form, open_modal=True)
     return render_template("acessos.html", **context)
 
-
 @app.route("/acessos/novo", methods=["GET", "POST"])
 @login_required
 def acessos_novo():
@@ -2368,7 +2347,6 @@ def acessos_novo():
     form.category.choices = _access_category_choices()
     return _handle_access_shortcut_submission(form)
 
-
 @app.route("/acessos/<categoria_slug>")
 @login_required
 def acessos_categoria(categoria_slug: str):
@@ -2378,7 +2356,6 @@ def acessos_categoria(categoria_slug: str):
         abort(404)
 
     return redirect(url_for("acessos"))
-
 
 @app.route("/acessos/<categoria_slug>/novo", methods=["GET", "POST"])
 @login_required
@@ -2403,7 +2380,6 @@ def acessos_categoria_novo(categoria_slug: str):
     if not form.category.data:
         form.category.data = categoria_slug
     return _handle_access_shortcut_submission(form)
-
 
 @app.route("/acessos/<int:link_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -2434,7 +2410,6 @@ def acessos_editar(link_id: int):
     context["editing_link"] = link
     return render_template("acessos.html", **context)
 
-
 @app.route("/acessos/<int:link_id>/excluir", methods=["POST"])
 @login_required
 def acessos_excluir(link_id: int):
@@ -2449,7 +2424,6 @@ def acessos_excluir(link_id: int):
     db.session.commit()
     flash(f'Atalho "{label}" excluído com sucesso!', "success")
     return redirect(url_for("acessos"))
-
 
 @app.route("/procedimentos", methods=["GET", "POST"])
 @login_required
@@ -2493,13 +2467,11 @@ def procedimentos_operacionais():
         search_term=search_term,
     )
 
-
 @app.route("/procedimentos/<int:proc_id>")
 @login_required
 def procedimentos_operacionais_redirect(proc_id: int):
     """Compatibilidade: redireciona para a visualização dedicada."""
     return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc_id))
-
 
 @app.route("/procedimentos/<int:proc_id>/visualizar")
 @login_required
@@ -2507,7 +2479,6 @@ def procedimentos_operacionais_ver(proc_id: int):
     """Exibe somente a visualização do procedimento."""
     proc = OperationalProcedure.query.get_or_404(proc_id)
     return render_template("procedimento_view.html", procedure=proc)
-
 
 @app.route("/procedimentos/<int:proc_id>/json")
 @login_required
@@ -2520,7 +2491,6 @@ def procedimentos_operacionais_json(proc_id: int):
         "descricao": proc.descricao or "",
         "updated_at": proc.updated_at.strftime('%d/%m/%Y às %H:%M') if proc.updated_at else None
     })
-
 
 @app.route("/procedimentos/<int:proc_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -2546,7 +2516,6 @@ def procedimentos_operacionais_editar(proc_id: int):
     flash("Não foi possível atualizar. Verifique os campos.", "danger")
     return redirect(url_for("procedimentos_operacionais_editar", proc_id=proc.id))
 
-
 @app.route("/procedimentos/<int:proc_id>/excluir", methods=["POST"])
 @login_required
 def procedimentos_operacionais_excluir(proc_id: int):
@@ -2560,7 +2529,6 @@ def procedimentos_operacionais_excluir(proc_id: int):
     db.session.commit()
     flash("Procedimento excluído com sucesso.", "success")
     return redirect(url_for("procedimentos_operacionais"))
-
 
 @app.route("/procedimentos/search")
 @login_required
@@ -2576,7 +2544,6 @@ def procedimentos_search():
         {"id": p.id, "title": p.title, "url": url_for("procedimentos_operacionais_ver", proc_id=p.id)}
         for p in results
     ])
-
 
 @app.route("/ping")
 @login_required
@@ -2724,7 +2691,6 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
     db.session.bulk_save_objects(notifications)
     _invalidate_notification_cache()
 
-
 @app.route("/notifications", methods=["GET"])
 @login_required
 def list_notifications():
@@ -2732,7 +2698,6 @@ def list_notifications():
 
     items, unread_total = _get_user_notification_items(limit=20)
     return jsonify({"notifications": items, "unread": unread_total})
-
 
 @app.route("/notifications/stream")
 @login_required
@@ -2798,7 +2763,6 @@ def notifications_stream():
     response.headers["Cache-Control"] = "no-cache"
     return response
 
-
 @app.route("/notificacoes")
 @login_required
 def notifications_center():
@@ -2810,7 +2774,6 @@ def notifications_center():
         notifications=items,
         unread_total=unread_total,
     )
-
 
 @app.route("/notifications/<int:notification_id>/read", methods=["POST"])
 @login_required
@@ -2826,7 +2789,6 @@ def mark_notification_read(notification_id):
         db.session.commit()
         _invalidate_notification_cache(current_user.id)
     return jsonify({"success": True})
-
 
 @app.route("/notifications/read-all", methods=["POST"])
 @login_required
@@ -2856,7 +2818,6 @@ def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
     render_kw["autocomplete"] = "off"
     form.senha.render_kw = render_kw
     return form
-
 
 @app.route("/consultorias", methods=["GET", "POST"])
 @login_required
@@ -2960,7 +2921,6 @@ def consultorias():
         editing_consultoria=editing_consultoria,
     )
 
-
 @app.route("/calendario-colaboradores", methods=["GET", "POST"])
 @login_required
 def calendario_colaboradores():
@@ -2998,7 +2958,6 @@ def calendario_colaboradores():
         show_modal=show_modal,
         calendar_timezone=calendar_tz.key,
     )
-
 
 @app.route("/calendario-eventos/<int:event_id>/delete", methods=["POST"])
 @login_required
@@ -3048,7 +3007,6 @@ def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], st
     )
     candidates.sort(key=lambda entry: (entry["name"] or "").lower())
     return candidates, creator_name
-
 
 @app.route("/sala-reunioes", methods=["GET", "POST"])
 @login_required
@@ -3204,7 +3162,6 @@ def sala_reunioes():
         reschedule_statuses=reschedule_statuses,
     )
 
-
 @app.route("/reuniao/<int:meeting_id>/meet-config", methods=["POST"])
 @login_required
 def configure_meet_call(meeting_id: int):
@@ -3292,7 +3249,6 @@ def configure_meet_call(meeting_id: int):
         for error in field_errors:
             flash(error, "danger")
     return redirect(url_for("sala_reunioes"))
-
 
 @app.route("/reuniao/<int:meeting_id>/status", methods=["POST"])
 @login_required
@@ -3391,7 +3347,6 @@ def update_meeting_status(meeting_id: int):
     message = f"Status atualizado para {get_status_label(new_status)}."
     return jsonify({"success": True, "event": event_payload, "message": message})
 
-
 @app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])
 @login_required
 def delete_reuniao(meeting_id):
@@ -3416,7 +3371,6 @@ def delete_reuniao(meeting_id):
         flash("Não foi possível remover o evento do Google Calendar.", "danger")
     return redirect(url_for("sala_reunioes"))
 
-
 @app.route("/consultorias/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_consultoria():
@@ -3438,7 +3392,6 @@ def cadastro_consultoria():
             for error in errors:
                 flash(error, "warning")
     return redirect(url_for("consultorias", open_consultoria_modal="1"))
-
 
 @app.route("/consultorias/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
@@ -3479,7 +3432,6 @@ def editar_consultoria_cadastro(id):
             edit_consultoria_id=str(consultoria.id),
         )
     )
-
 
 @app.route("/consultorias/setores", methods=["GET", "POST"])
 @login_required
@@ -3567,7 +3519,6 @@ def setores():
         editing_setor=editing_setor,
     )
 
-
 @app.route("/consultorias/setores/cadastro", methods=["GET", "POST"])
 @admin_required
 def cadastro_setor():
@@ -3594,7 +3545,6 @@ def cadastro_setor():
             for error in errors:
                 flash(error, "warning")
     return redirect(url_for("setores", open_setor_modal="1"))
-
 
 @app.route("/consultorias/setores/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
@@ -3632,14 +3582,12 @@ def editar_setor(id):
         )
     )
 
-
 @app.route("/tags")
 @login_required
 def tags():
     """List registered tags."""
     tags = Tag.query.all()
     return render_template("tags.html", tags=tags)
-
 
 @app.route("/tags/cadastro", methods=["GET", "POST"])
 @admin_required
@@ -3653,7 +3601,6 @@ def cadastro_tag():
         flash("Tag registrada com sucesso.", "success")
         return redirect(url_for("tags"))
     return render_template("cadastro_tag.html", form=form)
-
 
 @app.route("/tags/editar/<int:id>", methods=["GET", "POST"])
 @admin_required
@@ -3677,7 +3624,6 @@ def editar_tag(id):
             else:
                 flash("Informe um nome válido para a tag.", "warning")
     return redirect(url_for("list_users", open_tag_modal="1", edit_tag_id=tag.id))
-
 
 @app.route("/consultorias/relatorios")
 @admin_required
@@ -3717,61 +3663,33 @@ def relatorios_consultorias():
         .all()
     )
 
-    labels_consultoria = [c or "—" for c, _ in por_consultoria]
+    labels_consultoria = [c or "N/D" for c, _ in por_consultoria]
     counts_consultoria = [total for _, total in por_consultoria]
-    fig_cons = go.Figure(
-        data=[
-            go.Bar(
-                x=labels_consultoria,
-                y=counts_consultoria,
-                marker_color=qualitative.Pastel,
-            )
-        ]
-    )
-    fig_cons.update_layout(
-        title_text="Inclusões por consultoria",
-        template="seaborn",
-        xaxis_title="Consultoria",
-        yaxis_title="Total",
-    )
-    chart_consultoria = fig_cons.to_html(full_html=False, div_id="consultoria-chart")
+    chart_consultoria = {
+        "type": "bar",
+        "title": "Inclusões por consultoria",
+        "datasetLabel": "Total de inclusões",
+        "labels": labels_consultoria,
+        "values": counts_consultoria,
+        "xTitle": "Consultoria",
+        "yTitle": "Total",
+        "total": sum(counts_consultoria),
+    }
 
-    labels_usuario = [u or "—" for u, _ in por_usuario]
+    labels_usuario = [u or "N/D" for u, _ in por_usuario]
     counts_usuario = [total for _, total in por_usuario]
-    fig_user = go.Figure(
-        data=[
-            go.Bar(x=labels_usuario, y=counts_usuario, marker_color=qualitative.Pastel)
-        ]
-    )
-    fig_user.update_layout(
-        title_text="Inclusões por usuário",
-        template="seaborn",
-        xaxis_title="Usuário",
-        yaxis_title="Total",
-    )
-    chart_usuario = fig_user.to_html(full_html=False, div_id="usuario-chart")
+    chart_usuario = {
+        "type": "bar",
+        "title": "Inclusões por usuário",
+        "datasetLabel": "Total de inclusões",
+        "labels": labels_usuario,
+        "values": counts_usuario,
+        "xTitle": "Usuário",
+        "yTitle": "Total",
+        "total": sum(counts_usuario),
+    }
 
     inclusoes = query.all()
-    inclusoes_por_consultoria = {}
-    inclusoes_por_usuario = {}
-    for inc in inclusoes:
-        label_cons = inc.consultoria or "—"
-        inclusoes_por_consultoria.setdefault(label_cons, []).append(
-            {
-                "usuario": inc.usuario,
-                "pergunta": inc.pergunta,
-                "data": inc.data.strftime("%d/%m/%Y") if inc.data else "",
-            }
-        )
-        label_user = inc.usuario or "—"
-        inclusoes_por_usuario.setdefault(label_user, []).append(
-            {
-                "consultoria": inc.consultoria,
-                "pergunta": inc.pergunta,
-                "data": inc.data.strftime("%d/%m/%Y") if inc.data else "",
-            }
-        )
-
     por_data = []
     if inicio or fim:
         por_data = (
@@ -3786,13 +3704,10 @@ def relatorios_consultorias():
         "relatorios_consultorias.html",
         chart_consultoria=chart_consultoria,
         chart_usuario=chart_usuario,
-        inclusoes_por_consultoria=inclusoes_por_consultoria,
-        inclusoes_por_usuario=inclusoes_por_usuario,
         por_data=por_data,
         inicio=inicio.strftime("%Y-%m-%d") if inicio else "",
         fim=fim.strftime("%Y-%m-%d") if fim else "",
     )
-
 
 @app.route("/consultorias/inclusoes")
 @login_required
@@ -3820,7 +3735,6 @@ def inclusoes():
         pagination=pagination,
         search=search_raw,
     )
-
 
 @app.route("/consultorias/inclusoes/nova", methods=["GET", "POST"])
 @login_required
@@ -3852,7 +3766,6 @@ def nova_inclusao():
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 
-
 @app.route("/consultorias/inclusoes/<int:codigo>")
 @login_required
 def visualizar_consultoria(codigo):
@@ -3863,7 +3776,6 @@ def visualizar_consultoria(codigo):
         inclusao=inclusao,
         data_formatada=inclusao.data_formatada,
     )
-
 
 @app.route("/consultorias/inclusoes/<int:codigo>/editar", methods=["GET", "POST"])
 @login_required
@@ -3898,12 +3810,10 @@ def editar_consultoria(codigo):
         inclusao=inclusao,
     )
 
-
 @app.route("/cookies")
 def cookies():
     """Render the cookie policy page."""
     return render_template("cookie_policy.html")
-
 
 @app.route("/cookies/revoke")
 def revoke_cookies():
@@ -3912,7 +3822,6 @@ def revoke_cookies():
     resp.delete_cookie("cookie_consent")
     flash("Consentimento de cookies revogado.", "info")
     return resp
-
 
 @app.route("/login/google")
 def google_login():
@@ -3959,7 +3868,6 @@ def _determine_post_login_redirect(user: User) -> str:
         return url_for("tasks_sector", tag_id=first_tag.id)
 
     return url_for("home")
-
 
 @app.route("/oauth2callback")
 def google_callback():
@@ -4057,7 +3965,6 @@ def google_callback():
     flash("Login com Google bem-sucedido!", "success")
     return redirect(_determine_post_login_redirect(user))
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Render the login page and handle authentication."""
@@ -4097,7 +4004,6 @@ def login():
             flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form, google_enabled=google_enabled)
 
-
 @app.route("/api/cnpj/<cnpj>")
 @login_required
 def api_cnpj(cnpj):
@@ -4116,7 +4022,6 @@ def api_cnpj(cnpj):
         return jsonify({"error": "CNPJ não está cadastrado"}), 404
     return jsonify(dados)
 
-
 @app.route("/api/reunioes")
 @login_required
 @csrf.exempt
@@ -4130,7 +4035,6 @@ def api_reunioes():
     )
     return jsonify(events)
 
-
 @app.route("/api/calendario-eventos")
 @login_required
 def api_general_calendar_events():
@@ -4141,7 +4045,6 @@ def api_general_calendar_events():
         current_user.id, can_manage, current_user.role == "admin"
     )
     return jsonify(events)
-
 
 @app.route("/cadastrar_empresa", methods=["GET", "POST"])
 @login_required
@@ -4187,7 +4090,6 @@ def cadastrar_empresa():
 
     return render_template("empresas/cadastrar.html", form=form)
 
-
 @app.route("/listar_empresas")
 @login_required
 def listar_empresas():
@@ -4230,7 +4132,6 @@ def listar_empresas():
         sort=sort,
         order=order,
     )
-
 
 @app.route("/empresa/editar/<int:id>", methods=["GET", "POST"])
 @login_required
@@ -4276,7 +4177,6 @@ def editar_empresa(id):
         empresa=empresa,
         empresa_form=empresa_form,
     )
-
 
 @app.route("/empresa/visualizar/<int:id>")
 @login_required
@@ -4389,7 +4289,6 @@ def visualizar_empresa(id):
     )
 
     ## Rota para gerenciar departamentos de uma empresa
-
 
 @app.route("/empresa/<int:empresa_id>/departamentos", methods=["GET", "POST"])
 @login_required
@@ -4640,13 +4539,11 @@ def gerenciar_departamentos(empresa_id):
         can_access_financeiro=can_access_financeiro,
     )
 
-
 @app.route("/relatorios")
 @admin_required
 def relatorios():
     """Render the reports landing page."""
     return render_template("admin/relatorios.html")
-
 
 @app.route("/relatorio_empresas")
 @admin_required
@@ -4676,41 +4573,36 @@ def relatorio_empresas():
         )
 
     labels = list(grouped.keys())
-    counts = [len(grouped[l]) for l in labels]
-    fig = go.Figure(data=[go.Bar(x=labels, y=counts, marker_color=qualitative.Pastel)])
-    fig.update_layout(
-        title_text="Empresas por regime de tributação",
-        template="seaborn",
-        xaxis_title="Regime",
-        yaxis_title="Quantidade",
-    )
-    chart_div = fig.to_html(full_html=False, div_id="empresa-tributacao-chart")
+    counts = [len(grouped[label]) for label in labels]
+    tributacao_chart = {
+        "type": "bar",
+        "title": "Empresas por regime de tributação",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels,
+        "values": counts,
+        "xTitle": "Regime",
+        "yTitle": "Quantidade",
+        "total": sum(counts),
+    }
 
     sistema_labels = list(grouped_sistemas.keys())
-    sistema_counts = [len(grouped_sistemas[l]) for l in sistema_labels]
-    fig_sistemas = go.Figure(
-        data=[
-            go.Bar(x=sistema_labels, y=sistema_counts, marker_color=qualitative.Pastel)
-        ]
-    )
-    fig_sistemas.update_layout(
-        title_text="Empresas por sistema utilizado",
-        template="seaborn",
-        xaxis_title="Sistema",
-        yaxis_title="Quantidade",
-    )
-    chart_div_sistema = fig_sistemas.to_html(
-        full_html=False, div_id="empresa-sistema-chart"
-    )
+    sistema_counts = [len(grouped_sistemas[label]) for label in sistema_labels]
+    sistema_chart = {
+        "type": "bar",
+        "title": "Empresas por sistema utilizado",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": sistema_labels,
+        "values": sistema_counts,
+        "xTitle": "Sistema",
+        "yTitle": "Quantidade",
+        "total": sum(sistema_counts),
+    }
 
     return render_template(
         "admin/relatorio_empresas.html",
-        chart_div=chart_div,
-        empresas_por_slice=grouped,
-        chart_div_sistema=chart_div_sistema,
-        empresas_por_sistema=grouped_sistemas,
+        tributacao_chart=tributacao_chart,
+        sistema_chart=sistema_chart,
     )
-
 
 @app.route("/relatorio_fiscal")
 @admin_required
@@ -4750,61 +4642,48 @@ def relatorio_fiscal():
                 {"nome": nome, "codigo": codigo}
             )
     labels_imp = list(import_grouped.keys())
-    counts_imp = [len(import_grouped[l]) for l in labels_imp]
-    fig_imp = go.Figure(
-        data=[go.Bar(x=labels_imp, y=counts_imp, marker_color=qualitative.Pastel)]
-    )
-    fig_imp.update_layout(
-        title_text="Formas de Importação (Fiscal)",
-        template="seaborn",
-        xaxis_title="Forma",
-        yaxis_title="Quantidade",
-    )
-    import_chart = fig_imp.to_html(full_html=False, div_id="fiscal-importacao-chart")
+    counts_imp = [len(import_grouped[label]) for label in labels_imp]
+    importacao_chart = {
+        "type": "bar",
+        "title": "Formas de Importação (Fiscal)",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels_imp,
+        "values": counts_imp,
+        "xTitle": "Forma",
+        "yTitle": "Quantidade",
+        "total": sum(counts_imp),
+    }
+
     labels_env = list(envio_grouped.keys())
-    counts_env = [len(envio_grouped[l]) for l in labels_env]
-    fig_env = go.Figure(
-        data=[
-            go.Pie(
-                labels=labels_env,
-                values=counts_env,
-                hole=0.4,
-                marker=dict(
-                    colors=qualitative.Pastel,
-                    line=dict(color="#FFFFFF", width=2),
-                ),
-                textinfo="label+percent",
-            )
-        ]
-    )
-    fig_env.update_layout(
-        title_text="Envio de Documentos (Fiscal)",
-        template="seaborn",
-        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
-    )
-    envio_chart = fig_env.to_html(full_html=False, div_id="fiscal-envio-chart")
+    counts_env = [len(envio_grouped[label]) for label in labels_env]
+    envio_chart = {
+        "type": "doughnut",
+        "title": "Envio de Documentos (Fiscal)",
+        "datasetLabel": "Distribuição",
+        "labels": labels_env,
+        "values": counts_env,
+        "total": sum(counts_env),
+    }
+
     labels_mal = list(malote_grouped.keys())
-    counts_mal = [len(malote_grouped[l]) for l in labels_mal]
-    fig_mal = go.Figure(
-        data=[go.Bar(x=labels_mal, y=counts_mal, marker_color=qualitative.Pastel)]
-    )
-    fig_mal.update_layout(
-        title_text="Coleta de Malote (Envio Físico)",
-        template="seaborn",
-        xaxis_title="Coleta",
-        yaxis_title="Quantidade",
-    )
-    malote_chart = fig_mal.to_html(full_html=False, div_id="fiscal-malote-chart")
+    counts_mal = [len(malote_grouped[label]) for label in labels_mal]
+    malote_chart = {
+        "type": "bar",
+        "title": "Coleta de Malote (Envio Físico)",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels_mal,
+        "values": counts_mal,
+        "xTitle": "Coleta",
+        "yTitle": "Quantidade",
+        "total": sum(counts_mal),
+    }
+
     return render_template(
         "admin/relatorio_fiscal.html",
-        importacao_chart=import_chart,
+        importacao_chart=importacao_chart,
         envio_chart=envio_chart,
         malote_chart=malote_chart,
-        empresas_por_import=import_grouped,
-        empresas_por_envio=envio_grouped,
-        empresas_por_malote=malote_grouped,
     )
-
 
 @app.route("/relatorio_contabil")
 @admin_required
@@ -4857,77 +4736,62 @@ def relatorio_contabil():
                 {"nome": nome, "codigo": codigo}
             )
     labels_imp = list(import_grouped.keys())
-    counts_imp = [len(import_grouped[l]) for l in labels_imp]
-    fig_imp = go.Figure(
-        data=[go.Bar(x=labels_imp, y=counts_imp, marker_color=qualitative.Pastel)]
-    )
-    fig_imp.update_layout(
-        title_text="Métodos de Importação (Contábil)",
-        template="seaborn",
-        xaxis_title="Método",
-        yaxis_title="Quantidade",
-    )
-    import_chart = fig_imp.to_html(full_html=False, div_id="contabil-importacao-chart")
+    counts_imp = [len(import_grouped[label]) for label in labels_imp]
+    importacao_chart = {
+        "type": "bar",
+        "title": "Métodos de Importação (Contábil)",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels_imp,
+        "values": counts_imp,
+        "xTitle": "Método",
+        "yTitle": "Quantidade",
+        "total": sum(counts_imp),
+    }
+
     labels_env = list(envio_grouped.keys())
-    counts_env = [len(envio_grouped[l]) for l in labels_env]
-    fig_env = go.Figure(
-        data=[
-            go.Pie(
-                labels=labels_env,
-                values=counts_env,
-                hole=0.4,
-                marker=dict(
-                    colors=qualitative.Pastel,
-                    line=dict(color="#FFFFFF", width=2),
-                ),
-                textinfo="label+percent",
-            )
-        ]
-    )
-    fig_env.update_layout(
-        title_text="Envio de Documentos (Contábil)",
-        template="seaborn",
-        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
-    )
-    envio_chart = fig_env.to_html(full_html=False, div_id="contabil-envio-chart")
+    counts_env = [len(envio_grouped[label]) for label in labels_env]
+    envio_chart = {
+        "type": "doughnut",
+        "title": "Envio de Documentos (Contábil)",
+        "datasetLabel": "Distribuição",
+        "labels": labels_env,
+        "values": counts_env,
+        "total": sum(counts_env),
+    }
+
     labels_mal = list(malote_grouped.keys())
-    counts_mal = [len(malote_grouped[l]) for l in labels_mal]
-    fig_mal = go.Figure(
-        data=[go.Bar(x=labels_mal, y=counts_mal, marker_color=qualitative.Pastel)]
-    )
-    fig_mal.update_layout(
-        title_text="Coleta de Malote (Envio Físico)",
-        template="seaborn",
-        xaxis_title="Coleta",
-        yaxis_title="Quantidade",
-    )
-    malote_chart = fig_mal.to_html(full_html=False, div_id="contabil-malote-chart")
+    counts_mal = [len(malote_grouped[label]) for label in labels_mal]
+    malote_chart = {
+        "type": "bar",
+        "title": "Coleta de Malote (Envio Físico)",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels_mal,
+        "values": counts_mal,
+        "xTitle": "Coleta",
+        "yTitle": "Quantidade",
+        "total": sum(counts_mal),
+    }
+
     labels_rel = list(relatorios_grouped.keys())
-    counts_rel = [len(relatorios_grouped[l]) for l in labels_rel]
-    fig_rel = go.Figure(
-        data=[go.Bar(x=labels_rel, y=counts_rel, marker_color=qualitative.Pastel)]
-    )
-    fig_rel.update_layout(
-        title_text="Controle de Relatórios (Contábil)",
-        template="seaborn",
-        xaxis_title="Relatório",
-        yaxis_title="Quantidade",
-    )
-    relatorios_chart = fig_rel.to_html(
-        full_html=False, div_id="contabil-relatorios-chart"
-    )
+    counts_rel = [len(relatorios_grouped[label]) for label in labels_rel]
+    relatorios_chart = {
+        "type": "bar",
+        "title": "Controle de Relatórios (Contábil)",
+        "datasetLabel": "Quantidade de empresas",
+        "labels": labels_rel,
+        "values": counts_rel,
+        "xTitle": "Relatório",
+        "yTitle": "Quantidade",
+        "total": sum(counts_rel),
+    }
+
     return render_template(
         "admin/relatorio_contabil.html",
-        importacao_chart=import_chart,
+        importacao_chart=importacao_chart,
         envio_chart=envio_chart,
         malote_chart=malote_chart,
         relatorios_chart=relatorios_chart,
-        empresas_por_import=import_grouped,
-        empresas_por_envio=envio_grouped,
-        empresas_por_malote=malote_grouped,
-        empresas_por_relatorios=relatorios_grouped,
     )
-
 
 @app.route("/relatorio_usuarios")
 @admin_required
@@ -4949,31 +4813,19 @@ def relatorio_usuarios():
     for label, usuarios in grouped.items():
         labels.append(label)
         counts.append(len(usuarios))
-    fig = go.Figure(
-        data=[
-            go.Pie(
-                labels=labels,
-                values=counts,
-                hole=0.4,
-                marker=dict(
-                    colors=qualitative.Pastel, line=dict(color="#FFFFFF", width=2)
-                ),
-                textinfo="label+percent",
-            )
-        ]
-    )
-    fig.update_layout(
-        title_text="Usuários por tipo e status",
-        template="seaborn",
-        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center"),
-    )
-    chart_div = fig.to_html(full_html=False, div_id="user-role-chart")
+    users_chart = {
+        "type": "doughnut",
+        "title": "Usuários por tipo e status",
+        "datasetLabel": "Distribuição",
+        "labels": labels,
+        "values": counts,
+        "total": sum(counts),
+    }
+
     return render_template(
         "admin/relatorio_usuarios.html",
-        chart_div=chart_div,
-        users_by_slice=grouped,
+        users_chart=users_chart,
     )
-
 
 @app.route("/logout", methods=["GET"])
 @login_required
@@ -4986,7 +4838,6 @@ def logout():
         session.pop("sid", None)
     logout_user()
     return redirect(url_for("index"))
-
 
 @app.route("/users/active", methods=["GET"], endpoint="list_active_users")
 @app.route("/users", methods=["GET", "POST"])
@@ -5233,7 +5084,6 @@ def list_users():
         edit_password_error=edit_password_error,
     )
 
-
 @app.route("/admin/online-users")
 @admin_required
 def online_users():
@@ -5247,13 +5097,11 @@ def online_users():
     )
     return render_template("admin/online_users.html", users=users)
 
-
 @app.route("/novo_usuario", methods=["GET"])
 @admin_required
 def novo_usuario():
     """Redirect to the user list with the registration modal open."""
     return redirect(url_for("list_users", open_user_modal="1"))
-
 
 @app.route("/user/edit/<int:user_id>", methods=["GET"])
 @admin_required
@@ -5272,7 +5120,6 @@ def edit_user(user_id):
 
 
 # ---------------------- Task Management Routes ----------------------
-
 
 @app.route("/tasks/overview")
 @admin_required
@@ -5325,7 +5172,6 @@ def tasks_overview():
         history_count=history_count,
         assigned_by_me=assigned_by_me,
     )
-
 
 @app.route("/tasks/new", methods=["GET", "POST"])
 @login_required
@@ -5434,7 +5280,6 @@ def tasks_new():
         cancel_url = url_for("tasks_sector", tag_id=selected_tag_id)
     return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
 
-
 @app.route("/tasks/users/<int:tag_id>")
 @admin_required
 def tasks_users(tag_id):
@@ -5446,7 +5291,6 @@ def tasks_users(tag_id):
         if u.ativo
     ]
     return jsonify(users)
-
 
 @app.route("/tasks/sector/<int:tag_id>")
 @login_required
@@ -5507,7 +5351,6 @@ def tasks_sector(tag_id):
         ti_tag_id=ti_tag_id,
     )
 
-
 @app.route("/tasks/history")
 @app.route("/tasks/history/<int:tag_id>")
 @login_required
@@ -5565,7 +5408,6 @@ def tasks_history(tag_id=None):
         assigned_by_me=assigned_by_me,
     )
 
-
 @app.route("/tasks/<int:task_id>")
 @login_required
 def tasks_view(task_id):
@@ -5594,7 +5436,6 @@ def tasks_view(task_id):
         priority_order=priority_order,
         cancel_url=cancel_url,
     )
-
 
 @app.route("/tasks/<int:task_id>/status", methods=["POST"])
 @login_required
@@ -5657,7 +5498,6 @@ def _delete_task_recursive(task: Task) -> None:
     TaskStatusHistory.query.filter_by(task_id=task.id).delete(synchronize_session=False)
     TaskNotification.query.filter_by(task_id=task.id).delete(synchronize_session=False)
     db.session.delete(task)
-
 
 @app.route("/tasks/<int:task_id>/delete", methods=["POST"])
 @admin_required
