@@ -76,69 +76,126 @@
 
       /* Header da Sidebar */
       .sidebar-header {
-        padding: 1.1rem 1rem;
+        padding: 1rem 0.95rem;
         border-bottom: 1px solid var(--border-color);
-        background: linear-gradient(135deg, var(--accent), var(--primary));
-        color: white;
-        position: relative;
-      }
-
-      .sidebar-header h4 {
-        font-weight: 700;
-        margin: 0;
-        font-size: var(--font-xl);
+        background: #2f323a;
+        color: #f5f7fa;
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 0.5rem;
+        text-align: center;
       }
 
-      .sidebar-header .user-info {
-        margin-top: 0.5rem;
-        font-size: var(--font-sm);
-        opacity: 0.9;
+      .sidebar-header .sidebar-branding {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0;
       }
 
-      .sidebar-header .logout-icon {
-        position: absolute;
-        top: 1.1rem;
-        right: 1rem;
-        color: inherit;
-        font-size: var(--font-xl);
-        text-decoration: none;
-        opacity: 0.8;
-      }
-
-      .sidebar-header .logout-icon:hover {
-        opacity: 1;
-      }
-
-      .sidebar-header .home-btn {
-        position: absolute;
-        top: 1.1rem;
-        right: 2.4rem;
-        color: inherit;
-        font-size: var(--font-xl);
-        text-decoration: none;
-        opacity: 0.8;
-      }
-
-      .sidebar-header .home-btn:hover {
-        opacity: 1;
-      }
-
-      .user-avatar {
-        width: 26px;
-        height: 26px;
-        background: rgba(255, 255, 255, 0.2);
+      .sidebar-header .brand-logo {
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid rgba(255, 255, 255, 0.45);
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+      }
+
+      .sidebar-header .brand-logo img {
+        width: 62%;
+        height: auto;
+      }
+
+      .sidebar-header .quick-actions {
+        display: flex;
+        gap: 0.25rem;
+        justify-content: center;
+        flex-wrap: nowrap;
+      }
+
+      .quick-action-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 2px solid currentColor;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        text-decoration: none;
+        position: relative;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+      }
+
+      .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      .quick-action-btn:focus-visible {
+        outline: 3px solid rgba(255, 255, 255, 0.4);
+        outline-offset: 2px;
+      }
+
+      .quick-action-btn--active {
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+        transform: translateY(-2px);
+      }
+
+      .quick-action-btn--home {
+        color: #65c98d;
+      }
+
+      .quick-action-btn--home:hover {
+        background: rgba(101, 201, 141, 0.18);
+      }
+
+      .quick-action-btn--users {
+        color: #57a8ff;
+      }
+
+      .quick-action-btn--users:hover {
+        background: rgba(87, 168, 255, 0.18);
+      }
+
+      .quick-action-btn--notifications {
+        color: #f5b74c;
+      }
+
+      .quick-action-btn--notifications:hover {
+        background: rgba(245, 183, 76, 0.2);
+      }
+
+      .quick-action-btn--logout {
+        color: #ff6b6b;
+      }
+
+      .quick-action-btn--logout:hover {
+        background: rgba(255, 107, 107, 0.18);
+      }
+
+      .quick-action-btn .nav-badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        background: #ff6b6b;
+        color: #fff;
+        border-radius: 999px;
+        font-size: 0.48rem;
         font-weight: 600;
-        font-size: var(--font-xs);
+        padding: 0.05rem 0.22rem;
+        min-width: 0.7rem;
+        line-height: 1;
+        border: 2px solid #2f323a;
+        margin-left: 0;
       }
 
       /* Navegação */
@@ -279,12 +336,20 @@
           
         }
 
-        .sidebar-header h4 {
-          font-size: var(--font-lg);
+        .sidebar-header {
+          padding: 0.85rem 0.75rem;
+          gap: 0.4rem;
         }
 
-        .user-info {
-          font-size: var(--font-sm);
+        .sidebar-header .brand-logo {
+          width: 30px;
+          height: 30px;
+        }
+
+        .quick-action-btn {
+          width: 22px;
+          height: 22px;
+          font-size: 0.7rem;
         }
 
         .sidebar .nav-link {
@@ -399,24 +464,30 @@
         <nav class="sidebar" id="sidebar">
             <!-- Header da Sidebar -->
             <div class="sidebar-header">
-                <h4>
-                    <i class="bi bi-building-gear"></i>
-                    JP Contábil
-                </h4>
-                <a href="{{ url_for('home') }}" class="home-btn" title="Início">
-                    <i class="bi bi-house"></i>
-                </a>
-                <a href="{{ url_for('logout') }}" class="logout-icon" title="Sair">
-                    <i class="bi bi-box-arrow-left"></i>
-                </a>
-                <div class="user-info">
-                    <div class="user-avatar">
-                        {{ current_user.name[0].upper() if current_user.name else 'U' }}
+                <div class="sidebar-branding">
+                    <div class="brand-logo">
+                        <img src="{{ url_for('static', filename='images/logo-jp-contabil.png') }}" alt="JP Contábil" loading="lazy" />
                     </div>
-                    <div>
-                        <div>{{ current_user.name or 'Usuário' }}</div>
-                        <small>{{ current_user.role|title if current_user.role else 'User' }}</small>
-                    </div>
+                </div>
+                <div class="quick-actions">
+                    <a href="{{ url_for('home') }}" class="quick-action-btn quick-action-btn--home{% if request.endpoint == 'home' %} quick-action-btn--active{% endif %}" title="Início" aria-label="Início">
+                        <i class="bi bi-house"></i>
+                    </a>
+                    {% if current_user.role == 'admin' %}
+                    {% set user_nav_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
+                    <a href="{{ url_for('list_users') }}" class="quick-action-btn quick-action-btn--users{% if request.endpoint in user_nav_endpoints %} quick-action-btn--active{% endif %}" title="Usuários" aria-label="Usuários">
+                        <i class="bi bi-people"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('notifications_center') }}" class="quick-action-btn quick-action-btn--notifications{% if request.endpoint == 'notifications_center' %} quick-action-btn--active{% endif %}" title="Notificações" aria-label="Notificações">
+                        <i class="bi bi-bell"></i>
+                        <span class="nav-badge{% if not unread_notifications_count %} d-none{% endif %}" data-notifications-badge>
+                            {{ unread_notifications_count or 0 }}
+                        </span>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="quick-action-btn quick-action-btn--logout" title="Sair" aria-label="Sair">
+                        <i class="bi bi-power"></i>
+                    </a>
                 </div>
             </div>
 
