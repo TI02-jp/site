@@ -26,6 +26,12 @@
       {% if task.children %}
       <div class="progress"><div style="width: {{ task.progress }}%;"></div></div>
       {% endif %}
+      {% if task.attachments %}
+      <div class="task-meta">
+        <span class="meta-label"><i class="bi bi-paperclip"></i></span>
+        <span class="meta-value">{{ task.attachments|length }} anexo{{ 's' if task.attachments|length > 1 else '' }}</span>
+      </div>
+      {% endif %}
       {% if task.status == TaskStatus.IN_PROGRESS and task.assignee %}
       <div class="task-meta">
         <span class="meta-label">Em andamento por:</span>
@@ -100,6 +106,22 @@
         <span class="detail-label">Descrição:</span>
         <span class="detail-value multiline">{{ task.description or 'Sem descrição' }}</span>
       </div>
+      {% if task.attachments %}
+      <div class="detail-field full">
+        <span class="detail-label">Anexos:</span>
+        <div class="detail-value" style="display: flex; flex-direction: column; gap: 0.5rem; white-space: normal;">
+          {% for attachment in task.attachments %}
+          <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <i class="bi {% if attachment.is_image %}bi-image text-primary{% elif attachment.is_pdf %}bi-file-earmark-pdf text-danger{% elif attachment.is_text %}bi-filetype-txt text-info{% else %}bi-paperclip{% endif %}" style="font-size: 1.2rem;"></i>
+            <span style="flex: 1; font-size: var(--font-sm); overflow: hidden; text-overflow: ellipsis;">{{ attachment.display_name }}</span>
+            <a href="{{ url_for('static', filename=attachment.file_path) }}" target="_blank" rel="noopener" class="btn btn-xs btn-outline-primary" style="padding: 0.2rem 0.5rem; font-size: var(--font-xs); white-space: nowrap;">
+              <i class="bi bi-box-arrow-up-right"></i>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
   {% if task.children %}

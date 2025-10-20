@@ -830,6 +830,63 @@ class GeneralCalendarEventParticipant(db.Model):
     user = db.relationship("User")
 
 
+class TaskAttachment(db.Model):
+    """Attachment stored for a :class:`Task`."""
+
+    __tablename__ = "task_attachments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(
+        db.Integer,
+        db.ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    file_path = db.Column(db.String(255), nullable=False)
+    original_name = db.Column(db.String(255))
+    mime_type = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<TaskAttachment {self.original_name or self.file_path}>"
+
+    @property
+    def extension(self) -> str:
+        """Return the lower-case file extension for the attachment."""
+
+        _, extension = os.path.splitext(self.file_path or "")
+        return extension.lower()
+
+    @property
+    def is_image(self) -> bool:
+        """Return ``True`` when the attachment is an image."""
+
+        if self.mime_type and self.mime_type.startswith("image/"):
+            return True
+        return self.extension in IMAGE_EXTENSIONS
+
+    @property
+    def is_pdf(self) -> bool:
+        """Return ``True`` when the attachment is a PDF document."""
+
+        if self.mime_type:
+            return self.mime_type == "application/pdf"
+        return self.extension == ".pdf"
+
+    @property
+    def is_text(self) -> bool:
+        """Return ``True`` when the attachment is a plain-text document."""
+
+        if self.mime_type and self.mime_type.startswith("text/"):
+            return True
+        return self.extension in TEXT_EXTENSIONS
+
+    @property
+    def display_name(self) -> str:
+        """Return a user-friendly attachment name."""
+
+        return self.original_name or os.path.basename(self.file_path or "")
+
+
 class TaskStatus(Enum):
     """Enumeration of possible task states."""
     PENDING = "pending"
@@ -871,6 +928,13 @@ class Task(db.Model):
     finisher = db.relationship("User", foreign_keys=[completed_by])
     children = db.relationship(
         "Task", backref=db.backref("parent", remote_side=[id]), lazy="joined"
+    )
+    attachments = db.relationship(
+        "TaskAttachment",
+        backref="task",
+        cascade="all, delete-orphan",
+        order_by="TaskAttachment.created_at.asc()",
+        lazy="selectin",
     )
 
     @property
