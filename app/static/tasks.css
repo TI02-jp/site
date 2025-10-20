@@ -756,3 +756,74 @@
 .kanban-form .form-group-full {
   grid-column: 1 / -1;
 }
+
+/* Estilos para anexos de tarefas */
+.announcement-modal-attachment {
+  background: #ffffff;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: all 0.2s ease;
+}
+
+.announcement-modal-attachment:hover {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  border-color: var(--primary) !important;
+}
+
+.announcement-modal-attachment .attachment-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 40, 139, 0.08);
+  border-radius: 8px;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.announcement-modal-attachment-media {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.announcement-modal-attachment-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.announcement-modal-attachment-media iframe {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.btn-xs {
+  padding: 0.35rem 0.7rem;
+  font-size: var(--font-sm);
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-primary {
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(11, 40, 139, 0.2);
+}

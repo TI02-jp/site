@@ -659,5 +659,10 @@ class TaskForm(FlaskForm):
         validators=[DataRequired()],
     )
     due_date = DateField("Prazo", format="%Y-%m-%d", validators=[Optional()])
+    attachments = MultipleFileField(
+        "Anexos / Prints",
+        validators=[Optional()],
+        render_kw={"multiple": True, "accept": "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"},
+    )
     parent_id = HiddenField()
     submit = SubmitField("Salvar")

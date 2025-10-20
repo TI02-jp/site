@@ -40,6 +40,7 @@ from app.models.tables import (
     TaskStatusHistory,
     TaskNotification,
     NotificationType,
+    TaskAttachment,
     AccessLink,
     Course,
     CourseTag,
@@ -309,6 +310,7 @@ EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
 
 
 ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
+TASKS_UPLOAD_SUBDIR = os.path.join("uploads", "tasks")
 
 
 ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
@@ -440,6 +442,33 @@ def _save_announcement_file(uploaded_file) -> dict[str, str | None]:
     uploaded_file.save(stored_path)
 
     relative_path = os.path.join(ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name).replace(
+        "\\", "/"
+    )
+    mime_type = uploaded_file.mimetype or guess_type(original_name)[0]
+
+    return {
+        "path": relative_path,
+        "name": original_name or None,
+        "mime_type": mime_type,
+    }
+
+
+def _save_task_file(uploaded_file) -> dict[str, str | None]:
+    """Persist an uploaded file for a task and return its storage metadata."""
+
+    original_name = secure_filename(uploaded_file.filename or "")
+    extension = os.path.splitext(original_name)[1].lower()
+    unique_name = f"{uuid4().hex}{extension}"
+
+    upload_directory = os.path.join(
+        current_app.root_path, "static", TASKS_UPLOAD_SUBDIR
+    )
+    os.makedirs(upload_directory, exist_ok=True)
+
+    stored_path = os.path.join(upload_directory, unique_name)
+    uploaded_file.save(stored_path)
+
+    relative_path = os.path.join(TASKS_UPLOAD_SUBDIR, unique_name).replace(
         "\\", "/"
     )
     mime_type = uploaded_file.mimetype or guess_type(original_name)[0]
@@ -5139,10 +5168,12 @@ def tasks_overview():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
+            joinedload(Task.attachments),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.status_history),
+            joinedload(Task.children).joinedload(Task.attachments),
         )
         .order_by(Task.due_date)
         .all()
@@ -5259,6 +5290,26 @@ def tasks_new():
         if task.assigned_to and task.assigned_to == current_user.id:
             task._skip_assignment_notification = True
         db.session.add(task)
+        db.session.flush()
+
+        # Processar uploads de anexos
+        uploaded_files = [
+            storage
+            for storage in (form.attachments.data or [])
+            if storage and storage.filename
+        ]
+
+        for uploaded_file in uploaded_files:
+            saved = _save_task_file(uploaded_file)
+            db.session.add(
+                TaskAttachment(
+                    task=task,
+                    file_path=saved["path"],
+                    original_name=saved["name"],
+                    mime_type=saved["mime_type"],
+                )
+            )
+
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
 
@@ -5315,10 +5366,12 @@ def tasks_sector(tag_id):
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.status_history),
+            joinedload(Task.attachments),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.status_history),
+            joinedload(Task.children).joinedload(Task.attachments),
         )
         .order_by(Task.due_date)
         .all()
@@ -5419,6 +5472,7 @@ def tasks_view(task_id):
             joinedload(Task.finisher),
             joinedload(Task.parent),
             joinedload(Task.status_history),
+            joinedload(Task.attachments),
         )
         .get_or_404(task_id)
     )

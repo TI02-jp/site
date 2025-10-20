@@ -41,6 +41,47 @@
         <textarea rows="4" disabled>{{ task.description or '' }}</textarea>
       </div>
 
+      {% if task.attachments %}
+      <div class="form-group form-group-full">
+        <label>Anexos</label>
+        <div class="d-grid gap-2">
+          {% for attachment in task.attachments %}
+          <div class="announcement-modal-attachment border rounded p-2">
+            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <div class="d-flex align-items-center gap-2 flex-grow-1">
+                <span class="attachment-icon">
+                  <i class="bi {% if attachment.is_image %}bi-image{% elif attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
+                </span>
+                <div class="flex-grow-1">
+                  <div class="fw-semibold text-truncate">{{ attachment.display_name }}</div>
+                  <div class="text-muted small">{{ attachment.extension and attachment.extension[1:]|upper or 'ARQ' }}</div>
+                </div>
+              </div>
+              <a class="btn btn-outline-primary btn-xs" href="{{ url_for('static', filename=attachment.file_path) }}" target="_blank" rel="noopener">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+              </a>
+            </div>
+            {% if attachment.is_image %}
+            <div class="announcement-modal-attachment-media mt-2">
+              <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo da tarefa {{ task.title }}" class="img-fluid rounded">
+            </div>
+            {% elif attachment.is_pdf or attachment.is_text %}
+            <div class="announcement-modal-attachment-media mt-2">
+              <div class="ratio ratio-4x3">
+                <iframe src="{{ url_for('static', filename=attachment.file_path) }}" title="Pré-visualização do anexo" class="w-100 h-100 border" allowfullscreen></iframe>
+              </div>
+            </div>
+            {% else %}
+            <div class="alert alert-light border mt-2 mb-0 text-muted small">
+              Pré-visualização indisponível para este formato.
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="form-group form-group-prazo">
         <label>Prazo</label>
         <input type="date" value="{{ task.due_date.isoformat() if task.due_date else '' }}" disabled>

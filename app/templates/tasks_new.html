@@ -13,7 +13,7 @@
 {% block content %}
 <div class="new-task-container">
   <section class="kanban" style="gap: 1rem;">
-    <form method="POST" class="kanban-form">
+    <form method="POST" enctype="multipart/form-data" class="kanban-form">
       {{ form.hidden_tag() }}
 
       {% if parent_task %}
@@ -47,6 +47,14 @@
       <div class="form-group form-group-descricao">
         {{ form.description.label }}
         {{ form.description() }}
+      </div>
+
+      <div class="form-group form-group-full">
+        {{ form.attachments.label }}
+        {{ form.attachments() }}
+        <small style="color: #666; display: block; margin-top: 0.5rem;">
+          Aceita imagens, PDFs e documentos. Você pode selecionar múltiplos arquivos.
+        </small>
       </div>
 
       <div class="form-group form-group-prazo">
