@@ -31,6 +31,7 @@ class CourseRecord:
     instructor: str
     sectors: tuple[str, ...]
     participants: tuple[str, ...]
+    participants_raw: tuple[str, ...]
     workload: time | None
     start_date: date
     schedule_start: time | None
@@ -102,6 +103,12 @@ class CourseRecord:
         """Return the participants as a mutable list for template iteration."""
 
         return list(self.participants)
+
+    @property
+    def participants_raw_list(self) -> list[str]:
+        """Return the full list of participant names without aggregation."""
+
+        return list(self.participants_raw)
 
     @property
     def tags_list(self) -> list[str]:
@@ -258,7 +265,8 @@ def get_courses_overview() -> list[CourseRecord]:
 
         # Analisar participantes do curso
         course_sectors = _split_values(course.sectors or "")
-        course_participants = set(p.strip() for p in _split_values(course.participants or ""))
+        course_participants_raw = _split_values(course.participants or "")
+        course_participants = {p.strip() for p in course_participants_raw}
 
         # Detectar quais setores/tags estão completamente incluídos
         optimized_participants: list[str] = []
@@ -285,6 +293,7 @@ def get_courses_overview() -> list[CourseRecord]:
                 instructor=course.instructor,
                 sectors=course_sectors,
                 participants=tuple(optimized_participants),
+                participants_raw=course_participants_raw,
                 workload=_parse_time(course.workload),
                 start_date=course.start_date,
                 schedule_start=_parse_time(course.schedule_start),

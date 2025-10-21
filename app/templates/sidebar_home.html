@@ -20,6 +20,15 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'notifications_center' %} active{% endif %}" href="{{ url_for('notifications_center') }}">
+                <i class="bi bi-bell"></i>
+                NOTIFICAÇÕES
+                {% if unread_notifications_count %}
+                <span class="nav-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'cursos' %} active{% endif %}" href="{{ url_for('cursos') }}">
                 <i class="bi bi-mortarboard"></i>
                 CURSOS
@@ -58,13 +67,7 @@
             <div class="collapse{% if diretoria_active %} show{% endif %}" id="diretoriaMenu">
                 <ul class="nav flex-column ms-3">
                     <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint == 'diretoria_eventos' %} active{% endif %}"
-                           href="{{ url_for('diretoria_eventos') }}">
-                            Criar Evento
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint in ['diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
+                        <a class="nav-link{% if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
                            href="{{ url_for('diretoria_eventos_lista') }}">
                             Listar Eventos
                         </a>
