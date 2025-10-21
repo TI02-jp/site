@@ -143,7 +143,8 @@
             border: 1px solid rgba(13, 110, 253, 0.12);
             box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.12);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            min-height: 220px;
+            aspect-ratio: var(--photo-aspect-ratio, 4 / 3);
+            min-height: 0;
             padding: 0.75rem;
             align-items: center;
             justify-content: center;
@@ -165,10 +166,8 @@
 
         .event-view .photo-thumb img {
             position: relative;
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
             border-radius: 0.75rem;
             box-shadow: 0 0.35rem 1rem rgba(13, 110, 253, 0.12);
@@ -332,4 +331,50 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        (() => {
+            const clampRatio = (value) => {
+                if (!Number.isFinite(value) || value <= 0) {
+                    return null;
+                }
+                const min = 0.35;
+                const max = 3.5;
+                return Math.min(Math.max(value, min), max);
+            };
+
+            document.querySelectorAll('.event-view .photo-card').forEach((card) => {
+                const imageEl = card.querySelector('img');
+                if (!imageEl) {
+                    return;
+                }
+
+                const applyRatio = () => {
+                    const width = imageEl.naturalWidth;
+                    const height = imageEl.naturalHeight;
+                    if (!width || !height) {
+                        return;
+                    }
+
+                    const ratio = clampRatio(width / height);
+                    if (ratio) {
+                        card.style.setProperty('--photo-aspect-ratio', ratio.toFixed(4));
+                    }
+                };
+
+                if (imageEl.complete && imageEl.naturalWidth) {
+                    applyRatio();
+                } else {
+                    imageEl.addEventListener('load', applyRatio, { once: true });
+                }
+
+                imageEl.addEventListener('error', () => {
+                    card.style.removeProperty('--photo-aspect-ratio');
+                }, { once: true });
+            });
+        })();
+    </script>
 {% endblock %}
