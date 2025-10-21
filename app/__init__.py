@@ -560,6 +560,21 @@ with app.app_context():
             empresa_columns = {
                 col["name"] for col in inspector.get_columns("tbl_empresas")
             }
+            if "ativo" not in empresa_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            """
+                            ALTER TABLE tbl_empresas
+                            ADD COLUMN ativo TINYINT(1) NOT NULL DEFAULT 1
+                            """
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "UPDATE tbl_empresas SET ativo = 1 WHERE ativo IS NULL"
+                        )
+                    )
             if "contatos" not in empresa_columns:
                 with db.engine.begin() as conn:
                     # Add contatos column to tbl_empresas
