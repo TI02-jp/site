@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas Tarefas Abertas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<section class="kanban">
+  <div class="kanban-header">
+    <h2><i class="bi bi-kanban"></i>Minhas Tarefas Abertas</h2>
+    <div class="kanban-actions">
+      <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
+      <a href="{{ history_url }}" class="btn-history">Historico{% if history_count %} ({{ history_count }}){% endif %}</a>
+    </div>
+  </div>
+  {% from "tasks_macros.html" import render_task with context %}
+  {% set status_meta = {
+    'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
+    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'}
+  } %}
+  {% set priority_labels = {
+    'low': 'Baixa',
+    'medium': 'Media',
+    'high': 'Alta'
+  } %}
+  <div class="kanban-board">
+    {% for status in visible_statuses %}
+    <div class="kanban-column">
+      <h3><i class="bi {{ status_meta[status.value].icon }}"></i>{{ status_meta[status.value].label }}</h3>
+      <ul class="kanban-list" data-status="{{ status.value }}">
+        {% set column_tasks = tasks_by_status.get(status, []) %}
+        {% if column_tasks %}
+          {% for task in column_tasks %}
+            {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels, allow_delete=allow_delete) }}
+          {% endfor %}
+        {% else %}
+          <li class="empty">Nenhuma tarefa neste status.</li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+<script>
+  const csrfToken = "{{ csrf_token() }}";
+</script>
+<script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
+{% endblock %}
