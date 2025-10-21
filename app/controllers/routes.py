@@ -2489,7 +2489,7 @@ def acessos_excluir(link_id: int):
 @app.route("/procedimentos", methods=["GET", "POST"])
 @login_required
 def procedimentos_operacionais():
-    """Lista e permite criação de procedimentos operacionais (admin)."""
+    """Lista e permite criação de procedimentos operacionais."""
 
     form = OperationalProcedureForm()
     search_term = (request.args.get("q") or "").strip()
@@ -2507,8 +2507,6 @@ def procedimentos_operacionais():
     procedures = query.order_by(OperationalProcedure.updated_at.desc()).all()
 
     if request.method == "POST":
-        if current_user.role != "admin":
-            abort(403)
         if form.validate_on_submit():
             proc = OperationalProcedure(
                 title=form.title.data,
@@ -2523,7 +2521,7 @@ def procedimentos_operacionais():
 
     return render_template(
         "procedimentos.html",
-        form=form if current_user.role == "admin" else None,
+        form=form,
         procedures=procedures,
         search_term=search_term,
     )
@@ -4158,7 +4156,13 @@ def listar_empresas():
     search = request.args.get("q", "").strip()
     page = request.args.get("page", 1, type=int)
     per_page = 20
+    show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
+
     query = Empresa.query
+
+    # Filter inactive companies by default
+    if not show_inactive:
+        query = query.filter_by(ativo=True)
 
     if search:
         like_pattern = f"%{search}%"
@@ -4177,10 +4181,11 @@ def listar_empresas():
     else:
         order_column = Empresa.nome_empresa
 
+    # Show active companies first, then sort by the selected column
     if order == "desc":
-        query = query.order_by(order_column.desc())
+        query = query.order_by(Empresa.ativo.desc(), order_column.desc())
     else:
-        query = query.order_by(order_column.asc())
+        query = query.order_by(Empresa.ativo.desc(), order_column.asc())
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     empresas = pagination.items
@@ -4192,6 +4197,7 @@ def listar_empresas():
         search=search,
         sort=sort,
         order=order,
+        show_inactive=show_inactive,
     )
 
 @app.route("/empresa/editar/<int:id>", methods=["GET", "POST"])
@@ -4206,6 +4212,7 @@ def editar_empresa(id):
         empresa_form.regime_lancamento.data = empresa.regime_lancamento or []
         empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
         empresa_form.contatos_json.data = json.dumps(empresa.contatos or [])
+        empresa_form.ativo.data = empresa.ativo
 
     if request.method == "POST":
         if empresa_form.validate():
