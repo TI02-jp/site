@@ -258,6 +258,24 @@
                     </div>
                 </div>
 
+                <!-- Status -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-toggle-on me-2"></i>Status
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="form-check form-switch">
+                            {{ empresa_form.ativo(class="form-check-input", role="switch") }}
+                            {{ empresa_form.ativo.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-primary px-5" id="empresa-submit-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -295,7 +313,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const cnpjField = document.querySelector('#cnpj');
     if (cnpjField) {
         IMask(cnpjField, {
-            mask: '00.000.000/0000-00'
+            mask: '00.000.000/0000-00',
+            lazy: false  // Aplica a máscara imediatamente ao valor existente
         });
     }
 
