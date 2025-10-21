@@ -180,12 +180,38 @@
     font-size: var(--font-base);
   }
 
+  .announcement-card-image {
+    position: relative;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(13, 110, 253, 0.12);
+    background: #ffffff;
+    box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.1);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    aspect-ratio: var(--announcement-card-image-ratio, 4 / 3);
+    min-height: 0;
+  }
+
+  .announcement-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+  }
+
+  .announcement-card-image:hover img {
+    transform: scale(1.02);
+  }
+
   .announcement-card-gallery {
     display: grid;
     gap: 0.35rem;
     border-radius: 0.65rem;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.02);
+    background: rgba(13, 110, 253, 0.05);
   }
 
   .announcement-card-gallery.gallery-count-2,
@@ -197,23 +223,32 @@
     position: relative;
     overflow: hidden;
     border-radius: 0.6rem;
-    background: #000;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: var(--announcement-gallery-item-ratio, 4 / 3);
   }
 
   .announcement-card-gallery.gallery-count-2 .gallery-item,
   .announcement-card-gallery.gallery-count-3 .gallery-item {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--announcement-gallery-item-ratio, 4 / 3);
   }
 
   .announcement-card-gallery.gallery-count-3 .gallery-item:first-child {
     grid-column: span 2;
-    aspect-ratio: 4 / 2.6;
+    aspect-ratio: var(--announcement-gallery-item-large-ratio, 8 / 3);
   }
 
   .announcement-card-gallery .gallery-item img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+  }
+
+  .announcement-card-gallery .gallery-item:hover img {
+    transform: scale(1.02);
   }
 
   .announcement-card-gallery .gallery-overlay {
@@ -268,13 +303,18 @@
   }
 
   .announcement-view-modal .modal-dialog {
-    max-width: min(1200px, 96vw);
+    max-width: min(1040px, 85vw);
+    margin: 1.5rem auto;
   }
 
-  @media (min-width: 1400px) {
-    .announcement-view-modal .modal-dialog {
-      max-width: 1320px;
-    }
+  .announcement-view-modal .modal-content {
+    max-height: min(85vh, 880px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .announcement-view-modal .modal-body {
+    overflow-y: auto;
   }
 
   .announcement-view-modal .modal-content,
@@ -295,7 +335,18 @@
   }
 
   .announcement-modal-attachment-media {
-    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(13, 110, 253, 0.1);
+    background: #ffffff;
+    padding: 0.75rem;
+    margin: 0 auto;
+    max-height: clamp(240px, 60vh, 520px);
+    width: min(100%, clamp(280px, 70vw, 780px));
+    box-shadow: 0 0.75rem 1.5rem rgba(13, 110, 253, 0.12);
   }
 
   .announcement-modal-attachment-media .ratio {
@@ -304,9 +355,10 @@
   }
 
   .announcement-modal-attachment-media img {
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
     height: auto;
-    display: block;
     border-radius: 0.75rem;
   }
 
@@ -463,15 +515,23 @@
             <div class="announcement-card-content">
               <div class="text-body-secondary text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
               {% if image_count == 1 %}
-              <div class="ratio ratio-4x3 rounded overflow-hidden">
-                <img src="{{ url_for('static', filename=image_attachments[0].file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="w-100 h-100">
+              <div class="announcement-card-image" data-announcement-image-wrapper>
+                <img
+                  src="{{ url_for('static', filename=image_attachments[0].file_path) }}"
+                  alt="Anexo do comunicado {{ announcement.subject }}"
+                  loading="lazy"
+                  data-announcement-image>
               </div>
               {% elif image_count > 1 %}
               {% set gallery_display_count = [image_count, 3]|min %}
               <div class="announcement-card-gallery gallery-count-{{ gallery_display_count }}">
                 {% for attachment in image_attachments[:gallery_display_count] %}
-                <div class="gallery-item">
-                  <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" loading="lazy">
+                <div class="gallery-item" data-announcement-gallery-item data-span="{{ 2 if gallery_display_count == 3 and loop.first else 1 }}">
+                  <img
+                    src="{{ url_for('static', filename=attachment.file_path) }}"
+                    alt="Anexo do comunicado {{ announcement.subject }}"
+                    loading="lazy"
+                    data-announcement-gallery-image>
                   {% if loop.last and image_count > gallery_display_count %}
                   <span class="gallery-overlay">+{{ image_count - gallery_display_count }}</span>
                   {% endif %}
@@ -553,8 +613,11 @@
                     </a>
                   </div>
                   {% if attachment.is_image %}
-                  <div class="announcement-modal-attachment-media mt-2">
-                    <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Anexo do comunicado {{ announcement.subject }}" class="img-fluid rounded">
+                  <div class="announcement-modal-attachment-media mt-2" data-announcement-modal-image-wrapper>
+                    <img
+                      src="{{ url_for('static', filename=attachment.file_path) }}"
+                      alt="Anexo do comunicado {{ announcement.subject }}"
+                      data-announcement-modal-image>
                   </div>
                   {% elif attachment.is_pdf or attachment.is_text %}
                   <div class="announcement-modal-attachment-media mt-2">
@@ -1286,6 +1349,76 @@
 
     openAnnouncementFromHash();
     window.addEventListener('hashchange', openAnnouncementFromHash);
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const clampRatio = (value) => {
+      if (!Number.isFinite(value) || value <= 0) {
+        return null;
+      }
+      const min = 0.35;
+      const max = 3.5;
+      return Math.min(Math.max(value, min), max);
+    };
+
+    const registerRatio = (img, wrapper, { property, multiplier = 1, extraProperty, extraMultiplier }) => {
+      if (!img || !wrapper || !property) {
+        return;
+      }
+
+      const applyRatio = () => {
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        if (!width || !height) {
+          return;
+        }
+
+        const baseRatio = clampRatio((width / height) * multiplier);
+        if (baseRatio) {
+          wrapper.style.setProperty(property, baseRatio.toFixed(4));
+        }
+
+        if (extraProperty) {
+          const computedExtraRatio = clampRatio((width / height) * (extraMultiplier || 1));
+          if (computedExtraRatio) {
+            wrapper.style.setProperty(extraProperty, computedExtraRatio.toFixed(4));
+          }
+        }
+      };
+
+      if (img.complete && img.naturalWidth) {
+        applyRatio();
+      } else {
+        img.addEventListener('load', applyRatio, { once: true });
+      }
+
+      img.addEventListener('error', () => {
+        wrapper.style.removeProperty(property);
+        if (extraProperty) {
+          wrapper.style.removeProperty(extraProperty);
+        }
+      }, { once: true });
+    };
+
+    document.querySelectorAll('[data-announcement-image]').forEach((img) => {
+      const wrapper = img.closest('[data-announcement-image-wrapper]');
+      registerRatio(img, wrapper, { property: '--announcement-card-image-ratio' });
+    });
+
+    document.querySelectorAll('[data-announcement-gallery-image]').forEach((img) => {
+      const wrapper = img.closest('[data-announcement-gallery-item]');
+      if (!wrapper) {
+        return;
+      }
+      const span = Number.parseFloat(wrapper.dataset.span || '1');
+      registerRatio(img, wrapper, {
+        property: '--announcement-gallery-item-ratio',
+        extraProperty: span > 1 ? '--announcement-gallery-item-large-ratio' : undefined,
+        extraMultiplier: span > 1 ? span : undefined,
+      });
+    });
+
   });
 </script>
 {% endblock %}

@@ -363,10 +363,42 @@ def _normalize_photo_entry(value: str) -> str | None:
         return None
 
     parsed = urlparse(trimmed)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc
 
-    if parsed.scheme == "https" and parsed.netloc:
+    if scheme == "https" and netloc:
         return parsed.geturl()
-    if parsed.scheme and parsed.scheme != "https":
+
+    if scheme == "http" and netloc:
+        static_path = parsed.path or ""
+        if not static_path.startswith("/static/"):
+            return None
+
+        # Accept insecure scheme only when targeting this application host.
+        allowed_hosts: set[str] = set()
+        if has_request_context():
+            host = (request.host or "").lower()
+            if host:
+                allowed_hosts.add(host)
+        server_name = (current_app.config.get("SERVER_NAME") or "").lower()
+        if server_name:
+            allowed_hosts.add(server_name)
+
+        normalized_netloc = netloc.lower()
+        if not allowed_hosts:
+            return static_path if static_path.startswith("/static/uploads/") else None
+
+        netloc_base = normalized_netloc.split(":", 1)[0]
+        for allowed in allowed_hosts:
+            if not allowed:
+                continue
+            allowed_base = allowed.split(":", 1)[0]
+            if normalized_netloc == allowed or netloc_base == allowed_base:
+                return static_path
+
+        return None
+
+    if scheme and scheme not in {"http", "https"}:
         return None
 
     if not parsed.scheme and not parsed.netloc:
