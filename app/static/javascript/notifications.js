@@ -69,6 +69,11 @@
 
     const displayedNotificationIds = new Set();
 
+    // Suporte para notificações do sistema
+    const supportsNotifications = 'Notification' in window;
+    const supportsServiceWorker = 'serviceWorker' in navigator;
+    let notificationPermission = supportsNotifications ? Notification.permission : 'denied';
+
     function updateLastKnownId(id) {
       if (!id) {
         return;
@@ -163,6 +168,109 @@
       displayedNotificationIds.add(id);
     }
 
+    // Função para solicitar permissão de notificações do sistema
+    async function requestNotificationPermission() {
+      if (!supportsNotifications) {
+        console.log('[Notifications] Notificações do sistema não suportadas');
+        return false;
+      }
+
+      if (notificationPermission === 'granted') {
+        return true;
+      }
+
+      if (notificationPermission === 'denied') {
+        console.log('[Notifications] Permissão negada pelo usuário');
+        return false;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        notificationPermission = permission;
+        console.log('[Notifications] Permissão:', permission);
+        return permission === 'granted';
+      } catch (error) {
+        console.error('[Notifications] Erro ao solicitar permissão:', error);
+        return false;
+      }
+    }
+
+    // Função para criar notificação do sistema usando Service Worker
+    async function showSystemNotification(item) {
+      if (!item) {
+        return;
+      }
+
+      // Verificar se temos permissão
+      if (notificationPermission !== 'granted') {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          console.log('[Notifications] Usando notificação in-app (sem permissão do sistema)');
+          return false;
+        }
+      }
+
+      const title = 'JP Contábil';
+      const options = {
+        body: item.message || 'Nova notificação',
+        icon: '/static/images/icon-192x192.png',
+        badge: '/static/images/icon-192x192.png',
+        tag: item.id ? `notification-${item.id}` : 'jp-notification',
+        data: {
+          url: item.url || '/',
+          notificationId: item.id,
+          dateOfArrival: Date.now()
+        },
+        requireInteraction: true, // Mantém a notificação visível até o usuário interagir
+        silent: false, // Som ativado
+        vibrate: [200, 100, 200],
+        renotify: true, // Renotifica mesmo se já existe uma com a mesma tag
+        timestamp: Date.now()
+      };
+
+      try {
+        // Tentar usar Service Worker se disponível
+        if (supportsServiceWorker && navigator.serviceWorker.ready) {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification(title, options);
+          console.log('[Notifications] Notificação do sistema mostrada via SW');
+          return true;
+        } else {
+          // Fallback para Notification API direta
+          const notification = new Notification(title, options);
+
+          notification.onclick = function(event) {
+            event.preventDefault();
+            window.focus();
+            if (item.url) {
+              window.location.href = item.url;
+            }
+            notification.close();
+          };
+
+          console.log('[Notifications] Notificação do sistema mostrada diretamente');
+          return true;
+        }
+      } catch (error) {
+        console.error('[Notifications] Erro ao mostrar notificação do sistema:', error);
+        return false;
+      }
+    }
+
+    // Solicitar permissão automaticamente ao carregar a página
+    setTimeout(() => {
+      if (supportsNotifications && notificationPermission === 'default') {
+        console.log('[Notifications] Solicitando permissão para notificações do sistema...');
+        requestNotificationPermission().then(granted => {
+          if (granted) {
+            console.log('[Notifications] Permissão concedida! Notificações do Windows habilitadas.');
+          } else {
+            console.log('[Notifications] Permissão negada. As notificações ficarão apenas no navegador.');
+          }
+        });
+      }
+    }, 2000);
+
     function showNotificationToast(item) {
       if (!item) {
         return;
@@ -173,6 +281,27 @@
         updateLastKnownId(id);
         knownNotificationIds.add(id);
       }
+
+      // SEMPRE criar notificação do sistema (desktop) se tivermos permissão
+      // Isso garante que apareça como pop-up nativo do Windows
+      if (notificationPermission === 'granted') {
+        showSystemNotification(item).then(success => {
+          if (success) {
+            console.log('[Notifications] Notificação do Windows exibida com sucesso!');
+          }
+        }).catch(error => {
+          console.error('[Notifications] Falha ao criar notificação do sistema:', error);
+        });
+      } else {
+        // Se não temos permissão, tentar solicitar novamente
+        console.log('[Notifications] Tentando solicitar permissão novamente...');
+        requestNotificationPermission().then(granted => {
+          if (granted) {
+            showSystemNotification(item);
+          }
+        });
+      }
+
       if (!toastContainer) {
         return;
       }
@@ -513,5 +642,13 @@
         stopPolling();
       }
     });
+
+    // Expor função globalmente para poder ser chamada pela UI
+    window.jpNotifications = {
+      requestPermission: requestNotificationPermission,
+      hasPermission: () => notificationPermission === 'granted',
+      isSupported: () => supportsNotifications,
+      getPermissionStatus: () => notificationPermission
+    };
   });
 })();

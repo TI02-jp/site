@@ -89,6 +89,16 @@
 {% block content %}
 <div class="new-task-container">
   <section class="kanban" style="gap: 1rem;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
     <form method="POST" enctype="multipart/form-data" class="kanban-form">
       {{ form.hidden_tag() }}
 
@@ -103,15 +113,22 @@
       <div class="form-group form-group-setor">
         {{ form.tag_id.label }}
         {% if parent_task %}
-          {{ form.tag_id(disabled=True) }}
+          <!-- Campo visual desabilitado para exibição -->
+          <select disabled class="form-control">
+            <option>{{ parent_task.tag.nome }}</option>
+          </select>
+          <!-- Campo hidden com o valor real para enviar no POST -->
+          <input type="hidden" name="tag_id" id="tag_id" value="{{ parent_task.tag_id }}">
         {% else %}
           {{ form.tag_id() }}
         {% endif %}
+        {% for error in form.tag_id.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-group form-group-usuario">
         {{ form.assigned_to.label }}
         {{ form.assigned_to() }}
+        {% for error in form.assigned_to.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-group form-group-titulo">
@@ -123,6 +140,7 @@
       <div class="form-group form-group-descricao">
         {{ form.description.label }}
         {{ form.description() }}
+        {% for error in form.description.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-group form-group-full">
@@ -131,16 +149,19 @@
         <small style="color: #666; display: block; margin-top: 0.5rem;">
           Aceita imagens, PDFs e documentos. Você pode selecionar múltiplos arquivos.
         </small>
+        {% for error in form.attachments.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-group form-group-prazo">
         {{ form.due_date.label }}
         {{ form.due_date() }}
+        {% for error in form.due_date.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-group form-group-prioridade">
         {{ form.priority.label }}
         {{ form.priority() }}
+        {% for error in form.priority.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
       <div class="form-actions">
@@ -164,6 +185,33 @@
       contentWrapper.style.height = 'auto';
       contentWrapper.style.minHeight = 'calc(100vh - 80px)';
       contentWrapper.style.paddingBottom = '1.5rem';
+    }
+
+    // Adicionar feedback visual ao submeter o formulário
+    const form = document.querySelector('.kanban-form');
+    const submitBtn = form?.querySelector('.btn-new-task');
+
+    if (form && submitBtn) {
+      form.addEventListener('submit', function(e) {
+        // Desabilitar botão para evitar duplo submit
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+
+        // Mostrar texto de loading
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Salvando...';
+
+        // Se houver erro de validação, reabilitar o botão após um tempo
+        setTimeout(function() {
+          if (window.location.href === form.action || !form.action) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.textContent = originalText;
+          }
+        }, 3000);
+      });
     }
   });
 </script>

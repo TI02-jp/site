@@ -1,6 +1,6 @@
 {% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False) %}
 {% set status_class = ' task-status-' ~ task.status.value %}
-<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if task.children %} has-children{% endif %}">
+<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if task.children %} has-children{% endif %}" data-task-id="{{ task.id }}">
   <div class="task-header">
     {% if task.children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>

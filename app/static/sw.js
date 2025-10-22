@@ -88,3 +88,90 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Handler para cliques em notificações
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notificação clicada:', event.notification.tag);
+  console.log('[Service Worker] Ação:', event.action);
+
+  // Se a ação for 'close', apenas fechar
+  if (event.action === 'close') {
+    event.notification.close();
+    return;
+  }
+
+  // Para qualquer outra ação ou clique na notificação, abrir a URL
+  event.notification.close();
+
+  // Obter a URL da notificação
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Verificar se já existe uma janela aberta
+        for (const client of clientList) {
+          // Se encontrar uma janela do site, focar nela e navegar
+          if (client.url.includes(self.registration.scope) && 'focus' in client) {
+            return client.focus().then(() => {
+              // Navegar para a URL da notificação
+              if ('navigate' in client) {
+                return client.navigate(urlToOpen);
+              }
+            });
+          }
+        }
+        // Se não existe, abrir nova janela
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Handler para eventos push (preparado para futuro uso com push server)
+self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push recebido');
+
+  let data = { title: 'Nova notificação', body: 'Você tem uma nova notificação' };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body || data.message || 'Você tem uma nova notificação',
+    icon: '/static/images/icon-192x192.png',
+    badge: '/static/images/icon-192x192.png',
+    data: {
+      url: data.url || '/',
+      dateOfArrival: Date.now(),
+      notificationId: data.id
+    },
+    tag: data.id ? `notification-${data.id}` : 'jp-notification',
+    requireInteraction: true, // Mantém visível até o usuário interagir
+    vibrate: [200, 100, 200],
+    renotify: true, // Renotifica mesmo se já existe uma com a mesma tag
+    silent: false, // Som ativado
+    timestamp: Date.now(),
+    actions: [
+      {
+        action: 'open',
+        title: 'Abrir',
+        icon: '/static/images/icon-192x192.png'
+      },
+      {
+        action: 'close',
+        title: 'Fechar'
+      }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'JP Contábil', options)
+  );
+});
