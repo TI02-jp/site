@@ -23,9 +23,7 @@
             <a class="nav-link{% if request.endpoint == 'notifications_center' %} active{% endif %}" href="{{ url_for('notifications_center') }}">
                 <i class="bi bi-bell"></i>
                 NOTIFICAÇÕES
-                {% if unread_notifications_count %}
-                <span class="nav-badge">{{ unread_notifications_count }}</span>
-                {% endif %}
+                <span class="nav-badge{% if not unread_notifications_count %} d-none{% endif %}" data-notifications-badge>{{ unread_notifications_count or 0 }}</span>
             </a>
         </li>
         <li class="nav-item">
