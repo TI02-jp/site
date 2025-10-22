@@ -433,6 +433,10 @@ def serialize_meeting_event(
         and status in CONFIGURABLE_STATUSES
     )
     can_delete = is_admin or can_edit
+    can_edit_pautas = (
+        status == ReuniaoStatus.REALIZADA
+        and (is_admin or meeting.criador_id == current_user_id)
+    )
     event_data = {
         "id": meeting.id,
         "title": meeting.assunto,
@@ -440,6 +444,7 @@ def serialize_meeting_event(
         "end": end_dt.isoformat(),
         "color": color,
         "description": meeting.descricao,
+        "pautas": meeting.pautas or "",
         "status": label,
         "status_code": status.value,
         "creator": participant_meta["creator_name"] or participant_meta["creator_username"],
@@ -452,6 +457,7 @@ def serialize_meeting_event(
         "can_delete": can_delete,
         "can_configure": can_configure,
         "can_update_status": can_update_status,
+        "can_edit_pautas": can_edit_pautas,
         "course_id": meeting.course_id,
         "meet_settings": normalized_settings,
         "host_candidates": participant_meta["host_candidates"],
@@ -1159,6 +1165,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "start": start_dt.isoformat(),
                 "end": end_dt.isoformat(),
                 "description": e.get("description"),
+                "pautas": "",
                 "meet_link": e.get("hangoutLink"),
                 "color": color,
                 "status": status_label,
@@ -1169,6 +1176,7 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
                 "can_delete": False,
                 "can_update_status": False,
                 "can_configure": False,
+                "can_edit_pautas": False,
             }
         )
         seen_keys.add(key)

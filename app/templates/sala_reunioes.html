@@ -364,6 +364,22 @@
                                 <div class="fw-semibold mb-2">Configurações do Meet</div>
                                 <ul class="list-unstyled mb-0 small" id="meetConfigSummaryList"></ul>
                             </div>
+                            <div id="pautasSection" class="mt-3 d-none">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Pautas</h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="cancelPautasBtn">Cancelar</button>
+                                        <button type="button" class="btn btn-sm btn-primary d-none" id="savePautasBtn">
+                                            <span id="pautasSpinner" class="spinner-border spinner-border-sm align-middle me-1 d-none" role="status" aria-hidden="true"></span>
+                                            <span class="align-middle">Salvar</span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary d-none" id="editPautasBtn">Adicionar pautas</button>
+                                    </div>
+                                </div>
+                                <div id="pautasDisplay" class="border rounded p-3 bg-light text-break small"></div>
+                                <textarea id="pautasTextarea" class="form-control d-none mt-2" rows="5" placeholder="Registre os principais pontos discutidos."></textarea>
+                                <div class="text-danger small mt-2 d-none" id="pautasError"></div>
+                            </div>
                             <div id="statusControls" class="bg-light border rounded mt-3 d-none">
                                 <div class="row g-2 align-items-end">
                                     <div class="col-sm-6 col-lg-4">
@@ -593,6 +609,14 @@
     var detailStatus = document.getElementById('detailStatus');
     var meetLinkContainer = document.getElementById('meetLinkContainer');
     var detailMeetLink = document.getElementById('detailMeetLink');
+    var pautasSection = document.getElementById('pautasSection');
+    var pautasDisplay = document.getElementById('pautasDisplay');
+    var pautasTextarea = document.getElementById('pautasTextarea');
+    var pautasError = document.getElementById('pautasError');
+    var editPautasBtn = document.getElementById('editPautasBtn');
+    var savePautasBtn = document.getElementById('savePautasBtn');
+    var cancelPautasBtn = document.getElementById('cancelPautasBtn');
+    var pautasSpinner = document.getElementById('pautasSpinner');
     var copyMeetLink = document.getElementById('copyMeetLink');
     var statusesDisablingMeetLink = ['REALIZADA', 'CANCELADA'];
     var statusControls = document.getElementById('statusControls');
@@ -607,6 +631,7 @@
     var saveStatusBtn = document.getElementById('saveStatusBtn');
     var statusSpinner = document.getElementById('statusSpinner');
     var isStatusEditing = false;
+    var isEditingPautas = false;
     var editEventBtn = document.getElementById('editEventBtn');
     var deleteEventBtn = document.getElementById('deleteEventBtn');
     var deleteMeetingForm = document.getElementById('deleteMeetingForm');
@@ -962,6 +987,266 @@
         }
     }
 
+    function escapeHtml(value) {
+        if (!value) {
+            return '';
+        }
+        return value.replace(/[&<>"']/g, function(ch) {
+            switch (ch) {
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#39;';
+                default:
+                    return ch;
+            }
+        });
+    }
+
+    function formatPautasHtml(text) {
+        if (!text) {
+            return '';
+        }
+        return escapeHtml(text).replace(/\r?\n/g, '<br>');
+    }
+
+    function resetPautasError() {
+        if (!pautasError) {
+            return;
+        }
+        pautasError.textContent = '';
+        pautasError.classList.add('d-none');
+    }
+
+    function showPautasError(message) {
+        if (!pautasError) {
+            return;
+        }
+        pautasError.textContent = message;
+        pautasError.classList.remove('d-none');
+    }
+
+    function renderPautasDisplay(text) {
+        if (!pautasDisplay) {
+            return;
+        }
+        var hasText = !!(text && text.trim());
+        if (hasText) {
+            pautasDisplay.innerHTML = formatPautasHtml(text);
+            pautasDisplay.classList.remove('text-muted');
+            pautasDisplay.classList.remove('fst-italic');
+        } else {
+            pautasDisplay.textContent = 'Nenhuma pauta registrada.';
+            pautasDisplay.classList.add('text-muted');
+            pautasDisplay.classList.add('fst-italic');
+        }
+    }
+
+    function updatePautasEditControls(event) {
+        if (!editPautasBtn || !savePautasBtn || !cancelPautasBtn) {
+            return;
+        }
+        var canEdit = !!(event && event.extendedProps && event.extendedProps.can_edit_pautas);
+        if (isEditingPautas) {
+            editPautasBtn.classList.add('d-none');
+            savePautasBtn.classList.remove('d-none');
+            cancelPautasBtn.classList.remove('d-none');
+            savePautasBtn.disabled = false;
+            cancelPautasBtn.disabled = false;
+        } else {
+            savePautasBtn.classList.add('d-none');
+            cancelPautasBtn.classList.add('d-none');
+            if (canEdit) {
+                var hasText = !!(event && event.extendedProps && event.extendedProps.pautas && event.extendedProps.pautas.trim());
+                editPautasBtn.textContent = hasText ? 'Editar pautas' : 'Adicionar pautas';
+                editPautasBtn.classList.remove('d-none');
+                editPautasBtn.disabled = false;
+            } else {
+                editPautasBtn.classList.add('d-none');
+            }
+        }
+    }
+
+    function exitPautasEdit(event) {
+        if (!pautasSection) {
+            return;
+        }
+        isEditingPautas = false;
+        if (pautasTextarea) {
+            pautasTextarea.classList.add('d-none');
+            pautasTextarea.disabled = false;
+        }
+        if (pautasDisplay) {
+        pautasDisplay.classList.remove('d-none');
+    }
+    if (pautasSpinner) {
+        pautasSpinner.classList.add('d-none');
+    }
+    resetPautasError();
+    if (event && event.extendedProps) {
+        if (pautasTextarea) {
+            pautasTextarea.value = event.extendedProps.pautas || '';
+        }
+        renderPautasDisplay(event.extendedProps.pautas || '');
+    }
+    updatePautasEditControls(event);
+}
+
+    function enterPautasEdit(event) {
+        if (!pautasSection || !event || !event.extendedProps || !event.extendedProps.can_edit_pautas) {
+            return;
+        }
+        isEditingPautas = true;
+        if (pautasTextarea) {
+            pautasTextarea.value = event.extendedProps.pautas || '';
+            pautasTextarea.classList.remove('d-none');
+            pautasTextarea.disabled = false;
+            pautasTextarea.focus();
+        }
+        if (pautasDisplay) {
+            pautasDisplay.classList.add('d-none');
+        }
+        resetPautasError();
+        updatePautasEditControls(event);
+    }
+
+    function setPautasLoading(isLoading) {
+        if (savePautasBtn) {
+            savePautasBtn.disabled = !!isLoading;
+        }
+        if (cancelPautasBtn) {
+            cancelPautasBtn.disabled = !!isLoading;
+        }
+        if (pautasTextarea) {
+            pautasTextarea.disabled = !!isLoading;
+        }
+        if (pautasSpinner) {
+            pautasSpinner.classList.toggle('d-none', !isLoading);
+        }
+    }
+
+    function updatePautasSection(event) {
+        if (!pautasSection) {
+            return;
+        }
+        if (!event || !event.extendedProps) {
+            pautasSection.classList.add('d-none');
+            return;
+        }
+        var content = event.extendedProps.pautas || '';
+        var hasContent = !!(content && content.trim());
+        var canEdit = !!event.extendedProps.can_edit_pautas;
+        var shouldShow = hasContent || canEdit;
+        pautasSection.classList.toggle('d-none', !shouldShow);
+        if (!shouldShow) {
+            isEditingPautas = false;
+            resetPautasError();
+            return;
+        }
+        if (!isEditingPautas && pautasTextarea) {
+            pautasTextarea.value = content;
+            pautasTextarea.classList.add('d-none');
+            pautasTextarea.disabled = false;
+        }
+        if (isEditingPautas) {
+            if (pautasTextarea) {
+                pautasTextarea.classList.remove('d-none');
+                pautasTextarea.disabled = false;
+            }
+            if (pautasDisplay) {
+                pautasDisplay.classList.add('d-none');
+            }
+        } else {
+            if (pautasDisplay) {
+                pautasDisplay.classList.remove('d-none');
+            }
+            if (pautasTextarea) {
+                pautasTextarea.classList.add('d-none');
+            }
+        }
+        renderPautasDisplay(content);
+        resetPautasError();
+        if (pautasSpinner) {
+            pautasSpinner.classList.add('d-none');
+        }
+        updatePautasEditControls(event);
+    }
+
+    function savePautas() {
+        if (!currentEvent) {
+            showPautasError('Nenhuma reuniao selecionada.');
+            return;
+        }
+        var meetingId = currentEvent.extendedProps ? (currentEvent.extendedProps.meeting_id || currentEvent.id) : currentEvent.id;
+        if (!meetingId) {
+            showPautasError('Reuniao invalida.');
+            return;
+        }
+        if (!pautasTextarea) {
+            return;
+        }
+        setPautasLoading(true);
+        resetPautasError();
+        var payload = { pautas: pautasTextarea.value || '' };
+        fetch('/reuniao/' + meetingId + '/pautas', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function(response) {
+                return response
+                    .json()
+                    .then(function(data) {
+                        return { ok: response.ok, data: data };
+                    })
+                    .catch(function() {
+                        return { ok: response.ok, data: null };
+                    });
+            })
+            .then(function(result) {
+                setPautasLoading(false);
+                if (!result.ok || !result.data || result.data.success === false) {
+                    var errorMessage = (result.data && result.data.error) || 'Nao foi possivel salvar as pautas.';
+                    showPautasError(errorMessage);
+                    return;
+                }
+                var updatedEvent = result.data.event;
+                if (updatedEvent) {
+                    var calendarEventId = updatedEvent.id || (currentEvent && currentEvent.id);
+                    var matchingEvent = calendarEventId ? calendar.getEventById(String(calendarEventId)) : null;
+                    if (matchingEvent) {
+                        currentEvent = matchingEvent;
+                    }
+                    syncEventWithPayload(currentEvent, updatedEvent);
+                } else if (result.data.pautas !== undefined && currentEvent) {
+                    currentEvent.setExtendedProp('pautas', result.data.pautas);
+                }
+                if (currentEvent) {
+                    exitPautasEdit(currentEvent);
+                    updatePautasSection(currentEvent);
+                } else {
+                    exitPautasEdit(null);
+                }
+                showFlashMessage('Pautas salvas com sucesso!', 'success');
+                refreshStatuses();
+            })
+            .catch(function(error) {
+                console.error('Falha ao salvar pautas.', error);
+                setPautasLoading(false);
+                showPautasError('Nao foi possivel salvar as pautas.');
+            });
+    }
+
     function renderEventDetails(event) {
         if (!event) {
             return;
@@ -1000,6 +1285,7 @@
         if (detailStatus) {
             detailStatus.textContent = event.extendedProps.status || '';
         }
+        updatePautasSection(event);
         updateMeetLink(event);
     }
 
@@ -1131,6 +1417,8 @@
             ['creator', 'creator'],
             ['creator_username', 'creator_username'],
             ['host_candidates', 'host_candidates'],
+            ['pautas', 'pautas'],
+            ['can_edit_pautas', 'can_edit_pautas'],
         ];
         mapping.forEach(function(pair) {
             var propKey = pair[0];
@@ -1194,6 +1482,36 @@
         input.addEventListener('input', handler);
         input.addEventListener('change', handler);
     });
+
+    if (editPautasBtn) {
+        editPautasBtn.addEventListener('click', function() {
+            if (!currentEvent) {
+                showPautasError('Nenhuma reuniao selecionada.');
+                return;
+            }
+            enterPautasEdit(currentEvent);
+        });
+    }
+
+    if (cancelPautasBtn) {
+        cancelPautasBtn.addEventListener('click', function() {
+            if (currentEvent) {
+                if (pautasTextarea) {
+                    pautasTextarea.value = currentEvent.extendedProps ? (currentEvent.extendedProps.pautas || '') : '';
+                }
+                exitPautasEdit(currentEvent);
+                updatePautasSection(currentEvent);
+            } else {
+                exitPautasEdit(null);
+            }
+        });
+    }
+
+    if (savePautasBtn) {
+        savePautasBtn.addEventListener('click', function() {
+            savePautas();
+        });
+    }
 
     if (saveStatusBtn) {
         saveStatusBtn.addEventListener('click', function() {
@@ -1594,6 +1912,13 @@
         eventDetailsModalEl.addEventListener('hidden.bs.modal', function() {
             isStatusEditing = false;
             resetStatusError();
+            isEditingPautas = false;
+            exitPautasEdit(currentEvent || null);
+            if (currentEvent) {
+                updatePautasSection(currentEvent);
+            } else {
+                resetPautasError();
+            }
             eventDetailsModalInstance = bootstrap.Modal.getInstance(eventDetailsModalEl) || null;
         });
     }
@@ -1651,6 +1976,8 @@
                         var updatedHostId = Object.prototype.hasOwnProperty.call(evData, 'meet_host_id') ? evData.meet_host_id : null;
                         existing.setExtendedProp('meet_host_id', updatedHostId);
                         existing.setExtendedProp('meet_host_name', evData.meet_host_name || '');
+                        existing.setExtendedProp('pautas', evData.pautas || '');
+                        existing.setExtendedProp('can_edit_pautas', !!evData.can_edit_pautas);
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
