@@ -2824,6 +2824,50 @@ def notifications_stream():
     response.headers["Cache-Control"] = "no-cache"
     return response
 
+@app.route("/realtime/stream")
+@login_required
+def realtime_stream():
+    """Server-Sent Events stream for real-time system updates."""
+    from app.services.realtime import get_broadcaster
+
+    # Get subscribed scopes from query params (comma-separated)
+    scopes_param = request.args.get("scopes", "all")
+    subscribed_scopes = set(s.strip() for s in scopes_param.split(",") if s.strip())
+
+    user_id = current_user.id
+    broadcaster = get_broadcaster()
+    client_id = broadcaster.register_client(user_id, subscribed_scopes)
+
+    def event_stream() -> Any:
+        try:
+            last_event_id = 0
+            while True:
+                # Get pending events for this client
+                events = broadcaster.get_events(user_id, client_id, since_id=last_event_id)
+
+                if events:
+                    for event in events:
+                        yield event.to_sse()
+                        last_event_id = max(last_event_id, event.id)
+                else:
+                    # Send keep-alive comment every second
+                    yield ": keep-alive\n\n"
+
+                time.sleep(0.5)  # Check for new events every 500ms
+        except GeneratorExit:
+            broadcaster.unregister_client(user_id, client_id)
+            return
+        finally:
+            broadcaster.unregister_client(user_id, client_id)
+
+    response = Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+    )
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
+    return response
+
 @app.route("/notificacoes")
 @login_required
 def notifications_center():
@@ -5403,7 +5447,7 @@ def tasks_overview_mine():
 def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
-    return_url = request.args.get("return_url") or request.referrer
+    return_url = request.args.get("return_url")  # Não usar request.referrer - queremos ir para "Minhas Tarefas"
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
@@ -5422,7 +5466,7 @@ def tasks_new():
         form.parent_id.data = parent_task.id
         form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
         form.tag_id.data = parent_task.tag_id
-        form.tag_id.render_kw = {"disabled": True}
+        # Não desabilitar o campo aqui - será tratado no template
         form.assigned_to.choices = _build_user_choices(parent_task.tag)
     else:
         tags_query = (
@@ -5443,52 +5487,99 @@ def tasks_new():
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_user_choices(tag)
     if form.validate_on_submit():
+        current_app.logger.info("Formulário validado com sucesso. Criando task...")
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         if not parent_task and (tag is None or tag.id != tag_id):
             tag = Tag.query.get(tag_id)
         if tag is None:
             abort(400)
         assignee_id = form.assigned_to.data or None
-        task = Task(
-            title=form.title.data,
-            description=form.description.data,
-            tag_id=tag_id,
-            priority=TaskPriority(form.priority.data),
-            due_date=form.due_date.data,
-            created_by=current_user.id,
-            parent_id=parent_id,
-            assigned_to=assignee_id,
-        )
-        if task.assigned_to and task.assigned_to == current_user.id:
-            task._skip_assignment_notification = True
-        db.session.add(task)
-        db.session.flush()
 
-        # Processar uploads de anexos
-        uploaded_files = [
-            storage
-            for storage in (form.attachments.data or [])
-            if storage and storage.filename
-        ]
+        try:
+            task = Task(
+                title=form.title.data,
+                description=form.description.data,
+                tag_id=tag_id,
+                priority=TaskPriority(form.priority.data),
+                due_date=form.due_date.data,
+                created_by=current_user.id,
+                parent_id=parent_id,
+                assigned_to=assignee_id,
+            )
+            if task.assigned_to and task.assigned_to == current_user.id:
+                task._skip_assignment_notification = True
+            db.session.add(task)
+            db.session.flush()
 
-        for uploaded_file in uploaded_files:
-            saved = _save_task_file(uploaded_file)
-            db.session.add(
-                TaskAttachment(
-                    task=task,
-                    file_path=saved["path"],
-                    original_name=saved["name"],
-                    mime_type=saved["mime_type"],
+            # Processar uploads de anexos
+            uploaded_files = [
+                storage
+                for storage in (form.attachments.data or [])
+                if storage and storage.filename
+            ]
+
+            for uploaded_file in uploaded_files:
+                saved = _save_task_file(uploaded_file)
+                db.session.add(
+                    TaskAttachment(
+                        task=task,
+                        file_path=saved["path"],
+                        original_name=saved["name"],
+                        mime_type=saved["mime_type"],
+                    )
                 )
+
+            db.session.commit()
+
+            # Broadcast task creation
+            from app.services.realtime import broadcast_task_created
+            task_data = {
+                'id': task.id,
+                'title': task.title,
+                'description': task.description,
+                'status': task.status.value,
+                'priority': task.priority.value,
+                'tag_id': task.tag_id,
+                'tag_name': task.tag.nome,
+                'assigned_to': task.assigned_to,
+                'created_by': task.created_by,
+                'due_date': task.due_date.isoformat() if task.due_date else None,
+                'parent_id': task.parent_id
+            }
+            broadcast_task_created(task_data, exclude_user=current_user.id)
+
+            flash("Tarefa criada com sucesso!", "success")
+            current_app.logger.info(
+                "Task criada com sucesso (ID: %s). return_url: %s, current_user.role: %s",
+                task.id, return_url, current_user.role
             )
 
-        db.session.commit()
-        flash("Tarefa criada com sucesso!", "success")
+            # Redirecionar de volta para a pagina original ou para o setor da tarefa
+            if return_url and return_url != request.url:
+                current_app.logger.info("Redirecionando para return_url: %s", return_url)
+                return redirect(return_url)
 
-        # Redirecionar de volta para a pagina original ou para o setor da tarefa
-        if return_url and return_url != request.url:
-            return redirect(return_url)
-        return redirect(url_for("tasks_sector", tag_id=tag_id))
+            # Todos os usuários vão para "Minhas Tarefas" após salvar
+            current_app.logger.info("Redirecionando para tasks_overview_mine")
+            print("=" * 50)
+            print(f"DEBUG: Redirecionando para tasks_overview_mine")
+            print(f"DEBUG: User role: {current_user.role}")
+            print(f"DEBUG: Task ID: {task.id}")
+            print("=" * 50)
+            return redirect(url_for("tasks_overview_mine"))
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar tarefa", exc_info=exc)
+            flash(f"Erro ao criar tarefa: {str(exc)}", "danger")
+    else:
+        # Debug: mostrar erros de validação quando o formulário não validar
+        if request.method == "POST":
+            current_app.logger.warning(
+                "Formulário de tarefa não validou. Erros: %s", form.errors
+            )
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"Erro no campo '{field}': {error}", "danger")
     if parent_task:
         cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
     elif tag:
@@ -5717,6 +5808,32 @@ def update_task_status(task_id):
             task.completed_at = None
         db.session.add(history)
         db.session.commit()
+
+        # Broadcast status change
+        from app.services.realtime import broadcast_task_status_changed
+        task_data = {
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'status': task.status.value,
+            'priority': task.priority.value,
+            'tag_id': task.tag_id,
+            'tag_name': task.tag.nome,
+            'assigned_to': task.assigned_to,
+            'created_by': task.created_by,
+            'completed_by': task.completed_by,
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+            'due_date': task.due_date.isoformat() if task.due_date else None,
+            'parent_id': task.parent_id
+        }
+        broadcast_task_status_changed(
+            task.id,
+            old_status.value,
+            new_status.value,
+            task_data,
+            exclude_user=current_user.id
+        )
+
     return jsonify({"success": True})
 
 
@@ -5737,8 +5854,17 @@ def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
+
+    # Store task ID before deletion for broadcasting
+    deleted_task_id = task.id
+
     _delete_task_recursive(task)
     db.session.commit()
+
+    # Broadcast task deletion
+    from app.services.realtime import broadcast_task_deleted
+    broadcast_task_deleted(deleted_task_id, exclude_user=current_user.id)
+
     return jsonify({"success": True})
 
 

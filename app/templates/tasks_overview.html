@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="kanban">
+<section class="kanban" data-realtime data-realtime-scopes="tasks">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Visão Geral de Tarefas</h2>
     <div class="kanban-actions">
@@ -22,11 +22,24 @@
         </label>
       </form>
       {% if current_user.role == 'admin' %}
-      <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
+      <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
       {% endif %}
       <a href="{{ url_for('tasks_history', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
     </div>
   </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="margin: 1rem 0;">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert" style="margin-bottom: 0.5rem;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
   {% from "tasks_macros.html" import render_task with context %}
   {% set status_meta = {
     'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
@@ -56,6 +69,7 @@
 <script>
   const csrfToken = "{{ csrf_token() }}";
 </script>
+<script src="{{ url_for('static', filename='javascript/realtime.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
 {% endblock %}
 
