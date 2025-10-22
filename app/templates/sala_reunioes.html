@@ -358,7 +358,7 @@
                             <div id="meetLinkContainer" class="bg-light border rounded p-2 d-flex align-items-center gap-2 mt-3 d-none">
                                 <i class="bi bi-camera-video"></i>
                                 <a id="detailMeetLink" href="#" target="_blank" class="text-decoration-none flex-grow-1"></a>
-                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard"></i></button>
+                                <button type="button" id="copyMeetLink" class="btn btn-sm btn-outline-secondary" title="Copiar convite formatado"><i class="bi bi-envelope"></i> Copiar convite</button>
                             </div>
                             <div id="meetConfigSummary" class="bg-light border rounded p-3 mt-3 d-none">
                                 <div class="fw-semibold mb-2">Configurações do Meet</div>
@@ -971,8 +971,32 @@
                 detailMeetLink.style.pointerEvents = '';
                 copyMeetLink.classList.remove('d-none');
                 copyMeetLink.onclick = function() {
-                    navigator.clipboard.writeText(link).then(function() {
-                        showFlashMessage('Link copiado!', 'success');
+                    var title = event.title || 'Reunião';
+                    var dateFormatted = '';
+                    if (event.startStr && event.startStr.length >= 10) {
+                        var dateParts = event.startStr.slice(0, 10).split('-');
+                        dateFormatted = dateParts.reverse().join('/');
+                    }
+                    var startTime = event.startStr && event.startStr.length >= 16 ? event.startStr.slice(11, 16) : '';
+                    var endTime = event.endStr && event.endStr.length >= 16 ? event.endStr.slice(11, 16) : '';
+                    var timeRange = startTime && endTime ? startTime + ' às ' + endTime : startTime;
+                    var description = event.extendedProps.description || '';
+
+                    var formattedMessage = 'JP Contábil\n\n';
+                    formattedMessage += 'Título: ' + title + '\n';
+                    if (dateFormatted) {
+                        formattedMessage += 'Data: ' + dateFormatted + '\n';
+                    }
+                    if (timeRange) {
+                        formattedMessage += 'Horário: ' + timeRange + '\n';
+                    }
+                    if (description) {
+                        formattedMessage += '\nDescrição: ' + description + '\n';
+                    }
+                    formattedMessage += '\nLink do Google Meet: ' + link;
+
+                    navigator.clipboard.writeText(formattedMessage).then(function() {
+                        showFlashMessage('Convite copiado!', 'success');
                     });
                 };
             }

@@ -5275,7 +5275,7 @@ def edit_user(user_id):
 # ---------------------- Task Management Routes ----------------------
 
 @app.route("/tasks/overview")
-@admin_required
+@login_required
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
     assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
@@ -5284,6 +5284,13 @@ def tasks_overview():
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
     )
+    if current_user.role != "admin":
+        accessible_ids = _get_accessible_tag_ids(current_user)
+        allowed_filters = []
+        if accessible_ids:
+            allowed_filters.append(Task.tag_id.in_(accessible_ids))
+        allowed_filters.append(Task.created_by == current_user.id)
+        query = query.filter(sa.or_(*allowed_filters))
     if assigned_by_me:
         query = query.filter(Task.created_by == current_user.id)
     tasks = (
@@ -5291,11 +5298,13 @@ def tasks_overview():
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.creator),
             joinedload(Task.status_history),
             joinedload(Task.attachments),
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.creator),
             joinedload(Task.children).joinedload(Task.status_history),
             joinedload(Task.children).joinedload(Task.attachments),
         )
@@ -5326,6 +5335,67 @@ def tasks_overview():
         TaskStatus=TaskStatus,
         history_count=history_count,
         assigned_by_me=assigned_by_me,
+        allow_delete=current_user.role == "admin",
+    )
+
+
+@app.route("/tasks/overview/mine")
+@login_required
+def tasks_overview_mine():
+    """Kanban view of open tasks created by the current user."""
+
+    open_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+    query = (
+        Task.query.join(Tag)
+        .filter(
+            Task.parent_id.is_(None),
+            Task.created_by == current_user.id,
+            Task.status.in_(open_statuses),
+        )
+    )
+    tasks = (
+        query.options(
+            joinedload(Task.tag),
+            joinedload(Task.assignee),
+            joinedload(Task.finisher),
+            joinedload(Task.creator),
+            joinedload(Task.status_history),
+            joinedload(Task.attachments),
+            joinedload(Task.children).joinedload(Task.assignee),
+            joinedload(Task.children).joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.creator),
+            joinedload(Task.children).joinedload(Task.status_history),
+            joinedload(Task.children).joinedload(Task.attachments),
+        )
+        .order_by(Task.due_date)
+        .all()
+    )
+    tasks_by_status = {status: [] for status in open_statuses}
+    for t in tasks:
+        status = t.status
+        if isinstance(status, str):
+            try:
+                status = TaskStatus(status)
+            except Exception:
+                status = TaskStatus.PENDING
+        if status in tasks_by_status:
+            tasks_by_status[status].append(t)
+    history_count = (
+        Task.query.filter(
+            Task.parent_id.is_(None),
+            Task.created_by == current_user.id,
+            Task.status == TaskStatus.DONE,
+        ).count()
+    )
+    return render_template(
+        "tasks_overview_mine.html",
+        tasks_by_status=tasks_by_status,
+        TaskStatus=TaskStatus,
+        visible_statuses=open_statuses,
+        history_count=history_count,
+        allow_delete=current_user.role == "admin",
+        history_url=url_for("tasks_history", assigned_by_me=1),
     )
 
 @app.route("/tasks/new", methods=["GET", "POST"])
@@ -5337,20 +5407,14 @@ def tasks_new():
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    is_admin = current_user.role == "admin"
     requested_tag_id = request.args.get("tag_id", type=int)
     choices: list[tuple[int, str]] = []
-    ti_tag: Tag | None = None
-    ti_tag_id: int | None = None
-    if not is_admin:
-        ti_tag = _get_ti_tag()
-        if not ti_tag:
-            abort(403)
-        ti_tag_id = ti_tag.id
-        if parent_task and parent_task.tag_id != ti_tag_id:
-            abort(403)
-        if requested_tag_id and requested_tag_id != ti_tag_id:
-            requested_tag_id = ti_tag_id
+
+    def _build_user_choices(tag_obj: Tag | None) -> list[tuple[int, str]]:
+        if not tag_obj:
+            return [(0, "Sem responsavel")]
+        users = [u for u in tag_obj.users if u.ativo]
+        return [(0, "Sem responsavel")] + [(u.id, u.name) for u in users]
 
     form = TaskForm()
     tag = parent_task.tag if parent_task else None
@@ -5359,18 +5423,12 @@ def tasks_new():
         form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
         form.tag_id.data = parent_task.tag_id
         form.tag_id.render_kw = {"disabled": True}
-        users = [u for u in parent_task.tag.users if u.ativo]
-        form.assigned_to.choices = [(0, "Sem responsável")] + [
-            (u.id, u.name) for u in users
-        ]
+        form.assigned_to.choices = _build_user_choices(parent_task.tag)
     else:
-        if is_admin:
-            tags_query = (
-                Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
-            )
-            choices = [(t.id, t.nome) for t in tags_query.all()]
-        else:
-            choices = [(ti_tag_id, ti_tag.nome)] if ti_tag else []
+        tags_query = (
+            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
+        )
+        choices = [(t.id, t.nome) for t in tags_query.all()]
         form.tag_id.choices = choices
         selected_tag_id = form.tag_id.data
         if not selected_tag_id and requested_tag_id:
@@ -5383,23 +5441,13 @@ def tasks_new():
                 form.tag_id.data = selected_tag_id
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
-            if tag:
-                users = [u for u in tag.users if u.ativo]
-                form.assigned_to.choices = [(0, "Sem responsável")] + [
-                    (u.id, u.name) for u in users
-                ]
-            else:
-                form.assigned_to.choices = [(0, "Sem responsável")]
-        else:
-            form.assigned_to.choices = [(0, "Sem responsável")]
+        form.assigned_to.choices = _build_user_choices(tag)
     if form.validate_on_submit():
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         if not parent_task and (tag is None or tag.id != tag_id):
             tag = Tag.query.get(tag_id)
         if tag is None:
             abort(400)
-        if not is_admin and ti_tag_id and tag.id != ti_tag_id:
-            abort(403)
         assignee_id = form.assigned_to.data or None
         task = Task(
             title=form.title.data,
@@ -5437,28 +5485,28 @@ def tasks_new():
         db.session.commit()
         flash("Tarefa criada com sucesso!", "success")
 
-        # Redirecionar de volta para a página original ou para o setor da tarefa
+        # Redirecionar de volta para a pagina original ou para o setor da tarefa
         if return_url and return_url != request.url:
             return redirect(return_url)
         return redirect(url_for("tasks_sector", tag_id=tag_id))
     if parent_task:
         cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
-    elif is_admin:
-        cancel_url = url_for("tasks_overview")
+    elif tag:
+        cancel_url = url_for("tasks_sector", tag_id=tag.id)
     else:
-        selected_tag_id = form.tag_id.data
-        if not selected_tag_id:
-            if choices:
-                selected_tag_id = choices[0][0]
-            else:
-                selected_tag_id = ti_tag_id
-        cancel_url = url_for("tasks_sector", tag_id=selected_tag_id)
-    return render_template("tasks_new.html", form=form, parent_task=parent_task, cancel_url=cancel_url)
+        cancel_url = url_for("tasks_overview" if current_user.role == "admin" else "home")
+
+    return render_template(
+        "tasks_new.html",
+        form=form,
+        parent_task=parent_task,
+        cancel_url=cancel_url,
+    )
 
 @app.route("/tasks/users/<int:tag_id>")
-@admin_required
+@login_required
 def tasks_users(tag_id):
-    """Return active users for a given tag."""
+    """Return active users for the requested task tag."""
     tag = Tag.query.get_or_404(tag_id)
     users = [
         {"id": u.id, "name": u.name}
@@ -5556,14 +5604,15 @@ def tasks_history(tag_id=None):
             )
         else:
             tag_ids = _get_accessible_tag_ids(current_user)
-            if not tag_ids:
-                query = None
-            else:
-                query = Task.query.filter(
-                    Task.parent_id.is_(None),
-                    Task.status == TaskStatus.DONE,
-                    Task.tag_id.in_(tag_ids),
-                )
+            filters = []
+            if tag_ids:
+                filters.append(Task.tag_id.in_(tag_ids))
+            filters.append(Task.created_by == current_user.id)
+            query = Task.query.filter(
+                Task.parent_id.is_(None),
+                Task.status == TaskStatus.DONE,
+                sa.or_(*filters),
+            )
     if query is not None:
         if assigned_to_me:
             query = query.filter(Task.assigned_to == current_user.id)
@@ -5602,11 +5651,14 @@ def tasks_view(task_id):
     )
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if not _can_user_access_tag(task.tag, current_user):
+    if not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
         abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
     priority_order = ["low", "medium", "high"]
-    cancel_url = url_for("tasks_history", tag_id=task.tag_id)
+    if _can_user_access_tag(task.tag, current_user):
+        cancel_url = url_for("tasks_history", tag_id=task.tag_id)
+    else:
+        cancel_url = url_for("tasks_history", assigned_by_me=1)
     return render_template(
         "tasks_view.html",
         task=task,
@@ -5688,3 +5740,5 @@ def delete_task(task_id):
     _delete_task_recursive(task)
     db.session.commit()
     return jsonify({"success": True})
+
+
