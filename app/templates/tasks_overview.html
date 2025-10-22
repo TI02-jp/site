@@ -44,7 +44,7 @@
       <h3><i class="bi {{ status_meta[status.value].icon }}"></i>{{ status_meta[status.value].label }}</h3>
       <ul class="kanban-list" data-status="{{ status.value }}">
         {% for task in tasks_by_status[status] %}
-          {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels, allow_delete=True) }}
+          {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels, allow_delete=allow_delete) }}
         {% else %}
           <li class="empty">Nenhuma tarefa.</li>
         {% endfor %}
@@ -58,3 +58,4 @@
 </script>
 <script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
 {% endblock %}
+

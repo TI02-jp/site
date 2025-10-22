@@ -104,8 +104,8 @@
       /* Header da Sidebar */
       .sidebar-header {
         padding: 1rem 0.95rem;
-        border-bottom: 1px solid var(--border-color);
-        background: #2f323a;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, rgba(11, 40, 139, 1) 0%, rgba(11, 40, 139, 0.82) 70%, rgba(11, 40, 139, 0.72) 100%);
         color: #f5f7fa;
         display: flex;
         flex-direction: column;
@@ -122,8 +122,8 @@
       }
 
       .sidebar-header .brand-logo {
-        width: 42px;
-        height: 42px;
+        width: 68px;
+        height: 68px;
         border-radius: 50%;
         background: #ffffff;
         border: 2px solid rgba(255, 255, 255, 0.45);
@@ -140,9 +140,12 @@
 
       .sidebar-header .quick-actions {
         display: flex;
-        gap: 0.25rem;
+        gap: 0.3rem;
         justify-content: center;
         flex-wrap: nowrap;
+        padding: 0.35rem 0.4rem;
+        border-radius: 999px;
+        background: transparent;
       }
 
       .quick-action-btn {

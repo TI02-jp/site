@@ -24,6 +24,14 @@
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  /* Tipografia um pouco menor apenas dentro do quadro Kanban */
+  --font-display: 1.38rem;
+  --font-2xl: 1.24rem;
+  --font-xl: 1.08rem;
+  --font-lg: 0.96rem;
+  --font-base: 0.84rem;
+  --font-sm: 0.74rem;
+  --font-xs: 0.66rem;
 }
 
 .kanban-header {
