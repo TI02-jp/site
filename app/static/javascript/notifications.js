@@ -473,7 +473,7 @@
               return;
             }
             updateLastKnownId(id);
-            if (!seenNotificationIds.has(id)) {
+            if (!displayedNotificationIds.has(id)) {
               showNotificationToast(item);
             }
             knownNotificationIds.add(id);
