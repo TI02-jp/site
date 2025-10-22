@@ -103,6 +103,8 @@ from app.services.meeting_room import (
     delete_meeting,
     update_meeting_configuration,
     change_meeting_status,
+    serialize_meeting_event,
+    invalidate_calendar_cache,
     STATUS_SEQUENCE,
     get_status_label,
     MeetingStatusConflictError,
@@ -3405,6 +3407,89 @@ def update_meeting_status(meeting_id: int):
         )
     message = f"Status atualizado para {get_status_label(new_status)}."
     return jsonify({"success": True, "event": event_payload, "message": message})
+
+@app.route("/reuniao/<int:meeting_id>/pautas", methods=["POST"])
+@login_required
+def update_meeting_pautas(meeting_id: int):
+    """Persist meeting notes once the meeting has been completed."""
+
+    meeting = Reuniao.query.get_or_404(meeting_id)
+    is_admin = current_user.role == "admin"
+    if not is_admin and meeting.criador_id != current_user.id:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Voce nao tem permissao para atualizar as pautas desta reuniao.",
+                }
+            ),
+            403,
+        )
+    if meeting.status != ReuniaoStatus.REALIZADA:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "As pautas so podem ser registradas apos a reuniao ser finalizada.",
+                }
+            ),
+            400,
+        )
+    payload = request.get_json(silent=True) or {}
+    pautas_raw = payload.get("pautas", "")
+    if not isinstance(pautas_raw, str):
+        return (
+            jsonify(
+                {"success": False, "error": "Informe um texto valido para as pautas."}
+            ),
+            400,
+        )
+    pautas_text = pautas_raw.strip()
+    if len(pautas_text) > 5000:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "As pautas podem ter no maximo 5.000 caracteres.",
+                }
+            ),
+            400,
+        )
+    meeting.pautas = pautas_text or None
+    db.session.add(meeting)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception(
+            "Falha ao salvar pautas da reuniao", extra={"meeting_id": meeting_id}
+        )
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Nao foi possivel salvar as pautas da reuniao.",
+                }
+            ),
+            500,
+        )
+    invalidate_calendar_cache()
+    calendar_tz = get_calendar_timezone()
+    now = datetime.now(calendar_tz)
+    event_data, _ = serialize_meeting_event(
+        meeting,
+        now,
+        current_user.id,
+        is_admin,
+        auto_progress=False,
+    )
+    return jsonify(
+        {
+            "success": True,
+            "pautas": meeting.pautas or "",
+            "event": event_data,
+        }
+    )
 
 @app.route("/reuniao/<int:meeting_id>/delete", methods=["POST"])
 @login_required

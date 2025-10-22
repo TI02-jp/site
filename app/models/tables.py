@@ -714,6 +714,7 @@ class Reuniao(db.Model):
     fim = db.Column(db.DateTime(timezone=True), nullable=False)
     assunto = db.Column(db.String(50), nullable=False)
     descricao = db.Column(db.Text)
+    pautas = db.Column(db.Text)
     meet_link = db.Column(db.String(255))
     google_event_id = db.Column(db.String(255))
     course_id = db.Column(
