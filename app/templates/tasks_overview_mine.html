@@ -49,7 +49,7 @@
       <ul class="kanban-list" data-status="{{ status.value }}">
         {% set column_tasks = tasks_by_status.get(status, []) %}
         {% if column_tasks %}
-          {% for task in column_tasks %}
+          {% for task in column_tasks if not task.is_private or task.created_by == current_user.id %}
             {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels, allow_delete=allow_delete) }}
           {% endfor %}
         {% else %}

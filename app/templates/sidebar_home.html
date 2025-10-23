@@ -112,3 +112,16 @@
         </li>
     </ul>
 </div>
+{% if current_user.is_authenticated and current_user.is_master %}
+<div class="nav-section">
+    <div class="nav-section-title">DIAGNÓSTICO</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'admin_log_viewer' %} active{% endif %}" href="{{ url_for('admin_log_viewer') }}">
+                <i class="bi bi-activity"></i>
+                Logs do Sistema
+            </a>
+        </li>
+    </ul>
+</div>
+{% endif %}

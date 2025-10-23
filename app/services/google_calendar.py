@@ -62,8 +62,8 @@ def _build_service():
     Cached to avoid recreating the service on every request.
     """
     delegated = _build_delegated_credentials(CALENDAR_SCOPES)
-    # Set socket timeout to prevent hanging requests (reduced from 10s to 5s)
-    socket.setdefaulttimeout(5)
+    # Set socket timeout to prevent hanging requests (reduced to 3s for faster failover)
+    socket.setdefaulttimeout(3)
     return build("calendar", "v3", credentials=delegated)
 
 
@@ -74,7 +74,7 @@ def _build_meet_service():
     Cached to avoid recreating the service on every request.
     """
     delegated = _build_delegated_credentials(MEET_SCOPES)
-    socket.setdefaulttimeout(5)
+    socket.setdefaulttimeout(3)
     return build("meet", "v2", credentials=delegated)
 
 

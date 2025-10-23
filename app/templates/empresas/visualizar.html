@@ -524,60 +524,112 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-4">
-                        <div class="col-lg-6 col-md-12">
+                        <div class="col-12">
                             <div class="info-group">
                                 <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h6>
                                 <div class="info-item">
                                     <label class="info-label">Data de Envio</label>
-                                    <div class="info-value">{% if pessoal.data_envio %}<span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-calendar-event me-1 text-dept-blue"></i>{{ pessoal.data_envio }}</span>{% else %}<span class="text-muted">Não informada</span>{% endif %}</div>
+                                    <div class="info-value">
+                                        {% if pessoal.data_envio %}
+                                            <span class="badge bg-dept-blue-subtle fs-6"><i class="bi bi-calendar-event me-1 text-dept-blue"></i>{{ pessoal.data_envio }}</span>
+                                        {% else %}
+                                            <div class="text-center text-muted py-3 border rounded bg-light">
+                                                <i class="bi bi-calendar-x fs-3 mb-2"></i>
+                                                <p class="mb-0 small">Não informada</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-6 col-md-12">
+                    </div>
+
+                    <div class="row g-4 mt-2">
+                        <div class="col-12">
                             <div class="info-group">
                                 <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-gear me-2"></i>Controles e Sistemas</h6>
-                                <div class="row">
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Registro de Funcionários</label>
-                                        <div class="info-value mt-2">
-                                            {% if pessoal.registro_funcionarios %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-person-lines-fill me-2 text-dept-blue"></i>{{ pessoal.registro_funcionarios }}</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não tem</span>
-                                            {% endif %}
+
+                                <div class="info-item mb-3">
+                                    <div class="p-3 border rounded bg-light">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="bi bi-person-lines-fill fs-4 text-dept-blue"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="info-label fw-semibold mb-1 d-block">Registro de Funcionários</label>
+                                                <div class="info-value">
+                                                    {% if pessoal.registro_funcionarios %}
+                                                        <span class="text-break">
+                                                            <i class="bi bi-check-circle me-1 text-success"></i>{{ pessoal.registro_funcionarios }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">
+                                                            <i class="bi bi-x-circle me-1"></i>Deverá ser realizado um pré-cadastro no sistema da Domínio Contábil
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Ponto Eletrônico</label>
-                                        <div class="info-value mt-2">
-                                            {% if pessoal.ponto_eletronico %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-clock me-2 text-dept-blue"></i>{{ pessoal.ponto_eletronico }}</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
-                                            {% endif %}
+                                </div>
+
+                                <div class="info-item mb-3">
+                                    <div class="p-3 border rounded bg-light">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="bi bi-clock-history fs-4 text-dept-blue"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="info-label fw-semibold mb-1 d-block">Ponto Eletrônico</label>
+                                                <div class="info-value">
+                                                    {% if pessoal.ponto_eletronico %}
+                                                        <span class="text-break">
+                                                            <i class="bi bi-check-circle me-1 text-success"></i>{{ pessoal.ponto_eletronico }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">
+                                                            <i class="bi bi-x-circle me-1"></i>São apontados no arquivo de exportação do ponto eletrônico ou informado no arquivo de movimento
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 text-center info-item">
-                                        <label class="info-label">Sistema de Pagamento</label>
-                                        <div class="info-value mt-2">
-                                            {% if pessoal.pagamento_funcionario %}
-                                                <span class="badge bg-dept-blue-subtle fs-6 px-3 py-2"><i class="bi bi-currency-dollar me-2 text-dept-blue"></i>{{ pessoal.pagamento_funcionario }}</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-muted fs-6 px-3 py-2"><i class="bi bi-x-circle me-2"></i>Não informado</span>
-                                            {% endif %}
+                                </div>
+
+                                <div class="info-item">
+                                    <div class="p-3 border rounded bg-light">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="bi bi-cash-coin fs-4 text-dept-blue"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="info-label fw-semibold mb-1 d-block">Sistema de Pagamento</label>
+                                                <div class="info-value">
+                                                    {% if pessoal.pagamento_funcionario %}
+                                                        <span class="text-break">
+                                                            <i class="bi bi-check-circle me-1 text-success"></i>{{ pessoal.pagamento_funcionario }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">
+                                                            <i class="bi bi-x-circle me-1"></i>O pagamento dos funcionários poderá ser realizado diretamente pela Domínio ou pelo cliente
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-    
+
                     {% if pessoal.particularidades_texto and pessoal.particularidades_texto.strip() %}
                     <div class="row mt-4">
                         <div class="col-12">
                             <div class="info-group">
                                 <h6 class="text-dept-blue mb-3 border-bottom pb-2"><i class="bi bi-pencil-square me-2"></i>Particularidades</h6>
-                                  <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|sanitize }}</div>
+                                <div class="border rounded p-4 bg-white editor-content">{{ pessoal.particularidades_texto|sanitize }}</div>
                             </div>
                         </div>
                     </div>

@@ -56,7 +56,7 @@
     <div class="kanban-column">
       <h3><i class="bi {{ status_meta[status.value].icon }}"></i>{{ status_meta[status.value].label }}</h3>
       <ul class="kanban-list" data-status="{{ status.value }}">
-        {% for task in tasks_by_status[status] %}
+        {% for task in tasks_by_status[status] if not task.is_private or task.created_by == current_user.id %}
           {{ render_task(task, TaskStatus, show_tag=True, priority_labels=priority_labels, allow_delete=allow_delete) }}
         {% else %}
           <li class="empty">Nenhuma tarefa.</li>

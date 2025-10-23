@@ -419,6 +419,11 @@
       }
 
       /* Estados de Loading */
+      .nav-link.loading {
+        opacity: 0.6;
+        cursor: wait !important;
+      }
+
       .nav-link.loading i {
         animation: spin 1s linear infinite;
       }
@@ -426,6 +431,30 @@
       @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+      }
+
+      /* Overlay de carregamento global */
+      #globalLoadingOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #globalLoadingOverlay.show {
+        display: flex;
+      }
+
+      #globalLoadingOverlay .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-width: 0.3rem;
       }
 
       /* Tema escuro (opcional) */
@@ -467,6 +496,13 @@
     </style>
 </head>
 <body class="bg-light text-dark" style="font-family: 'Inter', sans-serif;">
+
+    <!-- Overlay de carregamento global -->
+    <div id="globalLoadingOverlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -653,14 +689,79 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Loading state nos links
+    // Proteção contra double-click e loading state nos links
+    const navigationInProgress = new Set();
+    const lastClickTime = new Map();
+    const CLICK_DEBOUNCE_MS = 1000; // 1 segundo entre cliques no mesmo link
+    const loadingOverlay = document.getElementById('globalLoadingOverlay');
+
     document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function() {
+        link.addEventListener('click', function(e) {
             if (this.href && !this.href.includes('#')) {
+                const now = Date.now();
+                const linkHref = this.href;
+
+                // Verificar se já está navegando para este link
+                if (navigationInProgress.has(linkHref)) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Verificar debounce - se clicou muito rápido no mesmo link
+                const lastClick = lastClickTime.get(linkHref) || 0;
+                if (now - lastClick < CLICK_DEBOUNCE_MS) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Marcar como em progresso e atualizar tempo
+                navigationInProgress.add(linkHref);
+                lastClickTime.set(linkHref, now);
                 this.classList.add('loading');
+
+                // Desabilitar pointer events temporariamente
+                this.style.pointerEvents = 'none';
+
+                // Mostrar overlay de carregamento
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('show');
+                }
+
+                // Limpar após timeout (caso navegação falhe)
+                setTimeout(() => {
+                    navigationInProgress.delete(linkHref);
+                    this.style.pointerEvents = '';
+                    if (loadingOverlay) {
+                        loadingOverlay.classList.remove('show');
+                    }
+                }, 3000);
             }
         });
     });
+
+    // Debounce universal para TODOS os links de navegação (não apenas .nav-link)
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.href.includes('#') && !link.target) {
+            const linkHref = link.href;
+
+            // Verificar se já está navegando
+            if (navigationInProgress.has(linkHref)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+
+            // Verificar debounce
+            const now = Date.now();
+            const lastClick = lastClickTime.get(linkHref) || 0;
+            if (now - lastClick < CLICK_DEBOUNCE_MS) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }
+    }, true); // Usar capture phase para interceptar antes de outros handlers
 
     // Auto-dismiss alerts
     document.querySelectorAll('.alert-dismissible').forEach(alert => {
@@ -681,19 +782,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Periodically ping the server to keep the session fresh
     (function() {
         const pingUrl = "{{ url_for('ping') }}";
-        function sendPing() {
-            fetch(pingUrl, {cache: 'no-store'}).catch(() => {});
+        const pingInterval = 120000; // 2 minutes
+        let lastPing = 0;
+        let scheduledId = null;
+
+        function performPing() {
+            lastPing = Date.now();
+            scheduledId = null;
+            fetch(pingUrl, {cache: 'no-store'})
+                .catch(() => {})
+                .finally(() => {
+                    window.portalPing = {
+                        lastPingAt: new Date(lastPing),
+                        nextPingInMs: pingInterval,
+                    };
+                    if (console && console.debug) {
+                        console.debug("[portal] ping", window.portalPing);
+                    }
+                });
         }
+
+        function queuePing(force = false) {
+            const now = Date.now();
+            if (force || now - lastPing >= pingInterval) {
+                performPing();
+                return;
+            }
+            if (scheduledId !== null) {
+                return;
+            }
+            const delay = Math.max(0, pingInterval - (now - lastPing));
+            scheduledId = setTimeout(() => performPing(), delay);
+        }
+
         ['mousemove','keydown','click','scroll','touchstart'].forEach(evt => {
-            window.addEventListener(evt, sendPing, {passive: true});
+            window.addEventListener(evt, () => queuePing(), {passive: true});
         });
         window.addEventListener('message', (event) => {
             if (event.data === 'session-activity') {
-                sendPing();
+                queuePing();
             }
         });
-        setInterval(sendPing, 60000);
-        sendPing();
+        setInterval(() => queuePing(), pingInterval);
+        queuePing(true);
     })();
 
     // Ordenar alfabeticamente os itens de menu das sidebars

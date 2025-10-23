@@ -653,6 +653,11 @@ class TaskForm(FlaskForm):
     assigned_to = SelectField(
         "Usuário", coerce=int, validators=[Optional()], default=0, choices=[]
     )
+    only_me = BooleanField(
+        "Somente para mim",
+        false_values={False, "false", "0", 0, ""},
+        default=False,
+    )
     priority = SelectField(
         "Prioridade",
         choices=[("low", "Baixa"), ("medium", "Média"), ("high", "Alta")],

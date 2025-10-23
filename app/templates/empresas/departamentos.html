@@ -3,7 +3,7 @@
 {% block title %}Departamentos{% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 1200px;">
+<div class="container mt-4" style="max-width: 1400px;">
     <div class="row mb-4">
         <div class="col-12">
             <div class="text-center">
@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="fiscal">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="fiscal">
         <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="contabil">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="contabil">
         <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
         <div class="card-body p-4">
             <form method="POST" enctype="multipart/form-data">
@@ -290,7 +290,7 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="pessoal">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="pessoal">
         <div class="card-header bg-dept-blue text-white py-3">
             <h3 class="mb-0 fw-semibold">
                 <i class="bi bi-people me-2"></i>Departamento Pessoal
@@ -369,7 +369,7 @@
     </div>
 
 
-    <div class="card shadow-lg mb-5 section-anchor" id="administrativo">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="administrativo">
         <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
         <div class="card-body p-4">
             <form method="POST">
@@ -391,7 +391,7 @@
         </div>
     </div>
 
-    <div class="card shadow-lg mb-5 section-anchor" id="notas-fiscais">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="notas-fiscais">
         <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt-cutoff me-2"></i>Departamento Notas Fiscais</h3></div>
         <div class="card-body p-4">
             <form method="POST">
@@ -425,7 +425,7 @@
     </div>
 
     {% if can_access_financeiro %}
-    <div class="card shadow-lg mb-5 section-anchor" id="financeiro">
+    <div class="card shadow-lg mb-5 section-anchor w-100" id="financeiro">
         <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
         <div class="card-body p-4">
             <form method="POST">

@@ -908,6 +908,12 @@ class Task(db.Model):
     __tablename__ = "tasks"
 
     id = db.Column(db.Integer, primary_key=True)
+    is_private = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.text("0"),
+    )
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.Enum(TaskStatus), nullable=False, default=TaskStatus.PENDING)
@@ -1116,7 +1122,8 @@ def _build_assignment_message(title: str, tag_name: str | None) -> str:
     """Return a human-friendly notification message for a task assignment."""
 
     if tag_name:
-        return f'Tarefa "{title}" atribuída no setor {tag_name}.'
+        display = "Pessoal" if tag_name.startswith("__personal__") else tag_name
+        return f'Tarefa "{title}" atribuída no setor {display}.'
     return f'Tarefa "{title}" atribuída a você.'
 
 
