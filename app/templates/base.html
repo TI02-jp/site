@@ -511,7 +511,7 @@
                         <i class="bi bi-house"></i>
                     </a>
                     {% if current_user.role == 'admin' %}
-                    {% set user_nav_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag', 'online_users'] %}
+                    {% set user_nav_endpoints = ['list_users', 'novo_usuario', 'edit_user', 'tags', 'cadastro_tag', 'editar_tag'] %}
                     <a href="{{ url_for('list_users') }}" class="quick-action-btn quick-action-btn--users{% if request.endpoint in user_nav_endpoints %} quick-action-btn--active{% endif %}" title="Usuários" aria-label="Usuários">
                         <i class="bi bi-people"></i>
                     </a>

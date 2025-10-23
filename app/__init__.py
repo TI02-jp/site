@@ -98,9 +98,11 @@ app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_pre_ping', True)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_recycle', 1800)
 # Otimizações de pool de conexões para produção
-app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_size', 20)  # 20 conexões permanentes
-app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('max_overflow', 40)  # Até 60 conexões no total
+# Aumentado para suportar 64 Waitress threads com margem de segurança
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_size', 30)  # ↑ 20→30 conexões permanentes
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('max_overflow', 50)  # ↑ 40→50 (total: 80 conexões)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_timeout', 30)  # Timeout de 30s para obter conexão
+app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_use_lifo', True)  # LIFO = reutiliza conexões quentes (melhor para MySQL)
 app.config['GOOGLE_CLIENT_ID'] = os.getenv('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
@@ -154,7 +156,7 @@ app.config['COMPRESS_MIMETYPES'] = [
 app.config['COMPRESS_LEVEL'] = 6  # Nível de compressão (1-9, 6 é bom balanço)
 app.config['COMPRESS_MIN_SIZE'] = 500  # Só comprime respostas > 500 bytes
 
-LAST_SEEN_REFRESH_INTERVAL = timedelta(seconds=60)
+
 
 # Import centralized cache for session tracking
 from app.extensions.cache import cache as session_cache
@@ -205,93 +207,59 @@ def _log_slow_requests(response):
 
 
 @app.before_request
-def _update_last_seen():
-    """Update ``current_user.last_seen`` and session activity."""
-    # Skip for static files, ping, and health check endpoints to reduce DB load
-    # These are high-frequency endpoints that don't need last_seen tracking
+def _update_session_activity():
+    """Persist minimal session activity without touching ``users.last_seen``."""
     if request.endpoint in ('static', 'ping', 'health_check', 'readiness_check', 'liveness_check', 'db_pool_status'):
         return
 
-    if current_user.is_authenticated:
-        from app.models.tables import Session, SAO_PAULO_TZ
+    if not current_user.is_authenticated:
+        return
 
-        now_utc = datetime.utcnow()
-        last_refresh_raw = session.get('_last_seen_refreshed_at')
-        last_refresh = None
-        if isinstance(last_refresh_raw, str):
-            try:
-                last_refresh = datetime.fromisoformat(last_refresh_raw)
-            except ValueError:
-                last_refresh = None
-        if last_refresh and now_utc - last_refresh < LAST_SEEN_REFRESH_INTERVAL:
-            return
+    from app.models.tables import Session, SAO_PAULO_TZ
 
-        session['_last_seen_refreshed_at'] = now_utc.isoformat(timespec='seconds')
+    now_utc = datetime.utcnow()
+    sid = session.get('sid')
+    if not sid:
+        return
 
-        # Atualiza last_seen via SQL direto (bypass ORM para evitar lock contention)
-        # NÃO usar current_user.last_seen = now_utc para evitar dirty tracking
-        try:
-            db.session.execute(
-                sa.text("UPDATE users SET last_seen = :now WHERE id = :user_id"),
-                {"now": now_utc, "user_id": current_user.id}
+    now_sp = datetime.now(SAO_PAULO_TZ)
+    user_agent = request.headers.get('User-Agent')
+    ip_address = request.remote_addr
+
+    cache_key = f"session_throttle:{sid}:{ip_address}:{user_agent}"
+    last_update = session_cache.get(cache_key)
+    if last_update and (now_utc - last_update).total_seconds() < 60:
+        return
+
+    session_cache.set(cache_key, now_utc, timeout=120)
+
+    try:
+        sess = db.session.query(Session).filter_by(session_id=sid).first()
+        if sess:
+            updates = {}
+            if sess.last_activity != now_sp:
+                updates['last_activity'] = now_sp
+            if sess.ip_address != ip_address:
+                updates['ip_address'] = ip_address
+            if sess.user_agent != user_agent:
+                updates['user_agent'] = user_agent
+
+            if updates:
+                db.session.query(Session).filter_by(session_id=sid).update(updates)
+                g.session_updated = True
+        else:
+            sess = Session(
+                session_id=sid,
+                user_id=current_user.id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                last_activity=now_sp,
+                session_data={},
             )
-            # Marca flag para commit isolado no teardown
-            g.last_seen_updated = True
-        except SQLAlchemyError:
-            # Se falhar, não bloqueia a requisição - last_seen não é crítico
-            db.session.rollback()
-
-        sid = session.get('sid')
-        if sid:
-            now_sp = datetime.now(SAO_PAULO_TZ)
-            user_agent = request.headers.get('User-Agent')
-            ip_address = request.remote_addr
-
-            # Verifica cache centralizado primeiro para evitar query desnecessária
-            cache_key = f"session_throttle:{sid}:{ip_address}:{user_agent}"
-            last_update = session_cache.get(cache_key)
-
-            # Só atualiza se passou mais de 60 segundos desde a última atualização
-            if last_update and (now_utc - last_update).total_seconds() < 60:
-                return
-
-            # Atualiza cache centralizado com TTL de 120 segundos
-            session_cache.set(cache_key, now_utc, timeout=120)
-
-            # Prepara atualização mas NÃO faz commit aqui (será feito em teardown)
-            try:
-                # Verifica se sessão existe no cache ou no banco
-                sess = db.session.query(Session).filter_by(session_id=sid).first()
-                if sess:
-                    # Atualiza apenas se houver mudanças significativas
-                    updates = {}
-                    if sess.last_activity != now_sp:
-                        updates['last_activity'] = now_sp
-                    if sess.ip_address != ip_address:
-                        updates['ip_address'] = ip_address
-                    if sess.user_agent != user_agent:
-                        updates['user_agent'] = user_agent
-
-                    # Update em batch - sem commit (otimização crítica)
-                    if updates:
-                        db.session.query(Session).filter_by(session_id=sid).update(updates)
-                        # Marca flag para commit no teardown
-                        g.session_updated = True
-                else:
-                    # Cria nova sessão apenas se não existir
-                    sess = Session(
-                        session_id=sid,
-                        user_id=current_user.id,
-                        ip_address=ip_address,
-                        user_agent=user_agent,
-                        last_activity=now_sp,
-                        session_data={},  # Sessão vazia inicialmente (otimização)
-                    )
-                    db.session.add(sess)
-                    # Marca flag para commit no teardown
-                    g.session_updated = True
-            except SQLAlchemyError:
-                db.session.rollback()
+            db.session.add(sess)
+            g.session_updated = True
+    except SQLAlchemyError:
+        db.session.rollback()
 
 
 @app.after_request
@@ -738,17 +706,7 @@ def _log_request_end(response):
 
 @app.teardown_appcontext
 def _commit_session_updates(exception=None):
-    """Commit session and last_seen updates after request completes (non-blocking optimization)."""
-    # Commit last_seen update (if any) - isolado para evitar lock contention
-    if hasattr(g, 'last_seen_updated') and g.last_seen_updated:
-        try:
-            commit_started = track_commit_start()
-            db.session.commit()
-            track_commit_end(commit_started)
-        except SQLAlchemyError as e:
-            logger.warning("Failed to commit last_seen update: %s", e)
-            db.session.rollback()
-
+    """Commit session updates after request completes (non-blocking optimization)."""
     # Commit session updates (if any)
     if hasattr(g, 'session_updated') and g.session_updated:
         try:

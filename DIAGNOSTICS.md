@@ -1,73 +1,73 @@
-Diagnostics Toolkit
-===================
+Kit de Diagnóstico
+==================
 
-Performance instrumentation has been wired into the Flask app to help explain request stalls. This guide shows how to enable each layer and read the collected data.
+Instrumentações de performance foram conectadas à aplicação Flask para explicar travamentos de requisições. Este guia mostra como habilitar cada camada e interpretar os dados coletados.
 
-Configuration Flags
--------------------
+Variáveis de Configuração
+-------------------------
 
-- `SLOW_REQUEST_THRESHOLD_MS` (default: `750`): minimum duration that promotes a request to a structured log entry with SQL, external call, template, and commit breakdowns.
-- `ENABLE_DIAGNOSTICS=1`: exposes the protected endpoint `/_diagnostics/thread-state` that snapshots live Waitress threads.
-- `DIAGNOSTICS_TOKEN`: optional shared secret required in the `X-Diagnostics-Token` header for diagnostics access.
-- `WAITRESS_LOG_LEVEL` (default: `info`): forwarded to the Waitress logger from `run.py`.
+- `SLOW_REQUEST_THRESHOLD_MS` (padrão: `750`): duração mínima para promover uma requisição a um log estruturado com detalhamento de SQL, chamadas externas, templates e commits.
+- `ENABLE_DIAGNOSTICS=1`: expõe o endpoint protegido `/_diagnostics/thread-state`, que captura um instantâneo das threads ativas do Waitress.
+- `DIAGNOSTICS_TOKEN`: segredo opcional exigido no header `X-Diagnostics-Token` para acessar os diagnósticos.
+- `WAITRESS_LOG_LEVEL` (padrão: `info`): nível de log encaminhado ao Waitress via `run.py`.
 
-Performance Middleware
+Middleware de Performance
+-------------------------
+
+O middleware grava entradas `SLOW REQUEST: {…}` em `logs/app.log`. Cada payload inclui:
+
+- `duration_ms`, `sql_time_ms` e contadores de SQL, chamadas externas, templates e commits.
+- Métricas por query (texto SQL truncado, tempo de execução).
+- Duração de chamadas externas (ex.: APIs Google).
+- Tempo de renderização de templates e commits.
+
+Requisições normais são registradas em nível `DEBUG` (`REQUEST PERF`) para evitar ruído em produção. Aumente a verbosidade se precisar inspecionar todas as requisições (`export FLASK_ENV=development` ou ajuste o nível do logger manualmente).
+
+Wrappers de Chamadas Externas
+-----------------------------
+
+`app/utils/google_api_monitor.py` disponibiliza:
+
+- `instrumented_request` para chamadas HTTP com cronometragem, timeouts padrão e logging de status.
+- `monitor_google_call` para envolver objetos de serviço e execuções em lote.
+
+Envolva endpoints lentos (Google Calendar ou similares) para obter visibilidade imediata das dependências externas.
+
+Tempo de SQL e Commits
 ----------------------
 
-The middleware emits `SLOW REQUEST: {…}` entries to `logs/app.log`. Each payload includes:
+O middleware conecta eventos de cursor do SQLAlchemy para medir cada query. Commits executados nos handlers de `teardown_appcontext` em `app/__init__.py` também são cronometrados, evidenciando lock waits no payload.
 
-- `duration_ms`, `sql_time_ms`, and counts for SQL, external calls, templates, and commits.
-- Per-query metrics (truncated SQL text, execution time).
-- External call timings (e.g., Google APIs).
-- Template render durations and commit timing.
-
-Normal requests are logged at `DEBUG` level (`REQUEST PERF`) to avoid polluting production logs. Increase log verbosity if you need every request (`export FLASK_ENV=development` or set the logger level manually).
-
-External Call Wrappers
+Diagnóstico de Threads
 ----------------------
 
-`app/utils/google_api_monitor.py` exposes:
+Com `ENABLE_DIAGNOSTICS=1`, a aplicação oferece `/_diagnostics/thread-state`. O endpoint informa:
 
-- `instrumented_request` for HTTP calls with timing, default timeouts, and status logging.
-- `monitor_google_call` helpers for service objects and batch execution.
+- Total de threads do processo e quantas aparentam ser workers do Waitress.
+- Valor configurado de `WAITRESS_THREADS`.
 
-Wrap Google Calendar (or other slow) endpoints to get immediate visibility into slow external dependencies.
-
-SQL & Commit Timing
--------------------
-
-The middleware hooks SQLAlchemy cursor events to time every query. Commits executed in `app/__init__.py` teardown handlers are wrapped so lock waits surface in the payload.
-
-Thread Diagnostics
-------------------
-
-When `ENABLE_DIAGNOSTICS=1`, the application serves `/_diagnostics/thread-state`. It reports:
-
-- Total threads in the process plus those whose names indicate Waitress workers.
-- Configured `WAITRESS_THREADS`.
-
-Use the helper script:
+Use o script auxiliar:
 
 ```powershell
 python scripts/monitor_waitress_threads.py --token "%DIAGNOSTICS_TOKEN%"
 ```
 
-It polls the endpoint and prints a compact summary that you can watch during incidents.
+Ele consulta o endpoint continuamente e imprime um resumo compacto para acompanhamento durante incidentes.
 
-Log Analysis
-------------
+Análise de Logs
+---------------
 
-Parse historical slow requests with:
+Para inspecionar requisições lentas históricas:
 
 ```powershell
 python scripts/analyze_slow_requests.py --log logs/app.log
 ```
 
-The script aggregates by route, printing the heaviest endpoints and quoting the most common slow SQL fragments.
+O script agrega por rota, mostrando os endpoints mais pesados e as instruções SQL mais recorrentes entre os eventos lentos.
 
-Next Steps
-----------
+Próximos Passos
+---------------
 
-1. Enable slow query logging on the database (`long_query_time=1`) to augment the middleware metrics.
-2. Wrap high-risk external integrations (Google Calendar, Drive, SSE endpoints) with `monitor_google_call`.
-3. Run the thread monitor during simulated load, compare `waitress_thread_count` against the configured limit, and record stack traces with `faulthandler` when a request surpasses 10 seconds.
+1. Ative o slow query log no banco (`long_query_time=1`) para complementar as métricas do middleware.
+2. Envolva integrações externas críticas (Google Calendar, Drive, SSE) com `monitor_google_call`.
+3. Execute o monitor de threads sob carga controlada, compare `waitress_thread_count` com o limite configurado e registre stack traces com `faulthandler` quando uma requisição ultrapassar 10 segundos.
