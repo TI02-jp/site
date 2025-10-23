@@ -843,8 +843,6 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
     }
     if include_admin_metrics:
         stats["total_usuarios"] = User.query.count()
-        cutoff = datetime.utcnow() - timedelta(minutes=5)
-        stats["online_users_count"] = User.query.filter(User.last_seen >= cutoff).count()
 
     cache.set(cache_key, dict(stats), timeout=_get_stats_cache_timeout())
     return stats
@@ -5300,8 +5298,9 @@ def list_users():
     tag_edit_form = TagForm(prefix="tag_edit")
     tag_edit_form.submit.label.text = "Salvar alterações"
     tag_delete_form = TagDeleteForm()
-    tag_query = Tag.query.order_by(Tag.nome)
-    tag_list = tag_query.all()
+    # Use cached tags to reduce database load (5-minute cache)
+    from app.services.cache_service import get_all_tags_cached
+    tag_list = get_all_tags_cached()
     form.tags.choices = [(t.id, t.nome) for t in tag_list]
     edit_form.tags.choices = [(t.id, t.nome) for t in tag_list]
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
@@ -5439,6 +5438,9 @@ def list_users():
                     tag = Tag(nome=tag_name)
                     db.session.add(tag)
                     db.session.commit()
+                    # Invalidate tag cache after creating new tag
+                    from app.services.cache_service import invalidate_tag_cache
+                    invalidate_tag_cache()
                     flash("Tag cadastrada com sucesso!", "success")
                     return redirect(url_for("list_users", open_tag_modal="1"))
 
@@ -5469,6 +5471,9 @@ def list_users():
                     else:
                         edit_tag.nome = new_name
                         db.session.commit()
+                        # Invalidate tag cache after editing tag
+                        from app.services.cache_service import invalidate_tag_cache
+                        invalidate_tag_cache()
                         flash("Tag atualizada com sucesso!", "success")
                         return redirect(url_for("list_users", open_tag_modal="1"))
 
@@ -5490,6 +5495,9 @@ def list_users():
                         try:
                             db.session.delete(tag_to_delete)
                             db.session.commit()
+                            # Invalidate tag cache after deleting tag
+                            from app.services.cache_service import invalidate_tag_cache
+                            invalidate_tag_cache()
                         except SQLAlchemyError:
                             db.session.rollback()
                             flash(
@@ -5532,19 +5540,6 @@ def list_users():
         editing_user_id=editing_user_id,
         edit_password_error=edit_password_error,
     )
-
-@app.route("/admin/online-users")
-@admin_required
-def online_users():
-    """List users active within the last five minutes."""
-    cutoff = datetime.utcnow() - timedelta(minutes=5)
-    users = (
-        User.query.options(joinedload(User.tags))
-        .filter(User.last_seen >= cutoff)
-        .order_by(User.name)
-        .all()
-    )
-    return render_template("admin/online_users.html", users=users)
 
 @app.route("/novo_usuario", methods=["GET"])
 @admin_required
@@ -5879,10 +5874,12 @@ def tasks_sector(tag_id):
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
+            joinedload(Task.creator),  # NOVO: Eager load creator to prevent N+1
             # Removed status_history and attachments eager loading to reduce Cartesian product
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.creator),  # NOVO: Eager load creator for children
             # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
