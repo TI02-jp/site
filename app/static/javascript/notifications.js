@@ -168,6 +168,90 @@
       displayedNotificationIds.add(id);
     }
 
+    // Função para obter chave pública VAPID do servidor
+    async function getVapidPublicKey() {
+      try {
+        const response = await fetch('/notifications/vapid-public-key');
+        const data = await response.json();
+        return data.publicKey;
+      } catch (error) {
+        console.error('[Notifications] Erro ao obter chave VAPID:', error);
+        return null;
+      }
+    }
+
+    // Função para converter chave VAPID de base64 para Uint8Array
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Função para subscrever ao Push usando Service Worker
+    async function subscribeToPush() {
+      if (!supportsServiceWorker || !supportsNotifications) {
+        console.log('[Notifications] Push não suportado neste navegador');
+        return false;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+
+        // Obter chave pública VAPID
+        const vapidPublicKey = await getVapidPublicKey();
+        if (!vapidPublicKey) {
+          console.error('[Notifications] Chave VAPID não disponível');
+          return false;
+        }
+
+        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+        // Verificar se já existe uma subscrição
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+          // Criar nova subscrição
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+          });
+          console.log('[Notifications] Nova subscrição Push criada');
+        } else {
+          console.log('[Notifications] Subscrição Push já existe');
+        }
+
+        // Enviar subscrição para o servidor
+        const response = await fetch('/notifications/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify(subscription.toJSON())
+        });
+
+        if (response.ok) {
+          console.log('[Notifications] Subscrição Push registrada no servidor');
+          return true;
+        } else {
+          console.error('[Notifications] Erro ao registrar subscrição no servidor');
+          return false;
+        }
+      } catch (error) {
+        console.error('[Notifications] Erro ao subscrever ao Push:', error);
+        return false;
+      }
+    }
+
     // Função para solicitar permissão de notificações do sistema
     async function requestNotificationPermission() {
       if (!supportsNotifications) {
@@ -176,6 +260,8 @@
       }
 
       if (notificationPermission === 'granted') {
+        // Se já tem permissão, subscrever ao Push
+        subscribeToPush();
         return true;
       }
 
@@ -188,6 +274,12 @@
         const permission = await Notification.requestPermission();
         notificationPermission = permission;
         console.log('[Notifications] Permissão:', permission);
+
+        if (permission === 'granted') {
+          // Subscrever ao Push após obter permissão
+          await subscribeToPush();
+        }
+
         return permission === 'granted';
       } catch (error) {
         console.error('[Notifications] Erro ao solicitar permissão:', error);

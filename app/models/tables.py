@@ -557,7 +557,7 @@ class Session(db.Model):
         nullable=False,
     )
 
-    user = db.relationship('User', backref=db.backref('sessions', lazy=True))
+    user = db.relationship('User', backref=db.backref('sessions', lazy='dynamic'))
 
 
 class Consultoria(db.Model):
@@ -929,7 +929,7 @@ class Task(db.Model):
     assignee = db.relationship("User", foreign_keys=[assigned_to])
     finisher = db.relationship("User", foreign_keys=[completed_by])
     children = db.relationship(
-        "Task", backref=db.backref("parent", remote_side=[id]), lazy="joined"
+        "Task", backref=db.backref("parent", remote_side=[id]), lazy="selectin"
     )
     attachments = db.relationship(
         "TaskAttachment",
@@ -1001,7 +1001,7 @@ class TaskStatusHistory(db.Model):
     changed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     task = db.relationship(
-        "Task", backref=db.backref("status_history", lazy=True, cascade="all, delete-orphan")
+        "Task", backref=db.backref("status_history", lazy="selectin", cascade="all, delete-orphan")
     )
     user = db.relationship("User")
 
@@ -1051,6 +1051,28 @@ class TaskNotification(db.Model):
             f"<TaskNotification type={self.type} task={self.task_id} "
             f"announcement={self.announcement_id} user={self.user_id}>"
         )
+
+
+class PushSubscription(db.Model):
+    """Web Push subscription for sending notifications outside the browser."""
+
+    __tablename__ = "push_subscriptions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    endpoint = db.Column(db.String(500), nullable=False, unique=True)
+    p256dh_key = db.Column(db.String(200), nullable=False)
+    auth_key = db.Column(db.String(100), nullable=False)
+    user_agent = db.Column(db.String(500), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_used_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", backref=db.backref("push_subscriptions", lazy=True))
+
+    def __repr__(self):
+        return f"<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}...>"
 
 
 class OperationalProcedure(db.Model):
@@ -1112,7 +1134,7 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
 
     title, tag_name = _get_assignment_context(connection, task)
     message = _build_assignment_message(title, tag_name)
-    connection.execute(
+    result = connection.execute(
         TaskNotification.__table__.insert().values(
             user_id=assignee_id,
             task_id=task.id,
@@ -1121,6 +1143,19 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
             created_at=datetime.utcnow(),
         )
     )
+
+    # Store notification info for push after commit
+    if not hasattr(task, "_pending_push_notifications"):
+        task._pending_push_notifications = []
+
+    task._pending_push_notifications.append({
+        "user_id": assignee_id,
+        "title": "JP Contábil",
+        "body": message[:255] if message else "Nova tarefa atribuída",
+        "url": f"/tasks/view/{task.id}" if task.id else "/",
+        "notification_id": result.inserted_primary_key[0] if hasattr(result, 'inserted_primary_key') else None,
+    })
+
     if hasattr(task, "_skip_assignment_notification"):
         delattr(task, "_skip_assignment_notification")
 
@@ -1151,6 +1186,30 @@ def _task_assignment_after_update(mapper, connection, target):
         return
 
     _create_task_assignment_notification(connection, target, new_assignee)
+
+
+@event.listens_for(db.session, "after_commit")
+def _send_push_notifications_after_commit(session):
+    """Send push notifications after database commit."""
+    from app.services.push_notifications import send_push_notification
+
+    # Collect all pending push notifications from committed objects
+    push_queue = []
+
+    for obj in session.identity_map.values():
+        if hasattr(obj, "_pending_push_notifications"):
+            push_queue.extend(obj._pending_push_notifications)
+            delattr(obj, "_pending_push_notifications")
+
+    # Send push notifications asynchronously (in background)
+    for push_data in push_queue:
+        try:
+            send_push_notification(**push_data)
+        except Exception as e:
+            # Log error but don't fail the request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send push notification: {e}")
 
 
 def _build_completion_message(title: str, completer_name: str, tag_name: str | None) -> str:
@@ -1197,6 +1256,20 @@ def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> 
             created_at=datetime.utcnow(),
         )
     )
+
+    # Broadcast notification to realtime clients to wake up SSE streams
+    from app.services.realtime import get_broadcaster
+    try:
+        broadcaster = get_broadcaster()
+        broadcaster.broadcast(
+            event_type="notification:created",
+            data={"user_id": task.created_by, "task_id": task.id},
+            user_id=task.created_by,
+            scope="notifications",
+        )
+    except Exception:
+        # Don't fail the transaction if broadcast fails
+        pass
 
 
 @event.listens_for(Task, "after_update")

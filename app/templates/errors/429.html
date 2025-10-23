@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Muitas requisições - JP Contábil{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow">
+                <div class="card-body py-5">
+                    <h1 class="display-1 text-warning">429</h1>
+                    <h2 class="mb-4">Muitas requisições</h2>
+                    <p class="text-muted mb-4">
+                        Você fez muitas requisições em um curto período de tempo.
+                        Por favor, aguarde alguns instantes antes de tentar novamente.
+                    </p>
+                    {% if retry_after %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-clock me-2"></i>
+                        Tente novamente em {{ retry_after }}
+                    </div>
+                    {% endif %}
+                    <div class="mt-4">
+                        <a href="{{ url_for('home') }}" class="btn btn-primary">
+                            <i class="bi bi-house-door me-2"></i>Voltar para a página inicial
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
