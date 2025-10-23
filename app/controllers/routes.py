@@ -16,7 +16,7 @@ from flask import (
     stream_with_context,
 )
 from functools import wraps
-from collections import Counter
+from collections import Counter, deque
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf, limiter
 from app.extensions.cache import cache, get_cache_timeout
@@ -122,6 +122,9 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from math import ceil
 from typing import Any, Iterable, Optional
+from pathlib import Path
+from markupsafe import Markup, escape
+from app.utils.performance_middleware import track_custom_span
 from urllib.parse import urlunsplit
 from mimetypes import guess_type
 
@@ -309,6 +312,7 @@ def ensure_diretoria_agreement_schema() -> None:
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
 EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
+PERSONAL_TAG_PREFIX = "__personal__"
 
 
 ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
@@ -803,6 +807,130 @@ _STATS_CACHE_KEY_PREFIX = "portal:stats:"
 _NOTIFICATION_COUNT_KEY_PREFIX = "portal:notifications:unread:"
 _NOTIFICATION_VERSION_KEY = "portal:notifications:version"
 
+_LOG_VIEWER_SOURCES = {
+    "app": {
+        "label": "Aplicativo",
+        "filename": "app.log",
+        "description": "Logs gerais da aplicação em formato texto.",
+    },
+    "slow": {
+        "label": "Requisições Lentas",
+        "filename": "slow_requests.log",
+        "description": "Somente entradas marcadas como SLOW REQUEST.",
+    },
+    "json": {
+        "label": "JSON Estruturado",
+        "filename": "app.jsonl",
+        "description": "Versão JSON para ingestão em observabilidade.",
+    },
+    "sql": {
+        "label": "SQL Lento",
+        "filename": "slow_queries.log",
+        "description": "Consultas acima de 1s capturadas pelo SQLAlchemy.",
+    },
+}
+
+_DEFAULT_LOG_LINES = 120
+_MIN_LOG_LINES = 50
+_MAX_LOG_LINES = 500
+_LOG_LINE_RE = re.compile(r'^\[(?P<timestamp>[^\]]+)\]\s+(?P<level>[A-Z]+)')
+_REQ_ID_RE = re.compile(r'req[_-]?id[:=]\s*([a-z0-9\-]+)', re.IGNORECASE)
+_STRUCTURED_FIELDS = {"timestamp", "level", "module", "func", "line", "message", "request_id"}
+_LOG_TAIL_CACHE_TTL = 5
+_LOG_CACHE_PREFIX = "portal:logtail:"
+
+
+def _tail_log_lines(file_path: Path, limit: int) -> list[str]:
+    """Read the last ``limit`` lines from a log file efficiently."""
+    if limit <= 0:
+        return []
+    try:
+        with file_path.open("r", encoding="utf-8", errors="replace") as handle:
+            return [line.rstrip("\n") for line in deque(handle, maxlen=limit)]
+    except FileNotFoundError:
+        return []
+    except OSError as exc:  # pylint: disable=broad-except
+        current_app.logger.warning("Falha ao ler log %s: %s", file_path, exc)
+        return []
+
+
+def _apply_highlight(text: str, terms: list[str]) -> Markup:
+    """Escape and highlight search terms within text."""
+    escaped_text: Markup = escape(text)
+    for term in terms:
+        if not term:
+            continue
+        escaped_term = escape(term)
+        escaped_text = escaped_text.replace(
+            escaped_term,
+            Markup(f"<mark>{escaped_term}</mark>"),
+        )
+    return escaped_text
+
+
+def _parse_log_line(line: str) -> dict[str, Any]:
+    """Parse a log line into structured fields when possible."""
+    try:
+        data = json.loads(line)
+        if isinstance(data, dict):
+            extra = {k: v for k, v in data.items() if k not in _STRUCTURED_FIELDS}
+            return {
+                "timestamp": data.get("timestamp"),
+                "level": data.get("level"),
+                "request_id": data.get("request_id"),
+                "message": data.get("message", ""),
+                "raw": line,
+                "structured": True,
+                "extra": extra,
+            }
+    except json.JSONDecodeError:
+        pass
+
+    match = _LOG_LINE_RE.match(line)
+    timestamp = match.group("timestamp") if match else None
+    level = match.group("level") if match else None
+    message = line
+    if match:
+        message = line[match.end():].strip()
+    return {
+        "timestamp": timestamp,
+        "level": level,
+        "request_id": None,
+        "message": message,
+        "raw": line,
+        "structured": False,
+        "extra": {},
+    }
+
+
+def _build_log_entries(lines: list[str], request_id_term: str, query_term: str) -> list[dict[str, Any]]:
+    """Create formatted entries with highlighting for display."""
+    terms = [request_id_term, query_term]
+    entries: list[dict[str, Any]] = []
+    for line in lines:
+        entry = _parse_log_line(line)
+        message_for_highlight = entry.get("message") or entry.get("raw", "")
+        entry["highlighted_message"] = _apply_highlight(message_for_highlight, terms)
+        if not entry.get("request_id"):
+            match = _REQ_ID_RE.search(line)
+            if match:
+                entry["request_id"] = match.group(1)
+            elif request_id_term and request_id_term in line:
+                entry["request_id"] = request_id_term
+        entries.append(entry)
+    return entries
+
+
+def _get_cached_log_tail(log_key: str, file_path: Path, limit: int, mtime: int) -> list[str]:
+    """Return cached tail of a log file with a short TTL to avoid repeated disk reads."""
+    cache_key = f"{_LOG_CACHE_PREFIX}{log_key}:{limit}:{mtime}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return list(cached)
+    lines = _tail_log_lines(file_path, limit)
+    cache.set(cache_key, tuple(lines), timeout=_LOG_TAIL_CACHE_TTL)
+    return lines
+
 
 def _get_stats_cache_timeout() -> int:
     return get_cache_timeout("PORTAL_STATS_CACHE_TIMEOUT", 300)
@@ -1243,10 +1371,15 @@ def inject_task_tags():
     """Provide task-related tags for dynamic sidebar menus."""
     if not current_user.is_authenticated:
         return {"tasks_tags": []}
-    tags = sorted(
-        [t for t in current_user.tags if t.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER],
-        key=lambda t: t.nome,
-    )
+    cached = getattr(g, "_cached_tasks_tags", None)
+    if cached is not None:
+        return {"tasks_tags": cached}
+    with track_custom_span("sidebar", "load_tasks_tags"):
+        tags = sorted(
+            [t for t in current_user.tags if t.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER],
+            key=lambda t: t.nome,
+        )
+    g._cached_tasks_tags = tags
     return {"tasks_tags": tags}
 
 
@@ -1256,7 +1389,12 @@ def inject_notification_counts():
 
     if not current_user.is_authenticated:
         return {"unread_notifications_count": 0}
-    unread = _get_unread_notifications_count(current_user.id)
+    cached = getattr(g, "_cached_unread_notifications", None)
+    if cached is not None:
+        return {"unread_notifications_count": cached}
+    with track_custom_span("sidebar", "load_unread_notifications"):
+        unread = _get_unread_notifications_count(current_user.id)
+    g._cached_unread_notifications = unread
     return {"unread_notifications_count": unread}
 
 @app.route("/")
@@ -1275,7 +1413,8 @@ def index():
 @login_required
 def home():
     """Render the authenticated home page."""
-    return render_template("home.html")
+    with track_custom_span("template", "render_home"):
+        return render_template("home.html")
 
 @app.route("/announcements", methods=["GET", "POST"])
 @login_required
@@ -2699,9 +2838,11 @@ def procedimentos_search():
     ])
 
 @app.route("/ping")
-@login_required
+@limiter.exempt  # Health check endpoint - don't rate limit to avoid false positive errors
 def ping():
-    """Endpoint for client pings to keep the session active."""
+    """Lightweight endpoint to keep the session active without hitting the ORM."""
+    if "_user_id" not in session:
+        return ("", 401)
     session.modified = True
     return ("", 204)
 
@@ -2737,7 +2878,11 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
         task = notification.task
         if task:
             task_title = (task.title or "").strip()
-            target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
+            is_owner = current_user.is_authenticated and task.created_by == current_user.id
+            if task.is_private and is_owner:
+                target_url = url_for("tasks_view", task_id=task.id)
+            else:
+                target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
             if not message:
                 prefix = (
                     "Tarefa atualizada"
@@ -2869,12 +3014,13 @@ def list_notifications():
 
 @app.route("/notifications/stream")
 @login_required
-@limiter.limit("10 per minute")  # Limit SSE connections to prevent abuse
+@limiter.exempt  # SSE connections remain open; exempt from standard rate limiting
 def notifications_stream():
     """Server-Sent Events stream delivering real-time notifications."""
     from app.services.realtime import get_broadcaster
 
     since_id = request.args.get("since", type=int) or 0
+    batch_limit = current_app.config.get("NOTIFICATIONS_STREAM_BATCH", 50)
     user_id = current_user.id
 
     # Query DB once to get the initial last_sent_id, then release connection
@@ -2890,11 +3036,11 @@ def notifications_stream():
 
     # CRITICAL: Release database connection before entering streaming loop
     # This prevents connection pool exhaustion from long-running SSE connections
-    db.session.close()
+    db.session.remove()
 
     broadcaster = get_broadcaster()
     client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
-    heartbeat_interval = 30  # 30 second heartbeat
+    heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 45)
 
     def event_stream() -> Any:
         last_sent_id = since_id
@@ -2913,6 +3059,7 @@ def notifications_stream():
                         joinedload(TaskNotification.announcement),
                     )
                     .order_by(TaskNotification.id.asc())
+                    .limit(batch_limit)
                     .all()
                 )
 
@@ -2932,11 +3079,11 @@ def notifications_stream():
                         }
                     )
                     # Release DB connection immediately after query
-                    db.session.close()
+                    db.session.remove()
                     yield f"data: {payload}\n\n"
                 else:
                     # No new notifications - release connection and send keep-alive
-                    db.session.close()
+                    db.session.remove()
                     yield ": keep-alive\n\n"
 
                 # Wait for broadcaster events or timeout
@@ -2953,11 +3100,11 @@ def notifications_stream():
 
         except GeneratorExit:
             broadcaster.unregister_client(user_id, client_id)
-            db.session.close()
+            db.session.remove()
             return
         finally:
             broadcaster.unregister_client(user_id, client_id)
-            db.session.close()
+            db.session.remove()
 
     response = Response(
         stream_with_context(event_stream()),
@@ -2969,7 +3116,7 @@ def notifications_stream():
 
 @app.route("/realtime/stream")
 @login_required
-@limiter.limit("10 per minute")  # Limit SSE connections to prevent abuse
+@limiter.exempt  # SSE connections remain open; rate limiting causa reconexões agressivas
 def realtime_stream():
     """Server-Sent Events stream for real-time system updates."""
     from app.services.realtime import get_broadcaster
@@ -2982,11 +3129,11 @@ def realtime_stream():
 
     # CRITICAL: Release database connection before entering streaming loop
     # This prevents connection pool exhaustion from long-running SSE connections
-    db.session.close()
+    db.session.remove()
 
     broadcaster = get_broadcaster()
     client_id = broadcaster.register_client(user_id, subscribed_scopes)
-    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 15)
+    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 30)
 
     def event_stream() -> Any:
         try:
@@ -3009,11 +3156,11 @@ def realtime_stream():
                     yield ": keep-alive\n\n"
         except GeneratorExit:
             broadcaster.unregister_client(user_id, client_id)
-            db.session.close()
+            db.session.remove()
             return
         finally:
             broadcaster.unregister_client(user_id, client_id)
-            db.session.close()
+            db.session.remove()
 
     response = Response(
         stream_with_context(event_stream()),
@@ -3360,6 +3507,7 @@ def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], st
 
 @app.route("/sala-reunioes", methods=["GET", "POST"])
 @login_required
+@limiter.limit("10 per minute", methods=["GET"])  # Previne abuse de refresh/múltiplos cliques
 def sala_reunioes():
     """List and create meetings using Google Calendar."""
     form = MeetingForm()
@@ -4459,6 +4607,7 @@ def api_cnpj(cnpj):
 @app.route("/api/reunioes")
 @login_required
 @csrf.exempt
+@limiter.limit("30 per minute")  # Limite de 30 req/min por IP (1 a cada 2s)
 def api_reunioes():
     """Return meetings with up-to-date status as JSON."""
     raw_events = fetch_raw_events()
@@ -5547,6 +5696,78 @@ def novo_usuario():
     """Redirect to the user list with the registration modal open."""
     return redirect(url_for("list_users", open_user_modal="1"))
 
+
+@app.route("/admin/logs", methods=["GET"])
+@login_required
+def admin_log_viewer():
+    """Render a lightweight log viewer restricted to master users."""
+    if not getattr(current_user, "is_master", False):
+        abort(403)
+
+    selected_log = request.args.get("log", "app")
+    if selected_log not in _LOG_VIEWER_SOURCES:
+        selected_log = "app"
+
+    limit = request.args.get("limit", type=int)
+    if limit is None:
+        limit = _DEFAULT_LOG_LINES
+    limit = max(_MIN_LOG_LINES, min(limit, _MAX_LOG_LINES))
+
+    request_id_filter = (request.args.get("request_id") or "").strip()
+    query_filter = (request.args.get("query") or "").strip()
+
+    log_dir = Path(current_app.root_path).parent / "logs"
+    meta = _LOG_VIEWER_SOURCES[selected_log]
+    file_path = log_dir / meta["filename"]
+
+    filters = []
+    if query_filter:
+        filters.append(query_filter.lower())
+    if request_id_filter:
+        filters.append(request_id_filter.lower())
+
+    file_exists = file_path.exists()
+    raw_lines: list[str] = []
+    filtered_lines: list[str] = []
+    file_size_bytes = 0
+
+    if file_exists:
+        stat_result = file_path.stat()
+        file_size_bytes = stat_result.st_size
+        mtime = int(stat_result.st_mtime)
+        raw_lines = _get_cached_log_tail(selected_log, file_path, limit, mtime)
+        if filters:
+            filtered_lines = [
+                line for line in raw_lines if all(token in line.lower() for token in filters)
+            ]
+        else:
+            filtered_lines = raw_lines
+    else:
+        filtered_lines = []
+
+    entries = _build_log_entries(
+        filtered_lines,
+        request_id_filter,
+        query_filter,
+    )
+
+    return render_template(
+        "admin/log_viewer.html",
+        log_sources=_LOG_VIEWER_SOURCES,
+        selected_log=selected_log,
+        entries=entries,
+        limit=limit,
+        request_id_filter=request_id_filter,
+        query_filter=query_filter,
+        file_exists=file_exists,
+        file_name=meta["filename"],
+        file_description=meta["description"],
+        file_path=str(file_path),
+        file_size_bytes=file_size_bytes,
+        min_limit=_MIN_LOG_LINES,
+        max_limit=_MAX_LOG_LINES,
+    )
+
 @app.route("/user/edit/<int:user_id>", methods=["GET"])
 @admin_required
 def edit_user(user_id):
@@ -5565,6 +5786,36 @@ def edit_user(user_id):
 
 # ---------------------- Task Management Routes ----------------------
 
+def _task_visible_for_user(task: Task, user: User) -> bool:
+    """Return True when ``task`` should be shown to ``user``."""
+    return not getattr(task, "is_private", False) or task.created_by == user.id
+
+
+def _filter_tasks_for_user(tasks: list[Task], user: User) -> list[Task]:
+    """Return a filtered list of tasks (and subtasks) visible to ``user``."""
+    visible: list[Task] = []
+    for task in tasks:
+        if not _task_visible_for_user(task, user):
+            continue
+        children = list(getattr(task, "children", []) or [])
+        filtered_children = _filter_tasks_for_user(children, user) if children else []
+        task.filtered_children = filtered_children
+        visible.append(task)
+    return visible
+
+
+def _ensure_personal_tag(user: User) -> Tag:
+    """Return (and create if needed) the personal tag for ``user``."""
+
+    tag_name = f"{PERSONAL_TAG_PREFIX}{user.id}"
+    tag = Tag.query.filter_by(nome=tag_name).first()
+    if not tag:
+        tag = Tag(nome=tag_name)
+        db.session.add(tag)
+        db.session.flush()
+    return tag
+
+
 @app.route("/tasks/overview")
 @login_required
 def tasks_overview():
@@ -5574,6 +5825,7 @@ def tasks_overview():
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+        .filter(sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id))
     )
     if current_user.role != "admin":
         accessible_ids = _get_accessible_tag_ids(current_user)
@@ -5602,6 +5854,7 @@ def tasks_overview():
         .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
+    tasks = _filter_tasks_for_user(tasks, current_user)
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
         status = t.status
@@ -5661,6 +5914,7 @@ def tasks_overview_mine():
         .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
+    tasks = _filter_tasks_for_user(tasks, current_user)
     tasks_by_status = {status: [] for status in open_statuses}
     for t in tasks:
         status = t.status
@@ -5697,14 +5951,20 @@ def tasks_new():
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
+    if parent_task and parent_task.is_private and parent_task.created_by != current_user.id:
+        abort(403)
     requested_tag_id = request.args.get("tag_id", type=int)
     choices: list[tuple[int, str]] = []
 
     def _build_user_choices(tag_obj: Tag | None) -> list[tuple[int, str]]:
-        if not tag_obj:
-            return [(0, "Sem responsavel")]
-        users = [u for u in tag_obj.users if u.ativo]
-        return [(0, "Sem responsavel")] + [(u.id, u.name) for u in users]
+        choices: list[tuple[int, str]] = [(0, "Sem responsavel")]
+        if tag_obj:
+            users = [u for u in getattr(tag_obj, "users", []) if getattr(u, "ativo", False)]
+            choices.extend((u.id, u.name) for u in users)
+        display_name = current_user.name or current_user.username
+        if current_user.id and all(choice[0] != current_user.id for choice in choices):
+            choices.append((current_user.id, display_name))
+        return choices
 
     form = TaskForm()
     tag = parent_task.tag if parent_task else None
@@ -5716,7 +5976,9 @@ def tasks_new():
         form.assigned_to.choices = _build_user_choices(parent_task.tag)
     else:
         tags_query = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS)).order_by(Tag.nome)
+            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
+            .order_by(Tag.nome)
         )
         choices = [(t.id, t.nome) for t in tags_query.all()]
         form.tag_id.choices = choices
@@ -5732,6 +5994,14 @@ def tasks_new():
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_user_choices(tag)
+    personal_tag = None
+    if request.method == "POST" and form.only_me.data:
+        personal_tag = _ensure_personal_tag(current_user)
+        form.tag_id.data = personal_tag.id
+        form.assigned_to.data = current_user.id
+        if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
+            form.tag_id.choices.append((personal_tag.id, "Pessoal"))
+
     if form.validate_on_submit():
         current_app.logger.info("Formulário validado com sucesso. Criando task...")
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
@@ -5740,9 +6010,16 @@ def tasks_new():
         if tag is None:
             abort(400)
         assignee_id = form.assigned_to.data or None
+        is_private = bool(form.only_me.data)
+        if is_private:
+            personal_tag = personal_tag or _ensure_personal_tag(current_user)
+            tag = personal_tag
+            tag_id = personal_tag.id
+            assignee_id = current_user.id
 
         try:
             task = Task(
+                is_private=is_private,
                 title=form.title.data,
                 description=form.description.data,
                 tag_id=tag_id,
@@ -5752,8 +6029,6 @@ def tasks_new():
                 parent_id=parent_id,
                 assigned_to=assignee_id,
             )
-            if task.assigned_to and task.assigned_to == current_user.id:
-                task._skip_assignment_notification = True
             db.session.add(task)
             db.session.flush()
 
@@ -5789,10 +6064,12 @@ def tasks_new():
                 'tag_name': task.tag.nome,
                 'assigned_to': task.assigned_to,
                 'created_by': task.created_by,
+                'is_private': task.is_private,
                 'due_date': task.due_date.isoformat() if task.due_date else None,
                 'parent_id': task.parent_id
             }
-            broadcast_task_created(task_data, exclude_user=current_user.id)
+            if not task.is_private:
+                broadcast_task_created(task_data, exclude_user=current_user.id)
 
             flash("Tarefa criada com sucesso!", "success")
             current_app.logger.info(
@@ -5800,19 +6077,14 @@ def tasks_new():
                 task.id, return_url, current_user.role
             )
 
-            # Redirecionar de volta para a pagina original ou para o setor da tarefa
-            if return_url and return_url != request.url:
+            # Redirecionar de volta para a pagina original quando apropriado
+            if return_url and not task.is_private and return_url != request.url:
                 current_app.logger.info("Redirecionando para return_url: %s", return_url)
                 return redirect(return_url)
 
-            # Todos os usuários vão para "Minhas Tarefas" após salvar
-            current_app.logger.info("Redirecionando para tasks_overview_mine")
-            print("=" * 50)
-            print(f"DEBUG: Redirecionando para tasks_overview_mine")
-            print(f"DEBUG: User role: {current_user.role}")
-            print(f"DEBUG: Task ID: {task.id}")
-            print("=" * 50)
-            return redirect(url_for("tasks_overview_mine"))
+            destination = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
+            current_app.logger.info("Redirecionando para %s", destination)
+            return redirect(url_for(destination))
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("Erro ao criar tarefa", exc_info=exc)
@@ -5845,11 +6117,15 @@ def tasks_new():
 def tasks_users(tag_id):
     """Return active users for the requested task tag."""
     tag = Tag.query.get_or_404(tag_id)
-    users = [
-        {"id": u.id, "name": u.name}
-        for u in tag.users
-        if u.ativo
-    ]
+    if tag.nome.startswith(PERSONAL_TAG_PREFIX):
+        display_name = current_user.name or current_user.username
+        users = [{"id": current_user.id, "name": display_name}]
+    else:
+        users = [
+            {"id": u.id, "name": u.name}
+            for u in tag.users
+            if u.ativo
+        ]
     return jsonify(users)
 
 @app.route("/tasks/sector/<int:tag_id>")
@@ -5866,7 +6142,11 @@ def tasks_sector(tag_id):
     ti_tag_id = ti_tag.id if ti_tag else None
     assigned_param = (request.args.get("assigned_to_me", "") or "").lower()
     assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
-    query = Task.query.filter(Task.tag_id == tag_id, Task.parent_id.is_(None))
+    query = Task.query.filter(
+        Task.tag_id == tag_id,
+        Task.parent_id.is_(None),
+        sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id),
+    )
     if assigned_to_me:
         query = query.filter(Task.assigned_to == current_user.id)
     tasks = (
@@ -5886,6 +6166,7 @@ def tasks_sector(tag_id):
         .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
+    tasks = _filter_tasks_for_user(tasks, current_user)
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
         status = t.status
@@ -5933,12 +6214,15 @@ def tasks_history(tag_id=None):
             Task.tag_id == tag_id,
             Task.parent_id.is_(None),
             Task.status == TaskStatus.DONE,
+            sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id),
         )
     else:
         tag = None
         if current_user.role == "admin":
             query = Task.query.filter(
-                Task.parent_id.is_(None), Task.status == TaskStatus.DONE
+                Task.parent_id.is_(None),
+                Task.status == TaskStatus.DONE,
+                sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id),
             )
         else:
             tag_ids = _get_accessible_tag_ids(current_user)
@@ -5950,6 +6234,9 @@ def tasks_history(tag_id=None):
                 Task.parent_id.is_(None),
                 Task.status == TaskStatus.DONE,
                 sa.or_(*filters),
+            )
+            query = query.filter(
+                sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id)
             )
     if query is not None:
         if assigned_to_me:
@@ -5964,6 +6251,7 @@ def tasks_history(tag_id=None):
         )
     else:
         tasks = []
+    tasks = _filter_tasks_for_user(tasks, current_user)
     return render_template(
         "tasks_history.html",
         tag=tag,
@@ -5987,13 +6275,26 @@ def tasks_view(task_id):
         )
         .get_or_404(task_id)
     )
-    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
-        abort(404)
-    if not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
-        abort(403)
+    if task.is_private:
+        is_owner = task.created_by == current_user.id
+        if not is_owner and current_user.role != "admin":
+            abort(403)
+        if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
+            abort(404)
+    else:
+        if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+            abort(404)
+        if not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+            abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
     priority_order = ["low", "medium", "high"]
-    if _can_user_access_tag(task.tag, current_user):
+    if task.is_private:
+        cancel_url = (
+            url_for("tasks_overview")
+            if current_user.role == "admin"
+            else url_for("tasks_overview_mine")
+        )
+    elif _can_user_access_tag(task.tag, current_user):
         cancel_url = url_for("tasks_history", tag_id=task.tag_id)
     else:
         cancel_url = url_for("tasks_history", assigned_by_me=1)
@@ -6010,6 +6311,8 @@ def tasks_view(task_id):
 def update_task_status(task_id):
     """Update a task status and record its history."""
     task = Task.query.get_or_404(task_id)
+    if task.is_private and task.created_by != current_user.id:
+        abort(403)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
     if not _can_user_access_tag(task.tag, current_user):
@@ -6070,16 +6373,18 @@ def update_task_status(task_id):
             'created_by': task.created_by,
             'completed_by': task.completed_by,
             'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+            'is_private': task.is_private,
             'due_date': task.due_date.isoformat() if task.due_date else None,
             'parent_id': task.parent_id
         }
-        broadcast_task_status_changed(
-            task.id,
-            old_status.value,
-            new_status.value,
-            task_data,
-            exclude_user=current_user.id
-        )
+        if not task.is_private:
+            broadcast_task_status_changed(
+                task.id,
+                old_status.value,
+                new_status.value,
+                task_data,
+                exclude_user=current_user.id,
+            )
 
     return jsonify({"success": True})
 
@@ -6094,13 +6399,17 @@ def _delete_task_recursive(task: Task) -> None:
     db.session.delete(task)
 
 @app.route("/tasks/<int:task_id>/delete", methods=["POST"])
-@admin_required
+@login_required
 def delete_task(task_id):
     """Remove a task from the system, including its subtasks and history."""
 
     task = Task.query.get_or_404(task_id)
-    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+    if task.is_private and task.created_by != current_user.id:
+        abort(403)
+    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
         abort(404)
+    if current_user.role != "admin" and task.created_by != current_user.id:
+        abort(403)
 
     # Store task ID before deletion for broadcasting
     deleted_task_id = task.id
@@ -6110,7 +6419,8 @@ def delete_task(task_id):
 
     # Broadcast task deletion
     from app.services.realtime import broadcast_task_deleted
-    broadcast_task_deleted(deleted_task_id, exclude_user=current_user.id)
+    if not task.is_private:
+        broadcast_task_deleted(deleted_task_id, exclude_user=current_user.id)
 
     return jsonify({"success": True})
 

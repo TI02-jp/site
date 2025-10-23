@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Logs do Sistema{% endblock %}
+
+{% block sidebar_nav %}
+    {% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                <div>
+                    <h1 class="h3 mb-1">Logs da Aplicação</h1>
+                    <p class="text-muted mb-0">
+                        Visualização rápida dos arquivos de log. Apenas usuários master podem acessar.
+                    </p>
+                </div>
+                <a href="{{ url_for('admin_log_viewer') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Atualizar
+                </a>
+            </div>
+
+            <form method="get" class="row g-3 align-items-end mb-4">
+                <div class="col-sm-4 col-md-3">
+                    <label for="logSelect" class="form-label">Arquivo de log</label>
+                    <select class="form-select" id="logSelect" name="log">
+                        {% for key, meta in log_sources.items() %}
+                        <option value="{{ key }}" {% if key == selected_log %}selected{% endif %}>
+                            {{ meta.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-4 col-md-3">
+                    <label for="requestIdFilter" class="form-label">Request ID</label>
+                    <input type="text" id="requestIdFilter" name="request_id" value="{{ request_id_filter }}" class="form-control" placeholder="ex: 5f3c1a7b2d90">
+                </div>
+                <div class="col-sm-4 col-md-3">
+                    <label for="queryFilter" class="form-label">Texto</label>
+                    <input type="text" id="queryFilter" name="query" value="{{ query_filter }}" class="form-control" placeholder="palavra-chave">
+                </div>
+                <div class="col-sm-4 col-md-2">
+                    <label for="limitInput" class="form-label">Linhas</label>
+                    <input type="number" id="limitInput" name="limit" value="{{ limit }}" min="{{ min_limit }}" max="{{ max_limit }}" class="form-control">
+                </div>
+                <div class="col-sm-4 col-md-1 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter-circle me-1"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ log_sources[selected_log].label }}</strong>
+                        <div class="text-muted small">
+                            {{ file_description }}
+                        </div>
+                    </div>
+                    <div class="text-muted small text-end">
+                        {% if file_exists %}
+                            <div><i class="bi bi-file-earmark-text me-1"></i>{{ file_name }}</div>
+                            <div>{{ file_path }}</div>
+                            <div>{{ (file_size_bytes / 1024)|round(1) }} KB</div>
+                        {% else %}
+                            <span class="text-danger">Arquivo não encontrado</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body log-viewer-body">
+                    {% if not file_exists %}
+                        <div class="alert alert-warning mb-0">
+                            O arquivo selecionado ainda não foi gerado. Dispare alguma ação que produza logs e tente novamente.
+                        </div>
+                    {% elif entries %}
+                        {% set level_classes = {
+                            'CRITICAL': 'badge bg-danger',
+                            'ERROR': 'badge bg-danger',
+                            'WARNING': 'badge bg-warning text-dark',
+                            'INFO': 'badge bg-info text-dark',
+                            'DEBUG': 'badge bg-secondary'
+                        } %}
+                        <div class="log-entries">
+                            {% for entry in entries %}
+                                {% set level = entry.level or 'INFO' %}
+                                {% set badge_class = level_classes.get(level, 'badge bg-secondary') %}
+                                <div class="log-entry">
+                                    <div class="log-entry-meta">
+                                        <span class="log-entry-time">{{ entry.timestamp or '—' }}</span>
+                                        <span class="{{ badge_class }} log-entry-level">{{ level }}</span>
+                                        {% if entry.request_id %}
+                                            <span class="badge bg-dark log-entry-request">req: {{ entry.request_id }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="log-entry-message">{{ entry.highlighted_message }}</div>
+                                    {% if entry.structured and entry.extra %}
+                                        <details class="log-entry-extra">
+                                            <summary>Detalhes adicionais</summary>
+                                            <dl class="row">
+                                                {% for key, value in entry.extra.items() %}
+                                                    <dt class="col-sm-3 text-uppercase text-muted">{{ key }}</dt>
+                                                    <dd class="col-sm-9"><code>{{ value }}</code></dd>
+                                                {% endfor %}
+                                            </dl>
+                                        </details>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-muted">Nenhuma linha encontrada com os filtros informados.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.log-viewer-body {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-family: "Fira Code", "Consolas", "SFMono-Regular", Menlo, Monaco, monospace;
+    font-size: 0.85rem;
+    max-height: 480px;
+    overflow-y: auto;
+    border-radius: 0.5rem;
+}
+.log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.log-entry {
+    padding: 0.75rem 1rem;
+    background-color: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 0.5rem;
+}
+.log-entry-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+.log-entry-message {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #f8fafc;
+}
+.log-entry-message mark {
+    background: #facc15;
+    color: #1f2937;
+    padding: 0 0.1rem;
+    border-radius: 0.2rem;
+}
+.log-entry-extra {
+    margin-top: 0.5rem;
+}
+.log-entry-extra summary {
+    cursor: pointer;
+    color: #cbd5f5;
+}
+.log-entry-extra dl {
+    margin: 0.5rem 0 0;
+}
+.log-entry-request {
+    font-size: 0.7rem;
+}
+.log-entry-time {
+    font-weight: 600;
+}
+.log-entry-level {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+</style>
+{% endblock %}

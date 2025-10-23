@@ -26,9 +26,29 @@
   }
 
   .new-task-container .form-group input,
-  .new-task-container .form-group select,
   .new-task-container .form-group textarea {
     font-size: var(--font-base);
+  }
+
+  .form-group-usuario.assigned-disabled select {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .form-group-setor.assigned-disabled select {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .form-group-usuario select {
+    max-width: 320px;
+  }
+
+  .form-group-only-me .form-check-input {
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-top: 0.25rem;
+    border-radius: 0.2rem;
   }
 
   @media (max-width: 992px) {
@@ -127,7 +147,7 @@
 
       <div class="form-group form-group-usuario">
         {{ form.assigned_to.label }}
-        {{ form.assigned_to() }}
+        {{ form.assigned_to(id="assigned_to", data_current_user_id=current_user.id) }}
         {% for error in form.assigned_to.errors %}<div class="error">{{ error }}</div>{% endfor %}
       </div>
 
@@ -162,6 +182,15 @@
         {{ form.priority.label }}
         {{ form.priority() }}
         {% for error in form.priority.errors %}<div class="error">{{ error }}</div>{% endfor %}
+      </div>
+
+      <div class="form-group form-group-only-me">
+        <div class="form-check">
+          {{ form.only_me(class="form-check-input", id="only-me-checkbox") }}
+          <label class="form-check-label" for="only-me-checkbox">
+            Somente para mim
+          </label>
+        </div>
       </div>
 
       <div class="form-actions">
@@ -212,6 +241,68 @@
           }
         }, 3000);
       });
+    }
+
+    const onlyMeCheckbox = document.getElementById('only-me-checkbox');
+    const assignedSelect = document.getElementById('assigned_to');
+    const assignedWrapper = document.querySelector('.form-group-usuario');
+    const tagSelect = document.getElementById('tag_id');
+    const tagWrapper = document.querySelector('.form-group-setor');
+
+    if (assignedSelect && assignedSelect.dataset.prevValue === undefined) {
+      assignedSelect.dataset.prevValue = assignedSelect.value;
+    }
+
+    function syncOnlyMeState() {
+      if (!assignedSelect) {
+        return;
+      }
+      const userId = assignedSelect?.dataset?.currentUserId;
+
+      if (onlyMeCheckbox && onlyMeCheckbox.checked) {
+        assignedSelect.dataset.prevDisabled = assignedSelect.disabled ? '1' : '0';
+        assignedSelect.dataset.prevValue = assignedSelect.value;
+        assignedSelect.disabled = true;
+        if (userId) {
+          assignedSelect.value = userId;
+        }
+        if (assignedWrapper) {
+          assignedWrapper.classList.add('assigned-disabled');
+        }
+
+        if (tagSelect) {
+          tagSelect.dataset.prevDisabled = tagSelect.disabled ? '1' : '0';
+          tagSelect.disabled = true;
+          if (tagWrapper) {
+            tagWrapper.classList.add('assigned-disabled');
+          }
+        }
+      } else {
+        const wasDisabled = assignedSelect.dataset.prevDisabled === '1';
+        assignedSelect.disabled = wasDisabled;
+        if (assignedSelect.dataset.prevValue !== undefined) {
+          assignedSelect.value = assignedSelect.dataset.prevValue;
+        }
+        assignedSelect.dataset.prevValue = assignedSelect.value;
+        assignedSelect.dataset.prevDisabled = '0';
+        if (assignedWrapper) {
+          assignedWrapper.classList.remove('assigned-disabled');
+        }
+
+        if (tagSelect) {
+          const tagWasDisabled = tagSelect.dataset.prevDisabled === '1';
+          tagSelect.disabled = tagWasDisabled;
+          tagSelect.dataset.prevDisabled = '0';
+          if (tagWrapper) {
+            tagWrapper.classList.remove('assigned-disabled');
+          }
+        }
+      }
+    }
+
+    if (onlyMeCheckbox) {
+      onlyMeCheckbox.addEventListener('change', syncOnlyMeState);
+      syncOnlyMeState();
     }
   });
 </script>

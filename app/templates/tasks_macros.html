@@ -1,14 +1,19 @@
 {% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False) %}
+{% if task.is_private and task.created_by != current_user.id %}
+{% else %}
 {% set status_class = ' task-status-' ~ task.status.value %}
-<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if task.children %} has-children{% endif %}" data-task-id="{{ task.id }}">
+{% set children = task.filtered_children if task.filtered_children is defined else task.children %}
+{% set has_children = children is not none and children|length > 0 %}
+<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}" data-task-id="{{ task.id }}">
   <div class="task-header">
-    {% if task.children %}
+    {% if has_children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
     {% endif %}
     <div class="task-info">
+      {% set tag_label = 'Pessoal' if task.is_private and task.created_by == current_user.id else (task.tag.nome if task.tag else 'Sem setor') %}
       <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
       {% if show_tag %}
-      <span class="task-tag">{{ task.tag.nome }}</span>
+      <span class="task-tag">{{ tag_label }}</span>
       {% endif %}
       {% set creator_display = (task.creator.name if task.creator and task.creator.name else (task.creator.username if task.creator else None)) %}
       {% if creator_display %}
@@ -23,7 +28,7 @@
         <span class="meta-value">{{ task.due_date.strftime('%d/%m/%Y') }}</span>
       </div>
       {% endif %}
-      {% if task.children %}
+      {% if has_children %}
       <div class="progress"><div style="width: {{ task.progress }}%;"></div></div>
       {% endif %}
       {% if task.attachments %}
@@ -59,9 +64,9 @@
       {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
       <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
-      {% if current_user.role == 'admin' %}
+      {% if current_user.role == 'admin' or task.created_by == current_user.id %}
       <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
-      {% if allow_delete %}
+      {% if allow_delete or task.created_by == current_user.id %}
       <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
       {% endif %}
       {% endif %}
@@ -78,7 +83,7 @@
       {% endif %}
       <div class="detail-field">
         <span class="detail-label">Setor:</span>
-        <span class="detail-value">{{ task.tag.nome }}</span>
+        <span class="detail-value">{{ tag_label }}</span>
       </div>
       <div class="detail-field">
         <span class="detail-label">Responsável:</span>
@@ -95,11 +100,11 @@
       {% if current_user.role == 'admin' %}
       <div class="detail-field">
         <span class="detail-label">Iniciada em:</span>
-        <span class="detail-value">{% if task.started_at %}{{ task.started_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
+        <span class="detail-value">{% if task.started_at %}{{ task.started_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}–{% endif %}</span>
       </div>
       <div class="detail-field">
         <span class="detail-label">Concluída em:</span>
-        <span class="detail-value">{% if task.finished_at %}{{ task.finished_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}—{% endif %}</span>
+        <span class="detail-value">{% if task.finished_at %}{{ task.finished_at.strftime('%d/%m/%Y às %H:%M') }}{% else %}–{% endif %}</span>
       </div>
       {% endif %}
       <div class="detail-field full">
@@ -124,12 +129,13 @@
       {% endif %}
     </div>
   </div>
-  {% if task.children %}
+  {% if has_children %}
   <ul class="subtasks">
-    {% for child in task.children %}
+    {% for child in children %}
       {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete) }}
     {% endfor %}
   </ul>
   {% endif %}
 </li>
+{% endif %}
 {% endmacro %}

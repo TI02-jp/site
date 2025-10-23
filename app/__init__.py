@@ -209,7 +209,16 @@ def _log_slow_requests(response):
 @app.before_request
 def _update_session_activity():
     """Persist minimal session activity without touching ``users.last_seen``."""
-    if request.endpoint in ('static', 'ping', 'health_check', 'readiness_check', 'liveness_check', 'db_pool_status'):
+    if request.endpoint in (
+        'static',
+        'ping',
+        'health_check',
+        'readiness_check',
+        'liveness_check',
+        'db_pool_status',
+        'notifications_stream',
+        'realtime_stream',
+    ):
         return
 
     if not current_user.is_authenticated:
@@ -701,7 +710,10 @@ def _log_request_end(response):
         duration_ms = (time.perf_counter() - g.request_start_time) * 1000
     else:
         duration_ms = 0.0
-    log_request_info(request, response, duration_ms)
+    request_id = getattr(g, "request_id", None)
+    if request_id:
+        response.headers.setdefault("X-Request-ID", request_id)
+    log_request_info(request, response, duration_ms, request_id=request_id)
     return response
 
 @app.teardown_appcontext

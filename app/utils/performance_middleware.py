@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import threading
 import time
+import uuid
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
 
@@ -21,7 +22,7 @@ from sqlalchemy.engine import Engine
 class PerformanceTracker:
     """Collects timing metrics for a single request."""
 
-    def __init__(self, threshold_ms: float) -> None:
+    def __init__(self, threshold_ms: float, request_id: Optional[str] = None) -> None:
         self.threshold_ms = threshold_ms
         self.started_at = time.perf_counter()
         self.completed_at: Optional[float] = None
@@ -32,6 +33,7 @@ class PerformanceTracker:
         self.template_renders: List[Dict[str, Any]] = []
         self.custom_spans: List[Dict[str, Any]] = []
         self.commit_durations_ms: List[float] = []
+        self.request_id = request_id or uuid.uuid4().hex[:12]
         self._lock = threading.Lock()
 
     def finish(self) -> None:
@@ -89,6 +91,7 @@ class PerformanceTracker:
     def to_log_payload(self) -> Dict[str, Any]:
         self.finish()
         payload: Dict[str, Any] = {
+            "request_id": self.request_id,
             "path": request.path,
             "method": request.method,
             "status_code": getattr(g, "performance_response_status", None),
@@ -207,6 +210,12 @@ def register_performance_middleware(app: Flask, db) -> None:
     def _perf_before_request():
         tracker = PerformanceTracker(threshold_ms=threshold_ms)
         g.performance_tracker = tracker
+        g.request_id = tracker.request_id
+        try:
+            request.request_id = tracker.request_id  # type: ignore[attr-defined]
+        except Exception:  # pylint: disable=broad-except
+            pass
+        request.environ["request_id"] = tracker.request_id
 
     @app.after_request
     def _perf_after_request(response):
@@ -217,10 +226,21 @@ def register_performance_middleware(app: Flask, db) -> None:
             payload = tracker.to_log_payload()
             total_ms = tracker.total_duration_ms or 0.0
             logger = app.logger
+            response.headers.setdefault("X-Request-ID", tracker.request_id)
             if total_ms >= threshold_ms:
-                logger.warning("SLOW REQUEST: %s", payload)
+                logger.warning(
+                    "SLOW REQUEST [%s]: %s",
+                    tracker.request_id,
+                    payload,
+                    extra={"request_id": tracker.request_id},
+                )
             else:
-                logger.debug("REQUEST PERF: %s", payload)
+                logger.debug(
+                    "REQUEST PERF [%s]: %s",
+                    tracker.request_id,
+                    payload,
+                    extra={"request_id": tracker.request_id},
+                )
         return response
 
     _install_sql_listeners(db.engine)
