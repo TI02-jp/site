@@ -1,23 +1,33 @@
 """Flask application factory and common utilities."""
 
 import os
+import threading
 import time
 import logging
 import secrets
 from datetime import datetime, timedelta
 
 import sqlalchemy as sa
-from flask import Flask, request, redirect, session
+from flask import Flask, request, redirect, session, g, jsonify
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_compress import Compress
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from markupsafe import Markup, escape
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.utils.security import sanitize_html
+from app.extensions.cache import cache, init_cache
+from app.utils.performance_middleware import (
+    get_request_tracker,
+    register_performance_middleware,
+    track_commit_end,
+    track_commit_start,
+)
 
 load_dotenv()
 
@@ -96,6 +106,9 @@ app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_REDIRECT_URI'] = os.getenv('GOOGLE_REDIRECT_URI')
 app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
 app.config['GOOGLE_MEETING_ROOM_EMAIL'] = os.getenv('GOOGLE_MEETING_ROOM_EMAIL')
+app.config['PORTAL_STATS_CACHE_TIMEOUT'] = int(os.getenv('PORTAL_STATS_CACHE_TIMEOUT', '300'))
+app.config['NOTIFICATION_COUNT_CACHE_TIMEOUT'] = int(os.getenv('NOTIFICATION_COUNT_CACHE_TIMEOUT', '60'))
+app.config['SLOW_REQUEST_THRESHOLD_MS'] = float(os.getenv('SLOW_REQUEST_THRESHOLD_MS', '750'))
 
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -105,6 +118,27 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+init_cache(app)
+
+# Rate limiting configuration for DDoS/brute-force protection
+rate_limit_storage = os.getenv('RATELIMIT_STORAGE_URI')
+if not rate_limit_storage:
+    redis_url = os.getenv('REDIS_URL')
+    rate_limit_storage = redis_url if redis_url else "memory://"
+
+raw_default_limits = os.getenv('RATELIMIT_DEFAULT_LIMITS', '').strip()
+default_limits = [limit.strip() for limit in raw_default_limits.split(',') if limit.strip()]
+
+# Rate limiting configuration for DDoS/brute-force protection
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=default_limits or None,
+    storage_uri=rate_limit_storage,
+    strategy="fixed-window",
+    headers_enabled=True,
+)
 
 # Compressão HTTP para reduzir tamanho das respostas em ~70%
 compress = Compress(app)
@@ -122,18 +156,8 @@ app.config['COMPRESS_MIN_SIZE'] = 500  # Só comprime respostas > 500 bytes
 
 LAST_SEEN_REFRESH_INTERVAL = timedelta(seconds=60)
 
-# Cache simples para reduzir queries de sessão
-_session_cache = {}
-_session_cache_max_size = 10000  # Limite de entradas no cache
-
-def _cleanup_session_cache():
-    """Remove entradas antigas do cache para evitar memory leak."""
-    global _session_cache
-    if len(_session_cache) > _session_cache_max_size:
-        # Remove 20% das entradas mais antigas
-        cutoff = int(_session_cache_max_size * 0.8)
-        sorted_keys = sorted(_session_cache.items(), key=lambda x: x[1])
-        _session_cache = dict(sorted_keys[cutoff:])
+# Import centralized cache for session tracking
+from app.extensions.cache import cache as session_cache
 
 
 @app.url_defaults
@@ -152,8 +176,42 @@ def _enforce_https():
 
 
 @app.before_request
+def _start_request_timer():
+    """Store the high-resolution start time for slow request logging."""
+    g.request_started_at = time.perf_counter()
+
+
+@app.after_request
+def _log_slow_requests(response):
+    """Emit warnings for requests that exceed the configured threshold."""
+    started_at = getattr(g, 'request_started_at', None)
+    threshold_ms = app.config.get('SLOW_REQUEST_THRESHOLD_MS', 0) or 0
+    if started_at is not None and threshold_ms > 0:
+        duration_ms = (time.perf_counter() - started_at) * 1000
+        endpoint = request.endpoint or 'unknown'
+        if duration_ms >= threshold_ms and endpoint != 'static':
+            user_id = current_user.get_id() if current_user.is_authenticated else 'anonymous'
+            app.logger.warning(
+                "Slow request: %s %s took %.1f ms (status=%s, user=%s, endpoint=%s, ip=%s)",
+                request.method,
+                request.path,
+                duration_ms,
+                response.status_code,
+                user_id,
+                endpoint,
+                request.remote_addr,
+            )
+    return response
+
+
+@app.before_request
 def _update_last_seen():
     """Update ``current_user.last_seen`` and session activity."""
+    # Skip for static files, ping, and health check endpoints to reduce DB load
+    # These are high-frequency endpoints that don't need last_seen tracking
+    if request.endpoint in ('static', 'ping', 'health_check', 'readiness_check', 'liveness_check', 'db_pool_status'):
+        return
+
     if current_user.is_authenticated:
         from app.models.tables import Session, SAO_PAULO_TZ
 
@@ -170,8 +228,18 @@ def _update_last_seen():
 
         session['_last_seen_refreshed_at'] = now_utc.isoformat(timespec='seconds')
 
-        # Atualiza last_seen apenas na memória (não força commit)
-        current_user.last_seen = now_utc
+        # Atualiza last_seen via SQL direto (bypass ORM para evitar lock contention)
+        # NÃO usar current_user.last_seen = now_utc para evitar dirty tracking
+        try:
+            db.session.execute(
+                sa.text("UPDATE users SET last_seen = :now WHERE id = :user_id"),
+                {"now": now_utc, "user_id": current_user.id}
+            )
+            # Marca flag para commit isolado no teardown
+            g.last_seen_updated = True
+        except SQLAlchemyError:
+            # Se falhar, não bloqueia a requisição - last_seen não é crítico
+            db.session.rollback()
 
         sid = session.get('sid')
         if sid:
@@ -179,20 +247,18 @@ def _update_last_seen():
             user_agent = request.headers.get('User-Agent')
             ip_address = request.remote_addr
 
-            # Verifica cache primeiro para evitar query desnecessária
-            cache_key = f"{sid}:{ip_address}:{user_agent}"
-            last_update = _session_cache.get(cache_key)
+            # Verifica cache centralizado primeiro para evitar query desnecessária
+            cache_key = f"session_throttle:{sid}:{ip_address}:{user_agent}"
+            last_update = session_cache.get(cache_key)
 
             # Só atualiza se passou mais de 60 segundos desde a última atualização
             if last_update and (now_utc - last_update).total_seconds() < 60:
                 return
 
-            # Atualiza cache e limpa se necessário
-            _session_cache[cache_key] = now_utc
-            if len(_session_cache) > _session_cache_max_size:
-                _cleanup_session_cache()
+            # Atualiza cache centralizado com TTL de 120 segundos
+            session_cache.set(cache_key, now_utc, timeout=120)
 
-            # Usa update direto sem carregar o objeto completo (mais rápido)
+            # Prepara atualização mas NÃO faz commit aqui (será feito em teardown)
             try:
                 # Verifica se sessão existe no cache ou no banco
                 sess = db.session.query(Session).filter_by(session_id=sid).first()
@@ -206,11 +272,11 @@ def _update_last_seen():
                     if sess.user_agent != user_agent:
                         updates['user_agent'] = user_agent
 
-                    # Serializa sessão apenas se houver outras mudanças (otimização)
+                    # Update em batch - sem commit (otimização crítica)
                     if updates:
-                        # Update em batch - muito mais rápido
                         db.session.query(Session).filter_by(session_id=sid).update(updates)
-                        db.session.commit()
+                        # Marca flag para commit no teardown
+                        g.session_updated = True
                 else:
                     # Cria nova sessão apenas se não existir
                     sess = Session(
@@ -222,7 +288,8 @@ def _update_last_seen():
                         session_data={},  # Sessão vazia inicialmente (otimização)
                     )
                     db.session.add(sess)
-                    db.session.commit()
+                    # Marca flag para commit no teardown
+                    g.session_updated = True
             except SQLAlchemyError:
                 db.session.rollback()
 
@@ -262,7 +329,7 @@ def _set_security_headers(response):
 
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
-from app.controllers import routes
+from app.controllers import routes, health
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -601,3 +668,95 @@ with app.app_context():
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc
         )
+
+    # Setup performance middleware (needs to be inside app context to access db.engine)
+    register_performance_middleware(app, db)
+
+# Setup structured logging with rotation (after app context is ready)
+from app.utils.logging_config import setup_logging, log_request_info
+import time
+
+setup_logging(app)
+
+def _register_diagnostics_routes(flask_app: Flask) -> None:
+    diagnostics_enabled = os.getenv("ENABLE_DIAGNOSTICS", "0") == "1"
+    diagnostics_token = os.getenv("DIAGNOSTICS_TOKEN")
+
+    if not diagnostics_enabled:
+        return
+
+    @flask_app.route("/_diagnostics/thread-state")
+    def _diagnostics_thread_state():
+        if diagnostics_token and request.headers.get("X-Diagnostics-Token") != diagnostics_token:
+            return jsonify({"error": "unauthorized"}), 403
+
+        threads = [
+            {
+                "name": thread.name,
+                "ident": thread.ident,
+                "daemon": thread.daemon,
+                "alive": thread.is_alive(),
+            }
+            for thread in threading.enumerate()
+        ]
+
+        waitress_threads = [
+            thread for thread in threads if "waitress" in (thread["name"] or "").lower()
+        ]
+
+        configured_threads = int(os.getenv("WAITRESS_THREADS", "64"))
+
+        payload = {
+            "thread_count": len(threads),
+            "waitress_thread_count": len(waitress_threads),
+            "configured_threads": configured_threads,
+            "threads": threads,
+        }
+        return jsonify(payload)
+
+_register_diagnostics_routes(app)
+
+# Add request/response logging middleware
+@app.before_request
+def _log_request_start():
+    """Record request start time for duration tracking."""
+    g.request_start_time = time.perf_counter()
+
+@app.after_request
+def _log_request_end(response):
+    """Log request completion with timing information."""
+    tracker = get_request_tracker()
+    if tracker:
+        tracker.finish()
+        duration_ms = tracker.total_duration_ms or 0.0
+    elif hasattr(g, 'request_start_time'):
+        duration_ms = (time.perf_counter() - g.request_start_time) * 1000
+    else:
+        duration_ms = 0.0
+    log_request_info(request, response, duration_ms)
+    return response
+
+@app.teardown_appcontext
+def _commit_session_updates(exception=None):
+    """Commit session and last_seen updates after request completes (non-blocking optimization)."""
+    # Commit last_seen update (if any) - isolado para evitar lock contention
+    if hasattr(g, 'last_seen_updated') and g.last_seen_updated:
+        try:
+            commit_started = track_commit_start()
+            db.session.commit()
+            track_commit_end(commit_started)
+        except SQLAlchemyError as e:
+            logger.warning("Failed to commit last_seen update: %s", e)
+            db.session.rollback()
+
+    # Commit session updates (if any)
+    if hasattr(g, 'session_updated') and g.session_updated:
+        try:
+            commit_started = track_commit_start()
+            db.session.commit()
+            track_commit_end(commit_started)
+        except SQLAlchemyError as e:
+            logger.warning("Failed to commit session update: %s", e)
+            db.session.rollback()
+        finally:
+            db.session.remove()

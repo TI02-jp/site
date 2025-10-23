@@ -18,7 +18,8 @@ from flask import (
 from functools import wraps
 from collections import Counter
 from flask_login import current_user, login_required, login_user, logout_user
-from app import app, db, csrf
+from app import app, db, csrf, limiter
+from app.extensions.cache import cache, get_cache_timeout
 from app.utils.security import sanitize_html
 from app.utils.mailer import send_email, EmailDeliveryError
 from app.models.tables import (
@@ -87,7 +88,6 @@ from sqlalchemy import or_, cast, String, text, inspect
 from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
-from threading import Lock
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -799,23 +799,42 @@ def credentials_to_dict(credentials):
     }
 
 
-_STATS_CACHE_TTL_SECONDS = 60
-_stats_cache: dict[str, dict[str, Any]] = {}
-_stats_cache_lock = Lock()
+_STATS_CACHE_KEY_PREFIX = "portal:stats:"
+_NOTIFICATION_COUNT_KEY_PREFIX = "portal:notifications:unread:"
+_NOTIFICATION_VERSION_KEY = "portal:notifications:version"
 
-_NOTIFICATION_CACHE_TTL_SECONDS = 15
-_notification_count_cache: dict[int, dict[str, Any]] = {}
-_notification_cache_lock = Lock()
+
+def _get_stats_cache_timeout() -> int:
+    return get_cache_timeout("PORTAL_STATS_CACHE_TIMEOUT", 300)
+
+
+def _get_notification_cache_timeout() -> int:
+    return get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60)
+
+
+def _get_notification_version() -> int:
+    version = cache.get(_NOTIFICATION_VERSION_KEY)
+    if version is None:
+        version = int(time.time())
+        _set_notification_version(int(version))
+    return int(version)
+
+
+def _set_notification_version(version: int) -> None:
+    ttl = max(_get_notification_cache_timeout(), 300)
+    cache.set(_NOTIFICATION_VERSION_KEY, int(version), timeout=ttl)
+
+
+def _notification_cache_key(user_id: int) -> str:
+    return f"{_NOTIFICATION_COUNT_KEY_PREFIX}{_get_notification_version()}:{user_id}"
 
 
 def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
     """Return lightweight portal stats with a short-lived cache."""
-    cache_key = "admin" if include_admin_metrics else "basic"
-    now = time.monotonic()
-    with _stats_cache_lock:
-        cached = _stats_cache.get(cache_key)
-        if cached and cached["expires_at"] > now:
-            return dict(cached["value"])
+    cache_key = f"{_STATS_CACHE_KEY_PREFIX}{'admin' if include_admin_metrics else 'basic'}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return dict(cached)
 
     stats: dict[str, int] = {
         "total_empresas": Empresa.query.count(),
@@ -827,43 +846,33 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
         cutoff = datetime.utcnow() - timedelta(minutes=5)
         stats["online_users_count"] = User.query.filter(User.last_seen >= cutoff).count()
 
-    with _stats_cache_lock:
-        _stats_cache[cache_key] = {
-            "value": dict(stats),
-            "expires_at": now + _STATS_CACHE_TTL_SECONDS,
-        }
+    cache.set(cache_key, dict(stats), timeout=_get_stats_cache_timeout())
     return stats
 
 
 def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
-    """Retrieve unread notification count with a small cache window."""
-    now = time.monotonic()
+    """Retrieve unread notification count with centralized cache support."""
+    cache_key = _notification_cache_key(user_id)
     if allow_cache:
-        with _notification_cache_lock:
-            cached = _notification_count_cache.get(user_id)
-            if cached and cached["expires_at"] > now:
-                return int(cached["value"])
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return int(cached)
 
     unread = TaskNotification.query.filter(
         TaskNotification.user_id == user_id,
         TaskNotification.read_at.is_(None),
     ).count()
 
-    with _notification_cache_lock:
-        _notification_count_cache[user_id] = {
-            "value": unread,
-            "expires_at": now + _NOTIFICATION_CACHE_TTL_SECONDS,
-        }
+    cache.set(cache_key, int(unread), timeout=_get_notification_cache_timeout())
     return unread
 
 
 def _invalidate_notification_cache(user_id: Optional[int] = None) -> None:
     """Drop cached unread counts for a specific user or everyone."""
-    with _notification_cache_lock:
-        if user_id is None:
-            _notification_count_cache.clear()
-        else:
-            _notification_count_cache.pop(user_id, None)
+    if user_id is None:
+        _set_notification_version(_get_notification_version() + 1)
+        return
+    cache.delete(_notification_cache_key(user_id))
 
 
 @app.context_processor
@@ -954,9 +963,83 @@ def is_safe_pdf_upload(file):
     return header.startswith(b"%PDF")
 
 
+## ============================================================================
+## ERROR HANDLERS - Production-grade error handling
+## ============================================================================
+
+@app.errorhandler(404)
+def handle_not_found(e):
+    """Handle 404 Not Found errors with friendly page."""
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Resource not found", "status": 404}), 404
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(403)
+def handle_forbidden(e):
+    """Handle 403 Forbidden errors."""
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Access forbidden", "status": 403}), 403
+    flash("Você não tem permissão para acessar este recurso.", "error")
+    return redirect(url_for('home'))
+
+@app.errorhandler(429)
+def handle_rate_limit(e):
+    """Handle 429 Too Many Requests (rate limit exceeded)."""
+    from app.utils.logging_config import log_exception
+    log_exception(e, request)
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            "error": "Rate limit exceeded",
+            "status": 429,
+            "message": "Too many requests. Please wait before trying again."
+        }), 429
+
+    return render_template('errors/429.html', retry_after=e.description), 429
+
+@app.errorhandler(500)
+def handle_internal_error(e):
+    """Handle 500 Internal Server Error with logging."""
+    from app.utils.logging_config import log_exception
+    log_exception(e, request)
+
+    # Rollback any pending database transactions
+    db.session.rollback()
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            "error": "Internal server error",
+            "status": 500,
+            "message": "An unexpected error occurred. Please try again later."
+        }), 500
+
+    return render_template('errors/500.html'), 500
+
+@app.errorhandler(SQLAlchemyError)
+def handle_database_error(e):
+    """Handle database errors specifically."""
+    from app.utils.logging_config import log_exception
+    log_exception(e, request)
+
+    # Rollback failed transaction
+    db.session.rollback()
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            "error": "Database error",
+            "status": 500,
+            "message": "A database error occurred. Please try again."
+        }), 500
+
+    flash("Erro ao processar sua solicitação. Tente novamente.", "error")
+    return redirect(request.referrer or url_for('home'))
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
     """Return JSON error when uploaded file exceeds limit."""
+    from app.utils.logging_config import log_exception
+    log_exception(e, request)
+
     max_len = current_app.config.get("MAX_CONTENT_LENGTH")
     if max_len:
         limit_mb = max_len / (1024 * 1024)
@@ -1358,16 +1441,23 @@ def announcement_history():
 
     total_history = base_query.count()
 
+    # Add pagination to limit memory usage with concurrent users
+    page = request.args.get("page", 1, type=int)
+    per_page = 50  # Show 50 announcements per page
+
     announcements_query = (
         base_query.options(
             joinedload(Announcement.created_by),
             joinedload(Announcement.attachments),
         )
         .order_by(Announcement.date.desc(), Announcement.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
     )
 
     announcement_items = announcements_query.all()
     display_count = len(announcement_items)
+    total_pages = (total_history + per_page - 1) // per_page  # ceiling division
 
     announcement_reads: dict[int, bool] = {}
     read_rows = (
@@ -1413,6 +1503,10 @@ def announcement_history():
         search_action_url=url_for("announcement_history"),
         history_link_url=None,
         history_back_url=url_for("announcements"),
+        # Pagination variables
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
     )
 
 @app.route("/announcements/<int:announcement_id>/update", methods=["POST"])
@@ -2752,6 +2846,21 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
     db.session.bulk_save_objects(notifications)
     _invalidate_notification_cache()
 
+    # Broadcast notification to all affected users' SSE streams
+    from app.services.realtime import get_broadcaster
+    try:
+        broadcaster = get_broadcaster()
+        for user_id, in active_user_rows:
+            broadcaster.broadcast(
+                event_type="notification:created",
+                data={"user_id": user_id, "announcement_id": announcement.id},
+                user_id=user_id,
+                scope="notifications",
+            )
+    except Exception:
+        # Don't fail if broadcast fails
+        pass
+
 @app.route("/notifications", methods=["GET"])
 @login_required
 def list_notifications():
@@ -2762,26 +2871,40 @@ def list_notifications():
 
 @app.route("/notifications/stream")
 @login_required
+@limiter.limit("10 per minute")  # Limit SSE connections to prevent abuse
 def notifications_stream():
     """Server-Sent Events stream delivering real-time notifications."""
+    from app.services.realtime import get_broadcaster
 
     since_id = request.args.get("since", type=int) or 0
     user_id = current_user.id
 
+    # Query DB once to get the initial last_sent_id, then release connection
+    if not since_id:
+        last_existing = (
+            TaskNotification.query.filter(TaskNotification.user_id == user_id)
+            .order_by(TaskNotification.id.desc())
+            .with_entities(TaskNotification.id)
+            .limit(1)
+            .scalar()
+        )
+        since_id = last_existing or 0
+
+    # CRITICAL: Release database connection before entering streaming loop
+    # This prevents connection pool exhaustion from long-running SSE connections
+    db.session.close()
+
+    broadcaster = get_broadcaster()
+    client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
+    heartbeat_interval = 30  # 30 second heartbeat
+
     def event_stream() -> Any:
         last_sent_id = since_id
-        if not last_sent_id:
-            last_existing = (
-                TaskNotification.query.filter(TaskNotification.user_id == user_id)
-                .order_by(TaskNotification.id.desc())
-                .with_entities(TaskNotification.id)
-                .limit(1)
-                .scalar()
-            )
-            last_sent_id = last_existing or 0
 
         try:
             while True:
+                # Check for new notifications in the database
+                # We create a new session for each check to avoid holding connections
                 new_notifications = (
                     TaskNotification.query.filter(
                         TaskNotification.user_id == user_id,
@@ -2801,7 +2924,8 @@ def notifications_stream():
                         for notification in new_notifications
                     ]
                     last_sent_id = max(notification.id for notification in new_notifications)
-                    unread_total = _get_unread_notifications_count(user_id, allow_cache=False)
+                    # Use cache for unread count to reduce database queries
+                    unread_total = _get_unread_notifications_count(user_id, allow_cache=True)
                     payload = json.dumps(
                         {
                             "notifications": serialized,
@@ -2809,23 +2933,45 @@ def notifications_stream():
                             "last_id": last_sent_id,
                         }
                     )
+                    # Release DB connection immediately after query
+                    db.session.close()
                     yield f"data: {payload}\n\n"
                 else:
+                    # No new notifications - release connection and send keep-alive
+                    db.session.close()
                     yield ": keep-alive\n\n"
 
-                time.sleep(1)
+                # Wait for broadcaster events or timeout
+                # This doesn't hold a DB connection
+                triggered = broadcaster.wait_for_events(
+                    user_id,
+                    client_id,
+                    timeout=heartbeat_interval,
+                )
+
+                # Small sleep to avoid busy-looping even after broadcast
+                if triggered:
+                    time.sleep(0.5)  # Brief delay to batch notifications
+
         except GeneratorExit:
+            broadcaster.unregister_client(user_id, client_id)
+            db.session.close()
             return
+        finally:
+            broadcaster.unregister_client(user_id, client_id)
+            db.session.close()
 
     response = Response(
         stream_with_context(event_stream()),
         mimetype="text/event-stream",
     )
     response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
     return response
 
 @app.route("/realtime/stream")
 @login_required
+@limiter.limit("10 per minute")  # Limit SSE connections to prevent abuse
 def realtime_stream():
     """Server-Sent Events stream for real-time system updates."""
     from app.services.realtime import get_broadcaster
@@ -2835,30 +2981,41 @@ def realtime_stream():
     subscribed_scopes = set(s.strip() for s in scopes_param.split(",") if s.strip())
 
     user_id = current_user.id
+
+    # CRITICAL: Release database connection before entering streaming loop
+    # This prevents connection pool exhaustion from long-running SSE connections
+    db.session.close()
+
     broadcaster = get_broadcaster()
     client_id = broadcaster.register_client(user_id, subscribed_scopes)
+    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 15)
 
     def event_stream() -> Any:
         try:
             last_event_id = 0
             while True:
-                # Get pending events for this client
                 events = broadcaster.get_events(user_id, client_id, since_id=last_event_id)
 
                 if events:
                     for event in events:
                         yield event.to_sse()
                         last_event_id = max(last_event_id, event.id)
-                else:
-                    # Send keep-alive comment every second
-                    yield ": keep-alive\n\n"
+                    continue
 
-                time.sleep(0.5)  # Check for new events every 500ms
+                triggered = broadcaster.wait_for_events(
+                    user_id,
+                    client_id,
+                    timeout=heartbeat_interval,
+                )
+                if not triggered:
+                    yield ": keep-alive\n\n"
         except GeneratorExit:
             broadcaster.unregister_client(user_id, client_id)
+            db.session.close()
             return
         finally:
             broadcaster.unregister_client(user_id, client_id)
+            db.session.close()
 
     response = Response(
         stream_with_context(event_stream()),
@@ -2913,6 +3070,96 @@ def mark_all_notifications_read():
     if updated:
         _invalidate_notification_cache(current_user.id)
     return jsonify({"success": True, "updated": updated or 0})
+
+
+@app.route("/notifications/subscribe", methods=["POST"])
+@login_required
+def subscribe_push_notifications():
+    """Subscribe to Web Push notifications."""
+    from app.models.tables import PushSubscription
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Dados inválidos"}), 400
+
+    endpoint = data.get("endpoint")
+    keys = data.get("keys", {})
+    p256dh = keys.get("p256dh")
+    auth = keys.get("auth")
+
+    if not endpoint or not p256dh or not auth:
+        return jsonify({"error": "Dados de subscrição incompletos"}), 400
+
+    # Verificar se já existe uma subscrição para este endpoint
+    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+
+    if existing:
+        # Atualizar usuário se mudou e timestamp
+        existing.user_id = current_user.id
+        existing.p256dh_key = p256dh
+        existing.auth_key = auth
+        existing.user_agent = request.headers.get("User-Agent", "")[:500]
+        existing.last_used_at = datetime.utcnow()
+    else:
+        # Criar nova subscrição
+        subscription = PushSubscription(
+            user_id=current_user.id,
+            endpoint=endpoint,
+            p256dh_key=p256dh,
+            auth_key=auth,
+            user_agent=request.headers.get("User-Agent", "")[:500],
+        )
+        db.session.add(subscription)
+
+    try:
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/notifications/unsubscribe", methods=["POST"])
+@login_required
+def unsubscribe_push_notifications():
+    """Unsubscribe from Web Push notifications."""
+    from app.models.tables import PushSubscription
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Dados inválidos"}), 400
+
+    endpoint = data.get("endpoint")
+    if not endpoint:
+        return jsonify({"error": "Endpoint não fornecido"}), 400
+
+    # Remover subscrição
+    PushSubscription.query.filter_by(
+        endpoint=endpoint,
+        user_id=current_user.id,
+    ).delete()
+
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/notifications/vapid-public-key", methods=["GET"])
+def get_vapid_public_key():
+    """Return the VAPID public key for push subscription."""
+    public_key = os.getenv("VAPID_PUBLIC_KEY", "")
+    if not public_key:
+        return jsonify({"error": "VAPID não configurado"}), 500
+    return jsonify({"publicKey": public_key})
+
+
+@app.route("/notifications/test-push", methods=["POST"])
+@login_required
+def test_push_notification():
+    """Send a test push notification to the current user."""
+    from app.services.push_notifications import test_push_notification as send_test
+
+    result = send_test(current_user.id)
+    return jsonify(result)
 
 
 def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
@@ -4154,6 +4401,7 @@ def google_callback():
     return redirect(_determine_post_login_redirect(user))
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])  # Brute-force protection
 def login():
     """Render the login page and handle authentication."""
     form = LoginForm()
@@ -4388,28 +4636,30 @@ def visualizar_empresa(id):
 
     can_access_financeiro = user_has_tag("financeiro")
 
-    fiscal = Departamento.query.filter_by(
-        empresa_id=id, tipo="Departamento Fiscal"
-    ).first()
-    contabil = Departamento.query.filter_by(
-        empresa_id=id, tipo="Departamento Contábil"
-    ).first()
-    pessoal = Departamento.query.filter_by(
-        empresa_id=id, tipo="Departamento Pessoal"
-    ).first()
-    administrativo = Departamento.query.filter_by(
-        empresa_id=id, tipo="Departamento Administrativo"
-    ).first()
-    financeiro = (
-        Departamento.query.filter_by(
-            empresa_id=id, tipo="Departamento Financeiro"
-        ).first()
-        if can_access_financeiro
-        else None
-    )
-    notas_fiscais = Departamento.query.filter_by(
-        empresa_id=id, tipo="Departamento Notas Fiscais"
-    ).first()
+    # Consolidated query: load all departments in one query instead of 6 separate queries
+    dept_tipos = [
+        "Departamento Fiscal",
+        "Departamento Contábil",
+        "Departamento Pessoal",
+        "Departamento Administrativo",
+        "Departamento Notas Fiscais"
+    ]
+    if can_access_financeiro:
+        dept_tipos.append("Departamento Financeiro")
+
+    departamentos = Departamento.query.filter(
+        Departamento.empresa_id == id,
+        Departamento.tipo.in_(dept_tipos)
+    ).all()
+
+    # Map departments by tipo for easy access
+    dept_map = {dept.tipo: dept for dept in departamentos}
+    fiscal = dept_map.get("Departamento Fiscal")
+    contabil = dept_map.get("Departamento Contábil")
+    pessoal = dept_map.get("Departamento Pessoal")
+    administrativo = dept_map.get("Departamento Administrativo")
+    financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
+    notas_fiscais = dept_map.get("Departamento Notas Fiscais")
 
     def _prepare_envio_fisico(departamento):
         if not departamento:
@@ -4495,28 +4745,30 @@ def gerenciar_departamentos(empresa_id):
 
     can_access_financeiro = user_has_tag("financeiro")
 
-    fiscal = Departamento.query.filter_by(
-        empresa_id=empresa_id, tipo="Departamento Fiscal"
-    ).first()
-    contabil = Departamento.query.filter_by(
-        empresa_id=empresa_id, tipo="Departamento Contábil"
-    ).first()
-    pessoal = Departamento.query.filter_by(
-        empresa_id=empresa_id, tipo="Departamento Pessoal"
-    ).first()
-    administrativo = Departamento.query.filter_by(
-        empresa_id=empresa_id, tipo="Departamento Administrativo"
-    ).first()
-    financeiro = (
-        Departamento.query.filter_by(
-            empresa_id=empresa_id, tipo="Departamento Financeiro"
-        ).first()
-        if can_access_financeiro
-        else None
-    )
-    notas_fiscais = Departamento.query.filter_by(
-        empresa_id=empresa_id, tipo="Departamento Notas Fiscais"
-    ).first()
+    # Consolidated query: load all departments in one query instead of 6 separate queries
+    dept_tipos = [
+        "Departamento Fiscal",
+        "Departamento Contábil",
+        "Departamento Pessoal",
+        "Departamento Administrativo",
+        "Departamento Notas Fiscais"
+    ]
+    if can_access_financeiro:
+        dept_tipos.append("Departamento Financeiro")
+
+    departamentos = Departamento.query.filter(
+        Departamento.empresa_id == empresa_id,
+        Departamento.tipo.in_(dept_tipos)
+    ).all()
+
+    # Map departments by tipo for easy access
+    dept_map = {dept.tipo: dept for dept in departamentos}
+    fiscal = dept_map.get("Departamento Fiscal")
+    contabil = dept_map.get("Departamento Contábil")
+    pessoal = dept_map.get("Departamento Pessoal")
+    administrativo = dept_map.get("Departamento Administrativo")
+    financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
+    notas_fiscais = dept_map.get("Departamento Notas Fiscais")
 
     fiscal_form = DepartamentoFiscalForm(request.form, obj=fiscal)
     contabil_form = DepartamentoContabilForm(request.form, obj=contabil)
@@ -5343,16 +5595,16 @@ def tasks_overview():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.status_history),
-            joinedload(Task.attachments),
+            # Removed status_history and attachments eager loading to reduce Cartesian product
+            # These will be loaded on-demand when needed (lazy loading)
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.status_history),
-            joinedload(Task.children).joinedload(Task.attachments),
+            # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
+        .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
     tasks_by_status = {status: [] for status in TaskStatus}
@@ -5403,16 +5655,15 @@ def tasks_overview_mine():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.status_history),
-            joinedload(Task.attachments),
+            # Removed status_history and attachments eager loading to reduce Cartesian product
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.status_history),
-            joinedload(Task.children).joinedload(Task.attachments),
+            # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
+        .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
     tasks_by_status = {status: [] for status in open_statuses}
@@ -5628,15 +5879,14 @@ def tasks_sector(tag_id):
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
-            joinedload(Task.status_history),
-            joinedload(Task.attachments),
+            # Removed status_history and attachments eager loading to reduce Cartesian product
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.status_history),
-            joinedload(Task.children).joinedload(Task.attachments),
+            # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
+        .limit(200)  # Added limit to prevent loading too many tasks at once
         .all()
     )
     tasks_by_status = {status: [] for status in TaskStatus}
@@ -5868,3 +6118,7 @@ def delete_task(task_id):
     return jsonify({"success": True})
 
 
+
+## ============================================================================
+## HEALTH CHECK ENDPOINTS - For monitoring and load balancers
+## ============================================================================

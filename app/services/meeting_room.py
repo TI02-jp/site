@@ -268,6 +268,8 @@ def _collect_intervals(
     *,
     exclude_meeting_id: int | None = None,
     exclude_event_id: str | None = None,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ):
     intervals: list[tuple[datetime, datetime]] = []
     for e in raw_events:
@@ -280,12 +282,24 @@ def _collect_intervals(
             e["end"].get("dateTime") or e["end"].get("date")
         ).astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
-    for r in Reuniao.query.all():
-        if exclude_meeting_id and r.id == exclude_meeting_id:
+
+    query = Reuniao.query.with_entities(
+        Reuniao.id, Reuniao.inicio, Reuniao.fim, Reuniao.google_event_id
+    )
+    if window_start is not None:
+        query = query.filter(Reuniao.fim >= window_start - MIN_GAP)
+    if window_end is not None:
+        query = query.filter(Reuniao.inicio <= window_end + MIN_GAP)
+    if exclude_meeting_id is not None:
+        query = query.filter(Reuniao.id != exclude_meeting_id)
+
+    for meeting_id, inicio, fim, google_event_id in query.all():
+        if exclude_event_id and google_event_id == exclude_event_id:
             continue
-        existing_start = r.inicio.astimezone(CALENDAR_TZ)
-        existing_end = r.fim.astimezone(CALENDAR_TZ)
+        existing_start = inicio.astimezone(CALENDAR_TZ)
+        existing_end = fim.astimezone(CALENDAR_TZ)
         intervals.append((existing_start, existing_end))
+
     return intervals
 
 
@@ -562,7 +576,12 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         form.date.data, form.end_time.data, tzinfo=CALENDAR_TZ
     )
     duration = end_dt - start_dt
-    intervals = _collect_intervals(raw_events)
+    search_padding = max(duration, timedelta(hours=1))
+    intervals = _collect_intervals(
+        raw_events,
+        window_start=start_dt - search_padding,
+        window_end=end_dt + search_padding,
+    )
 
     adjusted_start, messages = _calculate_adjusted_start(
         start_dt, duration, intervals, now
@@ -967,14 +986,18 @@ def change_meeting_status(
             )
         if new_end <= new_start:
             raise ValueError("O horário de término deve ser posterior ao horário de início.")
+        duration = new_end - new_start
         raw_events = raw_events or fetch_raw_events()
+        padding = max(duration, timedelta(hours=1))
         intervals = _collect_intervals(
             raw_events,
             exclude_meeting_id=meeting.id,
             exclude_event_id=meeting.google_event_id,
+            window_start=new_start - padding,
+            window_end=new_end + padding,
         )
         adjusted_start, messages = _calculate_adjusted_start(
-            new_start, new_end - new_start, intervals, now
+            new_start, duration, intervals, now
         )
         if adjusted_start != new_start:
             raise MeetingStatusConflictError(messages)

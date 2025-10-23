@@ -1,4 +1,4 @@
-"""Utilities for serving curated course information in the portal."""
+﻿"""Utilities for serving curated course information in the portal."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from app import db
 class CourseStatus(str, Enum):
     """Enumeration of supported course statuses."""
 
-    COMPLETED = "concluído"
+    COMPLETED = "concluÃ­do"
     PLANNED = "planejado"
     DELAYED = "atrasado"
     POSTPONED = "adiada"
@@ -42,7 +42,7 @@ class CourseRecord:
     observation: str | None = None
     tags: tuple[str, ...] = tuple()
     tag_ids: tuple[int, ...] = tuple()
-    participant_sectors: tuple[str, ...] = tuple()  # Setores/tags incluídos por completo
+    participant_sectors: tuple[str, ...] = tuple()  # Setores/tags incluÃ­dos por completo
 
     @property
     def start_date_label(self) -> str:
@@ -220,10 +220,11 @@ def _coerce_date(value: date | datetime | None) -> date | None:
     return value
 
 
+
 def get_courses_overview() -> list[CourseRecord]:
     """Return all registered courses prioritizing upcoming plans and fresh completions."""
 
-    from app.models.tables import Course, Tag, User
+    from app.models.tables import Course, Tag, User, user_tags
 
     status_priority = sa.case(
         (Course.status == CourseStatus.COMPLETED.value, 1),
@@ -231,7 +232,10 @@ def get_courses_overview() -> list[CourseRecord]:
     )
 
     most_recent_date = sa.case(
-        (Course.status == CourseStatus.COMPLETED.value, sa.func.coalesce(Course.completion_date, Course.start_date)),
+        (
+            Course.status == CourseStatus.COMPLETED.value,
+            sa.func.coalesce(Course.completion_date, Course.start_date),
+        ),
         else_=Course.start_date,
     )
 
@@ -241,49 +245,65 @@ def get_courses_overview() -> list[CourseRecord]:
         .order_by(status_priority.asc(), most_recent_date.desc(), Course.id.desc())
     )
 
-    # Carregar todos os usuários com suas tags para análise
-    users_with_tags = db.session.execute(
-        sa.select(User).where(User.ativo == True).options(selectinload(User.tags))
-    ).scalars().all()
+    result = db.session.execute(stmt).unique()
+    courses = result.scalars().all()
+    if not courses:
+        return []
 
-    # Criar mapa de tag -> usuários
+    parsed_payload: list[tuple[Course, tuple[str, ...], tuple[str, ...]]] = []
+    sector_names: set[str] = set()
+    for course in courses:
+        course_sectors = _split_values(course.sectors or "")
+        course_participants_raw = _split_values(course.participants or "")
+        sector_names.update(course_sectors)
+        parsed_payload.append((course, course_sectors, course_participants_raw))
+
+    normalized_sector_map = {
+        name.lower(): name for name in (sector.strip() for sector in sector_names if sector)
+    }
+
     tag_users_map: dict[str, set[str]] = {}
-    for user in users_with_tags:
-        for tag in user.tags:
-            tag_name = tag.nome.strip()
-            if tag_name not in tag_users_map:
-                tag_users_map[tag_name] = set()
-            tag_users_map[tag_name].add(user.name.strip())
+    if normalized_sector_map:
+        tag_rows = db.session.execute(
+            sa.select(Tag.nome, User.name)
+            .select_from(Tag)
+            .join(user_tags, Tag.id == user_tags.c.tag_id)
+            .join(User, User.id == user_tags.c.user_id)
+            .where(
+                sa.func.lower(Tag.nome).in_(list(normalized_sector_map.keys())),
+                User.ativo.is_(True),
+            )
+        ).all()
+        for tag_name, user_name in tag_rows:
+            if not user_name:
+                continue
+            canonical_name = normalized_sector_map.get(tag_name.lower())
+            if not canonical_name:
+                continue
+            tag_users_map.setdefault(canonical_name, set()).add(user_name.strip())
 
     records: list[CourseRecord] = []
-    for course in db.session.execute(stmt).scalars():
+    for course, course_sectors, course_participants_raw in parsed_payload:
         try:
             status = CourseStatus(course.status)
         except ValueError:
             status = CourseStatus.PLANNED
         tags_sorted = sorted(course.tags, key=lambda tag: tag.name.lower())
 
-        # Analisar participantes do curso
-        course_sectors = _split_values(course.sectors or "")
-        course_participants_raw = _split_values(course.participants or "")
         course_participants = {p.strip() for p in course_participants_raw}
 
-        # Detectar quais setores/tags estão completamente incluídos
         optimized_participants: list[str] = []
         complete_sectors: list[str] = []
         remaining_participants = set(course_participants)
 
         for sector in course_sectors:
-            sector_users = tag_users_map.get(sector.strip(), set())
+            sector_name = sector.strip()
+            sector_users = tag_users_map.get(sector_name, set())
             if sector_users and sector_users.issubset(course_participants):
-                # Todos os usuários desta tag estão incluídos
-                sector_name = sector.strip()
                 optimized_participants.append(sector_name)
                 complete_sectors.append(sector_name)
-                # Remover estes usuários da lista de participantes individuais
                 remaining_participants -= sector_users
 
-        # Adicionar participantes individuais restantes
         optimized_participants.extend(sorted(remaining_participants))
 
         records.append(
@@ -309,10 +329,10 @@ def get_courses_overview() -> list[CourseRecord]:
         )
     return records
 
-
 __all__ = [
     "CourseRecord",
     "CourseStatus",
     "get_courses_overview",
 ]
+
 

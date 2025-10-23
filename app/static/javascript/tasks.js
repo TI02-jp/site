@@ -56,8 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return response.json();
                 })
                 .then(() => {
-                    // Task will be removed via realtime event
-                    console.log('[Tasks] Task deleted successfully, waiting for realtime update');
+                    // Remove task immediately for the user who deleted it
+                    console.log('[Tasks] Task deleted successfully, removing from UI');
+                    handleTaskDeleted({ id: parseInt(taskId) });
                 })
                 .catch(error => {
                     console.error(error);
