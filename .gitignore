@@ -42,3 +42,4 @@ nosetests.xml
 
 # Ignorar arquivos do Claude AI
 .claude/
+logs/
