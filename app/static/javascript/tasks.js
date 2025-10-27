@@ -1,3 +1,54 @@
+/**
+ * Attach event listeners to status change buttons
+ */
+function attachStatusButtonListeners() {
+    document.querySelectorAll('.change-status').forEach(btn => {
+        // Remove old listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener('click', () => {
+            const taskId = newBtn.dataset.id;
+            const newStatus = newBtn.dataset.status;
+
+            // Get current status from card position
+            const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+            const currentColumn = taskCard ? taskCard.closest('.kanban-list') : null;
+            const oldStatus = currentColumn ? currentColumn.dataset.status : null;
+
+            fetch(`/tasks/${taskId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ status: newStatus })
+            }).then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    console.error('[Tasks] Status change failed');
+                    window.location.reload();
+                }
+            }).then(data => {
+                if (data && data.success && data.task) {
+                    // Update immediately for current user
+                    console.log('[Tasks] Status change successful, updating UI immediately');
+                    handleTaskStatusChanged({
+                        id: parseInt(taskId),
+                        old_status: oldStatus,
+                        new_status: newStatus,
+                        task: data.task
+                    });
+                }
+            }).catch(error => {
+                console.error('[Tasks] Status change error:', error);
+                window.location.reload();
+            });
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0);
 
@@ -6,31 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setupRealtimeHandlers();
     }
 
-    document.querySelectorAll('.change-status').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const taskId = btn.dataset.id;
-            const status = btn.dataset.status;
-            fetch(`/tasks/${taskId}/status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({ status })
-            }).then(response => {
-                if (response.ok) {
-                    // Status will be updated via realtime event
-                    console.log('[Tasks] Status change successful, waiting for realtime update');
-                } else {
-                    console.error('[Tasks] Status change failed');
-                    window.location.reload();
-                }
-            }).catch(error => {
-                console.error('[Tasks] Status change error:', error);
-                window.location.reload();
-            });
-        });
-    });
+    // Attach status button listeners
+    attachStatusButtonListeners();
 
     document.querySelectorAll('.delete-task').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -360,7 +388,7 @@ function createTaskCard(taskData) {
  */
 function updateTaskCardContent(taskCard, taskData) {
     // Update title
-    const titleElement = taskCard.querySelector('.task-header h4');
+    const titleElement = taskCard.querySelector('.task-title');
     if (titleElement) {
         titleElement.textContent = taskData.title;
     }
@@ -375,12 +403,89 @@ function updateTaskCardContent(taskCard, taskData) {
         descElement.remove();
     }
 
+    // Update status class on card
+    taskCard.className = `task-card task-status-${taskData.status}`;
+    if (taskCard.querySelector('.subtasks')) {
+        taskCard.classList.add('has-children');
+    }
+
+    // Rebuild action buttons based on new status
+    const actionsContainer = taskCard.querySelector('.task-actions');
+    if (actionsContainer) {
+        rebuildActionButtons(actionsContainer, taskData);
+    }
+
+    // Re-attach event listeners to new buttons
+    attachStatusButtonListeners();
+
     // Add visual feedback for update
     taskCard.style.backgroundColor = '#fffacd';
     setTimeout(() => {
         taskCard.style.backgroundColor = '';
         taskCard.style.transition = 'background-color 0.5s ease-out';
     }, 100);
+}
+
+/**
+ * Rebuild action buttons based on task status
+ */
+function rebuildActionButtons(actionsContainer, taskData) {
+    // Keep existing buttons that don't depend on status
+    const viewButton = actionsContainer.querySelector('.view-task');
+    const subtaskButton = actionsContainer.querySelector('.subtask');
+    const deleteButton = actionsContainer.querySelector('.delete-task');
+
+    // Clear all buttons
+    actionsContainer.innerHTML = '';
+
+    // Re-add view button
+    if (viewButton) {
+        actionsContainer.appendChild(viewButton);
+    }
+
+    // Add status-specific buttons
+    if (taskData.status === 'pending') {
+        const startBtn = document.createElement('button');
+        startBtn.className = 'action start change-status';
+        startBtn.dataset.id = taskData.id;
+        startBtn.dataset.status = 'in_progress';
+        startBtn.title = 'Iniciar';
+        startBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
+        actionsContainer.appendChild(startBtn);
+    } else if (taskData.status === 'in_progress') {
+        // Update actions container class for compact view
+        actionsContainer.classList.add('compact');
+
+        const toPendingBtn = document.createElement('button');
+        toPendingBtn.className = 'action to-pending change-status';
+        toPendingBtn.dataset.id = taskData.id;
+        toPendingBtn.dataset.status = 'pending';
+        toPendingBtn.title = 'Mover para pendente';
+        toPendingBtn.innerHTML = '<i class="bi bi-arrow-return-left"></i>';
+        actionsContainer.appendChild(toPendingBtn);
+
+        const doneBtn = document.createElement('button');
+        doneBtn.className = 'action done change-status';
+        doneBtn.dataset.id = taskData.id;
+        doneBtn.dataset.status = 'done';
+        doneBtn.title = 'Concluir';
+        doneBtn.innerHTML = '<i class="bi bi-check-circle"></i>';
+        actionsContainer.appendChild(doneBtn);
+    } else if (taskData.status === 'done') {
+        // Check if user is admin (we'll need to pass this info)
+        // For now, we won't add reopen button since we don't have user role info
+        actionsContainer.classList.remove('compact');
+    }
+
+    // Re-add subtask button if it existed
+    if (subtaskButton) {
+        actionsContainer.appendChild(subtaskButton);
+    }
+
+    // Re-add delete button if it existed
+    if (deleteButton) {
+        actionsContainer.appendChild(deleteButton);
+    }
 }
 
 /**

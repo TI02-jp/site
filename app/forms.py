@@ -579,6 +579,14 @@ class GeneralCalendarEventForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
+    is_birthday = BooleanField("Marcar como aniversário", default=False)
+    birthday_user_id = SelectField(
+        "Colaborador aniversariante",
+        coerce=int,
+        validators=[Optional()],
+        default=0,
+        choices=[],
+    )
     event_id = HiddenField()
     start_date = DateField(
         "Data inicial",
@@ -621,6 +629,14 @@ class GeneralCalendarEventForm(FlaskForm):
             raise ValidationError("A data final deve ser igual ou posterior à data inicial.")
 
     def validate(self, extra_validators=None):
+        if self.is_birthday.data and self.birthday_user_id.data:
+            try:
+                selected_participants = set(self.participants.data or [])
+            except TypeError:
+                selected_participants = set()
+            if self.birthday_user_id.data not in selected_participants:
+                selected_participants.add(self.birthday_user_id.data)
+                self.participants.data = list(selected_participants)
         if not super().validate(extra_validators):
             return False
         start_date = self.start_date.data
@@ -639,6 +655,13 @@ class GeneralCalendarEventForm(FlaskForm):
         if start_time and end_time and end_time <= start_time:
             self.end_time.errors.append("A hora de término deve ser posterior à hora de início.")
             return False
+        if self.is_birthday.data:
+            if not self.birthday_user_id.data:
+                self.birthday_user_id.errors.append("Selecione o colaborador aniversariante.")
+                return False
+            if end_date != start_date:
+                self.end_date.errors.append("Aniversários devem ocorrer em um único dia.")
+                return False
         return True
 
 
