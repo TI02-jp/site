@@ -1122,7 +1122,7 @@ def _build_assignment_message(title: str, tag_name: str | None) -> str:
     """Return a human-friendly notification message for a task assignment."""
 
     if tag_name:
-        display = "Pessoal" if tag_name.startswith("__personal__") else tag_name
+        display = "Para Mim" if tag_name.startswith("__personal__") else tag_name
         return f'Tarefa "{title}" atribuída no setor {display}.'
     return f'Tarefa "{title}" atribuída a você.'
 

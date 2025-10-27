@@ -71,8 +71,9 @@ class RealtimeBroadcaster:
     For multi-server deployments, consider using Redis pub/sub.
     """
 
-    def __init__(self, max_queue_size: int = 100):
+    def __init__(self, max_queue_size: int = 100, max_connections_per_user: int = 3):
         self.max_queue_size = max_queue_size
+        self.max_connections_per_user = max_connections_per_user
         self._clients: Dict[int, Dict[str, Any]] = {}  # user_id -> client_info
         self._lock = Lock()
         self._global_events: Deque["RealtimeEvent"] = deque(maxlen=1000)
@@ -82,14 +83,30 @@ class RealtimeBroadcaster:
         user_id: int,
         subscribed_scopes: Optional[Set[str]] = None,
     ) -> str:
-        """Register a new client for receiving events."""
+        """Register a new client for receiving events.
+
+        Limits concurrent connections per user to prevent worker exhaustion.
+        """
         client_id = f"{user_id}_{int(time.time() * 1000)}"
 
         with self._lock:
             if user_id not in self._clients:
                 self._clients[user_id] = {"connections": {}, "last_event_id": 0}
 
-            self._clients[user_id]["connections"][client_id] = {
+            connections = self._clients[user_id]["connections"]
+
+            # Limit concurrent connections per user to prevent resource exhaustion
+            if len(connections) >= self.max_connections_per_user:
+                # Remove oldest connection
+                oldest_client_id = min(
+                    connections.keys(),
+                    key=lambda cid: connections[cid]["connected_at"]
+                )
+                old_client_info = connections.pop(oldest_client_id, None)
+                if old_client_info:
+                    old_client_info["event"].set()  # Unblock waiter
+
+            connections[client_id] = {
                 "queue": deque(maxlen=self.max_queue_size),
                 "subscribed_scopes": subscribed_scopes or {"all"},
                 "connected_at": time.time(),
@@ -142,9 +159,14 @@ class RealtimeBroadcaster:
         self,
         user_id: int,
         client_id: str,
-        timeout: float = 15.0,
+        timeout: float = 30.0,
     ) -> bool:
-        """Block until new events arrive or the timeout expires."""
+        """Block until new events arrive or the timeout expires.
+
+        Default timeout is 30s, coordinated with Apache SSE timeout (90s).
+        Apache closes SSE connections after 90s, so we use shorter timeouts
+        with client-side reconnection for better resource management.
+        """
         with self._lock:
             user_data = self._clients.get(user_id)
             if not user_data:

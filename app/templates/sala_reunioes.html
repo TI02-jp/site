@@ -2080,8 +2080,51 @@
     });
 
     document.getElementById('deleteEventBtn').addEventListener('click', function() {
+        if (!currentEvent || !currentEvent.id) {
+            return;
+        }
         if (confirm('Deseja excluir esta reunião?')) {
-            document.getElementById('deleteMeetingForm').submit();
+            var meetingId = currentEvent.id;
+            var deleteUrl = '/reuniao/' + meetingId + '/delete';
+            var csrfToken = document.querySelector('#csrf_token_delete').value;
+
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                },
+                body: 'csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { status: response.status, data: data };
+                });
+            })
+            .then(function(result) {
+                if (result.data.success) {
+                    // Remover evento do calendário
+                    var eventToRemove = calendar.getEventById(String(meetingId));
+                    if (eventToRemove) {
+                        eventToRemove.remove();
+                    }
+
+                    // Fechar modal
+                    if (eventDetailsModalInstance) {
+                        eventDetailsModalInstance.hide();
+                    }
+
+                    // Exibir mensagem de sucesso
+                    showToast(result.data.message || 'Reunião excluída com sucesso!', 'success');
+                } else {
+                    showToast(result.data.error || 'Erro ao excluir reunião.', 'danger');
+                }
+            })
+            .catch(function(error) {
+                console.error('Erro ao excluir reunião:', error);
+                showToast('Erro ao excluir reunião. Tente novamente.', 'danger');
+            });
         }
     });
 
