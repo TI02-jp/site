@@ -66,6 +66,14 @@ def _ensure_time_columns() -> None:
         statements.append(
             "ALTER TABLE general_calendar_events ADD COLUMN birthday_user_name VARCHAR(255)"
         )
+    if "birthday_recurs_annually" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN birthday_recurs_annually BOOLEAN NOT NULL DEFAULT 0"
+        )
+    if "birthday_recurrence_years" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN birthday_recurrence_years INTEGER DEFAULT 1"
+        )
 
     if not statements:
         _TIME_COLUMNS_VERIFIED = True
@@ -97,6 +105,14 @@ def populate_event_participants(form) -> None:
     form.participants.choices = choices
     if hasattr(form, "birthday_user_id"):
         form.birthday_user_id.choices = [(0, "Selecione um colaborador")] + choices
+    if hasattr(form, "birthday_recurs_annually") and form.birthday_recurs_annually is not None:
+        form.birthday_recurs_annually.data = bool(form.birthday_recurs_annually.data)
+    if hasattr(form, "birthday_recurrence_years") and form.birthday_recurrence_years is not None:
+        try:
+            current_value = int(form.birthday_recurrence_years.data or 1)
+        except (TypeError, ValueError):
+            current_value = 1
+        form.birthday_recurrence_years.data = max(1, current_value)
 
 
 def _selected_users(ids: Iterable[int]) -> list[User]:
@@ -124,6 +140,16 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
     participant_ids = set(form.participants.data or [])
     if is_birthday and birthday_user_id:
         participant_ids.add(birthday_user_id)
+    birthday_recurs_annually = (
+        bool(form.birthday_recurs_annually.data) if is_birthday else False
+    )
+    birthday_recurrence_years = 0
+    if birthday_recurs_annually:
+        try:
+            birthday_recurrence_years = int(form.birthday_recurrence_years.data or 1)
+        except (TypeError, ValueError):
+            birthday_recurrence_years = 1
+        birthday_recurrence_years = max(1, birthday_recurrence_years)
     selected_users = _selected_users(participant_ids)
     birthday_user = None
     if is_birthday and birthday_user_id:
@@ -147,6 +173,8 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
             if birthday_user
             else None
         ),
+        birthday_recurs_annually=birthday_recurs_annually,
+        birthday_recurrence_years=birthday_recurrence_years if birthday_recurs_annually else None,
     )
     for user in selected_users:
         event.participants.append(
@@ -180,6 +208,18 @@ def update_calendar_event_from_form(
     event.start_time = form.start_time.data if use_times else None
     event.end_time = form.end_time.data if use_times else None
     event.is_birthday = bool(form.is_birthday.data)
+    event.birthday_recurs_annually = (
+        bool(form.birthday_recurs_annually.data) if event.is_birthday else False
+    )
+    if event.birthday_recurs_annually:
+        try:
+            event.birthday_recurrence_years = max(
+                1, int(form.birthday_recurrence_years.data or 1)
+            )
+        except (TypeError, ValueError):
+            event.birthday_recurrence_years = 1
+    else:
+        event.birthday_recurrence_years = None
     birthday_user_id = form.birthday_user_id.data or 0
     if event.is_birthday:
         event.end_date = event.start_date
@@ -265,34 +305,66 @@ def serialize_events_for_calendar(
             for username in participants + ([creator_username] if creator_username else [])
         )
         is_birthday = bool(event.is_birthday)
-
-        events.append(
-            {
-                "id": event.id,
-                "title": event.title,
-                "start": start_iso,
-                "end": end_iso,
-                "allDay": all_day,
-                "start_date": event.start_date.isoformat(),
-                "end_date": event.end_date.isoformat(),
-                "start_time": event.start_time.strftime("%H:%M") if event.start_time else None,
-                "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
-                "description": event.description,
-                "creator": creator_username,
-                "participants": participants,
-                "participant_ids": [p.user_id for p in sorted_participants],
-                "can_edit": can_edit,
-                "can_delete": can_delete,
-                "is_tadeu_event": is_tadeu_event,
-                "is_birthday": is_birthday,
-                "birthday_user_id": event.birthday_user_id,
-                "birthday_user_name": event.birthday_user_name,
-                "backgroundColor": "#f58220" if is_birthday else None,
-                "borderColor": "#f58220" if is_birthday else None,
-                "textColor": "#ffffff" if is_birthday else None,
-                "classNames": ["birthday-event"] if is_birthday else [],
-            }
+        recurs_annually = bool(event.birthday_recurs_annually) if is_birthday else False
+        recurrence_years = (
+            int(event.birthday_recurrence_years or 0) if recurs_annually else 0
         )
+
+        base_event = {
+            "id": event.id,
+            "title": event.title,
+            "start": start_iso,
+            "end": end_iso,
+            "allDay": all_day,
+            "start_date": event.start_date.isoformat(),
+            "end_date": event.end_date.isoformat(),
+            "start_time": event.start_time.strftime("%H:%M") if event.start_time else None,
+            "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
+            "description": event.description,
+            "creator": creator_username,
+            "participants": participants,
+            "participant_ids": [p.user_id for p in sorted_participants],
+            "can_edit": can_edit,
+            "can_delete": can_delete,
+            "is_tadeu_event": is_tadeu_event,
+            "is_birthday": is_birthday,
+            "birthday_user_id": event.birthday_user_id,
+            "birthday_user_name": event.birthday_user_name,
+            "birthday_recurs_annually": recurs_annually,
+            "birthday_recurrence_years": recurrence_years,
+            "originalId": event.id,
+            "backgroundColor": "#f58220" if is_birthday else None,
+            "borderColor": "#f58220" if is_birthday else None,
+            "textColor": "#ffffff" if is_birthday else None,
+            "classNames": ["birthday-event"] if is_birthday else [],
+        }
+        if is_birthday:
+            base_event["birthday_year"] = event.start_date.year
+        events.append(base_event)
+
+        if is_birthday and recurs_annually and recurrence_years > 0:
+            base_start = event.start_date
+            base_end = event.end_date
+            base_year = base_start.year
+            for offset in range(1, recurrence_years + 1):
+                year = base_year + offset
+                try:
+                    start_date_year = base_start.replace(year=year)
+                except ValueError:
+                    start_date_year = base_start.replace(year=year, day=28)
+                try:
+                    end_date_year = base_end.replace(year=year)
+                except ValueError:
+                    end_date_year = base_end.replace(year=year, day=28)
+                occurrence = dict(base_event)
+                occurrence["id"] = f"{event.id}-birthday-{year}"
+                occurrence["start_date"] = start_date_year.isoformat()
+                occurrence["end_date"] = end_date_year.isoformat()
+                occurrence["start"] = start_date_year.isoformat()
+                occurrence["end"] = (end_date_year + timedelta(days=1)).isoformat()
+                occurrence["allDay"] = True
+                occurrence["birthday_year"] = year
+                events.append(occurrence)
 
     events.sort(
         key=lambda data: (

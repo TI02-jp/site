@@ -152,6 +152,19 @@
                                         <div class="text-danger">{{ form.birthday_user_id.errors[0] }}</div>
                                     {% endif %}
                                 </div>
+                                <div class="mb-3 d-none" id="birthdayRecurringWrapper">
+                                    <div class="form-check ms-1 mb-2">
+                                        {{ form.birthday_recurs_annually(class="form-check-input", id="birthday_recurs_annually") }}
+                                        <label class="form-check-label" for="birthday_recurs_annually">Repetir todos os anos</label>
+                                    </div>
+                                    <div>
+                                        {{ form.birthday_recurrence_years.label(class="form-label") }}
+                                        {{ form.birthday_recurrence_years(class="form-select", id="birthday_recurrence_years") }}
+                                        {% if form.birthday_recurrence_years.errors %}
+                                            <div class="text-danger">{{ form.birthday_recurrence_years.errors[0] }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                                 <div class="mb-3">
                                     {{ form.title.label(class="form-label") }}
                                     {{ form.title(class="form-control") }}
@@ -406,17 +419,33 @@
                     (currentEvent.extendedProps && currentEvent.extendedProps.is_birthday) || currentEvent.is_birthday
                 );
                 if (isBirthdayEvent) {
+                    var recurrenceYears = parseInt(
+                        currentEvent.extendedProps.birthday_recurrence_years || currentEvent.birthday_recurrence_years || '0',
+                        10
+                    );
                     if (birthdayBadge) {
+                        if (currentEvent.extendedProps.birthday_recurs_annually && recurrenceYears > 0) {
+                            var yearsLabel = recurrenceYears === 1 ? '1 ano' : recurrenceYears + ' anos';
+                            birthdayBadge.textContent = 'Aniversário (anual por ' + yearsLabel + ')';
+                        } else {
+                            birthdayBadge.textContent = 'Aniversário';
+                        }
                         birthdayBadge.classList.remove('d-none');
                     }
                     if (birthdayRow && birthdayNameEl) {
                         birthdayRow.classList.remove('d-none');
-                        birthdayNameEl.textContent =
+                        var birthdayLabel =
                             currentEvent.extendedProps.birthday_user_name || 'N/A';
+                        if (currentEvent.extendedProps.birthday_recurs_annually && recurrenceYears > 0) {
+                            var shortYearsLabel = recurrenceYears === 1 ? 'próximo ano' : 'próximos ' + recurrenceYears + ' anos';
+                            birthdayLabel += ' • Repetição anual (' + shortYearsLabel + ')';
+                        }
+                        birthdayNameEl.textContent = birthdayLabel;
                     }
                 } else {
                     if (birthdayBadge) {
                         birthdayBadge.classList.add('d-none');
+                        birthdayBadge.textContent = 'Aniversário';
                     }
                     if (birthdayRow && birthdayNameEl) {
                         birthdayRow.classList.add('d-none');
@@ -528,6 +557,9 @@
         var birthdayCheckbox = document.getElementById('is_birthday');
         var birthdayWrapper = document.getElementById('birthdayUserWrapper');
         var birthdaySelect = document.getElementById('birthday_user_id');
+        var birthdayRecurringWrapper = document.getElementById('birthdayRecurringWrapper');
+        var birthdayRecurringCheckbox = document.getElementById('birthday_recurs_annually');
+        var birthdayRecurrenceYearsSelect = document.getElementById('birthday_recurrence_years');
         var previousBirthdayParticipantId = null;
         var autoBirthdayTitle = '';
 
@@ -601,6 +633,16 @@
             }
         }
 
+        function syncBirthdayRecurrenceControls() {
+            if (!birthdayRecurrenceYearsSelect) { return; }
+            if (birthdayRecurringCheckbox && birthdayRecurringCheckbox.checked) {
+                birthdayRecurrenceYearsSelect.disabled = false;
+            } else {
+                birthdayRecurrenceYearsSelect.value = '1';
+                birthdayRecurrenceYearsSelect.disabled = true;
+            }
+        }
+
         function syncBirthdayState() {
             if (!birthdayWrapper || !birthdaySelect || !endDateInput) {
                 updateTimeFieldsVisibility();
@@ -610,6 +652,16 @@
             if (isBirthday) {
                 birthdayWrapper.classList.remove('d-none');
                 birthdaySelect.disabled = false;
+                if (birthdayRecurringWrapper) {
+                    birthdayRecurringWrapper.classList.remove('d-none');
+                }
+                if (birthdayRecurringCheckbox) {
+                    birthdayRecurringCheckbox.disabled = false;
+                    if (!birthdayRecurringCheckbox.dataset.userToggled && !birthdayRecurringCheckbox.checked) {
+                        birthdayRecurringCheckbox.checked = true;
+                    }
+                }
+                syncBirthdayRecurrenceControls();
                 var selectedId = parseInt(birthdaySelect.value || '0', 10) || null;
                 if (startDateInput && startDateInput.value) {
                     endDateInput.value = startDateInput.value;
@@ -623,6 +675,18 @@
                 endDateInput.disabled = false;
                 applyBirthdayTitle(null);
                 syncBirthdayParticipantSelection(null);
+                if (birthdayRecurringWrapper) {
+                    birthdayRecurringWrapper.classList.add('d-none');
+                }
+                if (birthdayRecurringCheckbox) {
+                    birthdayRecurringCheckbox.checked = false;
+                    birthdayRecurringCheckbox.disabled = true;
+                    delete birthdayRecurringCheckbox.dataset.userToggled;
+                }
+                if (birthdayRecurrenceYearsSelect) {
+                    birthdayRecurrenceYearsSelect.value = '1';
+                    birthdayRecurrenceYearsSelect.disabled = true;
+                }
             }
             updateTimeFieldsVisibility();
         }
@@ -646,6 +710,21 @@
         }
         if (birthdayCheckbox) {
             birthdayCheckbox.addEventListener('change', syncBirthdayState);
+        }
+        if (birthdayRecurringCheckbox) {
+            birthdayRecurringCheckbox.addEventListener('change', function() {
+                if (birthdayRecurringCheckbox.checked || !birthdayCheckbox || birthdayCheckbox.checked) {
+                    birthdayRecurringCheckbox.dataset.userToggled = '1';
+                } else {
+                    delete birthdayRecurringCheckbox.dataset.userToggled;
+                }
+                syncBirthdayRecurrenceControls();
+            });
+        }
+        if (birthdayRecurrenceYearsSelect) {
+            birthdayRecurrenceYearsSelect.addEventListener('change', function() {
+                birthdayRecurrenceYearsSelect.dataset.userToggled = '1';
+            });
         }
         if (birthdaySelect) {
             birthdaySelect.addEventListener('change', function() {
@@ -720,11 +799,20 @@
                         if (typeof ev.is_birthday !== 'undefined') {
                             ev.extendedProps.is_birthday = ev.is_birthday;
                         }
+                        if (typeof ev.birthday_recurs_annually !== 'undefined') {
+                            ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
+                        }
+                        if (typeof ev.birthday_recurrence_years !== 'undefined') {
+                            ev.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
+                        }
                         if (typeof ev.birthday_user_id !== 'undefined') {
                             ev.extendedProps.birthday_user_id = ev.birthday_user_id;
                         }
                         if (typeof ev.birthday_user_name !== 'undefined') {
                             ev.extendedProps.birthday_user_name = ev.birthday_user_name;
+                        }
+                        if (typeof ev.originalId !== 'undefined') {
+                            ev.extendedProps.originalId = ev.originalId;
                         }
                         if (ev.allDay) {
                             var startDate = parseUTCDate(ev.start_date || ev.start);
@@ -747,7 +835,8 @@
                                 if (!segment.extendedProps) {
                                     segment.extendedProps = {};
                                 }
-                                segment.extendedProps.originalId = ev.id;
+                                var baseOriginalId = ev.originalId || ev.id;
+                                segment.extendedProps.originalId = baseOriginalId;
                                 segment.extendedProps.spanDays = totalDays;
                                 if (typeof segment.is_tadeu_event !== 'undefined') {
                                     segment.extendedProps.is_tadeu_event = segment.is_tadeu_event;
@@ -755,13 +844,19 @@
                                 if (typeof segment.is_birthday !== 'undefined') {
                                     segment.extendedProps.is_birthday = segment.is_birthday;
                                 }
+                                if (typeof ev.birthday_recurs_annually !== 'undefined') {
+                                    segment.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
+                                }
+                                if (typeof ev.birthday_recurrence_years !== 'undefined') {
+                                    segment.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
+                                }
                                 if (typeof ev.birthday_user_id !== 'undefined') {
                                     segment.extendedProps.birthday_user_id = ev.birthday_user_id;
                                 }
                                 if (typeof ev.birthday_user_name !== 'undefined') {
                                     segment.extendedProps.birthday_user_name = ev.birthday_user_name;
                                 }
-                                segment.originalId = ev.id;
+                                segment.originalId = baseOriginalId;
                                 if (segmentIndex === 0) {
                                     segment.id = ev.id;
                                 } else {
@@ -791,6 +886,15 @@
                             if (typeof ev.is_birthday !== 'undefined') {
                                 ev.extendedProps.is_birthday = ev.is_birthday;
                             }
+                            if (typeof ev.birthday_recurs_annually !== 'undefined') {
+                                ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
+                            }
+                            if (typeof ev.birthday_recurrence_years !== 'undefined') {
+                                ev.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
+                            }
+                            if (typeof ev.originalId !== 'undefined') {
+                                ev.extendedProps.originalId = ev.originalId;
+                            }
                             calendar.addEvent(ev);
                         }
                     });
@@ -808,6 +912,22 @@
             }
             if (birthdaySelect) {
                 birthdaySelect.value = '0';
+            }
+            if (birthdayRecurringCheckbox) {
+                birthdayRecurringCheckbox.checked = false;
+                birthdayRecurringCheckbox.disabled = true;
+                delete birthdayRecurringCheckbox.dataset.userToggled;
+            }
+            if (birthdayWrapper) {
+                birthdayWrapper.classList.add('d-none');
+            }
+            if (birthdayRecurringWrapper) {
+                birthdayRecurringWrapper.classList.add('d-none');
+            }
+            if (birthdayRecurrenceYearsSelect) {
+                birthdayRecurrenceYearsSelect.value = '1';
+                birthdayRecurrenceYearsSelect.disabled = true;
+                delete birthdayRecurrenceYearsSelect.dataset.userToggled;
             }
             if (dateStr) {
                 form.start_date.value = dateStr;
@@ -864,6 +984,28 @@
             if (birthdaySelect) {
                 var birthdayId = currentEvent.extendedProps.birthday_user_id || currentEvent.birthday_user_id || 0;
                 birthdaySelect.value = birthdayId ? String(birthdayId) : '0';
+            }
+            if (birthdayRecurringCheckbox) {
+                var recursAnnual = Boolean(
+                    currentEvent.extendedProps.birthday_recurs_annually || currentEvent.birthday_recurs_annually
+                );
+                birthdayRecurringCheckbox.checked = recursAnnual;
+                if (birthdayCheckbox && birthdayCheckbox.checked) {
+                    birthdayRecurringCheckbox.dataset.userToggled = '1';
+                } else {
+                    delete birthdayRecurringCheckbox.dataset.userToggled;
+                }
+            }
+            if (birthdayRecurrenceYearsSelect) {
+                var recurrenceYears = currentEvent.extendedProps.birthday_recurrence_years
+                    || currentEvent.birthday_recurrence_years
+                    || 1;
+                birthdayRecurrenceYearsSelect.value = String(recurrenceYears);
+                if (birthdayRecurringCheckbox && birthdayRecurringCheckbox.checked) {
+                    birthdayRecurrenceYearsSelect.dataset.userToggled = '1';
+                } else {
+                    delete birthdayRecurrenceYearsSelect.dataset.userToggled;
+                }
             }
             previousBirthdayParticipantId = (birthdaySelect && birthdaySelect.value !== '0')
                 ? (parseInt(birthdaySelect.value, 10) || null)
