@@ -812,6 +812,18 @@ class GeneralCalendarEvent(db.Model):
         nullable=True,
     )
     birthday_user_name = db.Column(db.String(255))
+    birthday_recurs_annually = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+    birthday_recurrence_years = db.Column(
+        db.Integer,
+        nullable=True,
+        default=1,
+        server_default="1",
+    )
 
     participants = db.relationship(
         "GeneralCalendarEventParticipant",

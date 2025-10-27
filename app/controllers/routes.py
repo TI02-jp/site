@@ -85,7 +85,7 @@ from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from sqlalchemy import or_, cast, String, text, inspect
-from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError, OperationalError
+from sqlalchemy.exc import IntegrityError, NoSuchTableError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 from google_auth_oauthlib.flow import Flow
@@ -5663,11 +5663,23 @@ def list_users():
                         flash("Tag não encontrada.", "warning")
                     else:
                         try:
+                            if tag_to_delete.nome.startswith(PERSONAL_TAG_PREFIX):
+                                personal_tasks = Task.query.filter_by(tag_id=tag_to_delete.id).all()
+                                for task in personal_tasks:
+                                    _delete_task_recursive(task)
+                                db.session.flush()
                             db.session.delete(tag_to_delete)
                             db.session.commit()
                             # Invalidate tag cache after deleting tag
                             from app.services.cache_service import invalidate_tag_cache
                             invalidate_tag_cache()
+                        except IntegrityError:
+                            db.session.rollback()
+                            flash(
+                                "Não foi possível excluir a tag porque há tarefas vinculadas a ela. "
+                                "Remova ou atualize as tarefas antes de tentar novamente.",
+                                "danger",
+                            )
                         except SQLAlchemyError:
                             db.session.rollback()
                             flash(

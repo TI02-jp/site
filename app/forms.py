@@ -587,6 +587,17 @@ class GeneralCalendarEventForm(FlaskForm):
         default=0,
         choices=[],
     )
+    birthday_recurs_annually = BooleanField(
+        "Repetir todos os anos",
+        default=True,
+    )
+    birthday_recurrence_years = SelectField(
+        "Repetir pelos próximos",
+        choices=[(i, f"{i} ano" + ("s" if i > 1 else "")) for i in range(1, 11)],
+        coerce=int,
+        default=1,
+        validators=[Optional()],
+    )
     event_id = HiddenField()
     start_date = DateField(
         "Data inicial",
@@ -637,6 +648,9 @@ class GeneralCalendarEventForm(FlaskForm):
             if self.birthday_user_id.data not in selected_participants:
                 selected_participants.add(self.birthday_user_id.data)
                 self.participants.data = list(selected_participants)
+        if not self.is_birthday.data:
+            self.birthday_recurs_annually.data = False
+            self.birthday_recurrence_years.data = 1
         if not super().validate(extra_validators):
             return False
         start_date = self.start_date.data
@@ -662,6 +676,15 @@ class GeneralCalendarEventForm(FlaskForm):
             if end_date != start_date:
                 self.end_date.errors.append("Aniversários devem ocorrer em um único dia.")
                 return False
+            if self.birthday_recurs_annually.data:
+                try:
+                    years = int(self.birthday_recurrence_years.data or 1)
+                except (TypeError, ValueError):
+                    years = 0
+                if years < 1:
+                    self.birthday_recurrence_years.errors.append("Informe pelo menos 1 ano de recorrência.")
+                    return False
+                self.birthday_recurrence_years.data = years
         return True
 
 
