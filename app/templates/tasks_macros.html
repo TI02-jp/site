@@ -10,7 +10,7 @@
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
     {% endif %}
     <div class="task-info">
-      {% set tag_label = 'Pessoal' if task.is_private and task.created_by == current_user.id else (task.tag.nome if task.tag else 'Sem setor') %}
+      {% set tag_label = 'Para Mim' if task.is_private and task.created_by == current_user.id else (task.tag.nome if task.tag else 'Sem setor') %}
       <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
       {% if show_tag %}
       <span class="task-tag">{{ tag_label }}</span>

@@ -32,11 +32,18 @@ from app.services.google_calendar import (
     update_meet_space_preferences,
 )
 from app.services.calendar_cache import calendar_cache
+from app.services.background import submit_background_job
 from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 
 # Lazy-load calendar timezone to avoid API call at module import
 _CALENDAR_TZ = None
+
+# Global state for Meet preference sync cooldown handling
+_meet_sync_disabled_until: float = 0.0
+_meet_sync_disable_lock = threading.Lock()
+_pending_meet_sync: set[int] = set()
+_pending_meet_sync_lock = threading.Lock()
 
 def get_calendar_tz():
     """Get calendar timezone with lazy initialization."""
@@ -54,9 +61,11 @@ _user_cache_ttl = timedelta(minutes=5)  # Mesmo TTL do cache de eventos
 
 MIN_GAP = timedelta(minutes=2)
 
-# Request-level locking para prevenir race conditions na API do Google Calendar
-_fetch_lock = threading.Lock()
-_fetch_timeout = 10.0  # segundos
+# Request coalescing para prevenir múltiplas chamadas simultâneas à API do Google Calendar
+# Usa Event ao invés de Lock para permitir que múltiplas threads esperem pelo mesmo fetch
+_fetch_event: threading.Event | None = None
+_fetch_event_lock = threading.Lock()
+_fetch_timeout = 5.0  # segundos (reduzido de 10s para falhar mais rápido)
 
 
 def get_users_by_email_cached(emails: set[str]) -> dict[str, str]:
@@ -170,40 +179,58 @@ def _normalize_meet_settings(raw: Any | None = None) -> dict[str, bool]:
 def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
     """Sync stored Meet preferences with the Google Meet space.
 
-    Implements retry logic with exponential backoff (3 attempts with 1s, 2s, 4s delays).
-    Returns:
-        - True: Settings successfully applied
-        - False: Failed after all retries
-        - None: No Meet link (nothing to configure)
+    Adds adaptive backoff so repeated failures (e.g. missing permissions) do not
+    impact request latency.
     """
+    global _meet_sync_disabled_until
+
     if not meeting.meet_link:
         return None
 
+    now_ts = time.time()
+    disable_seconds = current_app.config.get("MEET_SYNC_DISABLE_SECONDS", 600)
+    retry_cooldown = current_app.config.get("MEET_SYNC_RETRY_COOLDOWN", 120)
+
+    with _meet_sync_disable_lock:
+        disabled_until = _meet_sync_disabled_until
+    if disabled_until and now_ts < disabled_until:
+        current_app.logger.debug(
+            "Skipping Meet preference sync for meeting %s (cooldown %.1fs remaining)",
+            meeting.id,
+            disabled_until - now_ts,
+        )
+        return None
+
     settings = _normalize_meet_settings(meeting.meet_settings)
-    max_retries = 3
+    max_retries = max(1, int(current_app.config.get("MEET_PREFERENCES_MAX_RETRIES", 3)))
     base_delay = current_app.config.get("MEET_PREFERENCES_RETRY_BASE_DELAY", 0.5)
 
     for attempt in range(1, max_retries + 1):
         try:
             current_app.logger.info(
-                f"Applying Meet settings for meeting {meeting.id} (attempt {attempt}/{max_retries})"
+                "Applying Meet settings for meeting %s (attempt %s/%s)",
+                meeting.id,
+                attempt,
+                max_retries,
             )
             update_meet_space_preferences(meeting.meet_link, settings)
             current_app.logger.info(
-                f"Successfully applied Meet settings for meeting {meeting.id} on attempt {attempt}"
+                "Successfully applied Meet settings for meeting %s on attempt %s",
+                meeting.id,
+                attempt,
             )
             return True
 
-        except Exception as e:
+        except Exception as exc:
             error_msg = (
                 f"Attempt {attempt}/{max_retries} failed to apply Meet settings for meeting "
-                f"{meeting.id}: {type(e).__name__}: {str(e)}"
+                f"{meeting.id}: {type(exc).__name__}: {exc}"
             )
-            message = str(e)
+            message = str(exc)
             unauthorized = False
-            if isinstance(e, RefreshError) and "unauthorized_client" in message:
+            if isinstance(exc, RefreshError) and "unauthorized_client" in message:
                 unauthorized = True
-            elif isinstance(e, HttpError) and getattr(e, "resp", None) and getattr(e.resp, "status", None) in (401, 403):
+            elif isinstance(exc, HttpError) and getattr(exc, "resp", None) and getattr(exc.resp, "status", None) in (401, 403):
                 unauthorized = True
 
             if unauthorized:
@@ -211,26 +238,77 @@ def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
                     "Skipping Meet preference sync for meeting %s: service account lacks required permissions. "
                     "Verify Google Meet scopes for the configured service account.",
                     meeting.id,
-                    exc_info=e,
+                    exc_info=exc,
                 )
+                cooldown_target = time.time() + disable_seconds
+                with _meet_sync_disable_lock:
+                    _meet_sync_disabled_until = max(_meet_sync_disabled_until, cooldown_target)
                 return False
 
             if attempt < max_retries:
-                # Calculate exponential backoff delay
                 delay = base_delay * (2 ** (attempt - 1))
-                current_app.logger.warning(
-                    f"{error_msg}. Retrying in {delay}s..."
-                )
+                current_app.logger.warning("%s. Retrying in %.1fs...", error_msg, delay)
                 time.sleep(delay)
             else:
-                # Final attempt failed - log full exception
-                current_app.logger.exception(
-                    f"{error_msg}. All retry attempts exhausted."
-                )
+                current_app.logger.exception("%s. All retry attempts exhausted.", error_msg)
+                cooldown_target = time.time() + retry_cooldown
+                with _meet_sync_disable_lock:
+                    _meet_sync_disabled_until = max(_meet_sync_disabled_until, cooldown_target)
                 return False
 
-    # Should never reach here, but just in case
     return False
+
+
+def _queue_meet_preferences_sync(meeting_id: int, reason: str = "unspecified") -> None:
+    """Queue Meet preference synchronization in a background worker."""
+    if not meeting_id:
+        return
+
+    with _pending_meet_sync_lock:
+        if meeting_id in _pending_meet_sync:
+            current_app.logger.debug(
+                "Meet sync already queued for meeting %s (reason=%s)",
+                meeting_id,
+                reason,
+            )
+            return
+        _pending_meet_sync.add(meeting_id)
+
+    def _job(meeting_id: int, reason: str) -> None:
+        try:
+            meeting = db.session.get(Reuniao, meeting_id)
+            if not meeting or not meeting.meet_link:
+                current_app.logger.debug(
+                    "Skipping Meet sync for meeting %s (reason=%s) - no record or Meet link",
+                    meeting_id,
+                    reason,
+                )
+                return
+            result = _apply_meet_preferences(meeting)
+            if result is False:
+                current_app.logger.warning(
+                    "Meet preference sync failed for meeting %s (reason=%s)",
+                    meeting_id,
+                    reason,
+                )
+        except Exception:
+            current_app.logger.exception(
+                "Unhandled error while syncing Meet preferences (meeting=%s, reason=%s)",
+                meeting_id,
+                reason,
+            )
+        finally:
+            db.session.remove()
+            with _pending_meet_sync_lock:
+                _pending_meet_sync.discard(meeting_id)
+
+    queued = submit_background_job(_job, meeting_id, reason=reason)
+    if not queued:
+        current_app.logger.debug(
+            "Meet preference sync executed synchronously for meeting %s (reason=%s)",
+            meeting_id,
+            reason,
+        )
 
 
 def _parse_course_id(form) -> int | None:
@@ -254,55 +332,69 @@ def populate_participants_choices(form):
 
 
 def fetch_raw_events():
-    """Fetch upcoming events from Google Calendar with caching and request-level locking.
+    """Fetch upcoming events from Google Calendar with caching and request coalescing.
 
     Uses a 3-tier protection strategy:
     1. Primary cache (5 minutes) - frequently accessed
     2. Stale cache (15 minutes) - fallback during API failures
-    3. Request-level lock - prevents multiple simultaneous API calls (thundering herd)
+    3. Request coalescing - multiple concurrent requests wait for single fetch
 
-    Thread safety:
-    - First thread: Acquires lock, fetches from API, populates cache
-    - Subsequent threads: Wait for lock, then read from cache (already populated)
-    - Timeout: 10 seconds to prevent deadlock
+    Thread safety (request coalescing pattern):
+    - First thread: Creates event, fetches from API, sets event to signal completion
+    - Concurrent threads: Wait on existing event (up to 5s), then read from cache
+    - Timeout: 5 seconds to fail fast
     """
+    global _fetch_event
+
     # Fast path: Try primary cache first (no lock needed)
     cached_events = calendar_cache.get("raw_calendar_events")
     if cached_events is not None:
         return cached_events
 
-    # Cache miss - need to fetch from API with lock protection
-    lock_acquired = _fetch_lock.acquire(timeout=_fetch_timeout)
+    # Cache miss - check if another thread is already fetching
+    with _fetch_event_lock:
+        if _fetch_event is not None:
+            # Another thread is fetching - wait for it
+            event_to_wait = _fetch_event
+        else:
+            # We're the first - create event and fetch
+            _fetch_event = threading.Event()
+            event_to_wait = None
 
-    if not lock_acquired:
-        # Timeout acquiring lock - log warning and try stale cache
-        current_app.logger.warning(
-            "Timeout acquiring fetch lock after %.1f seconds - using stale cache",
-            _fetch_timeout
-        )
-        stale_events = calendar_cache.get("raw_calendar_events_stale")
-        if stale_events is not None:
-            return stale_events
-        # No stale cache available - raise timeout error
-        raise TimeoutError(
-            f"Timeout waiting for calendar fetch (>{_fetch_timeout}s) and no stale cache available"
-        )
+    # If another thread is fetching, wait for it to complete
+    if event_to_wait is not None:
+        wait_success = event_to_wait.wait(timeout=_fetch_timeout)
 
-    try:
-        # Double-check cache after acquiring lock
-        # (another thread may have populated it while we were waiting)
+        if not wait_success:
+            # Timeout waiting - try stale cache
+            current_app.logger.warning(
+                "Timeout waiting for calendar fetch after %.1fs - using stale cache",
+                _fetch_timeout
+            )
+            stale_events = calendar_cache.get("raw_calendar_events_stale")
+            if stale_events is not None:
+                return stale_events
+            # No stale cache - raise timeout
+            raise TimeoutError(
+                f"Timeout waiting for calendar fetch (>{_fetch_timeout}s) and no stale cache available"
+            )
+
+        # Fetch completed by other thread - check cache
         cached_events = calendar_cache.get("raw_calendar_events")
         if cached_events is not None:
-            current_app.logger.debug(
-                "Cache populated by another thread while waiting for lock"
-            )
             return cached_events
 
-        # We're the first thread - fetch from API
+        # Cache somehow missing - fall through to fetch ourselves
+        current_app.logger.warning(
+            "Cache missing after fetch event signaled - fetching again"
+        )
+
+    # We're responsible for fetching - do it now
+    try:
         current_app.logger.debug("Fetching calendar events from Google API")
         fetch_start = time.perf_counter()
 
-        # Try stale cache as fallback (if API is slow/failing)
+        # Get stale cache as fallback
         stale_events = calendar_cache.get("raw_calendar_events_stale")
 
         try:
@@ -312,7 +404,7 @@ def fetch_raw_events():
 
             # Update both primary and stale caches
             calendar_cache.set("raw_calendar_events", events, ttl=300)  # 5 minutes
-            calendar_cache.set("raw_calendar_events_stale", events, ttl=900)  # 15 minutes (stale backup)
+            calendar_cache.set("raw_calendar_events_stale", events, ttl=900)  # 15 minutes
 
             current_app.logger.info(
                 "Successfully fetched %d calendar events from Google API in %.2fms",
@@ -345,8 +437,11 @@ def fetch_raw_events():
             raise
 
     finally:
-        # Always release lock
-        _fetch_lock.release()
+        # Signal waiting threads and clear event
+        with _fetch_event_lock:
+            if _fetch_event is not None:
+                _fetch_event.set()
+                _fetch_event = None
 
 
 def invalidate_calendar_cache():
@@ -660,12 +755,8 @@ def _create_additional_meeting(
             )
         )
     db.session.commit()
-    sync_result = _apply_meet_preferences(meeting)
-    if sync_result is False:
-        flash(
-            "Não foi possível aplicar as configurações do Meet automaticamente.",
-            "warning",
-        )
+    if meeting.meet_link:
+        _queue_meet_preferences_sync(meeting.id, reason="replicated_meeting")
     formatted_date = additional_date.strftime("%d/%m/%Y")
     if meet_link:
         flash(
@@ -681,13 +772,8 @@ def _create_additional_meeting(
 
 
 def create_meeting_and_event(form, raw_events, now, user_id: int):
-    """Create meeting adjusting times to avoid conflicts.
+    """Create meeting adjusting times to avoid conflicts."""
 
-    Returns a tuple ``(success, result)`` where ``success`` indicates whether
-    the meeting was created and ``result`` is an instance of
-    :class:`MeetingOperationResult` containing the meeting identifier and the
-    generated Google Meet URL when available.
-    """
     course_id_value = _parse_course_id(form)
     start_dt = datetime.combine(
         form.date.data, form.start_time.data, tzinfo=CALENDAR_TZ
@@ -712,12 +798,11 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         form.start_time.data = adjusted_start.time()
         form.end_time.data = adjusted_end.time()
         flash(
-            f"{' '.join(messages)} Horário ajustado para o próximo horário livre.",
+            f"{' '.join(messages)} Horario ajustado para o proximo horario livre.",
             "warning",
         )
         return False, None
 
-    # Verificar se há recorrência configurada
     recorrencia_tipo_field = getattr(form, "recorrencia_tipo", None)
     recorrencia_fim_field = getattr(form, "recorrencia_fim", None)
     recorrencia_dias_semana_field = getattr(form, "recorrencia_dias_semana", None)
@@ -739,30 +824,25 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             recorrencia_tipo_value = ReuniaoRecorrenciaTipo(recorrencia_tipo_field.data)
             recorrencia_fim_value = recorrencia_fim_field.data
 
-            # Para recorrência semanal com dias específicos
             weekdays = None
             if recorrencia_tipo_value == ReuniaoRecorrenciaTipo.SEMANAL and recorrencia_dias_semana_field:
                 if recorrencia_dias_semana_field.data:
                     weekdays = [int(d) for d in recorrencia_dias_semana_field.data]
                     recorrencia_dias_semana_value = ','.join(recorrencia_dias_semana_field.data)
 
-            # Gerar todas as datas de recorrência
             all_dates = generate_recurrence_dates(
                 start_date=form.date.data,
                 end_date=recorrencia_fim_value,
                 recurrence_type=recorrencia_tipo_value,
-                weekdays=weekdays
+                weekdays=weekdays,
             )
-
-            # Remover a primeira data (será criada como reunião principal)
             recurrence_dates = [d for d in all_dates if d != form.date.data]
 
-            # Gerar ID de grupo para a série
             if recurrence_dates:
                 group_id = generate_recurrence_group_id()
 
-        except (ValueError, AttributeError) as e:
-            flash(f"Erro ao processar recorrência: {str(e)}", "danger")
+        except (ValueError, AttributeError) as exc:
+            flash(f"Erro ao processar recorrencia: {exc}", "danger")
             return False, None
 
     selected_users = User.query.filter(User.id.in_(form.participants.data)).all()
@@ -795,6 +875,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             notify_attendees=should_notify,
         )
         meet_link = None
+
     meeting = Reuniao(
         inicio=start_dt,
         fim=end_dt,
@@ -813,23 +894,22 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
     meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
     db.session.flush()
-    for u in selected_users:
+    for user in selected_users:
         db.session.add(
             ReuniaoParticipante(
-                reuniao_id=meeting.id, id_usuario=u.id, username_usuario=u.username
+                reuniao_id=meeting.id,
+                id_usuario=user.id,
+                username_usuario=user.username,
             )
         )
     db.session.commit()
-    sync_result = _apply_meet_preferences(meeting)
-    if sync_result is False:
-        flash(
-            "Não foi possível aplicar as configurações do Meet automaticamente.",
-            "warning",
-        )
+
+    meetings_to_sync: list[tuple[int, str]] = []
+    if meeting.meet_link:
+        meetings_to_sync.append((meeting.id, "create_meeting"))
 
     additional_meet_link = None
 
-    # Criar reuniões recorrentes
     if recurrence_dates:
         recurrence_count = 0
         for recurrence_date in recurrence_dates:
@@ -840,7 +920,6 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 recurrence_date, form.end_time.data, tzinfo=CALENDAR_TZ
             )
 
-            # Criar evento no Google Calendar
             if form.create_meet.data:
                 event_recurrent = create_meet_event(
                     form.subject.data,
@@ -862,7 +941,6 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 )
                 meet_link_recurrent = None
 
-            # Criar reunião recorrente
             recurrent_meeting = Reuniao(
                 inicio=start_dt_recurrent,
                 fim=end_dt_recurrent,
@@ -882,22 +960,17 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             db.session.add(recurrent_meeting)
             db.session.flush()
 
-            # Adicionar participantes
-            for u in selected_users:
+            for user in selected_users:
                 db.session.add(
                     ReuniaoParticipante(
                         reuniao_id=recurrent_meeting.id,
-                        id_usuario=u.id,
-                        username_usuario=u.username
+                        id_usuario=user.id,
+                        username_usuario=user.username,
                     )
                 )
 
-            # Aplicar configurações do Meet
-            sync_result_recurrent = _apply_meet_preferences(recurrent_meeting)
-            if sync_result_recurrent is False:
-                current_app.logger.warning(
-                    f"Não foi possível aplicar configurações do Meet para reunião recorrente {recurrent_meeting.id}"
-                )
+            if meet_link_recurrent:
+                meetings_to_sync.append((recurrent_meeting.id, "create_meeting_recurrence"))
 
             if not meet_link and meet_link_recurrent and not additional_meet_link:
                 additional_meet_link = meet_link_recurrent
@@ -906,35 +979,40 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
 
         db.session.commit()
 
-        # Mensagem de sucesso
         total_meetings = recurrence_count + 1
         if meet_link:
             flash(
                 Markup(
-                    f'Série de {total_meetings} reuniões recorrentes criada com sucesso! '
-                    f'<a href="{meet_link}" target="_blank">Link do Meet da primeira reunião</a>'
+                    f'Serie de {total_meetings} reunioes recorrentes criada com sucesso! '
+                    f'<a href="{meet_link}" target="_blank">Link do Meet da primeira reuniao</a>'
                 ),
                 "success",
             )
         else:
-            flash(f"Série de {total_meetings} reuniões recorrentes criada com sucesso!", "success")
+            flash(f"Serie de {total_meetings} reunioes recorrentes criada com sucesso!", "success")
     else:
         if meet_link:
             flash(
                 Markup(
-                    f'Reunião criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
+                    f'Reuniao criada com sucesso! <a href="{meet_link}" target="_blank">Link do Meet</a>'
                 ),
                 "success",
             )
         else:
-            flash("Reunião criada com sucesso!", "success")
+            flash("Reuniao criada com sucesso!", "success")
 
-    # Invalidar cache após criar reunião
     invalidate_calendar_cache()
 
+    for meeting_id, reason in meetings_to_sync:
+        _queue_meet_preferences_sync(meeting_id, reason=reason)
+
+    if form.create_meet.data and meetings_to_sync:
+        flash(
+            "Configuracoes do Google Meet serao aplicadas em segundo plano.",
+            "info",
+        )
+
     return True, MeetingOperationResult(meeting.id, meet_link or additional_meet_link)
-
-
 def update_meeting(form, raw_events, now, meeting: Reuniao):
     """Update existing meeting adjusting for conflicts and syncing with Google Calendar.
 
@@ -1045,12 +1123,9 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         meeting.meet_link = updated_event.get("hangoutLink")
         meeting.google_event_id = updated_event.get("id")
     db.session.commit()
-    sync_result = _apply_meet_preferences(meeting)
-    if sync_result is False:
-        flash(
-            "Não foi possível aplicar as configurações do Meet automaticamente.",
-            "warning",
-        )
+    if meeting.meet_link:
+        _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
+
     flash("Reunião atualizada com sucesso!", "success")
 
     # Invalidar cache após atualizar reunião
@@ -1080,7 +1155,11 @@ def update_meeting_configuration(
     else:
         meeting.meet_host_id = None
     db.session.commit()
-    sync_result = _apply_meet_preferences(meeting)
+    if meeting.meet_link:
+        _queue_meet_preferences_sync(meeting.id, reason="update_meeting_configuration")
+        sync_result = None
+    else:
+        sync_result = True
     return normalized_settings, host, sync_result
 
 
@@ -1347,3 +1426,5 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     calendar_cache.set(cache_key, events, ttl=90)
 
     return events
+
+

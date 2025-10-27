@@ -51,7 +51,11 @@ def setup_logging(app):
     - slow_queries.log: Database queries >1s (rotated weekly)
     """
     # Create logs directory if it doesn't exist
-    log_dir = os.path.join(app.root_path, '..', 'logs')
+    log_dir = os.getenv("APP_LOG_DIR")
+    if not log_dir:
+        # Default directory outside da aplicação para facilitar coleta por serviços Windows
+        root_dir = os.path.abspath(os.path.join(app.root_path, "..", ".."))
+        log_dir = os.path.join(root_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
     # Clear default handlers to avoid duplicates

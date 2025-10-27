@@ -24,7 +24,7 @@
   </div>
   <ul class="history-list">
     {% for task in tasks if not task.is_private or task.created_by == current_user.id %}
-    {% set tag_label = 'Pessoal' if task.is_private and task.created_by == current_user.id else task.tag.nome %}
+    {% set tag_label = 'Para Mim' if task.is_private and task.created_by == current_user.id else task.tag.nome %}
     <li class="history-item">
       <span class="title">{{ task.title }}</span>
       <span class="meta">{{ tag_label }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>

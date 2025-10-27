@@ -3040,7 +3040,8 @@ def notifications_stream():
 
     broadcaster = get_broadcaster()
     client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
-    heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 45)
+    # Reduced heartbeat to 15s to prevent worker exhaustion (was 45s)
+    heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 15)
 
     def event_stream() -> Any:
         last_sent_id = since_id
@@ -3133,7 +3134,8 @@ def realtime_stream():
 
     broadcaster = get_broadcaster()
     client_id = broadcaster.register_client(user_id, subscribed_scopes)
-    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 30)
+    # Reduced heartbeat to 10s to prevent worker exhaustion (was 30s)
+    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 10)
 
     def event_stream() -> Any:
         try:
@@ -3719,18 +3721,24 @@ def configure_meet_call(meeting_id: int):
                     warning_message = None
                     if sync_result is False:
                         warning_message = (
-                            "Não foi possível aplicar as configurações do Meet automaticamente. "
+                            "Nao foi possivel aplicar as configuracoes do Meet automaticamente. "
                             "Verifique manualmente na sala do Google Meet."
+                        )
+                    elif sync_result is None and meeting.meet_link:
+                        warning_message = (
+                            "As configuracoes do Meet estao sendo aplicadas em segundo plano. "
+                            "Verifique a sala do Google Meet em alguns instantes."
                         )
                     response_payload = {
                         "success": True,
-                        "message": "Configurações do Meet atualizadas com sucesso!",
+                        "message": "Configuracoes do Meet atualizadas com sucesso!",
                         "meet_settings": normalized_settings,
                         "meet_host": {
                             "id": host.id if host else None,
                             "name": host_name,
                         },
-                        "meet_settings_applied": sync_result is not False,
+                        "meet_settings_applied": bool(sync_result) or meeting.meet_link is None,
+                        "meet_settings_pending": sync_result is None and meeting.meet_link is not None,
                     }
                     if warning_message:
                         response_payload["warning"] = warning_message
@@ -3935,18 +3943,31 @@ def delete_reuniao(meeting_id):
     meeting = Reuniao.query.get_or_404(meeting_id)
     if current_user.role != "admin":
         if meeting.criador_id != current_user.id:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": "Você só pode excluir reuniões que você criou."}), 403
             flash("Você só pode excluir reuniões que você criou.", "danger")
             return redirect(url_for("sala_reunioes"))
         if meeting.status in (
             ReuniaoStatus.EM_ANDAMENTO,
             ReuniaoStatus.REALIZADA,
         ):
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "error": "Reuniões em andamento ou realizadas não podem ser excluídas."}), 400
             flash(
                 "Reuniões em andamento ou realizadas não podem ser excluídas.",
                 "danger",
             )
             return redirect(url_for("sala_reunioes"))
-    if delete_meeting(meeting):
+
+    success = delete_meeting(meeting)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if success:
+            return jsonify({"success": True, "message": "Reunião excluída com sucesso!"}), 200
+        else:
+            return jsonify({"success": False, "error": "Não foi possível remover o evento do Google Calendar."}), 500
+
+    if success:
         flash("Reunião excluída com sucesso!", "success")
     else:
         flash("Não foi possível remover o evento do Google Calendar.", "danger")
@@ -6000,7 +6021,7 @@ def tasks_new():
         form.tag_id.data = personal_tag.id
         form.assigned_to.data = current_user.id
         if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
-            form.tag_id.choices.append((personal_tag.id, "Pessoal"))
+            form.tag_id.choices.append((personal_tag.id, "Para Mim"))
 
     if form.validate_on_submit():
         current_app.logger.info("Formulário validado com sucesso. Criando task...")
