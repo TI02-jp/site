@@ -48,6 +48,8 @@ from app.models.tables import (
     DiretoriaEvent,
     DiretoriaAgreement,
     GeneralCalendarEvent,
+    NotaDebito,
+    CadastroNota,
     Announcement,
     AnnouncementAttachment,
     OperationalProcedure,
@@ -78,6 +80,8 @@ from app.forms import (
     AnnouncementForm,
     DiretoriaAcordoForm,
     OperationalProcedureForm,
+    NotaDebitoForm,
+    CadastroNotaForm,
 )
 import os, json, re, secrets, imghdr, time
 import requests
@@ -1315,6 +1319,23 @@ def user_has_tag(tag_name: str) -> bool:
     return any(tag.nome.lower() == tag_name.lower() for tag in current_user.tags)
 
 
+def can_access_controle_notas() -> bool:
+    """Return True if current user can access Controle de Notas module."""
+    if not current_user.is_authenticated:
+        return False
+
+    # Check if user has Gestão or Financeiro tags
+    if user_has_tag('Gestão') or user_has_tag('Financeiro'):
+        return True
+
+    # Check if username is in allowed list
+    allowed_usernames = ['Eduarda', 'Mara', 'Ryan']
+    if current_user.username in allowed_usernames:
+        return True
+
+    return False
+
+
 def _get_ti_tag() -> Tag | None:
     """Return the TI tag if it exists (cached per request)."""
 
@@ -1363,7 +1384,7 @@ def _get_accessible_tag_ids(user: User | None = None) -> list[int]:
 @app.context_processor
 def inject_user_tag_helpers():
     """Expose user tag helper utilities to templates."""
-    return dict(user_has_tag=user_has_tag)
+    return dict(user_has_tag=user_has_tag, can_access_controle_notas=can_access_controle_notas)
 
 
 @app.context_processor
@@ -4183,6 +4204,210 @@ def editar_setor(id):
             edit_setor_id=str(setor.id),
         )
     )
+
+
+# =============================================
+# CONTROLE DE NOTAS ROUTES
+# =============================================
+
+@app.route("/controle-notas/debito", methods=["GET", "POST"])
+@login_required
+def notas_debito():
+    """List and manage Notas para Débito with modal-based CRUD."""
+
+    if not can_access_controle_notas():
+        abort(403)
+
+    nota_form = NotaDebitoForm(prefix="nota")
+    notas = NotaDebito.query.order_by(NotaDebito.data_emissao.desc()).all()
+
+    # Buscar cadastros para autocomplete
+    cadastros = CadastroNota.query.order_by(CadastroNota.cadastro).all()
+    cadastros_json = json.dumps([{
+        'nome': c.cadastro,
+        'valor': float(c.valor) if c.valor else 0,
+        'forma_pagamento': c.forma_pagamento
+    } for c in cadastros])
+
+    open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")
+    editing_nota: NotaDebito | None = None
+
+    if request.method == "GET":
+        edit_id_raw = request.args.get("edit_nota_id")
+        if edit_id_raw:
+            try:
+                edit_id = int(edit_id_raw)
+            except (TypeError, ValueError):
+                abort(404)
+            editing_nota = NotaDebito.query.get_or_404(edit_id)
+            nota_form = NotaDebitoForm(prefix="nota", obj=editing_nota)
+            open_nota_modal = True
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+        if form_name == "nota_create":
+            open_nota_modal = True
+            if nota_form.validate_on_submit():
+                try:
+                    valor_un = float(nota_form.valor_un.data.replace(',', '.')) if nota_form.valor_un.data else None
+                    total = float(nota_form.total.data.replace(',', '.')) if nota_form.total.data else None
+                    notas_int = int(nota_form.notas.data)
+                    qtde_int = int(nota_form.qtde_itens.data)
+                except (ValueError, AttributeError):
+                    flash("Valores numéricos inválidos.", "warning")
+                else:
+                    nota = NotaDebito(
+                        data_emissao=nota_form.data_emissao.data,
+                        empresa=nota_form.empresa.data.strip(),
+                        notas=notas_int,
+                        qtde_itens=qtde_int,
+                        valor_un=valor_un,
+                        total=total,
+                        acordo=nota_form.acordo.data.strip() if nota_form.acordo.data else None,
+                        forma_pagamento=nota_form.forma_pagamento.data,
+                        observacao=nota_form.observacao.data.strip() if nota_form.observacao.data else None
+                    )
+                    db.session.add(nota)
+                    db.session.commit()
+                    flash("Nota registrada com sucesso.", "success")
+                    return redirect(url_for("notas_debito"))
+        elif form_name == "nota_update":
+            open_nota_modal = True
+            nota_id_raw = request.form.get("nota_id")
+            try:
+                nota_id = int(nota_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            editing_nota = NotaDebito.query.get_or_404(nota_id)
+            if nota_form.validate_on_submit():
+                try:
+                    valor_un = float(nota_form.valor_un.data.replace(',', '.')) if nota_form.valor_un.data else None
+                    total = float(nota_form.total.data.replace(',', '.')) if nota_form.total.data else None
+                    notas_int = int(nota_form.notas.data)
+                    qtde_int = int(nota_form.qtde_itens.data)
+                except (ValueError, AttributeError):
+                    flash("Valores numéricos inválidos.", "warning")
+                else:
+                    editing_nota.data_emissao = nota_form.data_emissao.data
+                    editing_nota.empresa = nota_form.empresa.data.strip()
+                    editing_nota.notas = notas_int
+                    editing_nota.qtde_itens = qtde_int
+                    editing_nota.valor_un = valor_un
+                    editing_nota.total = total
+                    editing_nota.acordo = nota_form.acordo.data.strip() if nota_form.acordo.data else None
+                    editing_nota.forma_pagamento = nota_form.forma_pagamento.data
+                    editing_nota.observacao = nota_form.observacao.data.strip() if nota_form.observacao.data else None
+                    db.session.commit()
+                    flash("Nota atualizada com sucesso.", "success")
+                    return redirect(url_for("notas_debito"))
+        elif form_name == "nota_delete":
+            nota_id_raw = request.form.get("nota_id")
+            try:
+                nota_id = int(nota_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            nota = NotaDebito.query.get_or_404(nota_id)
+            db.session.delete(nota)
+            db.session.commit()
+            flash("Nota excluída com sucesso.", "success")
+            return redirect(url_for("notas_debito"))
+
+    return render_template(
+        "notas_debito.html",
+        notas=notas,
+        nota_form=nota_form,
+        open_nota_modal=open_nota_modal,
+        editing_nota=editing_nota,
+        cadastros=cadastros,
+        cadastros_json=cadastros_json,
+    )
+
+
+@app.route("/controle-notas/cadastro", methods=["GET", "POST"])
+@login_required
+def cadastro_notas():
+    """List and manage Cadastro de Notas with modal-based CRUD."""
+
+    if not can_access_controle_notas():
+        abort(403)
+
+    cadastro_form = CadastroNotaForm(prefix="cadastro")
+    cadastros = CadastroNota.query.order_by(CadastroNota.cadastro).all()
+    open_cadastro_modal = request.args.get("open_cadastro_modal") in ("1", "true", "True")
+    editing_cadastro: CadastroNota | None = None
+
+    if request.method == "GET":
+        edit_id_raw = request.args.get("edit_cadastro_id")
+        if edit_id_raw:
+            try:
+                edit_id = int(edit_id_raw)
+            except (TypeError, ValueError):
+                abort(404)
+            editing_cadastro = CadastroNota.query.get_or_404(edit_id)
+            cadastro_form = CadastroNotaForm(prefix="cadastro", obj=editing_cadastro)
+            open_cadastro_modal = True
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+        if form_name == "cadastro_create":
+            open_cadastro_modal = True
+            if cadastro_form.validate_on_submit():
+                try:
+                    valor = float(cadastro_form.valor.data.replace(',', '.'))
+                except (ValueError, AttributeError):
+                    flash("Valor inválido.", "warning")
+                else:
+                    cadastro = CadastroNota(
+                        pix="49991352070",
+                        cadastro=cadastro_form.cadastro.data.strip(),
+                        valor=valor,
+                        forma_pagamento=cadastro_form.forma_pagamento.data
+                    )
+                    db.session.add(cadastro)
+                    db.session.commit()
+                    flash("Cadastro registrado com sucesso.", "success")
+                    return redirect(url_for("cadastro_notas"))
+        elif form_name == "cadastro_update":
+            open_cadastro_modal = True
+            cadastro_id_raw = request.form.get("cadastro_id")
+            try:
+                cadastro_id = int(cadastro_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            editing_cadastro = CadastroNota.query.get_or_404(cadastro_id)
+            if cadastro_form.validate_on_submit():
+                try:
+                    valor = float(cadastro_form.valor.data.replace(',', '.'))
+                except (ValueError, AttributeError):
+                    flash("Valor inválido.", "warning")
+                else:
+                    editing_cadastro.pix = "49991352070"
+                    editing_cadastro.cadastro = cadastro_form.cadastro.data.strip()
+                    editing_cadastro.valor = valor
+                    editing_cadastro.forma_pagamento = cadastro_form.forma_pagamento.data
+                    db.session.commit()
+                    flash("Cadastro atualizado com sucesso.", "success")
+                    return redirect(url_for("cadastro_notas"))
+        elif form_name == "cadastro_delete":
+            cadastro_id_raw = request.form.get("cadastro_id")
+            try:
+                cadastro_id = int(cadastro_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            cadastro = CadastroNota.query.get_or_404(cadastro_id)
+            db.session.delete(cadastro)
+            db.session.commit()
+            flash("Cadastro excluído com sucesso.", "success")
+            return redirect(url_for("cadastro_notas"))
+
+    return render_template(
+        "cadastro_notas.html",
+        cadastros=cadastros,
+        cadastro_form=cadastro_form,
+        open_cadastro_modal=open_cadastro_modal,
+        editing_cadastro=editing_cadastro,
+    )
+
 
 @app.route("/tags")
 @login_required

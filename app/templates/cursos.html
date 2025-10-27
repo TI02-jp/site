@@ -152,7 +152,7 @@
                                         </td>
                                         <td data-label="Status">
                                             {% set status_class = status_classes.get(course.status) %}
-                                            <span class="status-pill {{ status_class }}">
+                                            <span class="status-pill {{ status_class }}" style="white-space: nowrap;">
                                                 <span class="status-indicator"></span>
                                                 {{ course.status.value|capitalize }}
                                             </span>

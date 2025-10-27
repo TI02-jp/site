@@ -459,6 +459,51 @@ class SetorForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
+class NotaDebitoForm(FlaskForm):
+    """Formulário para cadastro de notas para débito."""
+    data_emissao = DateField('Data de Emissão', validators=[Optional()])
+    empresa = StringField('Empresa', validators=[Optional()])
+    notas = StringField('Notas', validators=[Optional()])
+    qtde_itens = StringField('Qtde Itens', validators=[Optional()])
+    valor_un = StringField('Valor UN', validators=[Optional()])
+    total = StringField('Total', validators=[Optional()])
+    acordo = StringField('Acordo', validators=[Optional()])
+    forma_pagamento = SelectField(
+        'Forma de Pagamento',
+        choices=[
+            ('Sem acordo', 'Sem acordo'),
+            ('OK - Pago', 'OK - Pago'),
+            ('Cortesia', 'Cortesia'),
+            ('À vista', 'À vista'),
+            ('Debitar', 'Debitar'),
+            ('Tadeu H.', 'Tadeu H.')
+        ],
+        validators=[Optional()]
+    )
+    tem_observacao = BooleanField('Adicionar Observação')
+    observacao = TextAreaField('Observação', validators=[Optional()])
+    submit = SubmitField('Salvar')
+
+
+class CadastroNotaForm(FlaskForm):
+    """Formulário para cadastro de notas."""
+    cadastro = StringField('Cadastro', validators=[Optional()])
+    valor = StringField('Valor', validators=[Optional()])
+    forma_pagamento = SelectField(
+        'Forma de Pagamento',
+        choices=[
+            ('Sem acordo', 'Sem acordo'),
+            ('OK - Pago', 'OK - Pago'),
+            ('Cortesia', 'Cortesia'),
+            ('À vista', 'À vista'),
+            ('Debitar', 'Debitar'),
+            ('Tadeu H.', 'Tadeu H.')
+        ],
+        validators=[Optional()]
+    )
+    submit = SubmitField('Salvar')
+
+
 class TagForm(FlaskForm):
     """Formulário para cadastro de tags."""
     nome = StringField('Tag', validators=[DataRequired()])
