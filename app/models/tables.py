@@ -595,6 +595,70 @@ class Setor(db.Model):
         return f"<Setor {self.nome}>"
 
 
+class NotaDebito(db.Model):
+    """Stores invoice notes for debit control."""
+    __tablename__ = 'notas_debito'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    data_emissao = db.Column(db.Date, nullable=False)
+    empresa = db.Column(db.String(255), nullable=False)
+    notas = db.Column(db.Integer, nullable=False, default=1)
+    qtde_itens = db.Column(db.Integer, nullable=False, default=1)
+    valor_un = db.Column(db.Numeric(10, 2), nullable=True)
+    total = db.Column(db.Numeric(10, 2), nullable=True)
+    acordo = db.Column(db.String(100), nullable=True)
+    forma_pagamento = db.Column(db.String(50), nullable=False)
+    observacao = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def data_emissao_formatada(self):
+        return self.data_emissao.strftime('%d/%m/%Y') if self.data_emissao else ''
+
+    @property
+    def valor_un_formatado(self):
+        return f"R$ {self.valor_un:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.') if self.valor_un else 'R$ -'
+
+    @property
+    def total_formatado(self):
+        return f"R$ {self.total:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.') if self.total else 'R$ -'
+
+    def __repr__(self):
+        return f"<NotaDebito {self.empresa} - {self.data_emissao}>"
+
+
+class CadastroNota(db.Model):
+    """Stores registration data for invoice control."""
+    __tablename__ = 'cadastro_notas'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    pix = db.Column(db.String(100), nullable=True)
+    cadastro = db.Column(db.String(255), nullable=False)
+    valor = db.Column(db.Numeric(10, 2), nullable=False)
+    forma_pagamento = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def valor_formatado(self):
+        return f"R$ {self.valor:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.') if self.valor else 'R$ 0,00'
+
+    @property
+    def status_color(self):
+        """Return CSS class based on forma_pagamento."""
+        color_map = {
+            'Debitar': 'status-debitar',
+            'À vista': 'status-a-vista',
+            'Sem acordo': 'status-sem-acordo',
+            'Tadeu H.': 'status-tadeu',
+            'Cortesia': 'status-cortesia',
+            'OK - Pago': 'status-ok-pago'
+        }
+        return color_map.get(self.forma_pagamento, '')
+
+    def __repr__(self):
+        return f"<CadastroNota {self.cadastro}>"
+
+
 class Inclusao(db.Model):
     """Records FAQ entries with questions and answers."""
     __tablename__ = 'inclusoes'

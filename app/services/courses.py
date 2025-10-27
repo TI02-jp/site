@@ -15,7 +15,7 @@ from app import db
 class CourseStatus(str, Enum):
     """Enumeration of supported course statuses."""
 
-    COMPLETED = "concluÃ­do"
+    COMPLETED = "concluído"
     PLANNED = "planejado"
     DELAYED = "atrasado"
     POSTPONED = "adiada"

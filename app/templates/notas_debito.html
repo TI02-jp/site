@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}Notas para Débito{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1400px;">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
+        </li>
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="text-primary mb-0">
+            Notas para Débito
+            <span class="badge bg-primary ms-2">{{ notas|length }}</span>
+        </h1>
+        <button type="button" class="btn btn-primary" data-nota-modal="create" data-bs-toggle="modal" data-bs-target="#notaModal">
+            <i class="bi bi-plus-lg me-1"></i>Nova Nota
+        </button>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 text-nowrap text-start">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Data Emissão</th>
+                            <th class="text-start">Empresa</th>
+                            <th class="text-center">Notas</th>
+                            <th class="text-center">Qtde Itens</th>
+                            <th class="text-end">Valor UN</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-start">Acordo</th>
+                            <th class="text-start">Forma de Pagamento</th>
+                            <th class="text-center" title="Observação"><i class="bi bi-chat-left-text"></i></th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in notas %}
+                        <tr>
+                            <td class="text-start">{{ n.data_emissao_formatada }}</td>
+                            <td class="text-start">{{ n.empresa }}</td>
+                            <td class="text-center">{{ n.notas }}</td>
+                            <td class="text-center">{{ n.qtde_itens }}</td>
+                            <td class="text-end">{{ n.valor_un_formatado }}</td>
+                            <td class="text-end">{{ n.total_formatado }}</td>
+                            <td class="text-start">{{ n.acordo or '#N/A' }}</td>
+                            <td class="text-start">
+                                <span class="badge forma-pagamento-badge-{{ n.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">{{ n.forma_pagamento }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if n.observacao %}
+                                <i class="bi bi-chat-left-text-fill text-primary"
+                                   title="{{ n.observacao }}"
+                                   style="cursor: pointer;"
+                                   data-bs-toggle="tooltip"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button type="button"
+                                        class="btn btn-custom btn-sm me-1"
+                                        title="Editar"
+                                        data-nota-modal="edit"
+                                        data-bs-target="#notaModal"
+                                        data-bs-toggle="modal"
+                                        data-nota-id="{{ n.id }}"
+                                        data-nota-data="{{ n.data_emissao }}"
+                                        data-nota-empresa="{{ n.empresa|e }}"
+                                        data-nota-notas="{{ n.notas }}"
+                                        data-nota-qtde="{{ n.qtde_itens }}"
+                                        data-nota-valor-un="{{ n.valor_un or '' }}"
+                                        data-nota-total="{{ n.total or '' }}"
+                                        data-nota-acordo="{{ n.acordo or '' }}"
+                                        data-nota-pagamento="{{ n.forma_pagamento }}"
+                                        data-nota-observacao="{{ n.observacao or '' }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-danger btn-sm"
+                                        title="Excluir"
+                                        data-nota-delete
+                                        data-nota-id="{{ n.id }}"
+                                        data-nota-empresa="{{ n.empresa|e }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-receipt fs-1 d-block mb-3"></i>
+                                Nenhuma nota cadastrada
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Nota -->
+<div class="modal fade" id="notaModal" tabindex="-1" aria-labelledby="notaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('notas_debito') }}" novalidate>
+                {{ nota_form.hidden_tag() }}
+                <input type="hidden" name="form_name" id="notaFormName" value="{{ 'nota_update' if editing_nota else 'nota_create' }}">
+                <input type="hidden" name="nota_id" id="notaIdField" value="{{ editing_nota.id if editing_nota else '' }}">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="w-100 d-flex justify-content-between align-items-start">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="notaModalLabel">
+                            <i class="bi bi-receipt-cutoff"></i>
+                            <span id="notaModalTitle">{{ 'Editar Nota' if editing_nota else 'Nova Nota' }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ nota_form.data_emissao.id }}" class="form-label fw-semibold">{{ nota_form.data_emissao.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                                {{ nota_form.data_emissao(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="{{ nota_form.empresa.id }}" class="form-label fw-semibold">{{ nota_form.empresa.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                {{ nota_form.empresa(class="form-control", list="empresas-list", autocomplete="off") }}
+                                <datalist id="empresas-list">
+                                    {% for c in cadastros %}
+                                    <option value="{{ c.cadastro }}">{{ c.cadastro }}</option>
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="{{ nota_form.notas.id }}" class="form-label fw-semibold">{{ nota_form.notas.label.text }}</label>
+                            {{ nota_form.notas(class="form-control") }}
+                        </div>
+                        <div class="col-md-2">
+                            <label for="{{ nota_form.qtde_itens.id }}" class="form-label fw-semibold">{{ nota_form.qtde_itens.label.text }}</label>
+                            {{ nota_form.qtde_itens(class="form-control") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ nota_form.valor_un.id }}" class="form-label fw-semibold">{{ nota_form.valor_un.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                {{ nota_form.valor_un(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ nota_form.total.id }}" class="form-label fw-semibold">{{ nota_form.total.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                {{ nota_form.total(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ nota_form.acordo.id }}" class="form-label fw-semibold">{{ nota_form.acordo.label.text }}</label>
+                            {{ nota_form.acordo(class="form-control") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ nota_form.forma_pagamento.id }}" class="form-label fw-semibold">{{ nota_form.forma_pagamento.label.text }}</label>
+                            {{ nota_form.forma_pagamento(class="form-select") }}
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <div class="form-check">
+                                {{ nota_form.tem_observacao(class="form-check-input", id="temObservacaoCheck") }}
+                                <label class="form-check-label" for="temObservacaoCheck">
+                                    {{ nota_form.tem_observacao.label.text }}
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-12" id="observacaoField" style="display: none;">
+                            <label for="{{ nota_form.observacao.id }}" class="form-label fw-semibold">{{ nota_form.observacao.label.text }}</label>
+                            {{ nota_form.observacao(class="form-control", rows="3") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ nota_form.submit(class="btn btn-primary", id="notaModalSubmit") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Form oculto para exclusão -->
+<form method="POST" action="{{ url_for('notas_debito') }}" id="deleteNotaForm" style="display: none;">
+    {{ nota_form.hidden_tag() }}
+    <input type="hidden" name="form_name" value="nota_delete">
+    <input type="hidden" name="nota_id" id="deleteNotaId">
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .forma-pagamento-badge-debitar {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        border: 1px solid #c3e6cb;
+    }
+    .forma-pagamento-badge-à-vista {
+        background-color: #fff3cd !important;
+        color: #856404 !important;
+        border: 1px solid #ffeaa7;
+    }
+    .forma-pagamento-badge-sem-acordo {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #f5c6cb;
+    }
+    .forma-pagamento-badge-tadeu-h {
+        background-color: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border: 1px solid #bee5eb;
+    }
+    .forma-pagamento-badge-cortesia {
+        background-color: #e2e3e5 !important;
+        color: #383d41 !important;
+        border: 1px solid #d6d8db;
+    }
+    .forma-pagamento-badge-ok---pago,
+    .forma-pagamento-badge-ok-pago {
+        background-color: #ffd9a8 !important;
+        color: #856404 !important;
+        border: 1px solid #ffc266;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalEl = document.getElementById('notaModal');
+    if (!modalEl) {
+        return;
+    }
+
+    // Dados de cadastros para autocomplete
+    var cadastrosData = {{ cadastros_json|safe }};
+    var empresaCadastroMap = {};
+    cadastrosData.forEach(function(cad) {
+        empresaCadastroMap[cad.nome.toLowerCase()] = cad;
+    });
+
+    // Auto-preencher campos quando empresa é selecionada
+    var empresaField = document.getElementById('{{ nota_form.empresa.id }}');
+    var valorUnField = document.getElementById('{{ nota_form.valor_un.id }}');
+    var formaPagamentoField = document.getElementById('{{ nota_form.forma_pagamento.id }}');
+    var notasField = document.getElementById('{{ nota_form.notas.id }}');
+    var totalField = document.getElementById('{{ nota_form.total.id }}');
+    var temObservacaoCheck = document.getElementById('temObservacaoCheck');
+    var observacaoField = document.getElementById('observacaoField');
+    var observacaoTextarea = document.getElementById('{{ nota_form.observacao.id }}');
+
+    // Toggle observação field
+    if (temObservacaoCheck && observacaoField) {
+        temObservacaoCheck.addEventListener('change', function() {
+            if (this.checked) {
+                observacaoField.style.display = 'block';
+            } else {
+                observacaoField.style.display = 'none';
+                if (observacaoTextarea) {
+                    observacaoTextarea.value = '';
+                }
+            }
+        });
+    }
+
+    // Função para calcular o total
+    function calcularTotal() {
+        if (notasField && valorUnField && totalField) {
+            var notas = parseFloat(notasField.value) || 0;
+            var valorUn = parseFloat(valorUnField.value.replace(',', '.')) || 0;
+            var total = notas * valorUn;
+
+            if (total > 0) {
+                totalField.value = total.toFixed(2).replace('.', ',');
+            } else {
+                totalField.value = '';
+            }
+        }
+    }
+
+    // Calcular total quando Notas ou Valor UN mudarem
+    if (notasField) {
+        notasField.addEventListener('input', calcularTotal);
+        notasField.addEventListener('change', calcularTotal);
+    }
+    if (valorUnField) {
+        valorUnField.addEventListener('input', calcularTotal);
+        valorUnField.addEventListener('change', calcularTotal);
+    }
+
+    if (empresaField) {
+        empresaField.addEventListener('change', function() {
+            var empresaNome = this.value.trim().toLowerCase();
+            var cadastro = empresaCadastroMap[empresaNome];
+
+            if (cadastro) {
+                // Preencher Valor UN
+                if (valorUnField && cadastro.valor) {
+                    valorUnField.value = cadastro.valor.toFixed(2).replace('.', ',');
+                    // Recalcular total após preencher valor
+                    calcularTotal();
+                }
+                // Preencher Forma de Pagamento
+                if (formaPagamentoField && cadastro.forma_pagamento) {
+                    formaPagamentoField.value = cadastro.forma_pagamento;
+                }
+            }
+        });
+    }
+
+    var notaModal = new bootstrap.Modal(modalEl);
+    var formNameInput = document.getElementById('notaFormName');
+    var notaIdInput = document.getElementById('notaIdField');
+    var titleWrapper = document.getElementById('notaModalTitle');
+    var submitButton = document.getElementById('notaModalSubmit');
+
+    function setMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            formNameInput.value = 'nota_update';
+            titleWrapper.textContent = 'Editar Nota';
+            if (submitButton) {
+                submitButton.value = 'Atualizar';
+            }
+            if ('id' in data) {
+                notaIdInput.value = data.id || '';
+            }
+            document.getElementById('{{ nota_form.data_emissao.id }}').value = data.data || '';
+            document.getElementById('{{ nota_form.empresa.id }}').value = data.empresa || '';
+            document.getElementById('{{ nota_form.notas.id }}').value = data.notas || '';
+            document.getElementById('{{ nota_form.qtde_itens.id }}').value = data.qtde || '';
+            document.getElementById('{{ nota_form.valor_un.id }}').value = data.valor_un || '';
+            document.getElementById('{{ nota_form.total.id }}').value = data.total || '';
+            document.getElementById('{{ nota_form.acordo.id }}').value = data.acordo || '';
+            document.getElementById('{{ nota_form.forma_pagamento.id }}').value = data.pagamento || '';
+
+            // Handle observacao field
+            if (data.observacao && data.observacao.trim() !== '') {
+                if (temObservacaoCheck) temObservacaoCheck.checked = true;
+                if (observacaoTextarea) observacaoTextarea.value = data.observacao;
+                if (observacaoField) observacaoField.style.display = 'block';
+            } else {
+                if (temObservacaoCheck) temObservacaoCheck.checked = false;
+                if (observacaoTextarea) observacaoTextarea.value = '';
+                if (observacaoField) observacaoField.style.display = 'none';
+            }
+        } else {
+            formNameInput.value = 'nota_create';
+            notaIdInput.value = '';
+            titleWrapper.textContent = 'Nova Nota';
+            if (submitButton) {
+                submitButton.value = 'Salvar';
+            }
+            if (!data.preserveValues) {
+                document.getElementById('{{ nota_form.data_emissao.id }}').value = '';
+                document.getElementById('{{ nota_form.empresa.id }}').value = '';
+                document.getElementById('{{ nota_form.notas.id }}').value = '';
+                document.getElementById('{{ nota_form.qtde_itens.id }}').value = '';
+                document.getElementById('{{ nota_form.valor_un.id }}').value = '';
+                document.getElementById('{{ nota_form.total.id }}').value = '';
+                document.getElementById('{{ nota_form.acordo.id }}').value = '';
+                document.getElementById('{{ nota_form.forma_pagamento.id }}').value = 'Sem acordo';
+
+                // Reset observacao fields
+                if (temObservacaoCheck) temObservacaoCheck.checked = false;
+                if (observacaoTextarea) observacaoTextarea.value = '';
+                if (observacaoField) observacaoField.style.display = 'none';
+            }
+        }
+    }
+
+    document.querySelectorAll('[data-nota-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setMode('create', { preserveValues: false });
+        });
+    });
+
+    document.querySelectorAll('[data-nota-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            setMode('edit', {
+                id: target.getAttribute('data-nota-id'),
+                data: target.getAttribute('data-nota-data') || '',
+                empresa: target.getAttribute('data-nota-empresa') || '',
+                notas: target.getAttribute('data-nota-notas') || '',
+                qtde: target.getAttribute('data-nota-qtde') || '',
+                valor_un: target.getAttribute('data-nota-valor-un') || '',
+                total: target.getAttribute('data-nota-total') || '',
+                acordo: target.getAttribute('data-nota-acordo') || '',
+                pagamento: target.getAttribute('data-nota-pagamento') || '',
+                observacao: target.getAttribute('data-nota-observacao') || ''
+            });
+            notaModal.show();
+        });
+    });
+
+    // Delete handler
+    document.querySelectorAll('[data-nota-delete]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            var notaId = target.getAttribute('data-nota-id');
+            var empresa = target.getAttribute('data-nota-empresa');
+
+            if (confirm('Deseja realmente excluir a nota da empresa "' + empresa + '"?')) {
+                document.getElementById('deleteNotaId').value = notaId;
+                document.getElementById('deleteNotaForm').submit();
+            }
+        });
+    });
+
+    function cleanupModalArtifacts() {
+        if (document.querySelectorAll('.modal.show').length > 0) {
+            return;
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+            backdrop.remove();
+        });
+    }
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        setMode('create', { preserveValues: true });
+        cleanupModalArtifacts();
+    });
+
+    {% if open_nota_modal %}
+    {% if editing_nota %}
+    setMode('edit', {
+        id: '{{ editing_nota.id }}',
+        data: '{{ editing_nota.data_emissao }}',
+        empresa: {{ editing_nota.empresa|tojson }},
+        notas: '{{ editing_nota.notas }}',
+        qtde: '{{ editing_nota.qtde_itens }}',
+        valor_un: '{{ editing_nota.valor_un or "" }}',
+        total: '{{ editing_nota.total or "" }}',
+        acordo: {{ (editing_nota.acordo or '')|tojson }},
+        pagamento: {{ editing_nota.forma_pagamento|tojson }},
+        observacao: {{ (editing_nota.observacao or '')|tojson }}
+    });
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+    notaModal.show();
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+
+    // Initialize tooltips for observation icons
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

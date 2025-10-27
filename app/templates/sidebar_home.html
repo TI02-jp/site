@@ -50,6 +50,34 @@
                 AGENDA
             </a>
         </li>
+        {% if can_access_controle_notas() %}
+        {% set controle_notas_active = request.endpoint in ['notas_debito', 'cadastro_notas'] %}
+        <li class="nav-item">
+            <a class="nav-link{% if controle_notas_active %} active{% endif %}"
+               data-bs-toggle="collapse"
+               href="#controleNotasMenu"
+               role="button"
+               aria-expanded="{{ 'true' if controle_notas_active else 'false' }}"
+               aria-controls="controleNotasMenu">
+                <i class="bi bi-receipt-cutoff"></i>
+                CONTROLE NOTAS
+            </a>
+            <div class="collapse{% if controle_notas_active %} show{% endif %}" id="controleNotasMenu">
+                <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'notas_debito' %} active{% endif %}" href="{{ url_for('notas_debito') }}">
+                            Notas para Débito
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'cadastro_notas' %} active{% endif %}" href="{{ url_for('cadastro_notas') }}">
+                            Cadastros
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+        {% endif %}
         {% if user_has_tag('Gestão') %}
         {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar', 'diretoria_acordos'] %}
         <li class="nav-item">

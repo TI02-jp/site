@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Notas{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1400px;">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
+        </li>
+    </ul>
+
+    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-cash-coin fs-4 me-3"></i>
+        <div>
+            <strong>PIX:</strong> <span class="fs-5 fw-bold">49991352070</span>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="text-primary mb-0">
+            Cadastro
+            <span class="badge bg-primary ms-2">{{ cadastros|length }}</span>
+        </h1>
+        <button type="button" class="btn btn-primary" data-cadastro-modal="create" data-bs-toggle="modal" data-bs-target="#cadastroModal">
+            <i class="bi bi-plus-lg me-1"></i>Novo Cadastro
+        </button>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 text-nowrap text-start">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Cadastro</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-start">Forma de Pagamento</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cadastros %}
+                        <tr>
+                            <td class="text-start">{{ c.cadastro }}</td>
+                            <td class="text-end">{{ c.valor_formatado }}</td>
+                            <td class="text-start">
+                                <span class="badge forma-pagamento-badge-{{ c.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">
+                                    {{ c.forma_pagamento }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button type="button"
+                                        class="btn btn-custom btn-sm me-1"
+                                        title="Editar"
+                                        data-cadastro-modal="edit"
+                                        data-bs-target="#cadastroModal"
+                                        data-bs-toggle="modal"
+                                        data-cadastro-id="{{ c.id }}"
+                                        data-cadastro-nome="{{ c.cadastro|e }}"
+                                        data-cadastro-valor="{{ c.valor }}"
+                                        data-cadastro-pagamento="{{ c.forma_pagamento }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-danger btn-sm"
+                                        title="Excluir"
+                                        data-cadastro-delete
+                                        data-cadastro-id="{{ c.id }}"
+                                        data-cadastro-nome="{{ c.cadastro|e }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-file-text fs-1 d-block mb-3"></i>
+                                Nenhum cadastro encontrado
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Cadastro -->
+<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="cadastroModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('cadastro_notas') }}" novalidate>
+                {{ cadastro_form.hidden_tag() }}
+                <input type="hidden" name="form_name" id="cadastroFormName" value="{{ 'cadastro_update' if editing_cadastro else 'cadastro_create' }}">
+                <input type="hidden" name="cadastro_id" id="cadastroIdField" value="{{ editing_cadastro.id if editing_cadastro else '' }}">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="w-100 d-flex justify-content-between align-items-start">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="cadastroModalLabel">
+                            <i class="bi bi-file-earmark-plus"></i>
+                            <span id="cadastroModalTitle">{{ 'Editar Cadastro' if editing_cadastro else 'Novo Cadastro' }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label for="{{ cadastro_form.cadastro.id }}" class="form-label fw-semibold">{{ cadastro_form.cadastro.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                                {{ cadastro_form.cadastro(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ cadastro_form.valor.id }}" class="form-label fw-semibold">{{ cadastro_form.valor.label.text }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                {{ cadastro_form.valor(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ cadastro_form.forma_pagamento.id }}" class="form-label fw-semibold">{{ cadastro_form.forma_pagamento.label.text }}</label>
+                            {{ cadastro_form.forma_pagamento(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ cadastro_form.submit(class="btn btn-primary", id="cadastroModalSubmit") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Form oculto para exclusão -->
+<form method="POST" action="{{ url_for('cadastro_notas') }}" id="deleteCadastroForm" style="display: none;">
+    {{ cadastro_form.hidden_tag() }}
+    <input type="hidden" name="form_name" value="cadastro_delete">
+    <input type="hidden" name="cadastro_id" id="deleteCadastroId">
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .forma-pagamento-badge-debitar {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        border: 1px solid #c3e6cb;
+    }
+    .forma-pagamento-badge-à-vista {
+        background-color: #fff3cd !important;
+        color: #856404 !important;
+        border: 1px solid #ffeaa7;
+    }
+    .forma-pagamento-badge-sem-acordo {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #f5c6cb;
+    }
+    .forma-pagamento-badge-tadeu-h {
+        background-color: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border: 1px solid #bee5eb;
+    }
+    .forma-pagamento-badge-cortesia {
+        background-color: #e2e3e5 !important;
+        color: #383d41 !important;
+        border: 1px solid #d6d8db;
+    }
+    .forma-pagamento-badge-ok---pago,
+    .forma-pagamento-badge-ok-pago {
+        background-color: #ffd9a8 !important;
+        color: #856404 !important;
+        border: 1px solid #ffc266;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalEl = document.getElementById('cadastroModal');
+    if (!modalEl) {
+        return;
+    }
+
+    var cadastroModal = new bootstrap.Modal(modalEl);
+    var formNameInput = document.getElementById('cadastroFormName');
+    var cadastroIdInput = document.getElementById('cadastroIdField');
+    var titleWrapper = document.getElementById('cadastroModalTitle');
+    var submitButton = document.getElementById('cadastroModalSubmit');
+
+    function setMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            formNameInput.value = 'cadastro_update';
+            titleWrapper.textContent = 'Editar Cadastro';
+            if (submitButton) {
+                submitButton.value = 'Atualizar';
+            }
+            if ('id' in data) {
+                cadastroIdInput.value = data.id || '';
+            }
+            document.getElementById('{{ cadastro_form.cadastro.id }}').value = data.nome || '';
+            document.getElementById('{{ cadastro_form.valor.id }}').value = data.valor || '';
+            document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = data.pagamento || '';
+        } else {
+            formNameInput.value = 'cadastro_create';
+            cadastroIdInput.value = '';
+            titleWrapper.textContent = 'Novo Cadastro';
+            if (submitButton) {
+                submitButton.value = 'Salvar';
+            }
+            if (!data.preserveValues) {
+                document.getElementById('{{ cadastro_form.cadastro.id }}').value = '';
+                document.getElementById('{{ cadastro_form.valor.id }}').value = '';
+                document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = 'Cortesia';
+            }
+        }
+    }
+
+    document.querySelectorAll('[data-cadastro-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setMode('create', { preserveValues: false });
+        });
+    });
+
+    document.querySelectorAll('[data-cadastro-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            setMode('edit', {
+                id: target.getAttribute('data-cadastro-id'),
+                nome: target.getAttribute('data-cadastro-nome') || '',
+                valor: target.getAttribute('data-cadastro-valor') || '',
+                pagamento: target.getAttribute('data-cadastro-pagamento') || ''
+            });
+            cadastroModal.show();
+        });
+    });
+
+    // Delete handler
+    document.querySelectorAll('[data-cadastro-delete]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            var cadastroId = target.getAttribute('data-cadastro-id');
+            var nome = target.getAttribute('data-cadastro-nome');
+
+            if (confirm('Deseja realmente excluir o cadastro "' + nome + '"?')) {
+                document.getElementById('deleteCadastroId').value = cadastroId;
+                document.getElementById('deleteCadastroForm').submit();
+            }
+        });
+    });
+
+    function cleanupModalArtifacts() {
+        if (document.querySelectorAll('.modal.show').length > 0) {
+            return;
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+            backdrop.remove();
+        });
+    }
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        setMode('create', { preserveValues: true });
+        cleanupModalArtifacts();
+    });
+
+    {% if open_cadastro_modal %}
+    {% if editing_cadastro %}
+    setMode('edit', {
+        id: '{{ editing_cadastro.id }}',
+        nome: {{ editing_cadastro.cadastro|tojson }},
+        valor: '{{ editing_cadastro.valor }}',
+        pagamento: {{ editing_cadastro.forma_pagamento|tojson }}
+    });
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+    cadastroModal.show();
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+});
+</script>
+{% endblock %}
