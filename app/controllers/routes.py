@@ -6407,7 +6407,7 @@ def update_task_status(task_id):
                 exclude_user=current_user.id,
             )
 
-    return jsonify({"success": True})
+    return jsonify({"success": True, "task": task_data})
 
 
 def _delete_task_recursive(task: Task) -> None:

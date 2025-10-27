@@ -21,7 +21,7 @@ _TIME_COLUMNS_VERIFIED = False
 
 
 def _ensure_time_columns() -> None:
-    """Make sure the ``start_time``/``end_time`` columns exist.
+    """Make sure optional columns exist for general calendar events.
 
     Older databases might have been created before the migration that introduced
     the optional time fields.  Accessing the new code without running the
@@ -54,6 +54,18 @@ def _ensure_time_columns() -> None:
         statements.append(
             "ALTER TABLE general_calendar_events ADD COLUMN end_time TIME NULL"
         )
+    if "is_birthday" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN is_birthday BOOLEAN NOT NULL DEFAULT 0"
+        )
+    if "birthday_user_id" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN birthday_user_id INTEGER NULL"
+        )
+    if "birthday_user_name" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN birthday_user_name VARCHAR(255)"
+        )
 
     if not statements:
         _TIME_COLUMNS_VERIFIED = True
@@ -78,10 +90,13 @@ def _ensure_time_columns() -> None:
 def populate_event_participants(form) -> None:
     """Populate the selectable participant list with active users."""
 
-    form.participants.choices = [
+    choices = [
         (u.id, u.name)
         for u in User.query.filter_by(ativo=True).order_by(User.name).all()
     ]
+    form.participants.choices = choices
+    if hasattr(form, "birthday_user_id"):
+        form.birthday_user_id.choices = [(0, "Selecione um colaborador")] + choices
 
 
 def _selected_users(ids: Iterable[int]) -> list[User]:
@@ -102,6 +117,21 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
         and form.start_time.data
         and form.end_time.data
     )
+    is_birthday = bool(form.is_birthday.data)
+    birthday_user_id = form.birthday_user_id.data or 0
+    if is_birthday:
+        end_date = start_date
+    participant_ids = set(form.participants.data or [])
+    if is_birthday and birthday_user_id:
+        participant_ids.add(birthday_user_id)
+    selected_users = _selected_users(participant_ids)
+    birthday_user = None
+    if is_birthday and birthday_user_id:
+        birthday_user = next(
+            (user for user in selected_users if user.id == birthday_user_id), None
+        )
+        if not birthday_user:
+            birthday_user = User.query.get(birthday_user_id)
     event = GeneralCalendarEvent(
         title=form.title.data.strip(),
         description=(form.description.data or "").strip() or None,
@@ -110,8 +140,14 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
         start_time=form.start_time.data if use_times else None,
         end_time=form.end_time.data if use_times else None,
         created_by_id=creator_id,
+        is_birthday=is_birthday,
+        birthday_user_id=birthday_user.id if birthday_user else None,
+        birthday_user_name=(
+            (birthday_user.name or birthday_user.username)
+            if birthday_user
+            else None
+        ),
     )
-    selected_users = _selected_users(form.participants.data)
     for user in selected_users:
         event.participants.append(
             GeneralCalendarEventParticipant(
@@ -143,8 +179,26 @@ def update_calendar_event_from_form(
     )
     event.start_time = form.start_time.data if use_times else None
     event.end_time = form.end_time.data if use_times else None
+    event.is_birthday = bool(form.is_birthday.data)
+    birthday_user_id = form.birthday_user_id.data or 0
+    if event.is_birthday:
+        event.end_date = event.start_date
+    participant_ids = set(form.participants.data or [])
+    if event.is_birthday and birthday_user_id:
+        participant_ids.add(birthday_user_id)
     event.participants.clear()
-    selected_users = _selected_users(form.participants.data)
+    selected_users = _selected_users(participant_ids)
+    birthday_user = None
+    if event.is_birthday and birthday_user_id:
+        birthday_user = next(
+            (user for user in selected_users if user.id == birthday_user_id), None
+        )
+        if not birthday_user:
+            birthday_user = User.query.get(birthday_user_id)
+    event.birthday_user_id = birthday_user.id if birthday_user else None
+    event.birthday_user_name = (
+        (birthday_user.name or birthday_user.username) if birthday_user else None
+    )
     for user in selected_users:
         event.participants.append(
             GeneralCalendarEventParticipant(
@@ -210,6 +264,7 @@ def serialize_events_for_calendar(
             username and username.lower() == "tadeu"
             for username in participants + ([creator_username] if creator_username else [])
         )
+        is_birthday = bool(event.is_birthday)
 
         events.append(
             {
@@ -229,6 +284,13 @@ def serialize_events_for_calendar(
                 "can_edit": can_edit,
                 "can_delete": can_delete,
                 "is_tadeu_event": is_tadeu_event,
+                "is_birthday": is_birthday,
+                "birthday_user_id": event.birthday_user_id,
+                "birthday_user_name": event.birthday_user_name,
+                "backgroundColor": "#f58220" if is_birthday else None,
+                "borderColor": "#f58220" if is_birthday else None,
+                "textColor": "#ffffff" if is_birthday else None,
+                "classNames": ["birthday-event"] if is_birthday else [],
             }
         )
 

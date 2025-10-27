@@ -800,6 +800,18 @@ class GeneralCalendarEvent(db.Model):
         default=lambda: datetime.now(CALENDAR_TZ),
         nullable=False,
     )
+    is_birthday = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+    birthday_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True,
+    )
+    birthday_user_name = db.Column(db.String(255))
 
     participants = db.relationship(
         "GeneralCalendarEventParticipant",
@@ -808,6 +820,7 @@ class GeneralCalendarEvent(db.Model):
         lazy=True,
     )
     created_by = db.relationship("User", foreign_keys=[created_by_id])
+    birthday_user = db.relationship("User", foreign_keys=[birthday_user_id])
 
 
 class GeneralCalendarEventParticipant(db.Model):
