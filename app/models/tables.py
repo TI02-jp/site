@@ -646,14 +646,14 @@ class CadastroNota(db.Model):
     def status_color(self):
         """Return CSS class based on forma_pagamento."""
         color_map = {
-            'Debitar': 'status-debitar',
-            'À vista': 'status-a-vista',
-            'Sem acordo': 'status-sem-acordo',
-            'Tadeu H.': 'status-tadeu',
-            'Cortesia': 'status-cortesia',
-            'OK - Pago': 'status-ok-pago'
+            'DEBITAR': 'status-debitar',
+            'A VISTA': 'status-a-vista',
+            'SEM ACORDO': 'status-sem-acordo',
+            'TADEU H.': 'status-tadeu',
+            'CORTESIA': 'status-cortesia',
+            'OK - PAGO': 'status-ok-pago'
         }
-        return color_map.get(self.forma_pagamento, '')
+        return color_map.get((self.forma_pagamento or '').upper(), '')
 
     def __repr__(self):
         return f"<CadastroNota {self.cadastro}>"

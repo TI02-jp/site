@@ -22,6 +22,7 @@ from app import app, db, csrf, limiter
 from app.extensions.cache import cache, get_cache_timeout
 from app.utils.security import sanitize_html
 from app.utils.mailer import send_email, EmailDeliveryError
+from app.utils.permissions import is_user_admin
 from app.models.tables import (
     User,
     Empresa,
@@ -1324,13 +1325,12 @@ def can_access_controle_notas() -> bool:
     if not current_user.is_authenticated:
         return False
 
-    # Check if user has Gestão or Financeiro tags
-    if user_has_tag('Gestão') or user_has_tag('Financeiro'):
+    # Admin always has access
+    if is_user_admin(current_user):
         return True
 
-    # Check if username is in allowed list
-    allowed_usernames = ['Eduarda', 'Mara', 'Ryan']
-    if current_user.username in allowed_usernames:
+    # Check if user has Gestão, Financeiro or Emissor NFe tags
+    if user_has_tag('Gestão') or user_has_tag('Financeiro') or user_has_tag('Emissor NFe'):
         return True
 
     return False
@@ -3448,7 +3448,7 @@ def calendario_colaboradores():
 
     form = GeneralCalendarEventForm()
     populate_general_event_participants(form)
-    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
     show_modal = False
     if form.validate_on_submit():
         if not can_manage:
@@ -3485,10 +3485,10 @@ def delete_calendario_evento(event_id):
     """Delete an event from the collaborators calendar."""
 
     event = GeneralCalendarEvent.query.get_or_404(event_id)
-    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
     if not can_manage:
         abort(403)
-    if current_user.role != "admin" and event.created_by_id != current_user.id:
+    if not is_user_admin(current_user) and event.created_by_id != current_user.id:
         flash("Você só pode excluir eventos que você criou.", "danger")
         return redirect(url_for("calendario_colaboradores"))
     delete_calendar_event(event)
@@ -3601,14 +3601,18 @@ def sala_reunioes():
     if form.validate_on_submit():
         if form.meeting_id.data:
             meeting = Reuniao.query.get(int(form.meeting_id.data))
-            if meeting and meeting.criador_id == current_user.id:
-                if meeting.status in (
+            # Admins (incluindo admin_master) podem editar qualquer reunião
+            # Criadores só podem editar suas próprias reuniões
+            can_edit_meeting = is_user_admin(current_user) or meeting.criador_id == current_user.id
+            if meeting and can_edit_meeting:
+                # Admins podem editar qualquer status; criadores têm restrições
+                if not is_user_admin(current_user) and meeting.status in (
                     ReuniaoStatus.EM_ANDAMENTO,
                     ReuniaoStatus.REALIZADA,
                     ReuniaoStatus.CANCELADA,
                 ):
                     flash(
-                        "Reuniões em andamento ou realizadas não podem ser editadas.",
+                        "Reuniões em andamento, realizadas ou canceladas não podem ser editadas.",
                         "danger",
                     )
                     return redirect(url_for("sala_reunioes"))
@@ -3649,7 +3653,7 @@ def sala_reunioes():
             meeting = Reuniao.query.get(meeting_id)
             if meeting and meeting.meet_link == meet_link:
                 can_configure = (
-                    current_user.role == "admin"
+                    is_user_admin(current_user)
                     or meeting.criador_id == current_user.id
                 )
                 participant_options, creator_name = _meeting_host_candidates(meeting)
@@ -3672,6 +3676,8 @@ def sala_reunioes():
         for status in STATUS_SEQUENCE
     ]
     reschedule_statuses = [status.value for status in RESCHEDULE_REQUIRED_STATUSES]
+    from datetime import date
+    today_date = date.today().isoformat()
     return render_template(
         "sala_reunioes.html",
         form=form,
@@ -3681,6 +3687,7 @@ def sala_reunioes():
         meet_popup_data=meet_popup_data,
         meeting_status_options=status_options,
         reschedule_statuses=reschedule_statuses,
+        today_date=today_date,
     )
 
 @app.route("/reuniao/<int:meeting_id>/meet-config", methods=["POST"])
@@ -3689,7 +3696,8 @@ def configure_meet_call(meeting_id: int):
     """Persist configuration options for the Google Meet room."""
 
     meeting = Reuniao.query.get_or_404(meeting_id)
-    if current_user.role != "admin" and meeting.criador_id != current_user.id:
+    # Admins (incluindo admin_master) ou criadores podem configurar o Meet
+    if not is_user_admin(current_user) and meeting.criador_id != current_user.id:
         abort(403)
     form = MeetConfigurationForm()
     candidate_entries, creator_name = _meeting_host_candidates(meeting)
@@ -3783,7 +3791,8 @@ def update_meeting_status(meeting_id: int):
     """Allow creators or admins to change the meeting status."""
 
     meeting = Reuniao.query.get_or_404(meeting_id)
-    if current_user.role != "admin" and meeting.criador_id != current_user.id:
+    # Admins (incluindo admin_master) ou criadores podem mudar o status
+    if not is_user_admin(current_user) and meeting.criador_id != current_user.id:
         abort(403)
     payload = request.get_json(silent=True) or {}
     status_raw = payload.get("status")
@@ -3839,7 +3848,7 @@ def update_meeting_status(meeting_id: int):
             meeting,
             new_status,
             current_user.id,
-            current_user.role == "admin",
+            is_user_admin(current_user),
             new_start=new_start,
             new_end=new_end,
             notify_attendees=notify_attendees,
@@ -3880,8 +3889,9 @@ def update_meeting_pautas(meeting_id: int):
     """Persist meeting notes once the meeting has been completed."""
 
     meeting = Reuniao.query.get_or_404(meeting_id)
-    is_admin = current_user.role == "admin"
-    if not is_admin and meeting.criador_id != current_user.id:
+    # Admins (incluindo admin_master) ou criadores podem atualizar pautas
+    user_is_admin = is_user_admin(current_user)
+    if not user_is_admin and meeting.criador_id != current_user.id:
         return (
             jsonify(
                 {
@@ -3962,7 +3972,8 @@ def update_meeting_pautas(meeting_id: int):
 def delete_reuniao(meeting_id):
     """Delete a meeting and its corresponding Google Calendar event."""
     meeting = Reuniao.query.get_or_404(meeting_id)
-    if current_user.role != "admin":
+    # Admins (incluindo admin_master) podem excluir qualquer reunião
+    if not is_user_admin(current_user):
         if meeting.criador_id != current_user.id:
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return jsonify({"success": False, "error": "Você só pode excluir reuniões que você criou."}), 403
@@ -4224,9 +4235,9 @@ def notas_debito():
     # Buscar cadastros para autocomplete
     cadastros = CadastroNota.query.order_by(CadastroNota.cadastro).all()
     cadastros_json = json.dumps([{
-        'nome': c.cadastro,
+        'nome': (c.cadastro or '').upper(),
         'valor': float(c.valor) if c.valor else 0,
-        'forma_pagamento': c.forma_pagamento
+        'acordo': (c.forma_pagamento or '').upper()
     } for c in cadastros])
 
     open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")
@@ -4258,13 +4269,13 @@ def notas_debito():
                 else:
                     nota = NotaDebito(
                         data_emissao=nota_form.data_emissao.data,
-                        empresa=nota_form.empresa.data.strip(),
+                        empresa=nota_form.empresa.data.strip().upper() if nota_form.empresa.data else '',
                         notas=notas_int,
                         qtde_itens=qtde_int,
                         valor_un=valor_un,
                         total=total,
-                        acordo=nota_form.acordo.data.strip() if nota_form.acordo.data else None,
-                        forma_pagamento=nota_form.forma_pagamento.data,
+                        acordo=nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None,
+                        forma_pagamento=(nota_form.forma_pagamento.data or '').upper(),
                         observacao=nota_form.observacao.data.strip() if nota_form.observacao.data else None
                     )
                     db.session.add(nota)
@@ -4289,13 +4300,13 @@ def notas_debito():
                     flash("Valores numéricos inválidos.", "warning")
                 else:
                     editing_nota.data_emissao = nota_form.data_emissao.data
-                    editing_nota.empresa = nota_form.empresa.data.strip()
+                    editing_nota.empresa = nota_form.empresa.data.strip().upper() if nota_form.empresa.data else ''
                     editing_nota.notas = notas_int
                     editing_nota.qtde_itens = qtde_int
                     editing_nota.valor_un = valor_un
                     editing_nota.total = total
-                    editing_nota.acordo = nota_form.acordo.data.strip() if nota_form.acordo.data else None
-                    editing_nota.forma_pagamento = nota_form.forma_pagamento.data
+                    editing_nota.acordo = nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None
+                    editing_nota.forma_pagamento = (nota_form.forma_pagamento.data or '').upper()
                     editing_nota.observacao = nota_form.observacao.data.strip() if nota_form.observacao.data else None
                     db.session.commit()
                     flash("Nota atualizada com sucesso.", "success")
@@ -4359,9 +4370,9 @@ def cadastro_notas():
                 else:
                     cadastro = CadastroNota(
                         pix="49991352070",
-                        cadastro=cadastro_form.cadastro.data.strip(),
+                        cadastro=cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else '',
                         valor=valor,
-                        forma_pagamento=cadastro_form.forma_pagamento.data
+                        forma_pagamento=(cadastro_form.forma_pagamento.data or '').upper()
                     )
                     db.session.add(cadastro)
                     db.session.commit()
@@ -4382,9 +4393,9 @@ def cadastro_notas():
                     flash("Valor inválido.", "warning")
                 else:
                     editing_cadastro.pix = "49991352070"
-                    editing_cadastro.cadastro = cadastro_form.cadastro.data.strip()
+                    editing_cadastro.cadastro = cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else ''
                     editing_cadastro.valor = valor
-                    editing_cadastro.forma_pagamento = cadastro_form.forma_pagamento.data
+                    editing_cadastro.forma_pagamento = (cadastro_form.forma_pagamento.data or '').upper()
                     db.session.commit()
                     flash("Cadastro atualizado com sucesso.", "success")
                     return redirect(url_for("cadastro_notas"))
@@ -4860,7 +4871,7 @@ def api_reunioes():
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
     events = combine_events(
-        raw_events, now, current_user.id, current_user.role == "admin"
+        raw_events, now, current_user.id, is_user_admin(current_user)
     )
     return jsonify(events)
 
@@ -4869,9 +4880,9 @@ def api_reunioes():
 def api_general_calendar_events():
     """Return collaborator calendar events as JSON."""
 
-    can_manage = current_user.role == "admin" or user_has_tag("Gestão")
+    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
     events = serialize_events_for_calendar(
-        current_user.id, can_manage, current_user.role == "admin"
+        current_user.id, can_manage, is_user_admin(current_user)
     )
     return jsonify(events)
 

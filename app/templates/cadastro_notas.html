@@ -40,22 +40,22 @@
                     <thead>
                         <tr>
                             <th class="text-start">Cadastro</th>
-                            <th class="text-end">Valor</th>
-                            <th class="text-start">Forma de Pagamento</th>
-                            <th class="text-end">Ações</th>
+                            <th class="text-start">Valor</th>
+                            <th class="text-start">Acordo</th>
+                            <th class="text-start">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in cadastros %}
                         <tr>
-                            <td class="text-start">{{ c.cadastro }}</td>
-                            <td class="text-end">{{ c.valor_formatado }}</td>
+                            <td class="text-start">{{ c.cadastro|upper }}</td>
+                            <td class="text-start">{{ c.valor_formatado }}</td>
                             <td class="text-start">
                                 <span class="badge forma-pagamento-badge-{{ c.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">
-                                    {{ c.forma_pagamento }}
+                                    {{ c.forma_pagamento|upper }}
                                 </span>
                             </td>
-                            <td class="text-end">
+                            <td class="text-start">
                                 <button type="button"
                                         class="btn btn-custom btn-sm me-1"
                                         title="Editar"
@@ -65,7 +65,7 @@
                                         data-cadastro-id="{{ c.id }}"
                                         data-cadastro-nome="{{ c.cadastro|e }}"
                                         data-cadastro-valor="{{ c.valor }}"
-                                        data-cadastro-pagamento="{{ c.forma_pagamento }}">
+                                        data-cadastro-pagamento="{{ c.forma_pagamento|upper }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button type="button"
@@ -80,7 +80,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
+                            <td colspan="4" class="text-start py-5 text-muted">
                                 <i class="bi bi-file-text fs-1 d-block mb-3"></i>
                                 Nenhum cadastro encontrado
                             </td>
@@ -159,6 +159,7 @@
         color: #155724 !important;
         border: 1px solid #c3e6cb;
     }
+    .forma-pagamento-badge-a-vista,
     .forma-pagamento-badge-à-vista {
         background-color: #fff3cd !important;
         color: #856404 !important;
@@ -198,6 +199,13 @@ document.addEventListener('DOMContentLoaded', function() {
     var cadastroIdInput = document.getElementById('cadastroIdField');
     var titleWrapper = document.getElementById('cadastroModalTitle');
     var submitButton = document.getElementById('cadastroModalSubmit');
+    var cadastroNomeField = document.getElementById('{{ cadastro_form.cadastro.id }}');
+
+    if (cadastroNomeField) {
+        cadastroNomeField.addEventListener('blur', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
 
     function setMode(mode, preset) {
         var data = preset || {};
@@ -223,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!data.preserveValues) {
                 document.getElementById('{{ cadastro_form.cadastro.id }}').value = '';
                 document.getElementById('{{ cadastro_form.valor.id }}').value = '';
-                document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = 'Cortesia';
+                document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = 'CORTESIA';
             }
         }
     }

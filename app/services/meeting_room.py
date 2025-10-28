@@ -18,6 +18,7 @@ from app.models.tables import (
     ReuniaoRecorrenciaTipo,
     default_meet_settings,
 )
+from app.utils.permissions import is_user_admin
 from app.services.meeting_recurrence import (
     generate_recurrence_dates,
     generate_recurrence_group_id,
@@ -66,6 +67,10 @@ MIN_GAP = timedelta(minutes=2)
 _fetch_event: threading.Event | None = None
 _fetch_event_lock = threading.Lock()
 _fetch_timeout = 5.0  # segundos (reduzido de 10s para falhar mais rápido)
+
+# Combined cache version control for proper invalidation
+_combined_cache_version: int = 0
+_combined_cache_version_lock = threading.Lock()
 
 
 def get_users_by_email_cached(emails: set[str]) -> dict[str, str]:
@@ -176,16 +181,22 @@ def _normalize_meet_settings(raw: Any | None = None) -> dict[str, bool]:
     return normalized
 
 
-def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
+def _apply_meet_preferences(meeting: Reuniao) -> tuple[bool | None, str | None]:
     """Sync stored Meet preferences with the Google Meet space.
 
     Adds adaptive backoff so repeated failures (e.g. missing permissions) do not
     impact request latency.
+
+    Returns:
+        Tuple of (success: bool | None, error_message: str | None)
+        - (True, None): Successfully synced
+        - (False, error_msg): Failed after retries
+        - (None, error_msg): Skipped due to cooldown or no meet_link
     """
     global _meet_sync_disabled_until
 
     if not meeting.meet_link:
-        return None
+        return None, "Reunião não possui link do Google Meet"
 
     now_ts = time.time()
     disable_seconds = current_app.config.get("MEET_SYNC_DISABLE_SECONDS", 600)
@@ -194,12 +205,13 @@ def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
     with _meet_sync_disable_lock:
         disabled_until = _meet_sync_disabled_until
     if disabled_until and now_ts < disabled_until:
+        remaining_seconds = int(disabled_until - now_ts)
         current_app.logger.debug(
             "Skipping Meet preference sync for meeting %s (cooldown %.1fs remaining)",
             meeting.id,
             disabled_until - now_ts,
         )
-        return None
+        return None, f"Sincronização temporariamente desabilitada (aguarde {remaining_seconds}s)"
 
     settings = _normalize_meet_settings(meeting.meet_settings)
     max_retries = max(1, int(current_app.config.get("MEET_PREFERENCES_MAX_RETRIES", 3)))
@@ -219,7 +231,7 @@ def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
                 meeting.id,
                 attempt,
             )
-            return True
+            return True, None
 
         except Exception as exc:
             error_msg = (
@@ -243,7 +255,7 @@ def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
                 cooldown_target = time.time() + disable_seconds
                 with _meet_sync_disable_lock:
                     _meet_sync_disabled_until = max(_meet_sync_disabled_until, cooldown_target)
-                return False
+                return False, "Permissões insuficientes para configurar o Google Meet. Contate o administrador."
 
             if attempt < max_retries:
                 delay = base_delay * (2 ** (attempt - 1))
@@ -254,9 +266,10 @@ def _apply_meet_preferences(meeting: Reuniao) -> bool | None:
                 cooldown_target = time.time() + retry_cooldown
                 with _meet_sync_disable_lock:
                     _meet_sync_disabled_until = max(_meet_sync_disabled_until, cooldown_target)
-                return False
+                user_friendly_error = f"Falha ao configurar Google Meet após {max_retries} tentativas. Tente novamente mais tarde."
+                return False, user_friendly_error
 
-    return False
+    return False, "Erro desconhecido ao configurar Google Meet"
 
 
 def _queue_meet_preferences_sync(meeting_id: int, reason: str = "unspecified") -> None:
@@ -284,12 +297,13 @@ def _queue_meet_preferences_sync(meeting_id: int, reason: str = "unspecified") -
                     reason,
                 )
                 return
-            result = _apply_meet_preferences(meeting)
+            result, error_message = _apply_meet_preferences(meeting)
             if result is False:
                 current_app.logger.warning(
-                    "Meet preference sync failed for meeting %s (reason=%s)",
+                    "Meet preference sync failed for meeting %s (reason=%s): %s",
                     meeting_id,
                     reason,
+                    error_message or "Unknown error",
                 )
         except Exception:
             current_app.logger.exception(
@@ -396,10 +410,17 @@ def fetch_raw_events():
 
         # Get stale cache as fallback
         stale_events = calendar_cache.get("raw_calendar_events_stale")
+        calendar_tz = CALENDAR_TZ
+        now = datetime.now(calendar_tz)
+        future_window_days = max(
+            int(current_app.config.get("MEETING_CALENDAR_FUTURE_DAYS", 365 * 3)),
+            0,
+        )
+        time_max = now + timedelta(days=future_window_days)
 
         try:
             # Fetch from Google Calendar API
-            events = list_upcoming_events(max_results=250)
+            events = list_upcoming_events(max_results=None, time_max=time_max)
             fetch_duration = (time.perf_counter() - fetch_start) * 1000
 
             # Update both primary and stale caches
@@ -458,11 +479,13 @@ def invalidate_calendar_cache():
         calendar_cache.set("raw_calendar_events", cached_events, ttl=30)
     # Don't touch the stale cache - it serves as fallback
 
-    # Also invalidate combined_events cache for all users
-    # Clear keys matching pattern "combined_events:*"
-    # Since SimpleCache doesn't support pattern matching, we'll set a flag
-    # Next request will rebuild the cache
-    pass  # Combined events cache has short TTL (90s) so will auto-refresh
+    # Invalidate combined_events cache for all users
+    # Since SimpleCache doesn't support pattern matching, we increment a version counter
+    # All cached entries will check this version and invalidate themselves if stale
+    global _combined_cache_version
+    with _combined_cache_version_lock:
+        _combined_cache_version += 1
+        current_app.logger.debug(f"Invalidated combined cache, new version: {_combined_cache_version}")
 
 
 def _next_available(
@@ -655,12 +678,14 @@ def serialize_meeting_event(
     participant_meta = _meeting_participant_metadata(meeting)
     normalized_settings = _normalize_meet_settings(meeting.meet_settings)
     can_update_status = is_admin or meeting.criador_id == current_user_id
-    can_edit = meeting.criador_id == current_user_id and status in EDITABLE_STATUSES
+    # Admins podem editar qualquer reunião; criadores só podem editar AGENDADAS ou ADIADAS
+    can_edit = is_admin or (meeting.criador_id == current_user_id and status in EDITABLE_STATUSES)
     can_configure = (
         bool(meeting.meet_link)
         and (is_admin or meeting.criador_id == current_user_id)
         and status in CONFIGURABLE_STATUSES
     )
+    # Admins podem excluir qualquer reunião; criadores só podem excluir se podem editar
     can_delete = is_admin or can_edit
     can_edit_pautas = (
         status == ReuniaoStatus.REALIZADA
@@ -745,6 +770,7 @@ def _create_additional_meeting(
         criador_id=user_id,
         course_id=course_id,
     )
+    meeting.meet_host_id = user_id
     meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
     db.session.flush()
@@ -891,6 +917,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         recorrencia_grupo_id=group_id,
         recorrencia_dias_semana=recorrencia_dias_semana_value,
     )
+    meeting.meet_host_id = user_id
     meeting.meet_settings = _normalize_meet_settings()
     db.session.add(meeting)
     db.session.flush()
@@ -912,6 +939,8 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
 
     if recurrence_dates:
         recurrence_count = 0
+        recurrence_conflicts = []
+
         for recurrence_date in recurrence_dates:
             start_dt_recurrent = datetime.combine(
                 recurrence_date, form.start_time.data, tzinfo=CALENDAR_TZ
@@ -919,6 +948,31 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
             end_dt_recurrent = datetime.combine(
                 recurrence_date, form.end_time.data, tzinfo=CALENDAR_TZ
             )
+
+            # Validate conflicts for each recurrent meeting
+            duration = end_dt_recurrent - start_dt_recurrent
+            padding = max(duration, timedelta(hours=1))
+            recurrent_intervals = _collect_intervals(
+                raw_events,
+                exclude_meeting_id=meeting.id,
+                exclude_event_id=meeting.google_event_id,
+                window_start=start_dt_recurrent - padding,
+                window_end=end_dt_recurrent + padding,
+            )
+            adjusted_start_recurrent, conflict_messages = _calculate_adjusted_start(
+                start_dt_recurrent, duration, recurrent_intervals, now
+            )
+
+            # If there's a conflict, record it but continue creating
+            if adjusted_start_recurrent != start_dt_recurrent:
+                recurrence_conflicts.append({
+                    'date': recurrence_date.strftime('%d/%m/%Y'),
+                    'original_time': start_dt_recurrent.strftime('%H:%M'),
+                    'suggested_time': adjusted_start_recurrent.strftime('%H:%M'),
+                    'messages': conflict_messages
+                })
+                # Skip creating this conflicting occurrence
+                continue
 
             if form.create_meet.data:
                 event_recurrent = create_meet_event(
@@ -956,6 +1010,7 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
                 recorrencia_grupo_id=group_id,
                 recorrencia_dias_semana=recorrencia_dias_semana_value,
             )
+            recurrent_meeting.meet_host_id = user_id
             recurrent_meeting.meet_settings = _normalize_meet_settings()
             db.session.add(recurrent_meeting)
             db.session.flush()
@@ -980,6 +1035,29 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
         db.session.commit()
 
         total_meetings = recurrence_count + 1
+        total_requested = len(recurrence_dates) + 1
+
+        # Show warnings about conflicts if any
+        if recurrence_conflicts:
+            skipped_count = len(recurrence_conflicts)
+            conflict_details = "<ul>"
+            for conflict in recurrence_conflicts[:5]:  # Show max 5 conflicts
+                conflict_details += (
+                    f"<li>{conflict['date']} às {conflict['original_time']} "
+                    f"(sugerido: {conflict['suggested_time']})</li>"
+                )
+            if skipped_count > 5:
+                conflict_details += f"<li>... e mais {skipped_count - 5} conflitos</li>"
+            conflict_details += "</ul>"
+
+            flash(
+                Markup(
+                    f"⚠️ {skipped_count} de {total_requested} reuniões recorrentes foram puladas "
+                    f"devido a conflitos de horário:{conflict_details}"
+                ),
+                "warning",
+            )
+
         if meet_link:
             flash(
                 Markup(
@@ -1122,6 +1200,8 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
             )
         meeting.meet_link = updated_event.get("hangoutLink")
         meeting.google_event_id = updated_event.get("id")
+    if meeting.meet_host_id is None:
+        meeting.meet_host_id = meeting.criador_id
     db.session.commit()
     if meeting.meet_link:
         _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
@@ -1209,6 +1289,12 @@ def change_meeting_status(
         raise ValueError(
             "Não é possível marcar como agendada uma reunião cujo horário já foi concluído."
         )
+    # Saga Pattern: Save original state for rollback in case of Google API failure
+    original_status = meeting.status
+    original_inicio = meeting.inicio
+    original_fim = meeting.fim
+    original_meet_link = meeting.meet_link
+
     meeting.status = new_status
     participant_meta = _meeting_participant_metadata(meeting)
     participant_emails = list(dict.fromkeys(participant_meta["emails"]))
@@ -1217,6 +1303,25 @@ def change_meeting_status(
         participant_meta["usernames"],
         get_status_label(meeting.status),
     )
+
+    # Step 1: Commit to local DB first (source of truth)
+    try:
+        event_data, _ = serialize_meeting_event(
+            meeting,
+            now,
+            current_user_id,
+            is_admin,
+            auto_progress=False,
+        )
+        db.session.commit()
+        current_app.logger.debug(f"Meeting {meeting.id} status changed to {new_status} in DB")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to update meeting {meeting.id} in DB: {e}")
+        raise
+
+    # Step 2: Sync to Google Calendar (best effort)
+    google_sync_failed = False
     try:
         if meeting.google_event_id:
             create_meet_flag = False if new_status == ReuniaoStatus.CANCELADA else None
@@ -1235,24 +1340,39 @@ def change_meeting_status(
                 meeting.meet_link = None
             elif updated_event.get("hangoutLink"):
                 meeting.meet_link = updated_event.get("hangoutLink")
+
+            # Commit meet_link changes
+            db.session.commit()
+            current_app.logger.debug(f"Meeting {meeting.id} synced to Google Calendar")
         elif new_status == ReuniaoStatus.CANCELADA:
             meeting.meet_link = None
-        event_data, _ = serialize_meeting_event(
-            meeting,
-            now,
-            current_user_id,
-            is_admin,
-            auto_progress=False,
+            db.session.commit()
+    except (HttpError, RefreshError) as e:
+        google_sync_failed = True
+        current_app.logger.warning(
+            f"Google Calendar sync failed for meeting {meeting.id}: {e}. "
+            f"Local DB updated successfully. Will retry on next sync."
         )
-        db.session.commit()
+        # Don't rollback DB - local state is source of truth
+        # User can manually trigger sync or it will happen on next calendar load
+    except Exception as e:
+        google_sync_failed = True
+        current_app.logger.error(
+            f"Unexpected error syncing meeting {meeting.id} to Google: {e}"
+        )
+        # Don't rollback DB for non-critical sync errors
 
-        # Invalidar cache após mudar status da reunião
-        invalidate_calendar_cache()
+    # Step 3: Invalidate cache after successful DB update
+    invalidate_calendar_cache()
 
-        return event_data
-    except Exception:
-        db.session.rollback()
-        raise
+    # Add warning to event_data if Google sync failed
+    if google_sync_failed:
+        event_data["sync_warning"] = (
+            "Reunião atualizada localmente, mas sincronização com Google Calendar falhou. "
+            "Será sincronizada automaticamente em breve."
+        )
+
+    return event_data
 
 
 def delete_meeting(meeting: Reuniao) -> bool:
@@ -1286,20 +1406,33 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     # Cache de resultados processados para evitar reprocessamento
     # Cache separado por usuário e role (admin vs normal)
     cache_key = f"combined_events:{current_user_id}:{is_admin}"
-    cached_result = calendar_cache.get(cache_key)
-    if cached_result is not None:
-        return cached_result
+    cached_data = calendar_cache.get(cache_key)
+
+    # Verify cache version to ensure data is still valid after invalidation
+    global _combined_cache_version
+    with _combined_cache_version_lock:
+        current_version = _combined_cache_version
+
+    if cached_data is not None:
+        # Check if cached data includes version and if it matches current version
+        cached_version = cached_data.get("version") if isinstance(cached_data, dict) else None
+        cached_events = cached_data.get("events") if isinstance(cached_data, dict) else cached_data
+
+        # If version matches, return cached events
+        if cached_version == current_version and cached_events is not None:
+            return cached_events
+        # Otherwise, cache is stale, proceed to regenerate
 
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
 
     updated = False
 
-    # Otimizado: buscar apenas reuniões dos últimos 2 meses e próximos 3 meses
-    # reduzindo de 6 meses para 5 meses (17% menos dados)
-    # Isso melhora a performance da query mantendo histórico relevante
-    two_months_ago = now - timedelta(days=60)
-    three_months_ahead = now + timedelta(days=90)
+    # Intervalo configurável para reduzir dados processados mantendo histórico relevante
+    past_window_days = max(int(current_app.config.get("MEETING_CALENDAR_PAST_DAYS", 60)), 0)
+    future_window_days = max(int(current_app.config.get("MEETING_CALENDAR_FUTURE_DAYS", 180)), 0)
+    two_months_ago = now - timedelta(days=past_window_days)
+    three_months_ahead = now + timedelta(days=future_window_days)
 
     # Use subqueryload para reduzir queries N+1 sem criar JOINs gigantes
     # subqueryload é mais eficiente que joinedload para relacionamentos 1:N
@@ -1330,16 +1463,28 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
             r, now, current_user_id, is_admin
         )
         if status_changed:
-            status_updates.append(r)
+            status_updates.append((r.id, r.status))
         key = (event_data["title"], event_data["start"], event_data["end"])
         events.append(event_data)
         seen_keys.add(key)
 
-    # Commit apenas se houver mudanças de status, mas em transação separada
-    # para não bloquear leitura de outros usuários
+    # Commit apenas se houver mudanças de status, usando UPDATE individual para evitar
+    # race conditions. Isso permite que múltiplas requisições atualizem diferentes reuniões
+    # sem conflitos, e ignora atualizações que já foram feitas por outra thread.
     if status_updates:
         try:
+            # Usar bulk update para melhor performance, mas sem expiration check
+            # para evitar locks desnecessários
+            for meeting_id, new_status in status_updates:
+                # Update direto no BD sem carregar objeto ORM completo
+                # Isso evita OptimisticLockException
+                db.session.execute(
+                    db.update(Reuniao)
+                    .where(Reuniao.id == meeting_id)
+                    .values(status=new_status)
+                )
             db.session.commit()
+            current_app.logger.debug(f"Auto-updated status for {len(status_updates)} meetings")
         except Exception as e:
             current_app.logger.warning(f"Failed to commit status updates: {e}")
             db.session.rollback()
@@ -1421,9 +1566,14 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
         )
         seen_keys.add(key)
 
-    # Cachear resultado processado por 90 segundos
+    # Cachear resultado processado por 90 segundos com versão
     # TTL curto para balance entre performance e freshness
-    calendar_cache.set(cache_key, events, ttl=90)
+    # Include version to allow proper invalidation across all users
+    cached_data_with_version = {
+        "version": current_version,
+        "events": events
+    }
+    calendar_cache.set(cache_key, cached_data_with_version, ttl=90)
 
     return events
 

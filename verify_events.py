@@ -1,21 +1,43 @@
+"""Script para verificar reuniões futuras com status incorreto"""
+import sys
+from datetime import datetime
 from app import app, db
-from app.models.tables import GeneralCalendarEvent
+from app.models.tables import Reuniao, ReuniaoStatus
 
-app.app_context().push()
+with app.app_context():
+    # Buscar reuniões futuras
+    now = datetime.now()
+    future_meetings = Reuniao.query.filter(Reuniao.inicio > now).all()
 
-total = GeneralCalendarEvent.query.count()
-normal = GeneralCalendarEvent.query.filter_by(is_birthday=False).count()
-birthday = GeneralCalendarEvent.query.filter_by(is_birthday=True).count()
+    print(f"\n=== Verificação de Reuniões Futuras ===")
+    print(f"Data/hora atual: {now}")
+    print(f"Total de reuniões futuras: {len(future_meetings)}\n")
 
-print("=== RESUMO DOS EVENTOS ===")
-print(f"Total de eventos: {total}")
-print(f"Eventos normais: {normal}")
-print(f"Eventos de aniversario: {birthday}")
+    # Verificar reuniões com status incorreto
+    problematic = []
+    for meeting in future_meetings:
+        if meeting.status == ReuniaoStatus.REALIZADA:
+            problematic.append(meeting)
+            print(f"⚠️  ID: {meeting.id}")
+            print(f"   Assunto: {meeting.assunto}")
+            print(f"   Início: {meeting.inicio}")
+            print(f"   Fim: {meeting.fim}")
+            print(f"   Status: {meeting.status.value}")
+            print(f"   Criador ID: {meeting.criador_id}")
+            print()
 
-print("\n=== PRIMEIROS 5 EVENTOS NORMAIS ===")
-for e in GeneralCalendarEvent.query.filter_by(is_birthday=False).order_by(GeneralCalendarEvent.start_date).limit(5).all():
-    print(f"{e.id}: {e.title} ({e.start_date})")
+    if problematic:
+        print(f"\n[ERRO] Encontradas {len(problematic)} reuniões futuras marcadas como REALIZADA!")
+        print(f"\nPara corrigir, execute o script fix_events.py")
+    else:
+        print(f"\n[OK] Todas as reuniões futuras estão com status correto!")
 
-print("\n=== PRIMEIROS 5 ANIVERSARIOS ===")
-for e in GeneralCalendarEvent.query.filter_by(is_birthday=True).order_by(GeneralCalendarEvent.start_date).limit(5).all():
-    print(f"{e.id}: {e.title} - {e.birthday_user_name} ({e.start_date})")
+    # Mostrar estatísticas de status
+    print(f"\n=== Estatísticas de Status (Reuniões Futuras) ===")
+    status_counts = {}
+    for meeting in future_meetings:
+        status = meeting.status.value
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    for status, count in sorted(status_counts.items()):
+        print(f"  {status}: {count}")

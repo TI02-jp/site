@@ -459,6 +459,16 @@ class SetorForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
+ACORDO_CHOICES = [
+    ('SEM ACORDO', 'SEM ACORDO'),
+    ('OK - PAGO', 'OK - PAGO'),
+    ('CORTESIA', 'CORTESIA'),
+    ('A VISTA', 'A VISTA'),
+    ('DEBITAR', 'DEBITAR'),
+    ('TADEU H.', 'TADEU H.')
+]
+
+
 class NotaDebitoForm(FlaskForm):
     """Formulário para cadastro de notas para débito."""
     data_emissao = DateField('Data de Emissão', validators=[Optional()])
@@ -468,18 +478,7 @@ class NotaDebitoForm(FlaskForm):
     valor_un = StringField('Valor UN', validators=[Optional()])
     total = StringField('Total', validators=[Optional()])
     acordo = StringField('Acordo', validators=[Optional()])
-    forma_pagamento = SelectField(
-        'Forma de Pagamento',
-        choices=[
-            ('Sem acordo', 'Sem acordo'),
-            ('OK - Pago', 'OK - Pago'),
-            ('Cortesia', 'Cortesia'),
-            ('À vista', 'À vista'),
-            ('Debitar', 'Debitar'),
-            ('Tadeu H.', 'Tadeu H.')
-        ],
-        validators=[Optional()]
-    )
+    forma_pagamento = SelectField('Forma de Pagamento', choices=ACORDO_CHOICES, validators=[Optional()])
     tem_observacao = BooleanField('Adicionar Observação')
     observacao = TextAreaField('Observação', validators=[Optional()])
     submit = SubmitField('Salvar')
@@ -489,18 +488,7 @@ class CadastroNotaForm(FlaskForm):
     """Formulário para cadastro de notas."""
     cadastro = StringField('Cadastro', validators=[Optional()])
     valor = StringField('Valor', validators=[Optional()])
-    forma_pagamento = SelectField(
-        'Forma de Pagamento',
-        choices=[
-            ('Sem acordo', 'Sem acordo'),
-            ('OK - Pago', 'OK - Pago'),
-            ('Cortesia', 'Cortesia'),
-            ('À vista', 'À vista'),
-            ('Debitar', 'Debitar'),
-            ('Tadeu H.', 'Tadeu H.')
-        ],
-        validators=[Optional()]
-    )
+    forma_pagamento = SelectField('Acordo', choices=ACORDO_CHOICES, validators=[Optional()])
     submit = SubmitField('Salvar')
 
 
