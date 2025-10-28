@@ -1,0 +1,41 @@
+{% set report_links = [
+    ("relatorios", "Visão geral", "bi-grid-1x2"),
+    ("relatorio_empresas", "Empresas", "bi-building"),
+    ("relatorio_fiscal", "Fiscal", "bi-receipt-cutoff"),
+    ("relatorio_contabil", "Contábil", "bi-calculator"),
+    ("relatorio_usuarios", "Usuários", "bi-person-gear"),
+    ("relatorios_consultorias", "Consultorias", "bi-bar-chart")
+] %}
+{% set active_endpoint = request.endpoint or "" %}
+{% set report_endpoints = report_links | map(attribute=0) | list %}
+{% set is_reports_section_active = active_endpoint in report_endpoints %}
+{% set collapse_target = collapse_id or "reportsMenu" %}
+<li class="nav-item nav-item--reports">
+    <a
+        class="nav-link nav-link-toggle{% if is_reports_section_active %} active{% endif %}"
+        data-bs-toggle="collapse"
+        href="#{{ collapse_target }}"
+        role="button"
+        aria-expanded="{{ 'true' if is_reports_section_active else 'false' }}"
+        aria-controls="{{ collapse_target }}"
+    >
+        <i class="bi bi-graph-up"></i>
+        <span>Relatórios</span>
+        <i class="bi bi-chevron-down toggle-icon ms-auto"></i>
+    </a>
+    <div class="collapse nav-submenu-container{% if is_reports_section_active %} show{% endif %}" id="{{ collapse_target }}">
+        <ul class="nav flex-column nav-submenu">
+            {% for endpoint, label, icon in report_links %}
+            <li class="nav-subitem">
+                <a
+                    class="nav-sublink{% if active_endpoint == endpoint %} active{% endif %}"
+                    href="{{ url_for(endpoint) }}"
+                >
+                    <i class="bi {{ icon }}"></i>
+                    <span>{{ label }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</li>

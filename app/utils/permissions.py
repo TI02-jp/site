@@ -17,6 +17,3 @@ def is_user_admin(user) -> bool:
     return user.role in ("admin", "admin_master")
 
 
-def requires_admin_role(user) -> bool:
-    """Alias for is_user_admin for backward compatibility."""
-    return is_user_admin(user)

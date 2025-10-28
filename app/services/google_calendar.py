@@ -436,33 +436,3 @@ def update_meet_space_preferences(
         raise
 
 
-def verify_meet_space_config(meet_link: str) -> dict | None:
-    """Verify and return the current configuration of a Meet space.
-
-    Returns the space configuration or None if unable to retrieve.
-    This can be used to confirm that settings were successfully applied.
-    """
-    meeting_code = _extract_meeting_code(meet_link)
-    if meeting_code is None:
-        print(f"Invalid Google Meet link for verification: {meet_link}")
-        return None
-
-    space_name = f"spaces/{meeting_code}"
-
-    try:
-        service = _build_meet_service()
-        response = service.spaces().get(name=space_name).execute()
-
-        config = response.get("config", {})
-        print(f"Retrieved Meet space config for {space_name}: {config}")
-        return config
-    except HttpError as e:
-        print(f"HttpError retrieving Meet config for {space_name}: {e}")
-        return None
-    except (socket.timeout, socket.error) as e:
-        print(f"Timeout retrieving Meet config for {space_name}: {e}")
-        return None
-    except Exception as e:
-        print(f"Unexpected error retrieving Meet config for {space_name}: {type(e).__name__}: {e}")
-        return None
-
