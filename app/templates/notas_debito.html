@@ -39,7 +39,9 @@
                             <th class="text-start">Valor UN</th>
                             <th class="text-start">Total</th>
                             <th class="text-start">Acordo</th>
-                            <th class="text-start">Forma de Pagamento</th>
+                            {% if pode_ver_forma_pagamento %}
+                            <th class="text-start">Pagamento</th>
+                            {% endif %}
                             <th class="text-start" title="Observação"><i class="bi bi-chat-left-text"></i></th>
                             <th class="text-end">Ações</th>
                         </tr>
@@ -54,9 +56,11 @@
                             <td class="text-start">{{ n.valor_un_formatado }}</td>
                             <td class="text-start">{{ n.total_formatado }}</td>
                             <td class="text-start">{{ (n.acordo or '#N/A')|upper }}</td>
+                            {% if pode_ver_forma_pagamento %}
                             <td class="text-start">
                                 <span class="badge forma-pagamento-badge-{{ n.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">{{ n.forma_pagamento|upper }}</span>
                             </td>
+                            {% endif %}
                             <td class="text-start">
                                 {% if n.observacao %}
                                 <i class="bi bi-chat-left-text-fill text-primary"
@@ -173,10 +177,12 @@
                             <label for="{{ nota_form.acordo.id }}" class="form-label fw-semibold">{{ nota_form.acordo.label.text }}</label>
                             {{ nota_form.acordo(class="form-control") }}
                         </div>
+                        {% if pode_ver_forma_pagamento %}
                         <div class="col-md-3">
                             <label for="{{ nota_form.forma_pagamento.id }}" class="form-label fw-semibold">{{ nota_form.forma_pagamento.label.text }}</label>
                             {{ nota_form.forma_pagamento(class="form-select") }}
                         </div>
+                        {% endif %}
                         <div class="col-md-12 mt-2">
                             <div class="form-check">
                                 {{ nota_form.tem_observacao(class="form-check-input", id="temObservacaoCheck") }}
@@ -232,37 +238,20 @@
         font-size: 0.7rem;
         padding: 0.3rem 0.5rem;
     }
-    .forma-pagamento-badge-debitar {
+    .forma-pagamento-badge-pix {
         background-color: #d4edda !important;
         color: #155724 !important;
         border: 1px solid #c3e6cb;
     }
-    .forma-pagamento-badge-a-vista,
-    .forma-pagamento-badge-à-vista {
+    .forma-pagamento-badge-dinheiro {
+        background-color: #cfe2ff !important;
+        color: #084298 !important;
+        border: 1px solid #b6d4fe;
+    }
+    .forma-pagamento-badge-débito {
         background-color: #fff3cd !important;
-        color: #856404 !important;
+        color: #664d03 !important;
         border: 1px solid #ffeaa7;
-    }
-    .forma-pagamento-badge-sem-acordo {
-        background-color: #f8d7da !important;
-        color: #721c24 !important;
-        border: 1px solid #f5c6cb;
-    }
-    .forma-pagamento-badge-tadeu-h {
-        background-color: #d1ecf1 !important;
-        color: #0c5460 !important;
-        border: 1px solid #bee5eb;
-    }
-    .forma-pagamento-badge-cortesia {
-        background-color: #e2e3e5 !important;
-        color: #383d41 !important;
-        border: 1px solid #d6d8db;
-    }
-    .forma-pagamento-badge-ok---pago,
-    .forma-pagamento-badge-ok-pago {
-        background-color: #ffd9a8 !important;
-        color: #856404 !important;
-        border: 1px solid #ffc266;
     }
 </style>
 <script>
@@ -417,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('{{ nota_form.valor_un.id }}').value = '';
                 document.getElementById('{{ nota_form.total.id }}').value = '';
                 document.getElementById('{{ nota_form.acordo.id }}').value = '';
-                document.getElementById('{{ nota_form.forma_pagamento.id }}').value = 'SEM ACORDO';
+                document.getElementById('{{ nota_form.forma_pagamento.id }}').value = '';
 
                 // Reset observacao fields
                 if (temObservacaoCheck) temObservacaoCheck.checked = false;
