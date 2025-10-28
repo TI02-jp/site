@@ -41,7 +41,7 @@
                         <tr>
                             <th class="text-start">Cadastro</th>
                             <th class="text-start">Valor</th>
-                            <th class="text-start">Acordo</th>
+                            <th class="text-start">Acordos</th>
                             <th class="text-start">Ações</th>
                         </tr>
                     </thead>
@@ -50,11 +50,7 @@
                         <tr>
                             <td class="text-start">{{ c.cadastro|upper }}</td>
                             <td class="text-start">{{ c.valor_formatado }}</td>
-                            <td class="text-start">
-                                <span class="badge forma-pagamento-badge-{{ c.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">
-                                    {{ c.forma_pagamento|upper }}
-                                </span>
-                            </td>
+                            <td class="text-start">{{ (c.acordo or '#N/A')|upper }}</td>
                             <td class="text-start">
                                 <button type="button"
                                         class="btn btn-custom btn-sm me-1"
@@ -65,7 +61,7 @@
                                         data-cadastro-id="{{ c.id }}"
                                         data-cadastro-nome="{{ c.cadastro|e }}"
                                         data-cadastro-valor="{{ c.valor }}"
-                                        data-cadastro-pagamento="{{ c.forma_pagamento|upper }}">
+                                        data-cadastro-acordo="{{ (c.acordo or '')|upper }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button type="button"
@@ -127,8 +123,8 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label for="{{ cadastro_form.forma_pagamento.id }}" class="form-label fw-semibold">{{ cadastro_form.forma_pagamento.label.text }}</label>
-                            {{ cadastro_form.forma_pagamento(class="form-select") }}
+                            <label for="{{ cadastro_form.acordo.id }}" class="form-label fw-semibold">{{ cadastro_form.acordo.label.text }}</label>
+                            {{ cadastro_form.acordo(class="form-select") }}
                         </div>
                     </div>
                 </div>
@@ -154,37 +150,20 @@
 {% block scripts %}
 {{ super() }}
 <style>
-    .forma-pagamento-badge-debitar {
+    .forma-pagamento-badge-pix {
         background-color: #d4edda !important;
         color: #155724 !important;
         border: 1px solid #c3e6cb;
     }
-    .forma-pagamento-badge-a-vista,
-    .forma-pagamento-badge-à-vista {
+    .forma-pagamento-badge-dinheiro {
+        background-color: #cfe2ff !important;
+        color: #084298 !important;
+        border: 1px solid #b6d4fe;
+    }
+    .forma-pagamento-badge-débito {
         background-color: #fff3cd !important;
-        color: #856404 !important;
+        color: #664d03 !important;
         border: 1px solid #ffeaa7;
-    }
-    .forma-pagamento-badge-sem-acordo {
-        background-color: #f8d7da !important;
-        color: #721c24 !important;
-        border: 1px solid #f5c6cb;
-    }
-    .forma-pagamento-badge-tadeu-h {
-        background-color: #d1ecf1 !important;
-        color: #0c5460 !important;
-        border: 1px solid #bee5eb;
-    }
-    .forma-pagamento-badge-cortesia {
-        background-color: #e2e3e5 !important;
-        color: #383d41 !important;
-        border: 1px solid #d6d8db;
-    }
-    .forma-pagamento-badge-ok---pago,
-    .forma-pagamento-badge-ok-pago {
-        background-color: #ffd9a8 !important;
-        color: #856404 !important;
-        border: 1px solid #ffc266;
     }
 </style>
 <script>
@@ -220,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('{{ cadastro_form.cadastro.id }}').value = data.nome || '';
             document.getElementById('{{ cadastro_form.valor.id }}').value = data.valor || '';
-            document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = data.pagamento || '';
+            document.getElementById('{{ cadastro_form.acordo.id }}').value = data.acordo || '';
         } else {
             formNameInput.value = 'cadastro_create';
             cadastroIdInput.value = '';
@@ -231,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!data.preserveValues) {
                 document.getElementById('{{ cadastro_form.cadastro.id }}').value = '';
                 document.getElementById('{{ cadastro_form.valor.id }}').value = '';
-                document.getElementById('{{ cadastro_form.forma_pagamento.id }}').value = 'CORTESIA';
+                document.getElementById('{{ cadastro_form.acordo.id }}').value = '';
             }
         }
     }
@@ -249,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 id: target.getAttribute('data-cadastro-id'),
                 nome: target.getAttribute('data-cadastro-nome') || '',
                 valor: target.getAttribute('data-cadastro-valor') || '',
-                pagamento: target.getAttribute('data-cadastro-pagamento') || ''
+                acordo: target.getAttribute('data-cadastro-acordo') || ''
             });
             cadastroModal.show();
         });

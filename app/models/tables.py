@@ -635,6 +635,7 @@ class CadastroNota(db.Model):
     pix = db.Column(db.String(100), nullable=True)
     cadastro = db.Column(db.String(255), nullable=False)
     valor = db.Column(db.Numeric(10, 2), nullable=False)
+    acordo = db.Column(db.String(100), nullable=True)
     forma_pagamento = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

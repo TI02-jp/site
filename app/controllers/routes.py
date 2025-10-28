@@ -4237,7 +4237,7 @@ def notas_debito():
     cadastros_json = json.dumps([{
         'nome': (c.cadastro or '').upper(),
         'valor': float(c.valor) if c.valor else 0,
-        'acordo': (c.forma_pagamento or '').upper()
+        'acordo': (c.acordo or '').upper()
     } for c in cadastros])
 
     open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")
@@ -4323,6 +4323,9 @@ def notas_debito():
             flash("Nota excluída com sucesso.", "success")
             return redirect(url_for("notas_debito"))
 
+    # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
+    pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
+
     return render_template(
         "notas_debito.html",
         notas=notas,
@@ -4331,6 +4334,7 @@ def notas_debito():
         editing_nota=editing_nota,
         cadastros=cadastros,
         cadastros_json=cadastros_json,
+        pode_ver_forma_pagamento=pode_ver_forma_pagamento,
     )
 
 
@@ -4372,7 +4376,8 @@ def cadastro_notas():
                         pix="49991352070",
                         cadastro=cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else '',
                         valor=valor,
-                        forma_pagamento=(cadastro_form.forma_pagamento.data or '').upper()
+                        acordo=cadastro_form.acordo.data.strip().upper() if cadastro_form.acordo.data else None,
+                        forma_pagamento=''
                     )
                     db.session.add(cadastro)
                     db.session.commit()
@@ -4395,7 +4400,7 @@ def cadastro_notas():
                     editing_cadastro.pix = "49991352070"
                     editing_cadastro.cadastro = cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else ''
                     editing_cadastro.valor = valor
-                    editing_cadastro.forma_pagamento = (cadastro_form.forma_pagamento.data or '').upper()
+                    editing_cadastro.acordo = cadastro_form.acordo.data.strip().upper() if cadastro_form.acordo.data else None
                     db.session.commit()
                     flash("Cadastro atualizado com sucesso.", "success")
                     return redirect(url_for("cadastro_notas"))
@@ -4411,12 +4416,16 @@ def cadastro_notas():
             flash("Cadastro excluído com sucesso.", "success")
             return redirect(url_for("cadastro_notas"))
 
+    # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
+    pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
+
     return render_template(
         "cadastro_notas.html",
         cadastros=cadastros,
         cadastro_form=cadastro_form,
         open_cadastro_modal=open_cadastro_modal,
         editing_cadastro=editing_cadastro,
+        pode_ver_forma_pagamento=pode_ver_forma_pagamento,
     )
 
 

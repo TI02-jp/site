@@ -459,7 +459,15 @@ class SetorForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
+PAGAMENTO_CHOICES = [
+    ('', ''),
+    ('PIX', 'PIX'),
+    ('DINHEIRO', 'DINHEIRO'),
+    ('DÉBITO', 'DÉBITO')
+]
+
 ACORDO_CHOICES = [
+    ('', ''),
     ('SEM ACORDO', 'SEM ACORDO'),
     ('OK - PAGO', 'OK - PAGO'),
     ('CORTESIA', 'CORTESIA'),
@@ -478,7 +486,7 @@ class NotaDebitoForm(FlaskForm):
     valor_un = StringField('Valor UN', validators=[Optional()])
     total = StringField('Total', validators=[Optional()])
     acordo = StringField('Acordo', validators=[Optional()])
-    forma_pagamento = SelectField('Forma de Pagamento', choices=ACORDO_CHOICES, validators=[Optional()])
+    forma_pagamento = SelectField('Pagamento', choices=PAGAMENTO_CHOICES, validators=[Optional()])
     tem_observacao = BooleanField('Adicionar Observação')
     observacao = TextAreaField('Observação', validators=[Optional()])
     submit = SubmitField('Salvar')
@@ -488,7 +496,7 @@ class CadastroNotaForm(FlaskForm):
     """Formulário para cadastro de notas."""
     cadastro = StringField('Cadastro', validators=[Optional()])
     valor = StringField('Valor', validators=[Optional()])
-    forma_pagamento = SelectField('Acordo', choices=ACORDO_CHOICES, validators=[Optional()])
+    acordo = SelectField('Acordos', choices=ACORDO_CHOICES, validators=[Optional()])
     submit = SubmitField('Salvar')
 
 
