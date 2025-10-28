@@ -96,23 +96,56 @@ def get_calendar_timezone() -> ZoneInfo:
     return ZoneInfo(tz_name)
 
 
-def list_upcoming_events(max_results: int = 10):
-    """Return upcoming events for the meeting room calendar."""
+def list_upcoming_events(
+    *,
+    max_results: int | None = 250,
+    time_max: datetime | None = None,
+) -> list[dict]:
+    """Return upcoming events for the meeting room calendar.
+
+    When ``max_results`` is ``None`` the function keeps paginating (250 per page)
+    until it exhausts all pages or reaches ``time_max``. Pagination ensures that
+    events muito distantes (ex.: anos à frente) sejam retornados quando o
+    calendário já contém muitos compromissos futuros.
+    """
     try:
         service = _build_service()
-        now = datetime.now(get_calendar_timezone()).isoformat()
-        events_result = (
-            service.events()
-            .list(
-                calendarId=MEETING_ROOM_EMAIL,
-                timeMin=now,
-                maxResults=max_results,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        return events_result.get("items", [])
+        calendar_tz = get_calendar_timezone()
+        now_iso = datetime.now(calendar_tz).isoformat()
+        base_params: dict[str, object] = {
+            "calendarId": MEETING_ROOM_EMAIL,
+            "timeMin": now_iso,
+            "singleEvents": True,
+            "orderBy": "startTime",
+        }
+        if time_max is not None:
+            base_params["timeMax"] = time_max.astimezone(calendar_tz).isoformat()
+
+        per_page = 250 if max_results is None else max(1, min(max_results, 250))
+        events: list[dict] = []
+        remaining = max_results
+        page_token: str | None = None
+
+        while True:
+            params = dict(base_params)
+            params["maxResults"] = per_page if remaining is None else max(1, min(per_page, remaining))
+            if page_token:
+                params["pageToken"] = page_token
+
+            response = service.events().list(**params).execute()
+            items = response.get("items", [])
+            events.extend(items)
+
+            if remaining is not None:
+                remaining -= len(items)
+                if remaining <= 0:
+                    break
+
+            page_token = response.get("nextPageToken")
+            if not page_token:
+                break
+
+        return events
     except (socket.timeout, socket.error) as e:
         # Return empty list on timeout to prevent blocking the application
         print(f"Google Calendar API timeout: {e}")

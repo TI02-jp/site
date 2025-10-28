@@ -245,15 +245,17 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             {{ form.date.label(class="form-label") }}
-                                            {{ form.date(class="form-control", type="date") }}
+                                            {{ form.date(class="form-control", type="date", id="meeting_date", min=today_date) }}
+                                            <div class="form-text">Data não pode ser no passado</div>
                                         </div>
                                         <div class="mb-3">
                                             {{ form.start_time.label(class="form-label") }}
-                                            {{ form.start_time(class="form-control", type="time") }}
+                                            {{ form.start_time(class="form-control", type="time", id="meeting_start_time") }}
                                         </div>
                                         <div class="mb-3">
                                             {{ form.end_time.label(class="form-label") }}
-                                            {{ form.end_time(class="form-control", type="time") }}
+                                            {{ form.end_time(class="form-control", type="time", id="meeting_end_time") }}
+                                            <div class="form-text">Término deve ser após o início</div>
                                         </div>
                                     </div>
                                 </div>
@@ -287,10 +289,11 @@
                                     </div>
                                     <div class="col-md-6 d-none" id="recorrenciaFimWrapper">
                                         {{ form.recorrencia_fim.label(class="form-label") }}
-                                        {{ form.recorrencia_fim(class="form-control", type="date", id="recorrencia_fim") }}
+                                        {{ form.recorrencia_fim(class="form-control", type="date", id="recorrencia_fim", min=today_date) }}
                                         {% if form.recorrencia_fim.errors %}
                                             <div class="text-danger small mt-1">{{ form.recorrencia_fim.errors[0] }}</div>
                                         {% endif %}
+                                        <div class="form-text">Data final da recorrência</div>
                                     </div>
                                 </div>
                                 <div class="mb-3 d-none" id="recorrenciaDiasWrapper">
@@ -390,7 +393,7 @@
                                         <div class="row g-2">
                                             <div class="col-12 col-md-4">
                                                 <label for="postponeDate" class="form-label">Nova data</label>
-                                                <input type="date" class="form-control" id="postponeDate">
+                                                <input type="date" class="form-control" id="postponeDate" min="{{ today_date }}">
                                             </div>
                                             <div class="col-6 col-md-4">
                                                 <label for="postponeStart" class="form-label">Início</label>
@@ -574,6 +577,30 @@
     if (recorrenciaTipoSelect) {
         recorrenciaTipoSelect.addEventListener('change', toggleRecurrenceFields);
         toggleRecurrenceFields(); // Inicializar no carregamento
+    }
+
+    // Validação de horários: término deve ser após início
+    var meetingStartTime = document.getElementById('meeting_start_time');
+    var meetingEndTime = document.getElementById('meeting_end_time');
+
+    function validateMeetingTimes() {
+        if (!meetingStartTime || !meetingEndTime) return true;
+
+        var start = meetingStartTime.value;
+        var end = meetingEndTime.value;
+
+        if (start && end && end <= start) {
+            meetingEndTime.setCustomValidity('O horário de término deve ser posterior ao de início');
+            return false;
+        } else {
+            meetingEndTime.setCustomValidity('');
+            return true;
+        }
+    }
+
+    if (meetingStartTime && meetingEndTime) {
+        meetingStartTime.addEventListener('change', validateMeetingTimes);
+        meetingEndTime.addEventListener('change', validateMeetingTimes);
     }
 
     var applyMoreDaysCheckbox = document.getElementById('apply_more_days');

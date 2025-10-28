@@ -34,13 +34,13 @@
                         <tr>
                             <th class="text-start">Data Emissão</th>
                             <th class="text-start">Empresa</th>
-                            <th class="text-center">Notas</th>
-                            <th class="text-center">Qtde Itens</th>
-                            <th class="text-end">Valor UN</th>
-                            <th class="text-end">Total</th>
+                            <th class="text-start">Notas</th>
+                            <th class="text-start">Qtde Itens</th>
+                            <th class="text-start">Valor UN</th>
+                            <th class="text-start">Total</th>
                             <th class="text-start">Acordo</th>
                             <th class="text-start">Forma de Pagamento</th>
-                            <th class="text-center" title="Observação"><i class="bi bi-chat-left-text"></i></th>
+                            <th class="text-start" title="Observação"><i class="bi bi-chat-left-text"></i></th>
                             <th class="text-end">Ações</th>
                         </tr>
                     </thead>
@@ -48,16 +48,16 @@
                         {% for n in notas %}
                         <tr>
                             <td class="text-start">{{ n.data_emissao_formatada }}</td>
-                            <td class="text-start">{{ n.empresa }}</td>
-                            <td class="text-center">{{ n.notas }}</td>
-                            <td class="text-center">{{ n.qtde_itens }}</td>
-                            <td class="text-end">{{ n.valor_un_formatado }}</td>
-                            <td class="text-end">{{ n.total_formatado }}</td>
-                            <td class="text-start">{{ n.acordo or '#N/A' }}</td>
+                            <td class="text-start">{{ n.empresa|upper }}</td>
+                            <td class="text-start">{{ n.notas }}</td>
+                            <td class="text-start">{{ n.qtde_itens }}</td>
+                            <td class="text-start">{{ n.valor_un_formatado }}</td>
+                            <td class="text-start">{{ n.total_formatado }}</td>
+                            <td class="text-start">{{ (n.acordo or '#N/A')|upper }}</td>
                             <td class="text-start">
-                                <span class="badge forma-pagamento-badge-{{ n.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">{{ n.forma_pagamento }}</span>
+                                <span class="badge forma-pagamento-badge-{{ n.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">{{ n.forma_pagamento|upper }}</span>
                             </td>
-                            <td class="text-center">
+                            <td class="text-start">
                                 {% if n.observacao %}
                                 <i class="bi bi-chat-left-text-fill text-primary"
                                    title="{{ n.observacao }}"
@@ -65,7 +65,7 @@
                                    data-bs-toggle="tooltip"></i>
                                 {% endif %}
                             </td>
-                            <td class="text-end">
+                            <td class="text-start">
                                 <button type="button"
                                         class="btn btn-custom btn-sm me-1"
                                         title="Editar"
@@ -74,13 +74,13 @@
                                         data-bs-toggle="modal"
                                         data-nota-id="{{ n.id }}"
                                         data-nota-data="{{ n.data_emissao }}"
-                                        data-nota-empresa="{{ n.empresa|e }}"
+                                        data-nota-empresa="{{ n.empresa|upper|e }}"
                                         data-nota-notas="{{ n.notas }}"
                                         data-nota-qtde="{{ n.qtde_itens }}"
                                         data-nota-valor-un="{{ n.valor_un or '' }}"
                                         data-nota-total="{{ n.total or '' }}"
-                                        data-nota-acordo="{{ n.acordo or '' }}"
-                                        data-nota-pagamento="{{ n.forma_pagamento }}"
+                                        data-nota-acordo="{{ (n.acordo or '')|upper }}"
+                                        data-nota-pagamento="{{ n.forma_pagamento|upper }}"
                                         data-nota-observacao="{{ n.observacao or '' }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -89,14 +89,14 @@
                                         title="Excluir"
                                         data-nota-delete
                                         data-nota-id="{{ n.id }}"
-                                        data-nota-empresa="{{ n.empresa|e }}">
+                                        data-nota-empresa="{{ n.empresa|upper|e }}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="9" class="text-start py-5 text-muted">
                                 <i class="bi bi-receipt fs-1 d-block mb-3"></i>
                                 Nenhuma nota cadastrada
                             </td>
@@ -218,6 +218,7 @@
         color: #155724 !important;
         border: 1px solid #c3e6cb;
     }
+    .forma-pagamento-badge-a-vista,
     .forma-pagamento-badge-à-vista {
         background-color: #fff3cd !important;
         color: #856404 !important;
@@ -263,12 +264,23 @@ document.addEventListener('DOMContentLoaded', function() {
     var empresaField = document.getElementById('{{ nota_form.empresa.id }}');
     var valorUnField = document.getElementById('{{ nota_form.valor_un.id }}');
     var formaPagamentoField = document.getElementById('{{ nota_form.forma_pagamento.id }}');
+    var acordoTextField = document.getElementById('{{ nota_form.acordo.id }}');
     var notasField = document.getElementById('{{ nota_form.notas.id }}');
     var totalField = document.getElementById('{{ nota_form.total.id }}');
     var temObservacaoCheck = document.getElementById('temObservacaoCheck');
     var observacaoField = document.getElementById('observacaoField');
     var observacaoTextarea = document.getElementById('{{ nota_form.observacao.id }}');
 
+    if (empresaField) {
+        empresaField.addEventListener('blur', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
+    if (acordoTextField) {
+        acordoTextField.addEventListener('blur', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
     // Toggle observação field
     if (temObservacaoCheck && observacaoField) {
         temObservacaoCheck.addEventListener('change', function() {
@@ -314,15 +326,22 @@ document.addEventListener('DOMContentLoaded', function() {
             var cadastro = empresaCadastroMap[empresaNome];
 
             if (cadastro) {
+                // Normalizar nome
+                if (empresaField && cadastro.nome) {
+                    empresaField.value = cadastro.nome;
+                }
                 // Preencher Valor UN
                 if (valorUnField && cadastro.valor) {
                     valorUnField.value = cadastro.valor.toFixed(2).replace('.', ',');
                     // Recalcular total após preencher valor
                     calcularTotal();
                 }
-                // Preencher Forma de Pagamento
-                if (formaPagamentoField && cadastro.forma_pagamento) {
-                    formaPagamentoField.value = cadastro.forma_pagamento;
+                // Preencher Acordo
+                if (formaPagamentoField && cadastro.acordo) {
+                    formaPagamentoField.value = cadastro.acordo;
+                }
+                if (acordoTextField) {
+                    acordoTextField.value = cadastro.acordo || '';
                 }
             }
         });
@@ -379,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('{{ nota_form.valor_un.id }}').value = '';
                 document.getElementById('{{ nota_form.total.id }}').value = '';
                 document.getElementById('{{ nota_form.acordo.id }}').value = '';
-                document.getElementById('{{ nota_form.forma_pagamento.id }}').value = 'Sem acordo';
+                document.getElementById('{{ nota_form.forma_pagamento.id }}').value = 'SEM ACORDO';
 
                 // Reset observacao fields
                 if (temObservacaoCheck) temObservacaoCheck.checked = false;
