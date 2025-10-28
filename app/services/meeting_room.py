@@ -724,79 +724,6 @@ def serialize_meeting_event(
     return event_data, status_changed
 
 
-def _create_additional_meeting(
-    additional_date,
-    form,
-    duration: timedelta,
-    selected_users: list[User],
-    description: str,
-    participant_emails: list[str],
-    should_notify: bool,
-    user_id: int,
-    course_id: int | None,
-):
-    start_dt = datetime.combine(
-        additional_date, form.start_time.data, tzinfo=CALENDAR_TZ
-    )
-    end_dt = start_dt + duration
-    if form.create_meet.data:
-        event = create_meet_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
-        )
-        meet_link = event.get("hangoutLink")
-    else:
-        event = create_event(
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            notify_attendees=should_notify,
-        )
-        meet_link = None
-    meeting = Reuniao(
-        inicio=start_dt,
-        fim=end_dt,
-        assunto=form.subject.data,
-        descricao=form.description.data,
-        status=ReuniaoStatus.AGENDADA,
-        meet_link=meet_link,
-        google_event_id=event["id"],
-        criador_id=user_id,
-        course_id=course_id,
-    )
-    meeting.meet_host_id = user_id
-    meeting.meet_settings = _normalize_meet_settings()
-    db.session.add(meeting)
-    db.session.flush()
-    for u in selected_users:
-        db.session.add(
-            ReuniaoParticipante(
-                reuniao_id=meeting.id, id_usuario=u.id, username_usuario=u.username
-            )
-        )
-    db.session.commit()
-    if meeting.meet_link:
-        _queue_meet_preferences_sync(meeting.id, reason="replicated_meeting")
-    formatted_date = additional_date.strftime("%d/%m/%Y")
-    if meet_link:
-        flash(
-            Markup(
-                f"Reunião replicada para {formatted_date}! "
-                f"<a href=\"{meet_link}\" target=\"_blank\">Link do Meet</a>"
-            ),
-            "success",
-        )
-    else:
-        flash(f"Reunião replicada para {formatted_date}!", "success")
-    return meet_link
-
-
 def create_meeting_and_event(form, raw_events, now, user_id: int):
     """Create meeting adjusting times to avoid conflicts."""
 
@@ -1289,12 +1216,6 @@ def change_meeting_status(
         raise ValueError(
             "Não é possível marcar como agendada uma reunião cujo horário já foi concluído."
         )
-    # Saga Pattern: Save original state for rollback in case of Google API failure
-    original_status = meeting.status
-    original_inicio = meeting.inicio
-    original_fim = meeting.fim
-    original_meet_link = meeting.meet_link
-
     meeting.status = new_status
     participant_meta = _meeting_participant_metadata(meeting)
     participant_emails = list(dict.fromkeys(participant_meta["emails"]))

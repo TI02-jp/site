@@ -255,18 +255,6 @@ def broadcast_task_created(
     )
 
 
-def broadcast_task_updated(
-    task_data: Dict[str, Any], exclude_user: Optional[int] = None
-) -> None:
-    """Broadcast that a task was updated."""
-    _broadcaster.broadcast(
-        event_type="task:updated",
-        data=task_data,
-        scope="tasks",
-        exclude_user=exclude_user,
-    )
-
-
 def broadcast_task_deleted(
     task_id: int, exclude_user: Optional[int] = None
 ) -> None:
@@ -300,46 +288,3 @@ def broadcast_task_status_changed(
     )
 
 
-def broadcast_company_created(
-    company_data: Dict[str, Any], exclude_user: Optional[int] = None
-) -> None:
-    """Broadcast that a new company was created."""
-    _broadcaster.broadcast(
-        event_type="company:created",
-        data=company_data,
-        scope="companies",
-        exclude_user=exclude_user,
-    )
-
-
-def broadcast_company_updated(
-    company_data: Dict[str, Any], exclude_user: Optional[int] = None
-) -> None:
-    """Broadcast that a company was updated."""
-    _broadcaster.broadcast(
-        event_type="company:updated",
-        data=company_data,
-        scope="companies",
-        exclude_user=exclude_user,
-    )
-
-
-def broadcast_company_deleted(
-    company_id: int, exclude_user: Optional[int] = None
-) -> None:
-    """Broadcast that a company was deleted."""
-    _broadcaster.broadcast(
-        event_type="company:deleted",
-        data={"id": company_id},
-        scope="companies",
-        exclude_user=exclude_user,
-    )
-
-
-def broadcast_user_presence(user_id: int, status: str) -> None:
-    """Broadcast user presence change (online/offline)."""
-    _broadcaster.broadcast(
-        event_type="user:presence",
-        data={"user_id": user_id, "status": status},
-        scope="presence",
-    )
