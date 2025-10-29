@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <title>Feedback da Diretoria JP</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #212529;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            background-color: #ffffff;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: #0d6efd;
+        }
+        .meta {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 16px;
+        }
+        .card {
+            border: 1px solid rgba(13, 110, 253, 0.2);
+            border-radius: 12px;
+            padding: 18px;
+            background-color: rgba(13, 110, 253, 0.03);
+        }
+        .card h2 {
+            font-size: 18px;
+            margin: 0 0 8px;
+            color: #0b5ed7;
+        }
+        .card .date {
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 12px;
+        }
+        .card .content {
+            font-size: 15px;
+            line-height: 1.55;
+        }
+        .footer {
+            margin-top: 24px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <h1>Feedback {{ action_label }} na Diretoria JP</h1>
+        <p>Olá, {{ destinatario.name }}.</p>
+        <p>
+            O feedback <strong>{{ feedback.title }}</strong> foi {{ action_label }}
+            em {{ feedback.feedback_date.strftime('%d/%m/%Y') }} pela equipe da Diretoria JP.
+        </p>
+
+        <div class="card">
+            <h2>{{ feedback.title }}</h2>
+            <div class="date">Data do feedback: {{ feedback.feedback_date.strftime('%d/%m/%Y') }}</div>
+            {% if feedback.description %}
+            <div class="content">{{ feedback.description | safe }}</div>
+            {% else %}
+            <div class="content">Nenhuma descrição adicional foi fornecida.</div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            Enviado por {{ editor.name or editor.username }} em {{ now().strftime('%d/%m/%Y %H:%M') }}.
+        </div>
+    </div>
+</body>
+</html>

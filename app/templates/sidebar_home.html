@@ -73,41 +73,52 @@
             </a>
         </li>
         {% endif %}
-        {% if user_has_tag('Gestão') %}
-        {% set diretoria_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar', 'diretoria_acordos'] %}
+        {% if user_has_tag('Gestão') or user_has_tag('Diretoria') %}
+        {% set eventos_active = request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %}
+        {% set acordos_active = request.endpoint == 'diretoria_acordos' %}
+        {% set feedbacks_active = request.endpoint == 'diretoria_feedbacks' %}
+        {% set gestao_active = eventos_active or acordos_active or feedbacks_active %}
         <li class="nav-item">
-            <a class="nav-link{% if diretoria_active %} active{% endif %}"
+            <a class="nav-link{% if gestao_active %} active{% endif %}"
                data-bs-toggle="collapse"
                href="#gestaoMenu"
                role="button"
-               aria-expanded="{{ 'true' if diretoria_active else 'false' }}"
+               aria-expanded="{{ 'true' if gestao_active else 'false' }}"
                aria-controls="gestaoMenu">
                 <i class="bi bi-people"></i>
                 GESTÃO
             </a>
-            <div class="collapse{% if diretoria_active %} show{% endif %}" id="gestaoMenu">
+            <div class="collapse{% if gestao_active %} show{% endif %}" id="gestaoMenu">
                 <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link{% if eventos_active %} active{% endif %}"
+                           href="{{ url_for('diretoria_eventos_lista') }}">
+                            <i class="bi bi-calendar-event"></i>
+                            EVENTOS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if feedbacks_active %} active{% endif %}"
+                           href="{{ url_for('diretoria_feedbacks') }}">
+                            <i class="bi bi-chat-left-text"></i>
+                            FEEDBACKS
+                        </a>
+                    </li>
                     {% if user_has_tag('Diretoria') %}
                     <li class="nav-item">
-                        <a class="nav-link{% if diretoria_active %} active{% endif %}"
+                        <a class="nav-link{% if acordos_active %} active{% endif %}"
                            data-bs-toggle="collapse"
                            href="#diretoriaSubmenu"
                            role="button"
-                           aria-expanded="{{ 'true' if diretoria_active else 'false' }}"
+                           aria-expanded="{{ 'true' if acordos_active else 'false' }}"
                            aria-controls="diretoriaSubmenu">
                             <i class="bi bi-briefcase"></i>
                             DIRETORIA
                         </a>
-                        <div class="collapse{% if diretoria_active %} show{% endif %}" id="diretoriaSubmenu">
+                        <div class="collapse{% if acordos_active %} show{% endif %}" id="diretoriaSubmenu">
                             <ul class="nav flex-column ms-3">
                                 <li class="nav-item">
-                                    <a class="nav-link{% if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
-                                       href="{{ url_for('diretoria_eventos_lista') }}">
-                                        Listar Eventos
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link{% if request.endpoint == 'diretoria_acordos' %} active{% endif %}"
+                                    <a class="nav-link{% if acordos_active %} active{% endif %}"
                                        href="{{ url_for('diretoria_acordos') }}">
                                         Acordos
                                     </a>
