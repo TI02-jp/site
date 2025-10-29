@@ -1336,6 +1336,48 @@ def can_access_controle_notas() -> bool:
     return False
 
 
+def is_meeting_only_user() -> bool:
+    """Return True if current user has ONLY the 'reunião' tag (meeting-only access)."""
+    if not current_user.is_authenticated:
+        return False
+
+    # Admins are not meeting-only users
+    if is_user_admin(current_user):
+        return False
+
+    user_tags = getattr(current_user, 'tags', []) or []
+    if not user_tags:
+        return False
+
+    # Check if user has exactly one tag and it's 'reunião'
+    # OR has multiple tags but only 'reunião' is the functional one
+    has_reunion_tag = any(tag.nome.lower() == 'reunião' for tag in user_tags)
+
+    if not has_reunion_tag:
+        return False
+
+    # If user has only reunião tag, they are meeting-only
+    if len(user_tags) == 1:
+        return True
+
+    # If user has other tags besides reunião, they are NOT meeting-only
+    return False
+
+
+def meeting_only_access_check(f):
+    """Decorator that blocks access for meeting-only users to routes other than meeting room."""
+
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if is_meeting_only_user():
+            flash('Você só tem acesso à Sala de Reuniões.', 'warning')
+            return redirect(url_for('sala_reunioes'))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 def _get_ti_tag() -> Tag | None:
     """Return the TI tag if it exists (cached per request)."""
 
@@ -1384,7 +1426,7 @@ def _get_accessible_tag_ids(user: User | None = None) -> list[int]:
 @app.context_processor
 def inject_user_tag_helpers():
     """Expose user tag helper utilities to templates."""
-    return dict(user_has_tag=user_has_tag, can_access_controle_notas=can_access_controle_notas)
+    return dict(user_has_tag=user_has_tag, can_access_controle_notas=can_access_controle_notas, is_meeting_only_user=is_meeting_only_user)
 
 
 @app.context_processor
@@ -1432,6 +1474,7 @@ def index():
 
 @app.route("/home")
 @login_required
+@meeting_only_access_check
 def home():
     """Render the authenticated home page."""
     with track_custom_span("template", "render_home"):
@@ -1439,6 +1482,7 @@ def home():
 
 @app.route("/announcements", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def announcements():
     """List internal announcements and allow admins to create new ones."""
 
@@ -1799,10 +1843,11 @@ def mark_announcement_read(announcement_id: int):
 
 @app.route("/diretoria/acordos", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def diretoria_acordos():
     """Render and manage Diretoria JP agreements linked to portal users."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     ensure_diretoria_agreement_schema()
@@ -2021,7 +2066,7 @@ def diretoria_acordos():
 def diretoria_acordos_excluir(agreement_id: int):
     """Remove an agreement linked to a Diretoria JP user."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     agreement = DiretoriaAgreement.query.get_or_404(agreement_id)
@@ -2039,10 +2084,11 @@ def diretoria_acordos_excluir(agreement_id: int):
 
 @app.route("/diretoria/eventos", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def diretoria_eventos():
     """Render or persist Diretoria JP event planning data."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     if request.method == "POST":
@@ -2082,7 +2128,7 @@ def diretoria_eventos():
 def diretoria_eventos_editar(event_id: int):
     """Edit an existing Diretoria JP event."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.get_or_404(event_id)
@@ -2160,7 +2206,7 @@ def diretoria_eventos_editar(event_id: int):
 def diretoria_eventos_visualizar(event_id: int):
     """Display the details of a Diretoria JP event without editing it."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.options(joinedload(DiretoriaEvent.created_by)).get_or_404(
@@ -2231,7 +2277,7 @@ def diretoria_eventos_visualizar(event_id: int):
 def diretoria_eventos_lista():
     """Display saved Diretoria JP events with search support."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     search_query = (request.args.get("q") or "").strip()
@@ -2266,7 +2312,7 @@ def diretoria_eventos_lista():
 def diretoria_eventos_excluir(event_id: int):
     """Remove a Diretoria JP event."""
 
-    if current_user.role != "admin" and not user_has_tag("Gestão"):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.get_or_404(event_id)
@@ -2289,6 +2335,7 @@ def diretoria_eventos_excluir(event_id: int):
 
 @app.route("/cursos", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def cursos():
     """Display the curated catalog of internal courses."""
 
@@ -2576,6 +2623,7 @@ def _build_acessos_context(
 
 @app.route("/acessos")
 @login_required
+@meeting_only_access_check
 def acessos():
     """Display the hub with the available access categories and saved shortcuts."""
 
@@ -2742,6 +2790,7 @@ def acessos_excluir(link_id: int):
 
 @app.route("/procedimentos", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def procedimentos_operacionais():
     """Lista e permite criação de procedimentos operacionais."""
 
@@ -3195,6 +3244,7 @@ def realtime_stream():
 
 @app.route("/notificacoes")
 @login_required
+@meeting_only_access_check
 def notifications_center():
     """Render the notification center page."""
 
@@ -3341,6 +3391,7 @@ def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
 
 @app.route("/consultorias", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def consultorias():
     """List registered consultorias and handle modal-based creation and edition."""
 
@@ -3443,6 +3494,7 @@ def consultorias():
 
 @app.route("/calendario-colaboradores", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def calendario_colaboradores():
     """Display and manage the internal collaborators calendar."""
 
@@ -4223,6 +4275,7 @@ def editar_setor(id):
 
 @app.route("/controle-notas/debito", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def notas_debito():
     """List and manage Notas para Débito with modal-based CRUD."""
 
@@ -4340,6 +4393,7 @@ def notas_debito():
 
 @app.route("/controle-notas/cadastro", methods=["GET", "POST"])
 @login_required
+@meeting_only_access_check
 def cadastro_notas():
     """List and manage Cadastro de Notas with modal-based CRUD."""
 
@@ -4709,7 +4763,11 @@ def _determine_post_login_redirect(user: User) -> str:
     if user.role == "admin":
         return url_for("tasks_overview")
 
-    tags = getattr(user, "tags", None)
+    # Check if user has ONLY the "reunião" tag (meeting-only access)
+    tags = getattr(user, "tags", None) or []
+    if len(tags) == 1 and tags[0].nome.lower() == 'reunião':
+        return url_for("sala_reunioes")
+
     first_tag = tags[0] if tags else None
     if first_tag:
         return url_for("tasks_sector", tag_id=first_tag.id)
@@ -4941,6 +4999,7 @@ def cadastrar_empresa():
 
 @app.route("/listar_empresas")
 @login_required
+@meeting_only_access_check
 def listar_empresas():
     """List companies with optional search and pagination."""
     search = request.args.get("q", "").strip()
@@ -6096,6 +6155,7 @@ def _ensure_personal_tag(user: User) -> Tag:
 
 @app.route("/tasks/overview")
 @login_required
+@meeting_only_access_check
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
     assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
@@ -6408,6 +6468,7 @@ def tasks_users(tag_id):
 
 @app.route("/tasks/sector/<int:tag_id>")
 @login_required
+@meeting_only_access_check
 def tasks_sector(tag_id):
     """Kanban board of tasks for a specific sector/tag."""
     tag = Tag.query.get_or_404(tag_id)
