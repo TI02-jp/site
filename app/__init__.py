@@ -358,10 +358,25 @@ def _sanitize_filter(value):
     return Markup(sanitize_html(value))
 
 with app.app_context():
+    # Import models inside the application context so SQLAlchemy metadata
+    # knows about every table before ``create_all``/inspector logic runs.
+    from app.models import tables as _models  # noqa: F401
+
     db.create_all()
 
     try:
         inspector = sa.inspect(db.engine)
+
+        if not inspector.has_table("diretoria_feedbacks"):
+            diretoria_feedback_table = db.metadata.tables.get("diretoria_feedbacks")
+            if diretoria_feedback_table is not None:
+                try:
+                    diretoria_feedback_table.create(bind=db.engine)
+                except SQLAlchemyError as exc:
+                    app.logger.warning(
+                        "Falha ao criar tabela diretoria_feedbacks automaticamente: %s",
+                        exc,
+                    )
 
         meeting_columns = {col["name"] for col in inspector.get_columns("reunioes")}
         if "course_id" not in meeting_columns:

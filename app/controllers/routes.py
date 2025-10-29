@@ -48,6 +48,7 @@ from app.models.tables import (
     CourseTag,
     DiretoriaEvent,
     DiretoriaAgreement,
+    DiretoriaFeedback,
     GeneralCalendarEvent,
     NotaDebito,
     CadastroNota,
@@ -80,6 +81,7 @@ from app.forms import (
     CourseTagForm,
     AnnouncementForm,
     DiretoriaAcordoForm,
+    DiretoriaFeedbackForm,
     OperationalProcedureForm,
     NotaDebitoForm,
     CadastroNotaForm,
@@ -1847,7 +1849,7 @@ def mark_announcement_read(announcement_id: int):
 def diretoria_acordos():
     """Render and manage Diretoria JP agreements linked to portal users."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not user_has_tag("Diretoria"):
         abort(403)
 
     ensure_diretoria_agreement_schema()
@@ -2082,13 +2084,252 @@ def diretoria_acordos_excluir(agreement_id: int):
 
     return redirect(url_for("diretoria_acordos", user_id=redirect_user_id))
 
+@app.route("/diretoria/feedbacks", methods=["GET", "POST"])
+@login_required
+@meeting_only_access_check
+def diretoria_feedbacks():
+    """Render and manage Diretoria JP feedbacks linked to portal users."""
+
+    if current_user.role != "admin" and not user_has_tag("Diretoria"):
+        abort(403)
+
+    users = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(sa.func.lower(User.name))
+        .all()
+    )
+
+    form = DiretoriaFeedbackForm()
+
+    search_query = (request.args.get("q", default="", type=str) or "").strip()
+
+    if request.method == "POST":
+        selected_user_id = request.form.get("user_id", type=int)
+    else:
+        selected_user_id = request.args.get("user_id", type=int)
+
+    selected_user = None
+    feedbacks: list[DiretoriaFeedback] = []
+    active_feedback: DiretoriaFeedback | None = None
+    search_results: list[DiretoriaFeedback] = []
+
+    if selected_user_id:
+        selected_user = (
+            User.query.filter(
+                User.id == selected_user_id,
+                User.ativo.is_(True),
+            ).first()
+        )
+        if not selected_user:
+            message = "Usuário selecionado não foi encontrado ou está inativo."
+            if request.method == "GET":
+                flash(message, "warning")
+                return redirect(url_for("diretoria_feedbacks"))
+            flash(message, "danger")
+        else:
+            feedbacks = (
+                DiretoriaFeedback.query.filter_by(user_id=selected_user.id)
+                .order_by(
+                    DiretoriaFeedback.feedback_date.desc(),
+                    DiretoriaFeedback.created_at.desc(),
+                )
+                .all()
+            )
+    feedback_entries: list[dict[str, Any]] = [
+        {"record": feedback_item}
+        for feedback_item in feedbacks
+    ]
+
+    search_entries: list[dict[str, Any]] = []
+    if search_query:
+        search_term = f"%{search_query}%"
+        search_results = (
+            DiretoriaFeedback.query.options(joinedload(DiretoriaFeedback.user))
+            .join(User)
+            .filter(
+                User.ativo.is_(True),
+                sa.or_(
+                    DiretoriaFeedback.title.ilike(search_term),
+                    DiretoriaFeedback.description.ilike(search_term),
+                ),
+            )
+            .order_by(
+                DiretoriaFeedback.feedback_date.desc(),
+                DiretoriaFeedback.created_at.desc(),
+            )
+            .all()
+        )
+
+    for feedback_item in search_results:
+        search_entries.append(
+            {
+                "record": feedback_item,
+                "user": feedback_item.user,
+            }
+        )
+
+    if request.method == "POST":
+        form_mode = request.form.get("form_mode") or "new"
+        if form_mode not in {"new", "edit"}:
+            form_mode = "new"
+        feedback_id = request.form.get("feedback_id", type=int)
+    else:
+        form_mode = request.args.get("action")
+        if form_mode not in {"new", "edit"}:
+            form_mode = None
+        feedback_id = request.args.get("feedback_id", type=int)
+
+    if request.method == "GET" and selected_user:
+        if form_mode == "edit" and feedback_id:
+            active_feedback = next(
+                (item for item in feedbacks if item.id == feedback_id), None
+            )
+            if not active_feedback:
+                active_feedback = DiretoriaFeedback.query.filter_by(
+                    id=feedback_id,
+                    user_id=selected_user.id,
+                ).first()
+            if not active_feedback:
+                flash("O feedback selecionado não foi encontrado.", "warning")
+                return redirect(
+                    url_for("diretoria_feedbacks", user_id=selected_user.id)
+                )
+            form.title.data = active_feedback.title
+            form.feedback_date.data = active_feedback.feedback_date
+            form.description.data = active_feedback.description
+            form.notify_user.data = False
+            form.notification_destination.data = "user"
+            form.notification_email.data = ""
+        elif form_mode == "new" and not form.feedback_date.data:
+            form.feedback_date.data = date.today()
+            form.notify_user.data = False
+            form.notification_destination.data = "user"
+            form.notification_email.data = ""
+
+    if request.method == "POST":
+        if not selected_user:
+            if not selected_user_id:
+                flash("Selecione um usuário para salvar o feedback.", "danger")
+        else:
+            if form_mode == "edit" and feedback_id:
+                active_feedback = DiretoriaFeedback.query.filter_by(
+                    id=feedback_id,
+                    user_id=selected_user.id,
+                ).first()
+                if not active_feedback:
+                    flash("O feedback selecionado não foi encontrado.", "warning")
+                    return redirect(
+                        url_for("diretoria_feedbacks", user_id=selected_user.id)
+                    )
+
+            if form.validate_on_submit():
+                cleaned_description = sanitize_html(form.description.data or "")
+
+                if form_mode == "edit" and active_feedback:
+                    active_feedback.title = form.title.data
+                    active_feedback.feedback_date = form.feedback_date.data
+                    active_feedback.description = cleaned_description
+                    feedback_message = "Feedback atualizado com sucesso."
+                else:
+                    active_feedback = DiretoriaFeedback(
+                        user=selected_user,
+                        title=form.title.data,
+                        feedback_date=form.feedback_date.data,
+                        description=cleaned_description,
+                    )
+                    db.session.add(active_feedback)
+                    feedback_message = "Feedback criado com sucesso."
+
+                db.session.commit()
+
+                recipient_email = None
+                destination_value = form.notification_destination.data or "user"
+                if form.notify_user.data:
+                    if destination_value == "custom":
+                        recipient_email = form.notification_email.data
+                    else:
+                        recipient_email = selected_user.email
+
+                if form.notify_user.data and recipient_email:
+                    try:
+                        action_label = (
+                            "atualizado" if form_mode == "edit" else "registrado"
+                        )
+                        email_html = render_template(
+                            "emails/diretoria_feedback.html",
+                            feedback=active_feedback,
+                            destinatario=selected_user,
+                            editor=current_user,
+                            action_label=action_label,
+                        )
+                        send_email(
+                            subject=f"[Diretoria JP] Feedback {active_feedback.title}",
+                            html_body=email_html,
+                            recipients=[recipient_email],
+                        )
+                        flash(
+                            f"{feedback_message} Notificação enviada por e-mail.",
+                            "success",
+                        )
+                    except EmailDeliveryError as exc:
+                        current_app.logger.error(
+                            "Falha ao enviar e-mail do feedback %s para %s: %s",
+                            active_feedback.id,
+                            recipient_email,
+                            exc,
+                        )
+                        flash(
+                            f"{feedback_message} Porém, não foi possível enviar o e-mail de notificação.",
+                            "warning",
+                        )
+                else:
+                    flash(feedback_message, "success")
+
+                return redirect(url_for("diretoria_feedbacks", user_id=selected_user.id))
+
+            flash("Por favor, corrija os erros do formulário.", "danger")
+
+    return render_template(
+        "diretoria/feedbacks.html",
+        users=users,
+        form=form,
+        selected_user=selected_user,
+        feedbacks=feedbacks,
+        form_mode=form_mode,
+        active_feedback=active_feedback,
+        feedback_entries=feedback_entries,
+        search_query=search_query,
+        search_entries=search_entries,
+    )
+
+@app.route("/diretoria/feedbacks/<int:feedback_id>/excluir", methods=["POST"])
+@login_required
+def diretoria_feedbacks_excluir(feedback_id: int):
+    """Remove a feedback linked to a Diretoria JP user."""
+
+    if current_user.role != "admin" and not user_has_tag("Diretoria"):
+        abort(403)
+
+    feedback = DiretoriaFeedback.query.get_or_404(feedback_id)
+
+    redirect_user_id = request.form.get("user_id", type=int) or feedback.user_id
+    if redirect_user_id != feedback.user_id:
+        redirect_user_id = feedback.user_id
+
+    db.session.delete(feedback)
+    db.session.commit()
+
+    flash("Feedback removido com sucesso.", "success")
+
+    return redirect(url_for("diretoria_feedbacks", user_id=redirect_user_id))
+
 @app.route("/diretoria/eventos", methods=["GET", "POST"])
 @login_required
 @meeting_only_access_check
 def diretoria_eventos():
     """Render or persist Diretoria JP event planning data."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
         abort(403)
 
     if request.method == "POST":
@@ -2128,7 +2369,7 @@ def diretoria_eventos():
 def diretoria_eventos_editar(event_id: int):
     """Edit an existing Diretoria JP event."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.get_or_404(event_id)
@@ -2206,7 +2447,7 @@ def diretoria_eventos_editar(event_id: int):
 def diretoria_eventos_visualizar(event_id: int):
     """Display the details of a Diretoria JP event without editing it."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.options(joinedload(DiretoriaEvent.created_by)).get_or_404(
@@ -2277,7 +2518,7 @@ def diretoria_eventos_visualizar(event_id: int):
 def diretoria_eventos_lista():
     """Display saved Diretoria JP events with search support."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
         abort(403)
 
     search_query = (request.args.get("q") or "").strip()
@@ -2312,7 +2553,7 @@ def diretoria_eventos_lista():
 def diretoria_eventos_excluir(event_id: int):
     """Remove a Diretoria JP event."""
 
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
+    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
         abort(403)
 
     event = DiretoriaEvent.query.get_or_404(event_id)

@@ -1,0 +1,1141 @@
+{% extends "base.html" %}
+{% block title %}Feedbacks - Diretoria JP{% endblock %}
+
+{% block sidebar_nav %}
+    {% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block extra_css %}
+    {{ super() }}
+    <style>
+        .acordos-page-root {
+            --acordos-footer-offset: 0px;
+            --acordos-users-card-top: 0px;
+            --acordos-layout-top: 0px;
+            min-height: calc(100vh - var(--acordos-footer-offset));
+            display: flex;
+            flex-direction: column;
+        }
+
+        .acordos-page-root > .container-fluid {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            padding-bottom: 1rem !important;
+        }
+
+        .acordos-layout {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 300px minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .acordos-content-column {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow: visible;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .acordos-content-column[data-acordos-content].is-loading {
+            position: relative;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        .acordos-content-column[data-acordos-content].is-loading::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(248, 249, 252, 0.55));
+            backdrop-filter: blur(2px);
+        }
+
+        .acordos-content-column > .acordos-card {
+            flex: none;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .acordos-card.acordos-card-user {
+            flex: 1 1 auto;
+            max-height: 100%;
+        }
+
+        .acordos-card.acordos-card-search-results .card-body,
+        .acordos-card.acordos-card-placeholder .card-body {
+            overflow: visible;
+        }
+
+        .acordos-content-column > .acordos-card .card-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 991.98px) {
+            .acordos-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .acordos-content-column {
+                gap: 1rem;
+            }
+
+            .acordos-content-column > .acordos-card {
+                flex: none;
+            }
+
+            .acordos-card.acordos-card-user {
+                max-height: none;
+            }
+
+            .acordos-card.acordos-card-user .card-body {
+                overflow: visible;
+            }
+        }
+
+        .acordos-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.07);
+            background: #ffffff;
+        }
+
+        .acordos-card.acordos-card-form .card-header {
+            padding: 0.875rem 1.15rem;
+        }
+
+        .acordos-users-card {
+            position: sticky;
+            top: 1.5rem;
+            width: 300px;
+            max-width: 100%;
+            height: clamp(240px, calc(100vh - var(--acordos-footer-offset) - var(--acordos-users-card-top, 0px) - 1.5rem), 620px);
+            max-height: clamp(240px, calc(100vh - var(--acordos-footer-offset) - var(--acordos-users-card-top, 0px) - 1.5rem), 620px);
+            display: flex;
+            flex-direction: column;
+            flex: none;
+        }
+
+        .acordos-users-card .card-body.acordos-users-list {
+            overflow-y: auto;
+            flex: 1 1 auto;
+            min-height: 0;
+            padding: 0.75rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .acordos-users-card {
+                position: static;
+                width: 100%;
+                height: auto;
+                max-height: none;
+            }
+
+            .acordos-users-card .card-body.acordos-users-list {
+                overflow: visible;
+                max-height: none;
+                padding: 1.25rem;
+            }
+        }
+
+        .acordos-card .card-header {
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: #ffffff;
+            padding: 1rem 1.25rem;
+        }
+
+        .acordos-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .acordos-card.acordos-card-form .card-body {
+            padding: 1.15rem 1.1rem 1.35rem;
+        }
+
+        .acordos-card.acordos-card-form h3.h6 {
+            font-size: 0.95rem;
+        }
+
+        .acordos-card.acordos-card-form .form-label {
+            font-size: 0.9rem;
+        }
+
+        .acordos-card.acordos-card-form .form-control,
+        .acordos-card.acordos-card-form .form-select {
+            font-size: 0.95rem;
+            padding: 0.55rem 0.75rem;
+        }
+
+        .acordos-card.acordos-card-form .card-body .btn {
+            font-size: 0.9rem;
+            padding: 0.55rem 1.1rem;
+        }
+
+        .acordos-card.acordos-card-form .acordo-editor {
+            min-height: 240px;
+        }
+
+        .acordos-users-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .acordo-user-option {
+            position: relative;
+        }
+
+        .acordo-user-option .form-check-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .acordo-user-option .form-check-label {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.65rem 0.75rem 0.65rem 2.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(11, 40, 139, 0.25);
+            background: #f8f9fa;
+            color: var(--primary);
+            font-size: 0.9rem;
+            transition: all 0.2s ease-in-out;
+            min-height: 48px;
+        }
+
+        .acordo-user-option .form-check-label::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0.85rem;
+            transform: translateY(-50%);
+            width: 1.05rem;
+            height: 1.05rem;
+            border-radius: 0.3rem;
+            border: 2px solid rgba(11, 40, 139, 0.45);
+            background: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .acordo-user-option .form-check-label::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 1.08rem;
+            transform: translateY(-55%) rotate(45deg);
+            width: 0.35rem;
+            height: 0.7rem;
+            border-right: 0.2rem solid transparent;
+            border-bottom: 0.2rem solid transparent;
+            transition: opacity 0.2s ease-in-out;
+            opacity: 0;
+        }
+
+        .acordo-user-option .form-check-input:checked + .form-check-label {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 0.75rem 1.25rem rgba(11, 40, 139, 0.25);
+            border-color: var(--primary);
+        }
+
+        .acordo-user-option .form-check-input:checked + .form-check-label::before {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0.25rem 0.6rem rgba(11, 40, 139, 0.35);
+        }
+
+        .acordo-user-option .form-check-input:checked + .form-check-label::after {
+            border-color: #ffffff;
+            opacity: 1;
+        }
+
+        .acordo-user-option .form-check-label span {
+            text-align: left;
+            flex: 1 1 auto;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .acordo-editor {
+            min-height: 280px;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: #ffffff;
+        }
+
+        .acordo-editor .ql-toolbar {
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+
+        .acordo-editor .ql-container {
+            border-radius: 0 0 0.75rem 0.75rem;
+        }
+
+        .acordo-placeholder {
+            border: 2px dashed rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            padding: 3rem 1rem;
+            text-align: left;
+            color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        .acordo-placeholder i {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            color: rgba(11, 40, 139, 0.75);
+        }
+
+        .acordo-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .acordo-item {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: #ffffff;
+        }
+
+        .acordo-item + .acordo-item {
+            margin-top: 1rem;
+        }
+
+        .acordo-item-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .acordo-item-user {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .acordos-search-results-empty {
+            color: #6c757d;
+        }
+
+        .acordo-item-meta {
+            font-size: var(--font-sm);
+            color: #6c757d;
+        }
+
+        .acordo-item-description {
+            margin-top: 0.75rem;
+            color: #343a40;
+        }
+
+        .acordos-search-form {
+            width: 100%;
+            max-width: 320px;
+            align-self: flex-start;
+        }
+
+        .acordos-search-form .form-control {
+            border-radius: 0.75rem;
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="content-area flex-grow-1 acordos-page-root">
+    <div class="container-fluid py-3 py-lg-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+            <div>
+                <h1 class="h4 fw-bold mb-0">Feedbacks da Diretoria JP</h1>
+            </div>
+            <div class="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-semibold px-3 py-2">
+                Diretoria JP
+            </div>
+        </div>
+
+        <div class="acordos-layout">
+            <div class="acordos-card acordos-users-card h-100">
+                <div class="card-header">
+                    <h2 class="h6 mb-0 text-primary fw-semibold">Usuários do portal</h2>
+                </div>
+                <div class="card-body acordos-users-list">
+                    {% for user in users %}
+                    <div class="form-check acordo-user-option m-0">
+                        <input class="form-check-input" type="radio"
+                               name="acordo-user-selector"
+                               id="acordo-user-{{ user.id }}"
+                               value="{{ user.id }}"
+                               data-acordo-user
+                               {% if selected_user and user.id == selected_user.id %}checked{% endif %}>
+                        <label class="form-check-label" for="acordo-user-{{ user.id }}">
+                            <span>{{ user.name }}</span>
+                        </label>
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-start text-muted">
+                        Nenhum usuário ativo disponível no portal.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="acordos-content-column" data-acordos-content>
+                <form method="get" class="acordos-search-form" data-acordos-search-form>
+                    <label for="acordos-search-input" class="visually-hidden">Buscar feedbacks</label>
+                    <input type="search"
+                           id="acordos-search-input"
+                           class="form-control"
+                           name="q"
+                           value="{{ search_query }}"
+                           placeholder="Buscar feedbacks entre todos os usuários"
+                           aria-label="Buscar feedbacks">
+                </form>
+
+                {% if search_query %}
+                <div class="acordos-card acordos-card-search-results">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex flex-column flex-sm-row gap-1">
+                            <h3 class="h6 fw-semibold mb-0">Resultados da busca</h3>
+                            <span class="text-muted small">Termo: "{{ search_query }}"</span>
+                        </div>
+                        <span class="text-muted small">{{ search_entries|length }} registro{% if search_entries|length != 1 %}s{% endif %}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if search_entries %}
+                            {% for entry in search_entries %}
+                                {% set feedback = entry.record %}
+                                {% set feedback_date_display = (
+                                    feedback.feedback_date.strftime('%d/%m/%Y')
+                                    if feedback.feedback_date
+                                    else None
+                                ) %}
+                                {% set entry_user = entry.user %}
+                                <div class="acordo-item mb-0">
+                                    <div class="acordo-item-header">
+                                        <div>
+                                            <h4 class="h6 fw-semibold mb-1">{{ feedback.title }}</h4>
+                                            <div class="acordo-item-meta">
+                                                <span class="acordo-item-user">{{ entry_user.name if entry_user else 'Usuário indisponível' }}</span>
+                                                {% if feedback_date_display %}
+                                                <span class="ms-2 ms-md-3">Data do feedback {{ feedback_date_display }}</span>
+                                                {% else %}
+                                                <span class="ms-2 ms-md-3">Data do feedback não informada</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="acordo-actions">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_feedbacks', user_id=feedback.user_id, action='edit', feedback_id=feedback.id) }}">
+                                                <i class="bi bi-pencil me-1"></i>Editar
+                                            </a>
+                                            <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" onsubmit="return confirm('Deseja realmente excluir este feedback?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="user_id" value="{{ feedback.user_id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1"></i>Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% set description_text = feedback.description | striptags | trim %}
+                                    {% if description_text %}
+                                    <p class="acordo-item-description mb-0">{{ description_text }}</p>
+                                    {% else %}
+                                    <p class="acordo-item-description text-muted mb-0">Nenhuma descrição cadastrada.</p>
+                                    {% endif %}
+                                </div>
+                                {% if not loop.last %}
+                                <hr class="my-3">
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                        <p class="acordos-search-results-empty mb-0">Nenhum feedback corresponde à busca informada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if selected_user %}
+                <div class="acordos-card acordos-card-user{% if form_mode in ['new', 'edit'] %} acordos-card-form{% endif %}">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 class="h6 mb-1 text-primary fw-semibold">{{ selected_user.name }}</h2>
+                            <span class="text-muted small">{{ feedbacks|length }} feedback{% if feedbacks|length != 1 %}s{% endif %} cadastrados</span>
+                        </div>
+                        <div class="acordo-actions">
+                            {% if form_mode in ['new', 'edit'] %}
+                            <a class="btn btn-outline-secondary" href="{{ url_for('diretoria_feedbacks', user_id=selected_user.id) }}">
+                                <i class="bi bi-x-lg me-2"></i>Cancelar
+                            </a>
+                            {% endif %}
+                            <a class="btn btn-primary" href="{{ url_for('diretoria_feedbacks', user_id=selected_user.id, action='new') }}">
+                                <i class="bi bi-plus-lg me-2"></i>NOVO FEEDBACK
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if form_mode in ['new', 'edit'] %}
+                        <div class="acordos-form-section mb-3">
+                            <h3 class="h6 fw-semibold mb-2">
+                                {% if form_mode == 'edit' %}Editar feedback{% else %}Cadastrar novo feedback{% endif %}
+                            </h3>
+                            <form method="post" class="needs-validation" novalidate>
+                                {{ form.hidden_tag() }}
+                                <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                <input type="hidden" name="form_mode" value="{{ form_mode }}">
+                                {% if form_mode == 'edit' and active_feedback %}
+                                <input type="hidden" name="feedback_id" value="{{ active_feedback.id }}">
+                                {% endif %}
+
+                                <div class="row g-3">
+                                    <div class="col-lg-8">
+                                        <label class="form-label fw-semibold" for="acordo-titulo">Título</label>
+                                        {{ form.title(class_="form-control" ~ (' is-invalid' if form.title.errors else ''), id="acordo-titulo", placeholder="Informe o título do feedback") }}
+                                        {% for error in form.title.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <label class="form-label fw-semibold" for="acordo-data">Data do feedback</label>
+                                        {{ form.feedback_date(class_="form-control" ~ (' is-invalid' if form.feedback_date.errors else ''), id="acordo-data") }}
+                                        {% for error in form.feedback_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label fw-semibold mb-2" for="acordo-editor">Descrição detalhada</label>
+                                        <small class="text-muted">Cole textos ou utilize o botão de imagem para anexar prints.</small>
+                                    </div>
+                                    <div id="acordo-editor" class="acordo-editor"></div>
+                                    {{ form.description(id="acordo-descricao", style="display:none;") }}
+                                    <input type="file" id="acordo-image-input" accept="image/*" style="display:none;">
+                                    {% for error in form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-2"></i>
+                                        {% if form_mode == 'edit' %}Atualizar feedback{% else %}Salvar feedback{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        {% if form_mode == 'edit' %}
+                        <hr class="my-3">
+                        {% endif %}
+
+                        {% if form_mode != 'new' %}
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <h3 class="h6 fw-semibold mb-0">Feedbacks cadastrados</h3>
+                                <span class="text-muted small">{{ feedbacks|length }} registro{% if feedbacks|length != 1 %}s{% endif %}</span>
+                            </div>
+
+                            {% if feedbacks %}
+                                {% for entry in feedback_entries %}
+                                    {% set feedback = entry.record %}
+                                    {% set feedback_date_display = (
+                                        feedback.feedback_date.strftime('%d/%m/%Y')
+                                        if feedback.feedback_date
+                                        else None
+                                    ) %}
+                                    <div class="acordo-item{% if active_feedback and feedback.id == active_feedback.id %} border-primary shadow-sm{% endif %}" data-agreement-item>
+                                        <div class="acordo-item-header">
+                                            <div>
+                                                <h4 class="h6 fw-semibold mb-1">{{ feedback.title }}</h4>
+                                                <div class="acordo-item-meta">
+                                                    {% if feedback_date_display %}
+                                                    <span>Data do feedback {{ feedback_date_display }}</span>
+                                                    {% else %}
+                                                    <span>Data do feedback não informada</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="acordo-actions">
+                                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_feedbacks', user_id=selected_user.id, action='edit', feedback_id=feedback.id) }}">
+                                                    <i class="bi bi-pencil me-1"></i>Editar
+                                                </a>
+                                                <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" onsubmit="return confirm('Deseja realmente excluir este feedback?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <input type="hidden" name="user_id" value="{{ selected_user.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash me-1"></i>Excluir
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        {% set description_text = feedback.description | striptags | trim %}
+                                        {% if description_text %}
+                                        <p class="acordo-item-description mb-0">{{ description_text }}</p>
+                                        {% else %}
+                                        <p class="acordo-item-description text-muted mb-0">Nenhuma descrição cadastrada.</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-start text-muted py-3">
+                                    Nenhum feedback foi registrado para este usuário ainda.
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="acordos-card acordos-card-placeholder">
+                    <div class="card-body d-none"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const acordosPage = document.querySelector('.acordos-page-root');
+            const footer = document.querySelector('footer');
+            const usersCard = document.querySelector('.acordos-users-card');
+            const acordosLayout = document.querySelector('.acordos-layout');
+
+            function updateAcordosViewportMetrics() {
+                if (acordosPage) {
+                    const footerHeight = footer ? footer.offsetHeight : 0;
+                    acordosPage.style.setProperty('--acordos-footer-offset', `${footerHeight}px`);
+                }
+
+                if (acordosPage && usersCard) {
+                    const cardRect = usersCard.getBoundingClientRect();
+                    const topOffset = Math.max(cardRect.top, 0);
+                    acordosPage.style.setProperty('--acordos-users-card-top', `${topOffset}px`);
+                }
+
+                if (acordosPage && acordosLayout) {
+                    const layoutRect = acordosLayout.getBoundingClientRect();
+                    const layoutTop = Math.max(layoutRect.top, 0);
+                    acordosPage.style.setProperty('--acordos-layout-top', `${layoutTop}px`);
+                }
+            }
+
+            if (acordosPage) {
+                updateAcordosViewportMetrics();
+                requestAnimationFrame(updateAcordosViewportMetrics);
+                window.addEventListener('resize', updateAcordosViewportMetrics, { passive: true });
+                window.addEventListener('load', updateAcordosViewportMetrics);
+                window.addEventListener('scroll', updateAcordosViewportMetrics, { passive: true });
+            }
+
+            const storageKey = 'diretoriaFeedbacksUsersScrollTop';
+            const pagePath = window.location.pathname;
+            const contentSelector = '[data-acordos-content]';
+            const fetchHeaders = { 'X-Requested-With': 'XMLHttpRequest' };
+
+            let usersList = null;
+            let radioCleanup = [];
+            let scrollCleanup = [];
+            let pageshowHandler = null;
+            let searchCleanup = [];
+            let isNavigating = false;
+
+            const refreshUsersListReference = () => {
+                usersList = document.querySelector('.acordos-users-list');
+            };
+
+            const getContentColumn = () => document.querySelector(contentSelector);
+
+            const setContentLoading = (active) => {
+                const column = getContentColumn();
+                if (column) {
+                    column.classList.toggle('is-loading', Boolean(active));
+                }
+            };
+
+            const setRadiosDisabled = (disabled) => {
+                document.querySelectorAll('[data-acordo-user]').forEach((radio) => {
+                    radio.disabled = disabled;
+                });
+            };
+
+            const persistUsersScroll = (value) => {
+                const payload = {
+                    scrollTop: Math.max(0, Math.round(value || 0)),
+                    path: pagePath
+                };
+
+                try {
+                    sessionStorage.setItem(storageKey, JSON.stringify(payload));
+                } catch (error) {
+                    console.warn('Não foi possível salvar o scroll da lista de usuários.', error);
+                }
+            };
+
+            const restoreUsersScroll = () => {
+                if (!usersList) {
+                    return;
+                }
+
+                const storedScroll = sessionStorage.getItem(storageKey);
+                if (!storedScroll) {
+                    return;
+                }
+
+                let parsed;
+                try {
+                    parsed = JSON.parse(storedScroll);
+                } catch (error) {
+                    sessionStorage.removeItem(storageKey);
+                    return;
+                }
+
+                const { scrollTop, path } = parsed || {};
+                if (path !== pagePath || typeof scrollTop !== 'number' || Number.isNaN(scrollTop)) {
+                    sessionStorage.removeItem(storageKey);
+                    return;
+                }
+
+                const applyScroll = () => {
+                    if (usersList) {
+                        usersList.scrollTop = scrollTop;
+                    }
+                };
+
+                requestAnimationFrame(() => {
+                    applyScroll();
+                    requestAnimationFrame(applyScroll);
+                });
+            };
+
+            const detachScrollPersistence = () => {
+                scrollCleanup.forEach((cleanup) => cleanup());
+                scrollCleanup = [];
+
+                if (pageshowHandler) {
+                    window.removeEventListener('pageshow', pageshowHandler);
+                    pageshowHandler = null;
+                }
+            };
+
+            const attachScrollPersistence = () => {
+                detachScrollPersistence();
+
+                if (!usersList) {
+                    return;
+                }
+
+                const onScroll = () => {
+                    persistUsersScroll(usersList.scrollTop || 0);
+                };
+
+                usersList.addEventListener('scroll', onScroll, { passive: true });
+                scrollCleanup.push(() => usersList.removeEventListener('scroll', onScroll));
+
+                pageshowHandler = () => restoreUsersScroll();
+                window.addEventListener('pageshow', pageshowHandler);
+            };
+
+            const detachRadioListeners = () => {
+                radioCleanup.forEach((cleanup) => cleanup());
+                radioCleanup = [];
+            };
+
+            const setSearchFormsDisabled = (disabled) => {
+                document
+                    .querySelectorAll(
+                        '[data-acordos-search-form] input, [data-acordos-search-form] button, [data-acordos-search-form] select, [data-acordos-search-form] textarea'
+                    )
+                    .forEach((element) => {
+                        element.disabled = disabled;
+                    });
+            };
+
+            const detachSearchForms = () => {
+                searchCleanup.forEach((cleanup) => cleanup());
+                searchCleanup = [];
+            };
+
+            const bindSearchForms = () => {
+                detachSearchForms();
+
+                const forms = document.querySelectorAll('[data-acordos-search-form]');
+                forms.forEach((form) => {
+                    const onSubmit = (event) => {
+                        if (
+                            typeof window.fetch !== 'function' ||
+                            typeof window.DOMParser !== 'function'
+                        ) {
+                            return;
+                        }
+
+                        event.preventDefault();
+
+                        const formAction = form.getAttribute('action') || window.location.pathname;
+                        const targetUrl = new URL(formAction, window.location.origin);
+                        const formData = new FormData(form);
+
+                        formData.forEach((value, key) => {
+                            if (typeof value !== 'string') {
+                                targetUrl.searchParams.set(key, value);
+                                return;
+                            }
+
+                            if (key === 'q') {
+                                const trimmedValue = value.trim();
+                                if (trimmedValue) {
+                                    targetUrl.searchParams.set(key, trimmedValue);
+                                } else {
+                                    targetUrl.searchParams.delete(key);
+                                }
+                                return;
+                            }
+
+                            targetUrl.searchParams.set(key, value);
+                        });
+
+                        targetUrl.searchParams.delete('action');
+                        targetUrl.searchParams.delete('agreement_id');
+
+                        const nextUrlString = targetUrl.toString();
+                        if (nextUrlString === window.location.href) {
+                            return;
+                        }
+
+                        loadUser(nextUrlString, { pushState: true });
+                    };
+
+                    form.addEventListener('submit', onSubmit);
+                    searchCleanup.push(() => form.removeEventListener('submit', onSubmit));
+                });
+            };
+
+            const initializeEditor = () => {
+                const editorContainer = document.querySelector('#acordo-editor');
+                const hiddenInput = document.querySelector('#acordo-descricao');
+                const imageInput = document.querySelector('#acordo-image-input');
+
+                if (!editorContainer || !hiddenInput) {
+                    return;
+                }
+
+                if (editorContainer.dataset.quillInitialized === 'true') {
+                    return;
+                }
+
+                editorContainer.dataset.quillInitialized = 'true';
+
+                const csrfToken = "{{ csrf_token() }}";
+
+                function uploadImage(file) {
+                    return new Promise((resolve, reject) => {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        fetch('/upload_image', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken },
+                            body: formData
+                        })
+                            .then((response) => response.json())
+                            .then((result) => {
+                                if (result.image_url) {
+                                    resolve(result.image_url);
+                                } else {
+                                    reject(result.error || 'Erro ao enviar a imagem.');
+                                }
+                            })
+                            .catch(() => reject('Não foi possível enviar a imagem.'));
+                    });
+                }
+
+                function selectLocalImage() {
+                    if (imageInput) {
+                        imageInput.click();
+                    }
+                }
+
+                const quill = new Quill(editorContainer, {
+                    theme: 'snow',
+                    placeholder: 'Descreva o feedback aqui...',
+                    modules: {
+                        toolbar: {
+                            container: [
+                                ['bold', 'italic', 'underline'],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
+                                ['link', 'image'],
+                                ['clean']
+                            ],
+                            handlers: { image: selectLocalImage }
+                        }
+                    }
+                });
+
+                if (hiddenInput.value) {
+                    quill.root.innerHTML = hiddenInput.value;
+                }
+
+                if (imageInput && imageInput.dataset.listenerAttached !== 'true') {
+                    imageInput.addEventListener('change', () => {
+                        if (imageInput.files && imageInput.files[0]) {
+                            const file = imageInput.files[0];
+                            const range = quill.getSelection(true);
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const previewImage = event.target?.result;
+                                if (!previewImage) {
+                                    return;
+                                }
+
+                                quill.insertEmbed(range.index, 'image', previewImage);
+                                quill.setSelection(range.index + 1);
+
+                                uploadImage(file)
+                                    .then((serverUrl) => {
+                                        const tempImage = quill.root.querySelector(`img[src="${previewImage}"]`);
+                                        if (tempImage) {
+                                            tempImage.setAttribute('src', serverUrl);
+                                        }
+                                    })
+                                    .catch(() => {
+                                        const tempImage = quill.root.querySelector(`img[src="${previewImage}"]`);
+                                        if (tempImage) {
+                                            tempImage.remove();
+                                        }
+                                    });
+                            };
+                            reader.readAsDataURL(file);
+                            imageInput.value = '';
+                        }
+                    });
+                    imageInput.dataset.listenerAttached = 'true';
+                }
+
+                const formElement = editorContainer.closest('form');
+                if (formElement && formElement.dataset.acordoEditorBound !== 'true') {
+                    formElement.addEventListener('submit', () => {
+                        hiddenInput.value = quill.root.innerHTML;
+                    });
+                    formElement.dataset.acordoEditorBound = 'true';
+                }
+            };
+
+            const buildUserNavigationUrl = (userId) => {
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.delete('action');
+                nextUrl.searchParams.delete('agreement_id');
+
+                if (userId) {
+                    nextUrl.searchParams.set('user_id', userId);
+                } else {
+                    nextUrl.searchParams.delete('user_id');
+                }
+
+                return nextUrl.toString();
+            };
+
+            const bindUserRadios = () => {
+                detachRadioListeners();
+
+                const radios = document.querySelectorAll('[data-acordo-user]');
+                radios.forEach((radio) => {
+                    const associatedLabel = radio.id
+                        ? document.querySelector(`label[for="${radio.id}"]`)
+                        : null;
+
+                    const clearToggleMarker = () => {
+                        delete radio.dataset.acordoWasChecked;
+                    };
+
+                    const markIfChecked = () => {
+                        if (radio.disabled) {
+                            clearToggleMarker();
+                            return;
+                        }
+
+                        if (radio.checked) {
+                            radio.dataset.acordoWasChecked = 'true';
+                        } else {
+                            clearToggleMarker();
+                        }
+                    };
+
+                    const onPointerDown = () => {
+                        markIfChecked();
+                    };
+
+                    const onKeyDown = (event) => {
+                        if (event.key === ' ' || event.key === 'Enter') {
+                            markIfChecked();
+                        }
+                    };
+
+                    const navigateToUrl = async (nextUrlString) => {
+                        if (!nextUrlString || nextUrlString === window.location.href) {
+                            return;
+                        }
+
+                        if (typeof window.fetch !== 'function' || typeof window.DOMParser !== 'function') {
+                            window.location.href = nextUrlString;
+                            return;
+                        }
+
+                        await loadUser(nextUrlString, { pushState: true });
+                    };
+
+                    const onClick = async (event) => {
+                        if (radio.dataset.acordoWasChecked === 'true') {
+                            event.preventDefault();
+                            radio.checked = false;
+                            clearToggleMarker();
+
+                            const deselectUrl = buildUserNavigationUrl(null);
+                            await navigateToUrl(deselectUrl);
+                            return;
+                        }
+
+                        clearToggleMarker();
+                    };
+
+                    const onChange = async () => {
+                        clearToggleMarker();
+
+                        if (!radio.checked) {
+                            return;
+                        }
+
+                        const nextUrlString = buildUserNavigationUrl(radio.value);
+                        await navigateToUrl(nextUrlString);
+                    };
+
+                    radio.addEventListener('pointerdown', onPointerDown);
+                    radioCleanup.push(() => radio.removeEventListener('pointerdown', onPointerDown));
+
+                    radio.addEventListener('keydown', onKeyDown);
+                    radioCleanup.push(() => radio.removeEventListener('keydown', onKeyDown));
+
+                    radio.addEventListener('click', onClick);
+                    radioCleanup.push(() => radio.removeEventListener('click', onClick));
+
+                    radio.addEventListener('change', onChange);
+                    radioCleanup.push(() => radio.removeEventListener('change', onChange));
+
+                    if (associatedLabel) {
+                        associatedLabel.addEventListener('pointerdown', onPointerDown);
+                        radioCleanup.push(() => associatedLabel.removeEventListener('pointerdown', onPointerDown));
+                    }
+
+                    radioCleanup.push(() => clearToggleMarker());
+                });
+            };
+
+            const rebindDynamicSection = () => {
+                refreshUsersListReference();
+                attachScrollPersistence();
+                restoreUsersScroll();
+                bindUserRadios();
+                initializeEditor();
+                bindSearchForms();
+            };
+
+            const loadUser = async (nextUrl, { pushState = false } = {}) => {
+                if (isNavigating || !nextUrl) {
+                    return;
+                }
+
+                const nextUrlString = typeof nextUrl === 'string' ? nextUrl : nextUrl.toString();
+                if (!nextUrlString) {
+                    return;
+                }
+
+                persistUsersScroll(usersList ? usersList.scrollTop || 0 : 0);
+
+                isNavigating = true;
+                setContentLoading(true);
+                setRadiosDisabled(true);
+                setSearchFormsDisabled(true);
+
+                try {
+                    const response = await fetch(nextUrlString, { headers: fetchHeaders });
+                    if (!response.ok) {
+                        throw new Error(`Status ${response.status}`);
+                    }
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const nextDocument = parser.parseFromString(html, 'text/html');
+                    const incomingContent = nextDocument.querySelector(contentSelector);
+                    const incomingUsersList = nextDocument.querySelector('.acordos-users-list');
+
+                    if (!incomingContent) {
+                        throw new Error('Estrutura da página inesperada.');
+                    }
+
+                    const currentContent = getContentColumn();
+                    if (currentContent) {
+                        currentContent.innerHTML = incomingContent.innerHTML;
+                    }
+
+                    if (usersList && incomingUsersList) {
+                        usersList.innerHTML = incomingUsersList.innerHTML;
+                    }
+
+                    if (pushState) {
+                        window.history.pushState({}, '', nextUrlString);
+                    }
+
+                    rebindDynamicSection();
+                } catch (error) {
+                    console.error('Não foi possível carregar os dados do usuário selecionado.', error);
+                    window.location.href = nextUrlString;
+                } finally {
+                    isNavigating = false;
+                    setContentLoading(false);
+                    setRadiosDisabled(false);
+                    setSearchFormsDisabled(false);
+                }
+            };
+
+            rebindDynamicSection();
+
+            window.addEventListener('popstate', () => {
+                if (!document.querySelector(contentSelector)) {
+                    return;
+                }
+
+                if (typeof window.fetch !== 'function' || typeof window.DOMParser !== 'function') {
+                    return;
+                }
+
+                loadUser(window.location.href, { pushState: false });
+            });
+        });
+    </script>
+
+{% endblock %}
