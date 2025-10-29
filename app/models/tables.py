@@ -726,11 +726,14 @@ class Departamento(db.Model):
     registro_funcionarios = db.Column(db.String(200))
     ponto_eletronico = db.Column(db.String(200))
     pagamento_funcionario = db.Column(db.String(200))
-    particularidades_texto = db.Column(db.Text)
+    particularidades_texto = db.Column(
+        db.Text().with_variant(mysql.LONGTEXT, "mysql"),
+        nullable=True,
+    )
     updated_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
     )
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
