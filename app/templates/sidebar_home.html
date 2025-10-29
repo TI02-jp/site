@@ -1,3 +1,18 @@
+{% if is_meeting_only_user() %}
+{# Usuários com apenas a tag "reunião" veem somente a sala de reuniões #}
+<div class="nav-section">
+    <div class="nav-section-title">PRINCIPAL</div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'sala_reunioes' %} active{% endif %}" href="{{ url_for('sala_reunioes') }}">
+                <i class="bi bi-calendar-event"></i>
+                SALA DE REUNIÕES
+            </a>
+        </li>
+    </ul>
+</div>
+{% else %}
+{# Menu completo para usuários normais #}
 <div class="nav-section">
     <div class="nav-section-title">PRINCIPAL</div>
     <ul class="nav flex-column">
@@ -63,27 +78,44 @@
         <li class="nav-item">
             <a class="nav-link{% if diretoria_active %} active{% endif %}"
                data-bs-toggle="collapse"
-               href="#diretoriaMenu"
+               href="#gestaoMenu"
                role="button"
                aria-expanded="{{ 'true' if diretoria_active else 'false' }}"
-               aria-controls="diretoriaMenu">
+               aria-controls="gestaoMenu">
                 <i class="bi bi-people"></i>
-                DIRETORIA JP
+                GESTÃO
             </a>
-            <div class="collapse{% if diretoria_active %} show{% endif %}" id="diretoriaMenu">
+            <div class="collapse{% if diretoria_active %} show{% endif %}" id="gestaoMenu">
                 <ul class="nav flex-column ms-3">
+                    {% if user_has_tag('Diretoria') %}
                     <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
-                           href="{{ url_for('diretoria_eventos_lista') }}">
-                            Listar Eventos
+                        <a class="nav-link{% if diretoria_active %} active{% endif %}"
+                           data-bs-toggle="collapse"
+                           href="#diretoriaSubmenu"
+                           role="button"
+                           aria-expanded="{{ 'true' if diretoria_active else 'false' }}"
+                           aria-controls="diretoriaSubmenu">
+                            <i class="bi bi-briefcase"></i>
+                            DIRETORIA
                         </a>
+                        <div class="collapse{% if diretoria_active %} show{% endif %}" id="diretoriaSubmenu">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link{% if request.endpoint in ['diretoria_eventos', 'diretoria_eventos_lista', 'diretoria_eventos_visualizar', 'diretoria_eventos_editar'] %} active{% endif %}"
+                                       href="{{ url_for('diretoria_eventos_lista') }}">
+                                        Listar Eventos
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link{% if request.endpoint == 'diretoria_acordos' %} active{% endif %}"
+                                       href="{{ url_for('diretoria_acordos') }}">
+                                        Acordos
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint == 'diretoria_acordos' %} active{% endif %}"
-                           href="{{ url_for('diretoria_acordos') }}">
-                            Acordos
-                        </a>
-                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </li>
@@ -120,6 +152,7 @@
         </li>
     </ul>
 </div>
+{% endif %}
 {% if current_user.is_authenticated and current_user.is_master %}
 <div class="nav-section">
     <div class="nav-section-title">DIAGNÓSTICO</div>
