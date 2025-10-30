@@ -42,7 +42,7 @@
       </div>
     {% endif %}
   {% endwith %}
-  {% from "tasks_macros.html" import render_task with context %}
+  {% from "tasks_macros.html" import render_task, render_actions_legend with context %}
   {% set status_meta = {
     'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
     'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
@@ -54,6 +54,7 @@
     'high': 'Alta'
   } %}
   {% set allow_delete = current_user.role == 'admin' %}
+  {{ render_actions_legend() }}
   <div class="kanban-board">
     {% for status in TaskStatus %}
     <div class="kanban-column">

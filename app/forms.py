@@ -808,4 +808,5 @@ class TaskForm(FlaskForm):
         render_kw={"multiple": True, "accept": "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"},
     )
     parent_id = HiddenField()
+    task_id = HiddenField()
     submit = SubmitField("Salvar")

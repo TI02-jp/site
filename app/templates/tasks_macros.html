@@ -1,3 +1,47 @@
+{% macro render_actions_legend() %}
+<div class="task-actions-legend" role="note" aria-label="Legenda de botões de ação das tarefas">
+  <span class="legend-heading">Ações disponíveis:</span>
+  <div class="legend-items">
+    <span class="legend-item">
+      <span class="action view legend-icon" aria-hidden="true"><i class="bi bi-eye"></i></span>
+      <span class="legend-label">Visualizar</span>
+    </span>
+    <span class="legend-item">
+      <span class="action responses legend-icon" aria-hidden="true"><i class="bi bi-chat-dots"></i></span>
+      <span class="legend-label">Respostas</span>
+    </span>
+    <span class="legend-item">
+      <span class="action edit legend-icon" aria-hidden="true"><i class="bi bi-pencil"></i></span>
+      <span class="legend-label">Editar</span>
+    </span>
+    <span class="legend-item">
+      <span class="action start legend-icon" aria-hidden="true"><i class="bi bi-play-fill"></i></span>
+      <span class="legend-label">Iniciar</span>
+    </span>
+    <span class="legend-item">
+      <span class="action to-pending legend-icon" aria-hidden="true"><i class="bi bi-arrow-return-left"></i></span>
+      <span class="legend-label">Voltar p/ pendente</span>
+    </span>
+    <span class="legend-item">
+      <span class="action done legend-icon" aria-hidden="true"><i class="bi bi-check-circle"></i></span>
+      <span class="legend-label">Concluir</span>
+    </span>
+    <span class="legend-item">
+      <span class="action reopen legend-icon" aria-hidden="true"><i class="bi bi-arrow-counterclockwise"></i></span>
+      <span class="legend-label">Reabrir</span>
+    </span>
+    <span class="legend-item">
+      <span class="action subtask legend-icon" aria-hidden="true"><i class="bi bi-node-plus"></i></span>
+      <span class="legend-label">Subtarefa</span>
+    </span>
+    <span class="legend-item">
+      <span class="action delete legend-icon" aria-hidden="true"><i class="bi bi-trash"></i></span>
+      <span class="legend-label">Excluir</span>
+    </span>
+  </div>
+</div>
+{% endmacro %}
+
 {% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False, is_subtask=False) %}
 {% if task.is_private and task.created_by != current_user.id %}
 {% else %}
@@ -77,41 +121,63 @@
     </div>
     {% set conversation = task.conversation_summary if task.conversation_summary is defined else None %}
     {% set show_responses = task.status in [TaskStatus.IN_PROGRESS, TaskStatus.DONE] %}
-    <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}"
-         data-allow-subtask="{{ 'true' if allow_subtask else 'false' }}">
-      <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
-      {% if show_responses %}
+    <div class="task-actions-container collapsed">
       <button type="button"
-              class="action responses open-task-responses{% if conversation and (conversation.unread_count or conversation.total_responses) %} has-responses{% endif %}"
-              data-task-id="{{ task.id }}"
-              data-unread="{{ conversation.unread_count if conversation else 0 }}"
-              data-total="{{ conversation.total_responses if conversation else 0 }}"
-              title="Abrir respostas da tarefa {{ task.title }}"
-              aria-label="Abrir respostas da tarefa {{ task.title }}">
-        <span class="icon">
-          <i class="bi {% if conversation and conversation.unread_count %}bi-chat-dots-fill{% else %}bi-chat-dots{% endif %}"></i>
-        </span>
-        {% if conversation and (conversation.unread_count or conversation.total_responses) %}
-        <span class="badge{% if conversation.unread_count %} unread{% endif %}">
-          {% if conversation.unread_count %}{{ conversation.unread_count }}{% else %}{{ conversation.total_responses }}{% endif %}
-        </span>
-        {% endif %}
+              class="task-actions-toggle"
+              aria-label="Mostrar ações da tarefa {{ task.title }}"
+              aria-controls="task-actions-{{ task.id }}"
+              aria-expanded="false"
+              title="Mostrar ações"
+              data-task-title="{{ task.title }}">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
       </button>
-      {% endif %}
-      {% if task.status == TaskStatus.PENDING %}
-      <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
-      {% elif task.status == TaskStatus.IN_PROGRESS %}
-      <button class="action to-pending change-status" data-id="{{ task.id }}" data-status="pending" title="Mover para pendente"><i class="bi bi-arrow-return-left"></i></button>
-      <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
-      {% elif task.status == TaskStatus.DONE and task.created_by == current_user.id %}
-      <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
-      {% endif %}
-      {% if allow_subtask %}
-      <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
-      {% endif %}
-      {% if current_user.role == 'admin' or task.created_by == current_user.id %}
-      <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
-      {% endif %}
+      <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}"
+           id="task-actions-{{ task.id }}"
+           data-allow-subtask="{{ 'true' if allow_subtask else 'false' }}"
+           data-edit-url="{{ url_for('tasks_edit', task_id=task.id) }}"
+           data-edit-return-url="{{ request.url }}">
+        <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
+        {% if show_responses %}
+        <button type="button"
+                class="action responses open-task-responses{% if conversation and (conversation.unread_count or conversation.total_responses) %} has-responses{% endif %}"
+                data-task-id="{{ task.id }}"
+                data-unread="{{ conversation.unread_count if conversation else 0 }}"
+                data-total="{{ conversation.total_responses if conversation else 0 }}"
+                title="Abrir respostas da tarefa {{ task.title }}"
+                aria-label="Abrir respostas da tarefa {{ task.title }}">
+          <span class="icon">
+            <i class="bi {% if conversation and conversation.unread_count %}bi-chat-dots-fill{% else %}bi-chat-dots{% endif %}"></i>
+          </span>
+          {% if conversation and (conversation.unread_count or conversation.total_responses) %}
+          <span class="badge{% if conversation.unread_count %} unread{% endif %}">
+            {% if conversation.unread_count %}{{ conversation.unread_count }}{% else %}{{ conversation.total_responses }}{% endif %}
+          </span>
+          {% endif %}
+        </button>
+        {% endif %}
+        {% if task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS] %}
+        <a class="action edit edit-task"
+           href="{{ url_for('tasks_edit', task_id=task.id, return_url=request.url) }}"
+           title="Editar tarefa"
+           aria-label="Editar tarefa {{ task.title }}">
+          <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+        {% if task.status == TaskStatus.PENDING %}
+        <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
+        {% elif task.status == TaskStatus.IN_PROGRESS %}
+        <button class="action to-pending change-status" data-id="{{ task.id }}" data-status="pending" title="Mover para pendente"><i class="bi bi-arrow-return-left"></i></button>
+        <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
+        {% elif task.status == TaskStatus.DONE and task.created_by == current_user.id %}
+        <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
+        {% endif %}
+        {% if allow_subtask %}
+        <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
+        {% endif %}
+        {% if allow_delete or task.created_by == current_user.id or task.assigned_to == current_user.id %}
+        <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% set labels = priority_labels if priority_labels is not none else {'low': 'Baixa', 'medium': 'Média', 'high': 'Alta'} %}

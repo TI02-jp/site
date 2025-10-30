@@ -17,6 +17,7 @@ from flask import (
 )
 from functools import wraps
 from collections import Counter, deque
+import unicodedata
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf, limiter
 from app.extensions.cache import cache, get_cache_timeout
@@ -3192,10 +3193,14 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
         if task:
             task_title = (task.title or "").strip()
             is_owner = current_user.is_authenticated and task.created_by == current_user.id
+            query_params: dict[str, object] = {"highlight_task": task.id}
+            if notification_type is NotificationType.TASK_RESPONSE:
+                query_params["open_responses"] = "1"
             if task.is_private and is_owner:
-                target_url = url_for("tasks_view", task_id=task.id)
+                overview_endpoint = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
+                target_url = url_for(overview_endpoint, **query_params) + f"#task-{task.id}"
             else:
-                target_url = url_for("tasks_sector", tag_id=task.tag_id) + f"#task-{task.id}"
+                target_url = url_for("tasks_sector", tag_id=task.tag_id, **query_params) + f"#task-{task.id}"
             if not message:
                 prefix = (
                     "Tarefa atualizada"
@@ -3210,7 +3215,10 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
             if not message:
                 message = "Tarefa removida."
         if not action_label:
-            action_label = "Abrir tarefa" if target_url else None
+            if notification_type is NotificationType.TASK_RESPONSE:
+                action_label = "Ver resposta" if target_url else None
+            else:
+                action_label = "Abrir tarefa" if target_url else None
 
     if not message:
         message = "Atualização disponível."
@@ -6549,6 +6557,56 @@ def tasks_overview_mine():
         history_url=url_for("tasks_history", assigned_by_me=1),
     )
 
+
+def _sortable_text(value: str | None) -> str:
+    """Return a lowercased, accent-free representation suitable for sorting."""
+    if not value:
+        return ""
+    normalized = unicodedata.normalize("NFKD", value)
+    without_accents = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return without_accents.casefold()
+
+
+def _sort_choice_pairs(
+    pairs: list[tuple[int, str]], keep_first: bool = False
+) -> list[tuple[int, str]]:
+    """Sort a list of ``(value, label)`` pairs alphabetically by label.
+
+    When ``keep_first`` is ``True`` the first element (commonly a sentinel like
+    ``0`` → "Sem responsável") is preserved at the front and only the remaining
+    items are sorted.
+    """
+    if not pairs:
+        return []
+    if keep_first:
+        head, *tail = pairs
+        return [head, *sorted(tail, key=lambda item: _sortable_text(item[1]))]
+    return sorted(pairs, key=lambda item: _sortable_text(item[1]))
+
+
+def _build_task_user_choices(tag_obj: Tag | None) -> list[tuple[int, str]]:
+    """Build select choices for task assignee field based on tag membership."""
+    entries: dict[int, str] = {}
+    if tag_obj:
+        users = [
+            u
+            for u in (getattr(tag_obj, "users", []) or [])
+            if getattr(u, "ativo", False)
+        ]
+        for user in users:
+            label = (user.name or user.username or "").strip()
+            if label:
+                entries[user.id] = label
+            else:
+                entries[user.id] = user.username or ""
+    display_name = (current_user.name or current_user.username or "").strip()
+    if current_user.id and current_user.id not in entries:
+        entries[current_user.id] = display_name
+
+    sorted_entries = sorted(entries.items(), key=lambda item: _sortable_text(item[1]))
+    return [(0, "Sem responsável"), *sorted_entries]
+
+
 @app.route("/tasks/new", methods=["GET", "POST"])
 @login_required
 def tasks_new():
@@ -6563,16 +6621,6 @@ def tasks_new():
     requested_tag_id = request.args.get("tag_id", type=int)
     choices: list[tuple[int, str]] = []
 
-    def _build_user_choices(tag_obj: Tag | None) -> list[tuple[int, str]]:
-        choices: list[tuple[int, str]] = [(0, "Sem responsavel")]
-        if tag_obj:
-            users = [u for u in getattr(tag_obj, "users", []) if getattr(u, "ativo", False)]
-            choices.extend((u.id, u.name) for u in users)
-        display_name = current_user.name or current_user.username
-        if current_user.id and all(choice[0] != current_user.id for choice in choices):
-            choices.append((current_user.id, display_name))
-        return choices
-
     form = TaskForm()
     tag = parent_task.tag if parent_task else None
     if parent_task:
@@ -6580,7 +6628,7 @@ def tasks_new():
         form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
         form.tag_id.data = parent_task.tag_id
         # Não desabilitar o campo aqui - será tratado no template
-        form.assigned_to.choices = _build_user_choices(parent_task.tag)
+        form.assigned_to.choices = _build_task_user_choices(parent_task.tag)
     else:
         tags_query = (
             Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
@@ -6588,6 +6636,7 @@ def tasks_new():
             .order_by(Tag.nome)
         )
         choices = [(t.id, t.nome) for t in tags_query.all()]
+        choices = _sort_choice_pairs(choices)
         form.tag_id.choices = choices
         selected_tag_id = form.tag_id.data
         if not selected_tag_id and requested_tag_id:
@@ -6600,7 +6649,7 @@ def tasks_new():
                 form.tag_id.data = selected_tag_id
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
-        form.assigned_to.choices = _build_user_choices(tag)
+        form.assigned_to.choices = _build_task_user_choices(tag)
     personal_tag = None
     if request.method == "POST" and form.only_me.data:
         personal_tag = _ensure_personal_tag(current_user)
@@ -6625,6 +6674,7 @@ def tasks_new():
             assignee_id = current_user.id
 
         try:
+            creation_notification_records: list[tuple[int, TaskNotification]] = []
             task = Task(
                 is_private=is_private,
                 title=form.title.data,
@@ -6657,10 +6707,35 @@ def tasks_new():
                     )
                 )
 
+            creator_name = current_user.name or current_user.username
+            creation_message = f'{creator_name} criou a tarefa "{task.title}".'
+            creation_now = datetime.utcnow()
+            notification_targets: set[int] = set()
+            if task.assigned_to and task.assigned_to != current_user.id:
+                notification_targets.add(task.assigned_to)
+            elif not task.is_private and tag and getattr(tag, "users", None):
+                for member in getattr(tag, "users", []) or []:
+                    if not getattr(member, "ativo", False):
+                        continue
+                    if not member.id or member.id == current_user.id:
+                        continue
+                    notification_targets.add(member.id)
+
+            for user_id in notification_targets:
+                notification = TaskNotification(
+                    user_id=user_id,
+                    task_id=task.id,
+                    type=NotificationType.TASK.value,
+                    message=creation_message[:255],
+                    created_at=creation_now,
+                )
+                db.session.add(notification)
+                creation_notification_records.append((user_id, notification))
+
             db.session.commit()
 
             # Broadcast task creation
-            from app.services.realtime import broadcast_task_created
+            from app.services.realtime import broadcast_task_created, get_broadcaster
             task_data = {
                 'id': task.id,
                 'title': task.title,
@@ -6677,6 +6752,24 @@ def tasks_new():
             }
             if not task.is_private:
                 broadcast_task_created(task_data, exclude_user=current_user.id)
+
+            if creation_notification_records:
+                broadcaster = get_broadcaster()
+                for user_id, notification in creation_notification_records:
+                    broadcaster.broadcast(
+                        event_type="notification:created",
+                        data={
+                            "id": notification.id,
+                            "task_id": task.id,
+                            "type": notification.type,
+                            "message": notification.message,
+                            "created_at": notification.created_at.isoformat()
+                            if notification.created_at
+                            else None,
+                        },
+                        user_id=user_id,
+                        scope="notifications",
+                    )
 
             flash("Tarefa criada com sucesso!", "success")
             current_app.logger.info(
@@ -6717,6 +6810,181 @@ def tasks_new():
         form=form,
         parent_task=parent_task,
         cancel_url=cancel_url,
+        is_editing=False,
+        editing_task=None,
+        return_url=return_url,
+    )
+
+
+@app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
+@login_required
+def tasks_edit(task_id: int):
+    """Edit an existing task."""
+    return_url = request.args.get("return_url")
+    if request.method == "POST" and not return_url:
+        return_url = request.form.get("return_url") or None
+
+    task = Task.query.get_or_404(task_id)
+
+    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
+        abort(404)
+
+    is_admin = current_user.role == "admin"
+    is_creator = task.created_by == current_user.id
+    is_assignee = task.assigned_to == current_user.id if task.assigned_to else False
+
+    if task.is_private:
+        if not (is_creator or is_admin):
+            abort(403)
+    else:
+        if not (_can_user_access_tag(task.tag, current_user) or is_admin or is_creator or is_assignee):
+            abort(403)
+
+    if task.status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS} and not is_admin:
+        flash("Apenas tarefas pendentes ou em andamento podem ser editadas.", "warning")
+        if return_url:
+            return redirect(return_url)
+        return redirect(url_for("tasks_view", task_id=task.id))
+
+    form = TaskForm()
+    parent_task = task.parent
+
+    if parent_task:
+        form.parent_id.data = parent_task.id
+        form.tag_id.choices = [(parent_task.tag_id, parent_task.tag.nome)]
+        form.tag_id.data = parent_task.tag_id
+        tag = parent_task.tag
+    else:
+        tags_query = (
+            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
+            .order_by(Tag.nome)
+        )
+        tag_choices = [(t.id, t.nome) for t in tags_query.all()]
+        tag_choices = _sort_choice_pairs(tag_choices)
+        form.tag_id.choices = tag_choices
+        if task.is_private and all(choice[0] != task.tag_id for choice in form.tag_id.choices):
+            updated_choices = list(form.tag_id.choices) + [(task.tag_id, "Para Mim")]
+            form.tag_id.choices = _sort_choice_pairs(updated_choices)
+
+        selected_tag_id = form.tag_id.data if request.method == "POST" else task.tag_id
+        if selected_tag_id is None:
+            selected_tag_id = task.tag_id
+        if request.method != "POST":
+            form.tag_id.data = selected_tag_id
+        tag = Tag.query.get(selected_tag_id) if selected_tag_id else None
+
+    assignee_choices = _build_task_user_choices(tag)
+    if task.assigned_to and all(choice[0] != task.assigned_to for choice in assignee_choices):
+        assignee = User.query.get(task.assigned_to)
+        if assignee:
+            assignee_label = (assignee.name or assignee.username or "").strip()
+            assignee_choices.append((assignee.id, assignee_label))
+    form.assigned_to.choices = _sort_choice_pairs(assignee_choices, keep_first=True)
+
+    if request.method == "GET":
+        form.task_id.data = task.id
+        form.title.data = task.title
+        form.description.data = task.description
+        form.priority.data = task.priority.value if task.priority else "medium"
+        form.due_date.data = task.due_date
+        form.only_me.data = task.is_private
+        form.assigned_to.data = task.assigned_to or (current_user.id if task.is_private else 0)
+
+    personal_tag = None
+    if request.method == "POST" and form.only_me.data:
+        personal_tag = _ensure_personal_tag(current_user)
+        form.tag_id.data = personal_tag.id
+        form.assigned_to.data = current_user.id
+        if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
+            updated_choices = list(form.tag_id.choices) + [(personal_tag.id, "Para Mim")]
+            form.tag_id.choices = _sort_choice_pairs(updated_choices)
+        tag = personal_tag
+
+    if form.validate_on_submit():
+        tag_id = parent_task.tag_id if parent_task else form.tag_id.data
+        if not parent_task and (tag is None or tag.id != tag_id):
+            tag = Tag.query.get(tag_id)
+        if tag is None:
+            abort(400)
+        assignee_id = form.assigned_to.data or None
+        is_private = bool(form.only_me.data)
+        if is_private:
+            personal_tag = personal_tag or _ensure_personal_tag(current_user)
+            tag = personal_tag
+            tag_id = personal_tag.id
+            assignee_id = current_user.id
+
+        try:
+            task.title = form.title.data
+            task.description = form.description.data
+            task.priority = TaskPriority(form.priority.data)
+            task.due_date = form.due_date.data
+            task.is_private = is_private
+            task.tag_id = tag_id
+            task.assigned_to = assignee_id
+
+            uploaded_files = [
+                storage
+                for storage in (form.attachments.data or [])
+                if storage and storage.filename
+            ]
+
+            for uploaded_file in uploaded_files:
+                saved = _save_task_file(uploaded_file)
+                db.session.add(
+                    TaskAttachment(
+                        task=task,
+                        file_path=saved["path"],
+                        original_name=saved["name"],
+                        mime_type=saved["mime_type"],
+                    )
+                )
+
+            db.session.commit()
+            flash("Tarefa atualizada com sucesso!", "success")
+
+            if return_url and return_url != request.url:
+                return redirect(return_url)
+
+            if not task.is_private:
+                target_tag_id = parent_task.tag_id if parent_task else task.tag_id
+                return redirect(url_for("tasks_sector", tag_id=target_tag_id))
+
+            destination = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
+            return redirect(url_for(destination))
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar tarefa", exc_info=exc)
+            flash(f"Erro ao atualizar tarefa: {str(exc)}", "danger")
+    else:
+        if request.method == "POST":
+            current_app.logger.warning(
+                "Formulário de edição de tarefa não validou. Erros: %s", form.errors
+            )
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"Erro no campo '{field}': {error}", "danger")
+
+    if return_url:
+        cancel_url = return_url
+    elif parent_task:
+        cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
+    elif task.is_private and current_user.role != "admin":
+        cancel_url = url_for("tasks_overview_mine")
+    else:
+        cancel_url = url_for("tasks_sector", tag_id=task.tag_id) if not task.is_private else url_for(
+            "tasks_overview"
+        )
+
+    return render_template(
+        "tasks_new.html",
+        form=form,
+        parent_task=parent_task,
+        cancel_url=cancel_url,
+        is_editing=True,
+        editing_task=task,
+        return_url=return_url,
     )
 
 @app.route("/tasks/users/<int:tag_id>")
@@ -6733,6 +7001,8 @@ def tasks_users(tag_id):
             for u in tag.users
             if u.ativo
         ]
+        # Sort users alphabetically by name
+        users.sort(key=lambda u: _sortable_text(u["name"]))
     return jsonify(users)
 
 @app.route("/tasks/sector/<int:tag_id>")
@@ -7172,9 +7442,7 @@ def task_responses_create(task_id: int):
             continue
         participant.last_notified_at = now
         recipients.add(participant_id)
-        message = f'Resposta de {sender_name} em "{task.title}".'
-        if body_preview:
-            message = f"{message} {body_preview}"
+        message = f'{sender_name} respondeu a tarefa "{task.title}".'
         notification = TaskNotification(
             user_id=participant_id,
             task_id=task.id,
@@ -7374,21 +7642,40 @@ def update_task_status(task_id):
             task.completed_at = None
 
         status_notification_records: list[tuple[int, TaskNotification]] = []
-        status_message = None
         actor_name = current_user.name or current_user.username
         now = datetime.utcnow()
+        local_display = (
+            now.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ).strftime("%d/%m/%Y às %H:%M")
+        )
+        recipients: set[int] = set()
+        status_message: str | None = None
+
         if new_status == TaskStatus.IN_PROGRESS:
             if old_status == TaskStatus.DONE:
                 status_message = f'{actor_name} reabriu a tarefa "{task.title}".'
+                recipients = {
+                    uid
+                    for uid in _task_conversation_participant_ids(task)
+                    if uid and uid != current_user.id
+                }
             else:
-                status_message = f'{actor_name} iniciou a tarefa "{task.title}".'
+                status_message = f'{actor_name} iniciou a tarefa "{task.title}" às {local_display}.'
+                if task.created_by and task.created_by != current_user.id:
+                    recipients.add(task.created_by)
         elif new_status == TaskStatus.DONE:
-            status_message = f'{actor_name} concluiu a tarefa "{task.title}".'
+            status_message = f'{actor_name} concluiu a tarefa "{task.title}" às {local_display}.'
+            if task.created_by and task.created_by != current_user.id:
+                recipients.add(task.created_by)
+        elif new_status == TaskStatus.PENDING and old_status == TaskStatus.IN_PROGRESS:
+            status_message = f'{actor_name} moveu a tarefa "{task.title}" para pendente.'
+            recipients = {
+                uid
+                for uid in _task_conversation_participant_ids(task)
+                if uid and uid != current_user.id
+            }
 
-        if status_message:
-            for user_id in _task_conversation_participant_ids(task):
-                if not user_id or user_id == current_user.id:
-                    continue
+        if status_message and recipients:
+            for user_id in recipients:
                 notification = TaskNotification(
                     user_id=user_id,
                     task_id=task.id,

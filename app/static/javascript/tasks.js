@@ -613,6 +613,21 @@ const TaskResponses = (() => {
         return div.innerHTML;
     }
 
+    function openForTask(taskId) {
+        if (!taskId) {
+            return false;
+        }
+        const id = String(taskId);
+        const button = document.querySelector(`${BUTTON_SELECTOR}[data-task-id="${id}"]`);
+        if (!button) {
+            return false;
+        }
+        openDrawer(id, button).catch((error) => {
+            console.error('[Tasks] Failed to open responses drawer:', error);
+        });
+        return true;
+    }
+
     return {
         init,
         refreshButtons,
@@ -620,11 +635,91 @@ const TaskResponses = (() => {
         updateButtonSummary,
         handleRealtimeResponse,
         markResponsesRead,
+        openForTask,
     };
 })();
 
 // Global variable to store current user ID
 let currentUserId = 0;
+
+const TASK_HIGHLIGHT_MS = 3000;
+
+function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(String(value));
+    }
+    return String(value).replace(/([ !"#$%&'()*+,./:;<=>?@[\]^`{|}~])/g, '\\$1');
+}
+
+function getTaskCardById(taskId) {
+    const selectorId = cssEscape(`task-${taskId}`);
+    return document.querySelector(`#${selectorId}`);
+}
+
+function highlightTaskCard(taskId, options = {}) {
+    const {
+        openDetails = true,
+        scrollIntoView = true,
+        highlightDuration = TASK_HIGHLIGHT_MS,
+    } = options;
+    const card = getTaskCardById(taskId);
+    if (!card) {
+        return false;
+    }
+
+    if (openDetails) {
+        const viewButton = card.querySelector('.view-task');
+        const isOpen = card.classList.contains('show-details');
+        if (viewButton && !isOpen) {
+            viewButton.click();
+        } else if (viewButton && isOpen) {
+            viewButton.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    if (scrollIntoView) {
+        try {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (error) {
+            card.scrollIntoView(true);
+        }
+    }
+
+    card.classList.add('task-highlight');
+    window.setTimeout(() => {
+        card.classList.remove('task-highlight');
+    }, highlightDuration);
+
+    return true;
+}
+
+window.highlightTaskCard = highlightTaskCard;
+
+document.addEventListener('click', event => {
+    const toggle = event.target.closest('.task-actions-toggle');
+    if (!toggle) {
+        return;
+    }
+    const container = toggle.closest('.task-actions-container');
+    if (!container) {
+        return;
+    }
+
+    const wasCollapsed = container.classList.contains('collapsed');
+    if (wasCollapsed) {
+        container.classList.remove('collapsed');
+    } else {
+        container.classList.add('collapsed');
+    }
+
+    const isExpanded = wasCollapsed;
+    toggle.setAttribute('aria-expanded', isExpanded.toString());
+
+    const taskTitle = toggle.dataset.taskTitle || '';
+    const labelAction = isExpanded ? 'Ocultar ações da tarefa' : 'Mostrar ações da tarefa';
+    toggle.setAttribute('aria-label', taskTitle ? `${labelAction} ${taskTitle}` : labelAction);
+    toggle.title = isExpanded ? 'Ocultar ações' : 'Mostrar ações';
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0);
@@ -753,6 +848,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(users => {
                     userSelect.innerHTML = '<option value="0">Sem responsável</option>';
+                    // Sort users alphabetically by name
+                    users.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
                     users.forEach(u => {
                         const opt = document.createElement('option');
                         opt.value = u.id;
@@ -786,6 +883,61 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const scheduleHighlightFromUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        let highlightId = params.get('highlight_task');
+        let shouldOpenResponses = params.get('open_responses') === '1';
+        if (!highlightId) {
+            const hash = window.location.hash || '';
+            if (hash.startsWith('#task-')) {
+                highlightId = hash.slice('#task-'.length);
+            }
+        }
+        if (!highlightId) {
+            return;
+        }
+
+        const attemptHighlight = (attempt = 0) => {
+            const success = highlightTaskCard(highlightId, {
+                openDetails: true,
+                scrollIntoView: true,
+            });
+            let needsAnotherAttempt = !success;
+
+            if (shouldOpenResponses) {
+                const opened = TaskResponses.openForTask(highlightId);
+                if (opened) {
+                    shouldOpenResponses = false;
+                } else {
+                    needsAnotherAttempt = true;
+                }
+            }
+
+            if (needsAnotherAttempt && attempt < 5) {
+                window.setTimeout(() => attemptHighlight(attempt + 1), 250);
+            }
+        };
+
+        window.setTimeout(() => attemptHighlight(0), 200);
+
+        let updated = false;
+        if (params.has('highlight_task')) {
+            params.delete('highlight_task');
+            updated = true;
+        }
+        if (params.has('open_responses')) {
+            params.delete('open_responses');
+            updated = true;
+        }
+        if (updated) {
+            const newQuery = params.toString();
+            const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}${window.location.hash}`;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    };
+
+    scheduleHighlightFromUrl();
 });
 
 /**
@@ -1065,8 +1217,11 @@ function rebuildActionButtons(actionsContainer, taskData) {
     const subtaskButton = actionsContainer.querySelector('.subtask');
     const deleteButton = actionsContainer.querySelector('.delete-task');
     const existingResponsesButton = actionsContainer.querySelector('.open-task-responses');
+    const editButton = actionsContainer.querySelector('.edit-task');
     const allowSubtask = canCurrentUserAddSubtask(taskData);
     actionsContainer.dataset.allowSubtask = allowSubtask ? 'true' : 'false';
+    const editBaseUrl = actionsContainer.dataset.editUrl || '';
+    const editReturnUrl = actionsContainer.dataset.editReturnUrl || '';
 
     // Clear all buttons
     actionsContainer.innerHTML = '';
@@ -1088,6 +1243,34 @@ function rebuildActionButtons(actionsContainer, taskData) {
     // Base class adjustments
     actionsContainer.classList.remove('compact');
 
+    const buildEditHref = (baseUrl, returnUrl) => {
+        if (!baseUrl) {
+            return '';
+        }
+        if (!returnUrl) {
+            return baseUrl;
+        }
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        return `${baseUrl}${separator}return_url=${encodeURIComponent(returnUrl)}`;
+    };
+
+    const ensureEditButton = () => {
+        if (!editBaseUrl) {
+            return null;
+        }
+        let link = editButton;
+        if (!link) {
+            link = document.createElement('a');
+            link.className = 'action edit edit-task';
+            link.innerHTML = '<i class="bi bi-pencil"></i>';
+        }
+        const label = taskData && taskData.title ? `Editar tarefa ${taskData.title}` : 'Editar tarefa';
+        link.href = buildEditHref(editBaseUrl, editReturnUrl);
+        link.title = 'Editar tarefa';
+        link.setAttribute('aria-label', label);
+        return link;
+    };
+
     const appendSubtaskButton = () => {
         if (!allowSubtask || taskData.status === 'done') {
             return;
@@ -1103,6 +1286,13 @@ function rebuildActionButtons(actionsContainer, taskData) {
             actionsContainer.appendChild(subtaskLink);
         }
     };
+
+    if (['pending', 'in_progress'].includes(taskData.status)) {
+        const editLink = ensureEditButton();
+        if (editLink) {
+            actionsContainer.appendChild(editLink);
+        }
+    }
 
     // Add status-specific buttons
     if (taskData.status === 'pending') {
