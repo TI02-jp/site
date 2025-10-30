@@ -17,7 +17,7 @@
     <div class="kanban-actions">
       <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
       {% if history_count > 0 %}
-      <a href="{{ history_url }}" class="btn-history">Ver Histórico Completo ({{ history_count }} concluídas)</a>
+      <a href="{{ history_url }}" class="btn-history">Histórico ({{ history_count }})</a>
       {% endif %}
     </div>
   </div>

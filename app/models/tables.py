@@ -1207,6 +1207,91 @@ class TaskStatusHistory(db.Model):
         return f"<TaskStatusHistory task={self.task_id} {self.from_status}->{self.to_status}>"
 
 
+class TaskHistory(db.Model):
+    """Comprehensive audit trail for all task changes."""
+    __tablename__ = "task_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(
+        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    changed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    field_name = db.Column(db.String(50), nullable=False)
+    old_value = db.Column(db.Text)
+    new_value = db.Column(db.Text)
+    change_type = db.Column(db.String(20), nullable=False)  # 'created', 'updated', 'deleted'
+
+    task = db.relationship(
+        "Task", backref=db.backref("history", lazy="dynamic", cascade="all, delete-orphan")
+    )
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<TaskHistory task={self.task_id} field={self.field_name} type={self.change_type}>"
+
+    @property
+    def changed_at_sao_paulo(self) -> datetime | None:
+        """Return the change timestamp converted to the São Paulo timezone."""
+        return _to_sao_paulo(self.changed_at)
+
+    def get_display_message(self) -> str:
+        """Return a human-friendly description of this change."""
+        field_labels = {
+            'title': 'Título',
+            'description': 'Descrição',
+            'status': 'Status',
+            'priority': 'Prioridade',
+            'due_date': 'Data de vencimento',
+            'assigned_to': 'Atribuído para',
+            'is_private': 'Visibilidade',
+            'tag_id': 'Setor'
+        }
+
+        field_display = field_labels.get(self.field_name, self.field_name)
+
+        if self.change_type == 'created':
+            return f'Tarefa criada'
+        elif self.change_type == 'deleted':
+            return f'Tarefa excluída'
+        elif self.field_name == 'status':
+            status_labels = {
+                'TaskStatus.PENDING': 'Pendente',
+                'TaskStatus.IN_PROGRESS': 'Em andamento',
+                'TaskStatus.DONE': 'Concluída',
+                'pending': 'Pendente',
+                'in_progress': 'Em andamento',
+                'done': 'Concluída'
+            }
+            old = status_labels.get(self.old_value or '', self.old_value or '')
+            new = status_labels.get(self.new_value or '', self.new_value or '')
+            return f'{field_display} alterado de "{old}" para "{new}"'
+        elif self.field_name == 'priority':
+            priority_labels = {
+                'TaskPriority.LOW': 'Baixa',
+                'TaskPriority.MEDIUM': 'Média',
+                'TaskPriority.HIGH': 'Alta',
+                'low': 'Baixa',
+                'medium': 'Média',
+                'high': 'Alta'
+            }
+            old = priority_labels.get(self.old_value or '', self.old_value or '')
+            new = priority_labels.get(self.new_value or '', self.new_value or '')
+            return f'{field_display} alterada de "{old}" para "{new}"'
+        elif self.field_name == 'is_private':
+            old = 'Privada' if self.old_value == 'True' else 'Pública'
+            new = 'Privada' if self.new_value == 'True' else 'Pública'
+            return f'{field_display} alterada de "{old}" para "{new}"'
+        elif self.old_value and self.new_value:
+            return f'{field_display} alterado de "{self.old_value}" para "{self.new_value}"'
+        elif self.new_value:
+            return f'{field_display} definido como "{self.new_value}"'
+        elif self.old_value:
+            return f'{field_display} removido (era "{self.old_value}")'
+        else:
+            return f'{field_display} atualizado'
+
+
 class TaskNotification(db.Model):
     """Notification emitted for tasks or announcements."""
 
@@ -1495,4 +1580,116 @@ def _task_completion_notification(mapper, connection, target):
     # Notify creator
     if target.completed_by:
         _notify_creator_on_completion(connection, target, target.completed_by)
+
+
+def _format_value_for_history(value) -> str | None:
+    """Format a field value for storage in task history."""
+    if value is None:
+        return None
+    if isinstance(value, (TaskStatus, TaskPriority)):
+        return str(value)
+    if isinstance(value, date):
+        return value.strftime('%Y-%m-%d')
+    if isinstance(value, bool):
+        return str(value)
+    return str(value)
+
+
+def _record_task_change(connection, task: Task, field_name: str, old_value, new_value, changed_by: int | None):
+    """Record a single field change in the task history."""
+    from flask import has_request_context, g
+
+    # Get current user ID from Flask context if not provided
+    if changed_by is None and has_request_context():
+        try:
+            from flask_login import current_user
+            if hasattr(current_user, 'id'):
+                changed_by = current_user.id
+        except Exception:
+            pass
+
+    old_val_str = _format_value_for_history(old_value)
+    new_val_str = _format_value_for_history(new_value)
+
+    # Only record if values actually changed
+    if old_val_str == new_val_str:
+        return
+
+    connection.execute(
+        TaskHistory.__table__.insert().values(
+            task_id=task.id,
+            changed_at=datetime.utcnow(),
+            changed_by=changed_by,
+            field_name=field_name,
+            old_value=old_val_str,
+            new_value=new_val_str,
+            change_type='updated'
+        )
+    )
+
+
+@event.listens_for(Task, "after_insert")
+def _record_task_creation(mapper, connection, target):
+    """Record task creation in history."""
+    from flask import has_request_context
+    from flask_login import current_user
+
+    changed_by = None
+    if has_request_context():
+        try:
+            if hasattr(current_user, 'id'):
+                changed_by = current_user.id
+        except Exception:
+            pass
+
+    connection.execute(
+        TaskHistory.__table__.insert().values(
+            task_id=target.id,
+            changed_at=datetime.utcnow(),
+            changed_by=changed_by or target.created_by,
+            field_name='task',
+            old_value=None,
+            new_value=target.title,
+            change_type='created'
+        )
+    )
+
+
+@event.listens_for(Task, "after_update")
+def _record_task_updates(mapper, connection, target):
+    """Record all field changes in task history."""
+    from flask import has_request_context
+    from flask_login import current_user
+
+    changed_by = None
+    if has_request_context():
+        try:
+            if hasattr(current_user, 'id'):
+                changed_by = current_user.id
+        except Exception:
+            pass
+
+    state = inspect(target)
+
+    # Fields to track
+    tracked_fields = {
+        'title': state.attrs.title,
+        'description': state.attrs.description,
+        'status': state.attrs.status,
+        'priority': state.attrs.priority,
+        'due_date': state.attrs.due_date,
+        'assigned_to': state.attrs.assigned_to,
+        'is_private': state.attrs.is_private,
+        'tag_id': state.attrs.tag_id,
+    }
+
+    for field_name, attr in tracked_fields.items():
+        history = attr.history
+        if not history.has_changes():
+            continue
+
+        old_value = next((v for v in history.deleted if v is not None), None)
+        new_value = next((v for v in history.added if v is not None), None)
+
+        _record_task_change(connection, target, field_name, old_value, new_value, changed_by)
 
