@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="kanban" data-realtime data-realtime-scopes="tasks">
+<section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Minhas Tarefas Abertas</h2>
     <div class="kanban-actions">
@@ -59,6 +59,7 @@
     </div>
     {% endfor %}
   </div>
+{% include "tasks_responses_panel.html" %}
 </section>
 <script>
   const csrfToken = "{{ csrf_token() }}";

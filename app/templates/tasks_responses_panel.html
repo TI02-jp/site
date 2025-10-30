@@ -1,0 +1,33 @@
+<div id="task-response-drawer" class="task-response-drawer" aria-hidden="true">
+  <div class="drawer-backdrop" data-close-responses></div>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="task-response-title">
+    <header class="drawer-header">
+      <div class="drawer-heading">
+        <h3 id="task-response-title">Respostas</h3>
+        <p class="drawer-subtitle" data-response-status></p>
+      </div>
+      <button type="button" class="drawer-close" data-close-responses aria-label="Fechar respostas">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </header>
+    <div class="drawer-body">
+      <div class="conversation-messages" data-messages-container>
+        <div class="empty-state" data-empty-messages>
+          <i class="bi bi-chat-dots"></i>
+          <p>Nenhuma resposta registrada ainda.</p>
+        </div>
+      </div>
+    </div>
+    <form class="drawer-form" data-response-form>
+      <label for="task-response-input" class="visually-hidden">Escreva uma resposta</label>
+      <textarea id="task-response-input" name="body" class="response-input" rows="3" placeholder="Escreva uma resposta..." autocomplete="off" required></textarea>
+      <div class="form-actions">
+        <span class="form-hint" data-response-hint></span>
+        <button type="submit" class="btn-send-response">
+          <i class="bi bi-send-fill"></i>
+          Enviar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

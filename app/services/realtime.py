@@ -288,3 +288,32 @@ def broadcast_task_status_changed(
     )
 
 
+def broadcast_task_response_created(
+    task_id: int,
+    response_data: Dict[str, Any],
+    recipients: Optional[List[int]] = None,
+    exclude_user: Optional[int] = None,
+) -> None:
+    """Broadcast that a new response was created for a task."""
+
+    payload = {"task_id": task_id, "response": response_data}
+
+    if not recipients:
+        _broadcaster.broadcast(
+            event_type="task:response_created",
+            data=payload,
+            scope="tasks",
+            exclude_user=exclude_user,
+        )
+        return
+
+    for user_id in recipients:
+        _broadcaster.broadcast(
+            event_type="task:response_created",
+            data=payload,
+            user_id=user_id,
+            scope="tasks",
+            exclude_user=exclude_user,
+        )
+
+
