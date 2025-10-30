@@ -1,5 +1,6 @@
 .content-area {
   overflow-y: hidden !important;
+  overflow-x: hidden;
 }
 
 .content-wrapper {
@@ -19,7 +20,7 @@
   height: 100%;
   box-sizing: border-box;
   overflow-y: visible;
-  overflow-x: hidden; /* evita ultrapassar os limites horizontais */
+  overflow-x: hidden;
   color: #1f2937;
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -384,8 +385,9 @@
 
 .task-actions-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.25rem;
+  flex-wrap: wrap;
 }
 
 .task-actions-container.collapsed .task-actions {
@@ -494,11 +496,13 @@
 
 .task-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   align-items: center;
 }
 
 .task-actions.compact {
+  flex-wrap: wrap;
   gap: 0.15rem;
 }
 
@@ -1374,5 +1378,22 @@ body.task-responses-open {
 @media (max-width: 640px) {
   .task-response-drawer .drawer-panel {
     width: 100%;
+  }
+}
+
+/* Breakpoints para responsividade do kanban */
+@media (max-width: 1366px) {
+  .kanban-column {
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .kanban-column {
+    min-width: 200px;
+  }
+
+  .kanban {
+    padding: 1rem;
   }
 }

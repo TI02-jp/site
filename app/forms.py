@@ -792,7 +792,7 @@ class TaskForm(FlaskForm):
     )
     only_me = BooleanField(
         "Somente para mim",
-        false_values={False, "false", "0", 0, ""},
+        false_values=(False, "false", "", "0"),
         default=False,
     )
     priority = SelectField(

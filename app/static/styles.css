@@ -337,7 +337,8 @@ Tabelas (Empresas e Usuários)
     padding: 12px;
     text-align: left;
     vertical-align: middle;
-    white-space: nowrap;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 /* -----------------------------
@@ -901,19 +902,23 @@ Página de Cursos
 }
 
 .codigo-col {
-    width: 100px;
+    width: 8%;
+    min-width: 70px;
 }
 
 .cnpj-col {
-    width: 160px;
+    width: 15%;
+    min-width: 140px;
 }
 
 .tributacao-col {
-    width: 160px;
+    width: 15%;
+    min-width: 120px;
 }
 
 .acao-col {
-    width: 160px;
+    width: 15%;
+    min-width: 140px;
     text-align: center;
 }
 
@@ -1913,15 +1918,18 @@ Responsividade
 
 /* --- Ajustes das colunas --- */
 .codigo-col {
-    width: 70px;
+    width: 8%;
+    min-width: 70px;
 }
 
 .cnpj-col {
-    width: 160px;
+    width: 15%;
+    min-width: 140px;
 }
 
 .acao-col {
-    min-width: 240px;       /* Espaço maior para os botões */
+    width: 20%;
+    min-width: 180px;       /* Espaço maior para os botões */
     text-align: center;
     white-space: nowrap;    /* Impede que quebre linha */
 }
@@ -2272,10 +2280,8 @@ Responsividade
 }
 
 iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: calc(100vw - 300px);
+            position: relative;
+            width: 100%;
             height: calc(100vh - 50px);
             border: none;
             overflow-x: hidden;
@@ -2828,5 +2834,69 @@ Notification Toast Container - Estilo WhatsApp
 
     .upload-dropzone {
         padding: 1.25rem;
+    }
+}
+
+/* -----------------------------
+Breakpoints Intermediários para Responsividade
+----------------------------- */
+
+/* Resolução 1366px (laptop comum em 100% zoom) */
+@media (max-width: 1366px) {
+    .table-empresas, .user-table {
+        font-size: 0.9rem;
+    }
+
+    .table-empresas th, .table-empresas td,
+    .user-table th, .user-table td {
+        padding: 10px;
+    }
+
+    .content-wrapper {
+        padding: 0rem;
+    }
+}
+
+/* Resolução 1280px (tablets landscape e monitores menores) */
+@media (max-width: 1280px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+
+    .main-content {
+        margin-left: 200px;
+    }
+
+    .content-area {
+        max-width: calc(100vw - 200px);
+    }
+
+    .table-empresas, .user-table {
+        font-size: 0.875rem;
+    }
+}
+
+/* Resolução 1024px (tablets) */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 180px;
+        --font-base: 0.9rem;
+    }
+
+    .main-content {
+        margin-left: 180px;
+    }
+
+    .content-area {
+        max-width: calc(100vw - 180px);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .acao-col {
+        min-width: 150px;
     }
 }

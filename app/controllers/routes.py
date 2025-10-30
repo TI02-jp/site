@@ -1405,6 +1405,11 @@ def _can_user_access_tag(tag: Tag | None, user: User | None = None) -> bool:
         return False
     if getattr(user, "role", None) == "admin":
         return True
+    # Check if it's a personal tag for this user
+    if tag.nome.startswith(PERSONAL_TAG_PREFIX):
+        expected_personal_tag = f"{PERSONAL_TAG_PREFIX}{user.id}"
+        if tag.nome == expected_personal_tag:
+            return True
     user_tags = getattr(user, "tags", []) or []
     if tag in user_tags:
         return True
@@ -1422,6 +1427,11 @@ def _get_accessible_tag_ids(user: User | None = None) -> list[int]:
     ids = {t.id for t in getattr(user, "tags", []) or []}
     if getattr(user, "role", None) == "admin":
         return list(ids)
+    # Include personal tag for this user
+    personal_tag_name = f"{PERSONAL_TAG_PREFIX}{user.id}"
+    personal_tag = Tag.query.filter_by(nome=personal_tag_name).first()
+    if personal_tag:
+        ids.add(personal_tag.id)
     ti_tag = _get_ti_tag()
     if ti_tag:
         ids.add(ti_tag.id)
@@ -3192,13 +3202,15 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
         task = notification.task
         if task:
             task_title = (task.title or "").strip()
-            is_owner = current_user.is_authenticated and task.created_by == current_user.id
             query_params: dict[str, object] = {"highlight_task": task.id}
             if notification_type is NotificationType.TASK_RESPONSE:
                 query_params["open_responses"] = "1"
-            if task.is_private and is_owner:
-                overview_endpoint = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
-                target_url = url_for(overview_endpoint, **query_params) + f"#task-{task.id}"
+            if task.is_private:
+                if current_user.is_authenticated and _user_can_access_task(task, current_user):
+                    overview_endpoint = (
+                        "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
+                    )
+                    target_url = url_for(overview_endpoint, **query_params) + f"#task-{task.id}"
             else:
                 target_url = url_for("tasks_sector", tag_id=task.tag_id, **query_params) + f"#task-{task.id}"
             if not message:
@@ -6374,9 +6386,24 @@ def edit_user(user_id):
 
 # ---------------------- Task Management Routes ----------------------
 
+def _user_can_access_task(task: Task, user: User | None) -> bool:
+    """Return ``True`` when ``user`` is allowed to access ``task``."""
+
+    if user is None:
+        return False
+    if getattr(user, "role", None) == "admin":
+        return True
+    if not getattr(task, "is_private", False):
+        return True
+    user_id = getattr(user, "id", None)
+    return user_id is not None and (
+        task.created_by == user_id or task.assigned_to == user_id
+    )
+
+
 def _task_visible_for_user(task: Task, user: User) -> bool:
     """Return True when ``task`` should be shown to ``user``."""
-    return not getattr(task, "is_private", False) or task.created_by == user.id
+    return _user_can_access_task(task, user)
 
 
 def _filter_tasks_for_user(tasks: list[Task], user: User) -> list[Task]:
@@ -6390,6 +6417,38 @@ def _filter_tasks_for_user(tasks: list[Task], user: User) -> list[Task]:
         task.filtered_children = filtered_children
         visible.append(task)
     return visible
+
+
+def _get_task_notification_recipients(task: Task, exclude_user_id: int | None = None) -> set[int]:
+    """
+    Retorna os IDs dos usuários que devem receber notificações sobre uma tarefa.
+    Regra: Se tem responsável, notifica só ele; se não, notifica o setor.
+
+    Args:
+        task: A tarefa em questão
+        exclude_user_id: ID do usuário a ser excluído (geralmente quem fez a ação)
+
+    Returns:
+        Set de IDs de usuários a serem notificados
+    """
+    recipients: set[int] = set()
+
+    # Se tem responsável e não é privada, notifica apenas o responsável
+    if task.assigned_to:
+        if exclude_user_id is None or task.assigned_to != exclude_user_id:
+            recipients.add(task.assigned_to)
+    # Se não tem responsável e não é privada, notifica o setor
+    elif not task.is_private and task.tag and getattr(task.tag, "users", None):
+        for member in getattr(task.tag, "users", []) or []:
+            if not getattr(member, "ativo", False):
+                continue
+            if not member.id:
+                continue
+            if exclude_user_id and member.id == exclude_user_id:
+                continue
+            recipients.add(member.id)
+
+    return recipients
 
 
 def _iter_tasks_with_children(tasks: Iterable[Task]) -> Iterable[Task]:
@@ -6494,15 +6553,17 @@ def tasks_overview():
 @app.route("/tasks/overview/mine")
 @login_required
 def tasks_overview_mine():
-    """Kanban view of open tasks created by the current user."""
+    """Kanban view of tasks created by the current user."""
 
-    open_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+    visible_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE]
     query = (
         Task.query.join(Tag)
+        .filter(Task.parent_id.is_(None))
         .filter(
-            Task.parent_id.is_(None),
-            Task.created_by == current_user.id,
-            Task.status.in_(open_statuses),
+            sa.or_(
+                Task.created_by == current_user.id,
+                sa.and_(Task.is_private.is_(True), Task.assigned_to == current_user.id),
+            )
         )
     )
     tasks = (
@@ -6530,7 +6591,7 @@ def tasks_overview_mine():
     default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
     for task in _iter_tasks_with_children(tasks):
         task.conversation_summary = summaries.get(task.id) or default_summary.copy()
-    tasks_by_status = {status: [] for status in open_statuses}
+    tasks_by_status = {status: [] for status in visible_statuses}
     for t in tasks:
         status = t.status
         if isinstance(status, str):
@@ -6540,18 +6601,20 @@ def tasks_overview_mine():
                 status = TaskStatus.PENDING
         if status in tasks_by_status:
             tasks_by_status[status].append(t)
-    history_count = (
-        Task.query.filter(
-            Task.parent_id.is_(None),
-            Task.created_by == current_user.id,
-            Task.status == TaskStatus.DONE,
-        ).count()
+    # Sort DONE tasks by completion date and show only last 5
+    done_sorted = sorted(
+        tasks_by_status[TaskStatus.DONE],
+        key=lambda x: x.completed_at or datetime.min,
+        reverse=True,
     )
+    history_count = max(0, len(done_sorted) - 5)
+    tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
+
     return render_template(
         "tasks_overview_mine.html",
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
-        visible_statuses=open_statuses,
+        visible_statuses=visible_statuses,
         history_count=history_count,
         allow_delete=current_user.role == "admin",
         history_url=url_for("tasks_history", assigned_by_me=1),
@@ -6616,7 +6679,7 @@ def tasks_new():
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if parent_task and parent_task.is_private and parent_task.created_by != current_user.id:
+    if parent_task and parent_task.is_private and not _user_can_access_task(parent_task, current_user):
         abort(403)
     requested_tag_id = request.args.get("tag_id", type=int)
     choices: list[tuple[int, str]] = []
@@ -6651,12 +6714,22 @@ def tasks_new():
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_task_user_choices(tag)
     personal_tag = None
+    if request.method == "POST":
+        current_app.logger.info(
+            f"Task create POST - only_me raw value: {request.form.get('only_me')}, "
+            f"form.only_me.data: {form.only_me.data}, "
+            f"tag_id: {form.tag_id.data}, assigned_to: {form.assigned_to.data}"
+        )
     if request.method == "POST" and form.only_me.data:
         personal_tag = _ensure_personal_tag(current_user)
         form.tag_id.data = personal_tag.id
         form.assigned_to.data = current_user.id
         if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
             form.tag_id.choices.append((personal_tag.id, "Para Mim"))
+        current_app.logger.info(
+            f"Task create - only_me checked, personal_tag: {personal_tag.id}, "
+            f"tag_id updated to: {form.tag_id.data}"
+        )
 
     if form.validate_on_submit():
         current_app.logger.info("Formulário validado com sucesso. Criando task...")
@@ -6667,6 +6740,10 @@ def tasks_new():
             abort(400)
         assignee_id = form.assigned_to.data or None
         is_private = bool(form.only_me.data)
+        current_app.logger.info(
+            f"Task create - is_private: {is_private}, tag_id: {tag_id}, "
+            f"assignee_id: {assignee_id}, tag_name: {tag.nome if tag else 'None'}"
+        )
         if is_private:
             personal_tag = personal_tag or _ensure_personal_tag(current_user)
             tag = personal_tag
@@ -6708,25 +6785,37 @@ def tasks_new():
                 )
 
             creator_name = current_user.name or current_user.username
-            creation_message = f'{creator_name} criou a tarefa "{task.title}".'
             creation_now = datetime.utcnow()
-            notification_targets: set[int] = set()
-            if task.assigned_to and task.assigned_to != current_user.id:
-                notification_targets.add(task.assigned_to)
+            notification_payloads: list[tuple[int, str]] = []
+
+            if task.assigned_to:
+                # Evitar notificação duplicada do listener de atribuição
+                task._skip_assignment_notification = True
+                if task.assigned_to != current_user.id:
+                    creation_message = f'{creator_name} criou a tarefa "{task.title}".'
+                    notification_payloads.append((task.assigned_to, creation_message))
             elif not task.is_private and tag and getattr(tag, "users", None):
+                sector_label = (
+                    "Para Mim" if tag.nome.startswith(PERSONAL_TAG_PREFIX) else tag.nome
+                )
+                sector_message = f'Tarefa "{task.title}" atribuída no setor {sector_label}.'
                 for member in getattr(tag, "users", []) or []:
                     if not getattr(member, "ativo", False):
                         continue
                     if not member.id or member.id == current_user.id:
                         continue
-                    notification_targets.add(member.id)
+                    notification_payloads.append((member.id, sector_message))
 
-            for user_id in notification_targets:
+            notified_users: set[int] = set()
+            for user_id, message in notification_payloads:
+                if user_id in notified_users:
+                    continue
+                notified_users.add(user_id)
                 notification = TaskNotification(
                     user_id=user_id,
                     task_id=task.id,
                     type=NotificationType.TASK.value,
-                    message=creation_message[:255],
+                    message=message[:255] if message else None,
                     created_at=creation_now,
                 )
                 db.session.add(notification)
@@ -6798,12 +6887,17 @@ def tasks_new():
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(f"Erro no campo '{field}': {error}", "danger")
-    if parent_task:
+
+    # Determinar URL de cancelamento - priorizar return_url se fornecido
+    if return_url:
+        cancel_url = return_url
+    elif parent_task:
         cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
     elif tag:
         cancel_url = url_for("tasks_sector", tag_id=tag.id)
     else:
-        cancel_url = url_for("tasks_overview" if current_user.role == "admin" else "home")
+        # Fallback: usar a página de origem ou home
+        cancel_url = request.referrer or url_for("home")
 
     return render_template(
         "tasks_new.html",
@@ -6834,7 +6928,7 @@ def tasks_edit(task_id: int):
     is_assignee = task.assigned_to == current_user.id if task.assigned_to else False
 
     if task.is_private:
-        if not (is_creator or is_admin):
+        if not _user_can_access_task(task, current_user):
             abort(403)
     else:
         if not (_can_user_access_tag(task.tag, current_user) or is_admin or is_creator or is_assignee):
@@ -6892,6 +6986,12 @@ def tasks_edit(task_id: int):
         form.assigned_to.data = task.assigned_to or (current_user.id if task.is_private else 0)
 
     personal_tag = None
+    if request.method == "POST":
+        current_app.logger.info(
+            f"Task edit POST (task {task_id}) - only_me raw value: {request.form.get('only_me')}, "
+            f"form.only_me.data: {form.only_me.data}, "
+            f"tag_id: {form.tag_id.data}, assigned_to: {form.assigned_to.data}"
+        )
     if request.method == "POST" and form.only_me.data:
         personal_tag = _ensure_personal_tag(current_user)
         form.tag_id.data = personal_tag.id
@@ -6900,6 +7000,10 @@ def tasks_edit(task_id: int):
             updated_choices = list(form.tag_id.choices) + [(personal_tag.id, "Para Mim")]
             form.tag_id.choices = _sort_choice_pairs(updated_choices)
         tag = personal_tag
+        current_app.logger.info(
+            f"Task edit - only_me checked, personal_tag: {personal_tag.id}, "
+            f"tag_id updated to: {form.tag_id.data}"
+        )
 
     if form.validate_on_submit():
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
@@ -6909,6 +7013,10 @@ def tasks_edit(task_id: int):
             abort(400)
         assignee_id = form.assigned_to.data or None
         is_private = bool(form.only_me.data)
+        current_app.logger.info(
+            f"Task edit - is_private: {is_private}, tag_id: {tag_id}, "
+            f"assignee_id: {assignee_id}, tag_name: {tag.nome if tag else 'None'}"
+        )
         if is_private:
             personal_tag = personal_tag or _ensure_personal_tag(current_user)
             tag = personal_tag
@@ -6941,7 +7049,45 @@ def tasks_edit(task_id: int):
                     )
                 )
 
+            # Notificar sobre a edição da tarefa
+            editor_name = current_user.name or current_user.username
+            edit_message = f'{editor_name} editou a tarefa "{task.title}".'
+            edit_now = datetime.utcnow()
+            edit_recipients = _get_task_notification_recipients(task, exclude_user_id=current_user.id)
+
+            edit_notification_records: list[tuple[int, TaskNotification]] = []
+            for user_id in edit_recipients:
+                notification = TaskNotification(
+                    user_id=user_id,
+                    task_id=task.id,
+                    type=NotificationType.TASK.value,
+                    message=edit_message[:255],
+                    created_at=edit_now,
+                )
+                db.session.add(notification)
+                edit_notification_records.append((user_id, notification))
+
             db.session.commit()
+
+            # Broadcast notificações em tempo real
+            if edit_notification_records:
+                from app.services.realtime import get_broadcaster
+                broadcaster = get_broadcaster()
+
+                for user_id, notification in edit_notification_records:
+                    broadcaster.broadcast(
+                        event_type="notification:created",
+                        data={
+                            "id": notification.id,
+                            "task_id": task.id,
+                            "type": notification.type,
+                            "message": notification.message,
+                            "created_at": notification.created_at.isoformat(),
+                        },
+                        user_id=user_id,
+                        scope="notifications",
+                    )
+
             flash("Tarefa atualizada com sucesso!", "success")
 
             if return_url and return_url != request.url:
@@ -6966,16 +7112,18 @@ def tasks_edit(task_id: int):
                 for error in errors:
                     flash(f"Erro no campo '{field}': {error}", "danger")
 
+    # Determinar URL de cancelamento - priorizar return_url se fornecido
     if return_url:
         cancel_url = return_url
     elif parent_task:
         cancel_url = url_for("tasks_sector", tag_id=parent_task.tag_id)
     elif task.is_private and current_user.role != "admin":
         cancel_url = url_for("tasks_overview_mine")
+    elif not task.is_private:
+        cancel_url = url_for("tasks_sector", tag_id=task.tag_id)
     else:
-        cancel_url = url_for("tasks_sector", tag_id=task.tag_id) if not task.is_private else url_for(
-            "tasks_overview"
-        )
+        # Fallback para tasks privadas de admin
+        cancel_url = request.referrer or url_for("tasks_overview")
 
     return render_template(
         "tasks_new.html",
@@ -7354,7 +7502,7 @@ def task_responses_list(task_id: int):
     )
     if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+    if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
     if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
         abort(403)
@@ -7397,7 +7545,7 @@ def task_responses_create(task_id: int):
     )
     if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+    if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
     if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
         abort(403)
@@ -7511,7 +7659,7 @@ def task_responses_mark_read(task_id: int):
     )
     if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+    if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
     if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
         abort(403)
@@ -7555,8 +7703,7 @@ def tasks_view(task_id):
         .get_or_404(task_id)
     )
     if task.is_private:
-        is_owner = task.created_by == current_user.id
-        if not is_owner and current_user.role != "admin":
+        if not _user_can_access_task(task, current_user):
             abort(403)
         if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
             abort(404)
@@ -7567,6 +7714,8 @@ def tasks_view(task_id):
             abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
     priority_order = ["low", "medium", "high"]
+
+    # Determinar URL de retorno
     if task.is_private:
         cancel_url = (
             url_for("tasks_overview")
@@ -7577,6 +7726,10 @@ def tasks_view(task_id):
         cancel_url = url_for("tasks_history", tag_id=task.tag_id)
     else:
         cancel_url = url_for("tasks_history", assigned_by_me=1)
+
+    # Usar referrer se disponível e seguro
+    if request.referrer and request.referrer != request.url:
+        cancel_url = request.referrer
     return render_template(
         "tasks_view.html",
         task=task,
@@ -7590,11 +7743,19 @@ def tasks_view(task_id):
 def update_task_status(task_id):
     """Update a task status and record its history."""
     task = Task.query.get_or_404(task_id)
-    if task.is_private and task.created_by != current_user.id:
+    current_app.logger.info(
+        f"Updating task status - task_id: {task_id}, is_private: {task.is_private}, "
+        f"created_by: {task.created_by}, current_user: {current_user.id}, "
+        f"tag: {task.tag.nome}"
+    )
+    if task.is_private and not _user_can_access_task(task, current_user):
+        current_app.logger.warning(f"Access denied: User {current_user.id} cannot modify private task {task_id}")
         abort(403)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
-    if not _can_user_access_tag(task.tag, current_user):
+    # For private tasks, access is already validated above
+    if not task.is_private and not _can_user_access_tag(task.tag, current_user):
+        current_app.logger.warning(f"Access denied: User {current_user.id} cannot access tag {task.tag.nome}")
         abort(403)
     data = request.get_json() or {}
     status_value = data.get("status")
@@ -7653,26 +7814,21 @@ def update_task_status(task_id):
         if new_status == TaskStatus.IN_PROGRESS:
             if old_status == TaskStatus.DONE:
                 status_message = f'{actor_name} reabriu a tarefa "{task.title}".'
-                recipients = {
-                    uid
-                    for uid in _task_conversation_participant_ids(task)
-                    if uid and uid != current_user.id
-                }
             else:
                 status_message = f'{actor_name} iniciou a tarefa "{task.title}" às {local_display}.'
-                if task.created_by and task.created_by != current_user.id:
-                    recipients.add(task.created_by)
+            # Aplicar regra: responsável OU setor
+            recipients = _get_task_notification_recipients(task, exclude_user_id=current_user.id)
         elif new_status == TaskStatus.DONE:
             status_message = f'{actor_name} concluiu a tarefa "{task.title}" às {local_display}.'
+            # Aplicar regra: responsável OU setor (além do criador)
+            recipients = _get_task_notification_recipients(task, exclude_user_id=current_user.id)
+            # Sempre incluir o criador
             if task.created_by and task.created_by != current_user.id:
                 recipients.add(task.created_by)
         elif new_status == TaskStatus.PENDING and old_status == TaskStatus.IN_PROGRESS:
             status_message = f'{actor_name} moveu a tarefa "{task.title}" para pendente.'
-            recipients = {
-                uid
-                for uid in _task_conversation_participant_ids(task)
-                if uid and uid != current_user.id
-            }
+            # Como assigned_to foi removido na linha 7715, agora notifica TODO O SETOR
+            recipients = _get_task_notification_recipients(task, exclude_user_id=current_user.id)
 
         if status_message and recipients:
             for user_id in recipients:
@@ -7753,7 +7909,7 @@ def delete_task(task_id):
     """Remove a task from the system, including its subtasks and history."""
 
     task = Task.query.get_or_404(task_id)
-    if task.is_private and task.created_by != current_user.id:
+    if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
         abort(404)
