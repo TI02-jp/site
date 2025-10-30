@@ -7730,12 +7730,23 @@ def tasks_view(task_id):
     # Usar referrer se disponível e seguro
     if request.referrer and request.referrer != request.url:
         cancel_url = request.referrer
+
+    # Buscar histórico de alterações da tarefa
+    from app.models.tables import TaskHistory
+    history_entries = (
+        TaskHistory.query
+        .filter_by(task_id=task_id)
+        .order_by(TaskHistory.changed_at.desc())
+        .all()
+    )
+
     return render_template(
         "tasks_view.html",
         task=task,
         priority_labels=priority_labels,
         priority_order=priority_order,
         cancel_url=cancel_url,
+        history_entries=history_entries,
     )
 
 @app.route("/tasks/<int:task_id>/status", methods=["POST"])

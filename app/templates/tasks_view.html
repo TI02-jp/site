@@ -111,6 +111,29 @@
       </div>
       {% endif %}
 
+      {% if history_entries %}
+      <div class="form-group form-group-full">
+        <label><i class="bi bi-clock-history"></i> Histórico de Alterações</label>
+        <div class="task-history-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: #f9f9f9;">
+          {% for entry in history_entries %}
+          <div class="history-entry" style="padding: 0.75rem; margin-bottom: 0.5rem; background: white; border-left: 3px solid #007bff; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.25rem;">
+              <span style="font-weight: 600; color: #333;">{{ entry.get_display_message() }}</span>
+              <span style="font-size: 0.875rem; color: #666;">
+                {{ entry.changed_at_sao_paulo.strftime('%d/%m/%Y %H:%M') if entry.changed_at_sao_paulo else entry.changed_at.strftime('%d/%m/%Y %H:%M') }}
+              </span>
+            </div>
+            {% if entry.user %}
+            <div style="font-size: 0.875rem; color: #666;">
+              <i class="bi bi-person-fill"></i> {{ entry.user.name }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="form-actions">
         <a href="{{ cancel_url }}" class="btn-history">Voltar</a>
       </div>
