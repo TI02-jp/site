@@ -304,6 +304,8 @@ class NotificationType(str, Enum):
     """Type of notification stored in :class:`TaskNotification`."""
 
     TASK = "task"
+    TASK_RESPONSE = "task_response"
+    TASK_STATUS = "task_status"
     ANNOUNCEMENT = "announcement"
 
 
@@ -1080,6 +1082,19 @@ class Task(db.Model):
         order_by="TaskAttachment.created_at.asc()",
         lazy="selectin",
     )
+    responses = db.relationship(
+        "TaskResponse",
+        backref="task",
+        cascade="all, delete-orphan",
+        order_by="TaskResponse.created_at.asc()",
+        lazy="selectin",
+    )
+    response_participants = db.relationship(
+        "TaskResponseParticipant",
+        backref="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     @property
     def progress(self) -> int:
@@ -1127,6 +1142,47 @@ class Task(db.Model):
             default=None,
         )
         return _to_sao_paulo(latest)
+
+
+class TaskResponse(db.Model):
+    """Stores conversational replies attached to a task."""
+
+    __tablename__ = "task_responses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    author = db.relationship("User")
+
+    def __repr__(self):
+        preview = (self.body or "").strip().replace("\n", " ")
+        if len(preview) > 40:
+            preview = f"{preview[:37]}..."
+        return f"<TaskResponse task={self.task_id} author={self.author_id} body={preview!r}>"
+
+
+class TaskResponseParticipant(db.Model):
+    """Tracks per-user conversation state for task responses."""
+
+    __tablename__ = "task_response_participants"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    last_read_at = db.Column(db.DateTime)
+    last_notified_at = db.Column(db.DateTime)
+
+    user = db.relationship("User")
+
+    __table_args__ = (
+        db.UniqueConstraint("task_id", "user_id", name="uq_task_response_participants_task_user"),
+    )
+
+    def __repr__(self):
+        return f"<TaskResponseParticipant task={self.task_id} user={self.user_id}>"
 
 
 class TaskStatusHistory(db.Model):

@@ -1,17 +1,38 @@
-{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False) %}
+{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False, is_subtask=False) %}
 {% if task.is_private and task.created_by != current_user.id %}
 {% else %}
 {% set status_class = ' task-status-' ~ task.status.value %}
 {% set children = task.filtered_children if task.filtered_children is defined else task.children %}
 {% set has_children = children is not none and children|length > 0 %}
-<li id="task-{{ task.id }}" class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}" data-task-id="{{ task.id }}">
+{% set status_labels = {
+  'pending': 'Pendente',
+  'in_progress': 'Em andamento',
+  'done': 'Concluída'
+} %}
+{% set show_subtask_status = is_subtask and task.status != TaskStatus.PENDING %}
+{% set is_creator = current_user.id == task.created_by %}
+{% set is_assignee = task.assigned_to == current_user.id %}
+{% set allow_subtask_pending = task.status == TaskStatus.PENDING and task.assigned_to and (is_creator or is_assignee) %}
+{% set allow_subtask_in_progress = task.status == TaskStatus.IN_PROGRESS and (is_creator or is_assignee) %}
+{% set allow_subtask = allow_subtask_pending or allow_subtask_in_progress %}
+<li id="task-{{ task.id }}"
+    class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}{% if is_subtask %} subtask-card{% endif %}"
+    data-task-id="{{ task.id }}"
+    data-is-subtask="{{ 'true' if is_subtask else 'false' }}">
   <div class="task-header">
     {% if has_children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
     {% endif %}
     <div class="task-info">
       {% set tag_label = 'Para Mim' if task.is_private and task.created_by == current_user.id else (task.tag.nome if task.tag else 'Sem setor') %}
-      <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
+      <div class="task-title-row{% if is_subtask %} subtask-title-row{% endif %}">
+        <span class="task-title" id="task-title-{{ task.id }}">{{ task.title }}</span>
+        {% if show_subtask_status %}
+        <span class="subtask-status status-{{ task.status.value }}" data-subtask-status>
+          {{ status_labels.get(task.status.value, '') }}
+        </span>
+        {% endif %}
+      </div>
       {% if show_tag %}
       <span class="task-tag">{{ tag_label }}</span>
       {% endif %}
@@ -54,21 +75,42 @@
       </div>
       {% endif %}
     </div>
-    <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}">
+    {% set conversation = task.conversation_summary if task.conversation_summary is defined else None %}
+    {% set show_responses = task.status in [TaskStatus.IN_PROGRESS, TaskStatus.DONE] %}
+    <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}"
+         data-allow-subtask="{{ 'true' if allow_subtask else 'false' }}">
       <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
+      {% if show_responses %}
+      <button type="button"
+              class="action responses open-task-responses{% if conversation and (conversation.unread_count or conversation.total_responses) %} has-responses{% endif %}"
+              data-task-id="{{ task.id }}"
+              data-unread="{{ conversation.unread_count if conversation else 0 }}"
+              data-total="{{ conversation.total_responses if conversation else 0 }}"
+              title="Abrir respostas da tarefa {{ task.title }}"
+              aria-label="Abrir respostas da tarefa {{ task.title }}">
+        <span class="icon">
+          <i class="bi {% if conversation and conversation.unread_count %}bi-chat-dots-fill{% else %}bi-chat-dots{% endif %}"></i>
+        </span>
+        {% if conversation and (conversation.unread_count or conversation.total_responses) %}
+        <span class="badge{% if conversation.unread_count %} unread{% endif %}">
+          {% if conversation.unread_count %}{{ conversation.unread_count }}{% else %}{{ conversation.total_responses }}{% endif %}
+        </span>
+        {% endif %}
+      </button>
+      {% endif %}
       {% if task.status == TaskStatus.PENDING %}
       <button class="action start change-status" data-id="{{ task.id }}" data-status="in_progress" title="Iniciar"><i class="bi bi-play-fill"></i></button>
       {% elif task.status == TaskStatus.IN_PROGRESS %}
       <button class="action to-pending change-status" data-id="{{ task.id }}" data-status="pending" title="Mover para pendente"><i class="bi bi-arrow-return-left"></i></button>
       <button class="action done change-status" data-id="{{ task.id }}" data-status="done" title="Concluir"><i class="bi bi-check-circle"></i></button>
-      {% elif task.status == TaskStatus.DONE and current_user.role == 'admin' %}
+      {% elif task.status == TaskStatus.DONE and task.created_by == current_user.id %}
       <button class="action reopen change-status" data-id="{{ task.id }}" data-status="in_progress" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i></button>
       {% endif %}
-      {% if current_user.role == 'admin' or task.created_by == current_user.id %}
+      {% if allow_subtask %}
       <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
-      {% if allow_delete or task.created_by == current_user.id %}
-      <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
       {% endif %}
+      {% if current_user.role == 'admin' or task.created_by == current_user.id %}
+      <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
       {% endif %}
     </div>
   </div>
@@ -132,7 +174,7 @@
   {% if has_children %}
   <ul class="subtasks">
     {% for child in children %}
-      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete) }}
+      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete, is_subtask=True) }}
     {% endfor %}
   </ul>
   {% endif %}

@@ -43,6 +43,8 @@ from app.models.tables import (
     TaskNotification,
     NotificationType,
     TaskAttachment,
+    TaskResponse,
+    TaskResponseParticipant,
     AccessLink,
     Course,
     CourseTag,
@@ -94,7 +96,7 @@ from uuid import uuid4
 from sqlalchemy import or_, cast, String, text, inspect
 from sqlalchemy.exc import IntegrityError, NoSuchTableError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, aliased
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -6382,6 +6384,18 @@ def _filter_tasks_for_user(tasks: list[Task], user: User) -> list[Task]:
     return visible
 
 
+def _iter_tasks_with_children(tasks: Iterable[Task]) -> Iterable[Task]:
+    """Yield tasks recursively, following ``filtered_children`` when available."""
+
+    for task in tasks:
+        yield task
+        children = getattr(task, "filtered_children", None)
+        if children is None:
+            children = getattr(task, "children", None)
+        if children:
+            yield from _iter_tasks_with_children(children)
+
+
 def _ensure_personal_tag(user: User) -> Tag:
     """Return (and create if needed) the personal tag for ``user``."""
 
@@ -6434,6 +6448,13 @@ def tasks_overview():
         .all()
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
+    summaries = _load_task_response_summaries(
+        (task.id for task in _iter_tasks_with_children(tasks)),
+        current_user.id,
+    )
+    default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
+    for task in _iter_tasks_with_children(tasks):
+        task.conversation_summary = summaries.get(task.id) or default_summary.copy()
     tasks_by_status = {status: [] for status in TaskStatus}
     for t in tasks:
         status = t.status
@@ -6494,6 +6515,13 @@ def tasks_overview_mine():
         .all()
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
+    summaries = _load_task_response_summaries(
+        (task.id for task in _iter_tasks_with_children(tasks)),
+        current_user.id,
+    )
+    default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
+    for task in _iter_tasks_with_children(tasks):
+        task.conversation_summary = summaries.get(task.id) or default_summary.copy()
     tasks_by_status = {status: [] for status in open_statuses}
     for t in tasks:
         status = t.status
@@ -6832,6 +6860,10 @@ def tasks_history(tag_id=None):
     else:
         tasks = []
     tasks = _filter_tasks_for_user(tasks, current_user)
+    summaries = _load_task_response_summaries((task.id for task in _iter_tasks_with_children(tasks)), current_user.id)
+    default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
+    for task in _iter_tasks_with_children(tasks):
+        task.conversation_summary = summaries.get(task.id) or default_summary.copy()
     return render_template(
         "tasks_history.html",
         tag=tag,
@@ -6839,6 +6871,405 @@ def tasks_history(tag_id=None):
         assigned_to_me=assigned_to_me,
         assigned_by_me=assigned_by_me,
     )
+
+
+def _task_conversation_participant_ids(task: Task) -> set[int]:
+    """Return user IDs that participate in the task conversation."""
+
+    participant_ids = {task.created_by}
+    if task.assigned_to:
+        participant_ids.add(task.assigned_to)
+    if task.completed_by:
+        participant_ids.add(task.completed_by)
+    return {uid for uid in participant_ids if uid}
+
+
+def _user_can_access_task_conversation(task: Task, user: User) -> bool:
+    """Return True when ``user`` is allowed to view/post task responses."""
+
+    if user.role == "admin":
+        return True
+    if task.created_by == user.id:
+        return True
+    if task.assigned_to == user.id:
+        return True
+    if task.completed_by == user.id:
+        return True
+    return False
+
+
+def _ensure_response_participant(task_id: int, user_id: int) -> TaskResponseParticipant:
+    """Return or create a conversation participant row for the given task/user."""
+
+    participant = TaskResponseParticipant.query.filter_by(
+        task_id=task_id, user_id=user_id
+    ).one_or_none()
+    if participant is None:
+        participant = TaskResponseParticipant(task_id=task_id, user_id=user_id)
+        db.session.add(participant)
+        db.session.flush()
+    return participant
+
+
+def _serialize_task_response(response: TaskResponse, viewer_id: int) -> dict[str, object]:
+    """Serialize a ``TaskResponse`` into a JSON-friendly payload."""
+
+    author = response.author
+    local_created_at = (
+        response.created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+        if response.created_at
+        else None
+    )
+    created_at_display = (
+        local_created_at.strftime("%d/%m/%Y %H:%M") if local_created_at else None
+    )
+    body = response.body or ""
+    return {
+        "id": response.id,
+        "task_id": response.task_id,
+        "body": body,
+        "body_html": body.replace("\n", "<br>"),
+        "created_at": response.created_at.isoformat() if response.created_at else None,
+        "created_at_display": created_at_display,
+        "author": {
+            "id": author.id if author else None,
+            "name": author.name if author and author.name else author.username if author else None,
+        },
+        "is_mine": author.id == viewer_id if author else False,
+    }
+
+
+def _build_task_conversation_meta(task: Task, viewer: User) -> dict[str, object]:
+    """Return metadata required by the conversation sidebar/drawer."""
+
+    participant_ids = _task_conversation_participant_ids(task)
+    participants = User.query.filter(User.id.in_(participant_ids)).all() if participant_ids else []
+    participants_info = []
+    for person in participants:
+        participants_info.append(
+            {
+                "id": person.id,
+                "name": person.name or person.username,
+                "is_creator": person.id == task.created_by,
+                "is_assignee": person.id == task.assigned_to,
+                "is_finisher": person.id == task.completed_by,
+            }
+        )
+    participant_row = TaskResponseParticipant.query.filter_by(
+        task_id=task.id, user_id=viewer.id
+    ).one_or_none()
+    last_read_at = participant_row.last_read_at if participant_row else None
+    responses_query = (
+        TaskResponse.query.filter_by(task_id=task.id)
+        .order_by(TaskResponse.created_at.asc())
+        .options(joinedload(TaskResponse.author))
+    )
+    responses = responses_query.all()
+    serialized_responses = [_serialize_task_response(response, viewer.id) for response in responses]
+    unread_count = 0
+    for response in responses:
+        if response.author_id == viewer.id:
+            continue
+        if not last_read_at or (response.created_at and response.created_at > last_read_at):
+            unread_count += 1
+    last_response_payload = serialized_responses[-1] if serialized_responses else None
+    return {
+        "participants": participants_info,
+        "unread_count": unread_count,
+        "last_response": last_response_payload,
+        "total_responses": len(responses),
+        "responses": serialized_responses,
+        "last_read_at": last_read_at.isoformat() if last_read_at else None,
+    }
+
+
+def _load_task_response_summaries(
+    task_ids: Iterable[int], viewer_id: int
+) -> dict[int, dict[str, object]]:
+    """Return unread counts and last-response info for the given tasks."""
+
+    normalized_ids = {int(task_id) for task_id in task_ids if task_id}
+    if not normalized_ids:
+        return {}
+
+    response_counts = dict(
+        db.session.query(TaskResponse.task_id, sa.func.count(TaskResponse.id))
+        .filter(TaskResponse.task_id.in_(normalized_ids))
+        .group_by(TaskResponse.task_id)
+        .all()
+    )
+
+    participant_alias = aliased(TaskResponseParticipant)
+    unread_rows = (
+        db.session.query(
+            TaskResponse.task_id,
+            sa.func.count(TaskResponse.id),
+        )
+        .outerjoin(
+            participant_alias,
+            sa.and_(
+                participant_alias.task_id == TaskResponse.task_id,
+                participant_alias.user_id == viewer_id,
+            ),
+        )
+        .filter(TaskResponse.task_id.in_(normalized_ids))
+        .filter(
+            sa.or_(
+                participant_alias.last_read_at.is_(None),
+                TaskResponse.created_at > participant_alias.last_read_at,
+            )
+        )
+        .filter(TaskResponse.author_id != viewer_id)
+        .group_by(TaskResponse.task_id)
+        .all()
+    )
+    unread_counts = {task_id: count for task_id, count in unread_rows}
+
+    latest_subquery = (
+        db.session.query(
+            TaskResponse.task_id.label("task_id"),
+            sa.func.max(TaskResponse.id).label("latest_id"),
+        )
+        .filter(TaskResponse.task_id.in_(normalized_ids))
+        .group_by(TaskResponse.task_id)
+        .subquery()
+    )
+
+    latest_rows = (
+        db.session.query(TaskResponse, User)
+        .join(latest_subquery, TaskResponse.id == latest_subquery.c.latest_id)
+        .outerjoin(User, User.id == TaskResponse.author_id)
+        .all()
+    )
+
+    last_responses: dict[int, dict[str, object]] = {}
+    for response, author in latest_rows:
+        local_created_at = (
+            response.created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+            if response.created_at
+            else None
+        )
+        last_responses[response.task_id] = {
+            "body": response.body or "",
+            "body_html": (response.body or "").replace("\n", "<br>"),
+            "created_at": response.created_at.isoformat() if response.created_at else None,
+            "created_at_display": local_created_at.strftime("%d/%m/%Y %H:%M")
+            if local_created_at
+            else None,
+            "author": {
+                "id": author.id if author else None,
+                "name": author.name if author and author.name else (author.username if author else None),
+            },
+        }
+
+    summaries: dict[int, dict[str, object]] = {}
+    for task_id in normalized_ids:
+        summaries[task_id] = {
+            "unread_count": unread_counts.get(task_id, 0),
+            "total_responses": response_counts.get(task_id, 0),
+            "last_response": last_responses.get(task_id),
+        }
+
+    return summaries
+
+
+@app.route("/tasks/<int:task_id>/responses", methods=["GET"])
+@login_required
+def task_responses_list(task_id: int):
+    """Return responses for the given task in JSON format."""
+
+    task = (
+        Task.query.options(joinedload(Task.tag), joinedload(Task.assignee), joinedload(Task.creator))
+        .get_or_404(task_id)
+    )
+    if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+        abort(404)
+    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+        abort(403)
+    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+        abort(403)
+    if not _user_can_access_task_conversation(task, current_user):
+        abort(403)
+    if task.status not in (TaskStatus.IN_PROGRESS, TaskStatus.DONE):
+        return jsonify({"success": False, "error": "conversation_unavailable"}), 409
+
+    meta = _build_task_conversation_meta(task, current_user)
+    responses = meta.pop("responses")
+    can_post = task.status in (TaskStatus.IN_PROGRESS, TaskStatus.DONE)
+    return jsonify(
+        {
+            "success": True,
+            "task": {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status.value,
+                "tag": task.tag.nome if task.tag else None,
+                "creator_id": task.created_by,
+                "assignee_id": task.assigned_to,
+            },
+            "responses": responses,
+            "meta": {
+                **meta,
+                "can_post": can_post and _user_can_access_task_conversation(task, current_user),
+            },
+        }
+    )
+
+
+@app.route("/tasks/<int:task_id>/responses", methods=["POST"])
+@login_required
+def task_responses_create(task_id: int):
+    """Create a new task response and notify participants."""
+
+    task = (
+        Task.query.options(joinedload(Task.tag), joinedload(Task.assignee), joinedload(Task.creator))
+        .get_or_404(task_id)
+    )
+    if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+        abort(404)
+    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+        abort(403)
+    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+        abort(403)
+    if not _user_can_access_task_conversation(task, current_user):
+        abort(403)
+    if task.status not in (TaskStatus.IN_PROGRESS, TaskStatus.DONE):
+        return jsonify({"success": False, "error": "conversation_unavailable"}), 409
+
+    payload = request.get_json(silent=True) or {}
+    raw_body = (payload.get("body") or "").strip()
+    if not raw_body:
+        return jsonify({"success": False, "error": "empty_response"}), 400
+
+    cleaned_body = sanitize_html(raw_body)
+    if not cleaned_body.strip():
+        return jsonify({"success": False, "error": "empty_response"}), 400
+
+    created_at = datetime.utcnow()
+    response = TaskResponse(
+        task_id=task.id,
+        author_id=current_user.id,
+        body=cleaned_body,
+        created_at=created_at,
+    )
+    db.session.add(response)
+
+    author_participant = _ensure_response_participant(task.id, current_user.id)
+    author_participant.last_read_at = created_at
+
+    recipients: set[int] = set()
+    notification_records: list[tuple[int, TaskNotification]] = []
+    now = datetime.utcnow()
+    sender_name = current_user.name or current_user.username
+    body_preview = re.sub(r'<[^>]+>', '', cleaned_body).replace('\n', ' ').strip()
+    if len(body_preview) > 90:
+        body_preview = f"{body_preview[:87]}..."
+
+    for participant_id in _task_conversation_participant_ids(task):
+        participant = _ensure_response_participant(task.id, participant_id)
+        if participant_id == current_user.id:
+            participant.last_notified_at = now
+            continue
+        participant.last_notified_at = now
+        recipients.add(participant_id)
+        message = f'Resposta de {sender_name} em "{task.title}".'
+        if body_preview:
+            message = f"{message} {body_preview}"
+        notification = TaskNotification(
+            user_id=participant_id,
+            task_id=task.id,
+            type=NotificationType.TASK_RESPONSE.value,
+            message=message[:255],
+            created_at=now,
+        )
+        db.session.add(notification)
+        notification_records.append((participant_id, notification))
+
+    db.session.flush()
+
+    response_payload = _serialize_task_response(response, current_user.id)
+
+    db.session.commit()
+
+    from app.services.realtime import (
+        broadcast_task_response_created,
+        get_broadcaster,
+    )
+
+    if recipients:
+        broadcast_task_response_created(
+            task.id,
+            response_payload,
+            recipients=list(recipients),
+            exclude_user=current_user.id,
+        )
+
+    broadcaster = get_broadcaster()
+    for user_id, notification in notification_records:
+        broadcaster.broadcast(
+            event_type="notification:created",
+            data={
+                "id": notification.id,
+                "task_id": task.id,
+                "type": notification.type,
+                "message": notification.message,
+                "created_at": notification.created_at.isoformat()
+                if notification.created_at
+                else None,
+            },
+            user_id=user_id,
+            scope="notifications",
+        )
+
+    refreshed_meta = _build_task_conversation_meta(task, current_user)
+
+    return jsonify(
+        {
+            "success": True,
+            "response": response_payload,
+            "meta": {**refreshed_meta, "can_post": True},
+        }
+    )
+
+
+@app.route("/tasks/<int:task_id>/responses/read", methods=["POST"])
+@login_required
+def task_responses_mark_read(task_id: int):
+    """Mark all responses as read for the current user."""
+
+    task = (
+        Task.query.options(joinedload(Task.tag), joinedload(Task.assignee), joinedload(Task.creator))
+        .get_or_404(task_id)
+    )
+    if task.tag and task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+        abort(404)
+    if task.is_private and task.created_by != current_user.id and current_user.role != "admin":
+        abort(403)
+    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+        abort(403)
+    if not _user_can_access_task_conversation(task, current_user):
+        abort(403)
+    if task.status not in (TaskStatus.IN_PROGRESS, TaskStatus.DONE):
+        return jsonify({"success": False, "error": "conversation_unavailable"}), 409
+
+    participant = _ensure_response_participant(task.id, current_user.id)
+    now = datetime.utcnow()
+    participant.last_read_at = now
+
+    (
+        TaskNotification.query.filter(
+            TaskNotification.user_id == current_user.id,
+            TaskNotification.task_id == task.id,
+            TaskNotification.type == NotificationType.TASK_RESPONSE.value,
+            TaskNotification.read_at.is_(None),
+        ).update({"read_at": now}, synchronize_session=False)
+    )
+
+    db.session.commit()
+
+    meta = _build_task_conversation_meta(task, current_user)
+    return jsonify({"success": True, "meta": {**meta, "can_post": True}})
+
 
 @app.route("/tasks/<int:task_id>")
 @login_required
@@ -6907,9 +7338,14 @@ def update_task_status(task_id):
         allowed = {
             TaskStatus.PENDING: {TaskStatus.IN_PROGRESS},
             TaskStatus.IN_PROGRESS: {TaskStatus.DONE, TaskStatus.PENDING},
+            TaskStatus.DONE: {TaskStatus.IN_PROGRESS},
         }
         if new_status not in allowed.get(task.status, set()):
             abort(403)
+        # Only creator can reopen a completed task
+        if task.status == TaskStatus.DONE and new_status == TaskStatus.IN_PROGRESS:
+            if task.created_by != current_user.id:
+                abort(403)
     if task.status != new_status:
         history = TaskStatusHistory(
             task_id=task.id,
@@ -6936,11 +7372,40 @@ def update_task_status(task_id):
         else:
             task.completed_by = None
             task.completed_at = None
+
+        status_notification_records: list[tuple[int, TaskNotification]] = []
+        status_message = None
+        actor_name = current_user.name or current_user.username
+        now = datetime.utcnow()
+        if new_status == TaskStatus.IN_PROGRESS:
+            if old_status == TaskStatus.DONE:
+                status_message = f'{actor_name} reabriu a tarefa "{task.title}".'
+            else:
+                status_message = f'{actor_name} iniciou a tarefa "{task.title}".'
+        elif new_status == TaskStatus.DONE:
+            status_message = f'{actor_name} concluiu a tarefa "{task.title}".'
+
+        if status_message:
+            for user_id in _task_conversation_participant_ids(task):
+                if not user_id or user_id == current_user.id:
+                    continue
+                notification = TaskNotification(
+                    user_id=user_id,
+                    task_id=task.id,
+                    type=NotificationType.TASK_STATUS.value,
+                    message=status_message[:255],
+                    created_at=now,
+                )
+                db.session.add(notification)
+                status_notification_records.append((user_id, notification))
+
         db.session.add(history)
+        if status_notification_records:
+            db.session.flush()
         db.session.commit()
 
         # Broadcast status change
-        from app.services.realtime import broadcast_task_status_changed
+        from app.services.realtime import broadcast_task_status_changed, get_broadcaster
         task_data = {
             'id': task.id,
             'title': task.title,
@@ -6965,6 +7430,23 @@ def update_task_status(task_id):
                 task_data,
                 exclude_user=current_user.id,
             )
+        if status_notification_records:
+            broadcaster = get_broadcaster()
+            for user_id, notification in status_notification_records:
+                broadcaster.broadcast(
+                    event_type="notification:created",
+                    data={
+                        "id": notification.id,
+                        "task_id": task.id,
+                        "type": notification.type,
+                        "message": notification.message,
+                        "created_at": notification.created_at.isoformat()
+                        if notification.created_at
+                        else None,
+                    },
+                    user_id=user_id,
+                    scope="notifications",
+                )
 
     return jsonify({"success": True, "task": task_data})
 

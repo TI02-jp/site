@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="kanban" data-realtime data-realtime-scopes="tasks">
+<section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Tarefas - {{ tag.nome }}</h2>
     <div class="kanban-actions">
@@ -53,13 +53,14 @@
     'medium': 'Média',
     'high': 'Alta'
   } %}
+  {% set allow_delete = current_user.role == 'admin' %}
   <div class="kanban-board">
     {% for status in TaskStatus %}
     <div class="kanban-column">
       <h3><i class="bi {{ status_meta[status.value].icon }}"></i>{{ status_meta[status.value].label }}</h3>
       <ul class="kanban-list" data-status="{{ status.value }}">
         {% for task in tasks_by_status[status] if not task.is_private or task.created_by == current_user.id %}
-          {{ render_task(task, TaskStatus, priority_labels=priority_labels) }}
+          {{ render_task(task, TaskStatus, priority_labels=priority_labels, allow_delete=allow_delete) }}
         {% else %}
           <li class="empty">Nenhuma tarefa.</li>
         {% endfor %}
@@ -67,6 +68,7 @@
     </div>
     {% endfor %}
   </div>
+{% include "tasks_responses_panel.html" %}
 </section>
 <script>
   const csrfToken = "{{ csrf_token() }}";
