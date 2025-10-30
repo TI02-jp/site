@@ -134,7 +134,7 @@
       <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}"
            id="task-actions-{{ task.id }}"
            data-allow-subtask="{{ 'true' if allow_subtask else 'false' }}"
-           data-edit-url="{{ url_for('tasks_edit', task_id=task.id) }}"
+           data-edit-url="{{ url_for('tasks_edit', task_id=task.id, return_url=request.url) }}"
            data-edit-return-url="{{ request.url }}">
         <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
         {% if show_responses %}

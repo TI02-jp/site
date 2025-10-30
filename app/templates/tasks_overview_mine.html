@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Minhas Tarefas Abertas{% endblock %}
+{% block title %}Minhas Tarefas{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
@@ -13,10 +13,12 @@
 {% block content %}
 <section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}">
   <div class="kanban-header">
-    <h2><i class="bi bi-kanban"></i>Minhas Tarefas Abertas</h2>
+    <h2><i class="bi bi-kanban"></i>Minhas Tarefas</h2>
     <div class="kanban-actions">
-      <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
-      <a href="{{ history_url }}" class="btn-history">Historico{% if history_count %} ({{ history_count }}){% endif %}</a>
+      <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
+      {% if history_count > 0 %}
+      <a href="{{ history_url }}" class="btn-history">Ver Histórico Completo ({{ history_count }} concluídas)</a>
+      {% endif %}
     </div>
   </div>
 
@@ -35,7 +37,8 @@
   {% from "tasks_macros.html" import render_task, render_actions_legend with context %}
   {% set status_meta = {
     'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
-    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'}
+    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
+    'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
   } %}
   {% set priority_labels = {
     'low': 'Baixa',

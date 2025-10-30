@@ -22,7 +22,7 @@
         </label>
       </form>
       {% if current_user.role == 'admin' %}
-      <a href="{{ url_for('tasks_new') }}" class="btn-new-task">Nova Tarefa</a>
+      <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
       {% endif %}
       <a href="{{ url_for('tasks_history', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
     </div>

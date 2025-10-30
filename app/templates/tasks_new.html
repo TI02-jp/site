@@ -30,16 +30,6 @@
     font-size: var(--font-base);
   }
 
-  .form-group-usuario.assigned-disabled select {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .form-group-setor.assigned-disabled select {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
   .form-group-usuario select {
     max-width: 320px;
   }
@@ -49,6 +39,17 @@
     height: 0.6rem;
     margin-top: 0.25rem;
     border-radius: 0.2rem;
+  }
+
+  .assigned-disabled select:disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+    opacity: 0.75;
+  }
+
+  .disabled-select:disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
   }
 
   @media (max-width: 992px) {
@@ -251,6 +252,14 @@
     const assignedWrapper = document.querySelector('.form-group-usuario');
     const tagSelect = document.getElementById('tag_id');
     const tagWrapper = document.querySelector('.form-group-setor');
+    const form = document.querySelector('.kanban-form');
+
+    if (assignedSelect && assignedSelect.disabled) {
+      assignedSelect.classList.add('disabled-select');
+    }
+    if (tagSelect && tagSelect.disabled) {
+      tagSelect.classList.add('disabled-select');
+    }
 
     if (assignedSelect && assignedSelect.dataset.prevValue === undefined) {
       assignedSelect.dataset.prevValue = assignedSelect.value;
@@ -265,40 +274,51 @@
       if (onlyMeCheckbox && onlyMeCheckbox.checked) {
         assignedSelect.dataset.prevDisabled = assignedSelect.disabled ? '1' : '0';
         assignedSelect.dataset.prevValue = assignedSelect.value;
-        assignedSelect.disabled = true;
         if (userId) {
           assignedSelect.value = userId;
         }
+        assignedSelect.disabled = true;
+        assignedSelect.classList.add('disabled-select');
         if (assignedWrapper) {
           assignedWrapper.classList.add('assigned-disabled');
         }
 
         if (tagSelect) {
           tagSelect.dataset.prevDisabled = tagSelect.disabled ? '1' : '0';
+          tagSelect.dataset.prevValue = tagSelect.value;
           tagSelect.disabled = true;
+          tagSelect.classList.add('disabled-select');
           if (tagWrapper) {
             tagWrapper.classList.add('assigned-disabled');
           }
         }
       } else {
+        const prevValue = assignedSelect.dataset.prevValue;
         const wasDisabled = assignedSelect.dataset.prevDisabled === '1';
         assignedSelect.disabled = wasDisabled;
-        if (assignedSelect.dataset.prevValue !== undefined) {
-          assignedSelect.value = assignedSelect.dataset.prevValue;
+        if (prevValue !== undefined) {
+          assignedSelect.value = prevValue;
         }
-        assignedSelect.dataset.prevValue = assignedSelect.value;
-        assignedSelect.dataset.prevDisabled = '0';
+        assignedSelect.classList.toggle('disabled-select', assignedSelect.disabled);
         if (assignedWrapper) {
           assignedWrapper.classList.remove('assigned-disabled');
         }
+        assignedSelect.dataset.prevValue = assignedSelect.value;
+        assignedSelect.dataset.prevDisabled = assignedSelect.disabled ? '1' : '0';
 
         if (tagSelect) {
+          const tagPrevValue = tagSelect.dataset.prevValue;
           const tagWasDisabled = tagSelect.dataset.prevDisabled === '1';
           tagSelect.disabled = tagWasDisabled;
-          tagSelect.dataset.prevDisabled = '0';
+          if (tagPrevValue !== undefined) {
+            tagSelect.value = tagPrevValue;
+          }
+          tagSelect.classList.toggle('disabled-select', tagSelect.disabled);
           if (tagWrapper) {
             tagWrapper.classList.remove('assigned-disabled');
           }
+          tagSelect.dataset.prevValue = tagSelect.value;
+          tagSelect.dataset.prevDisabled = tagSelect.disabled ? '1' : '0';
         }
       }
     }
@@ -306,6 +326,22 @@
     if (onlyMeCheckbox) {
       onlyMeCheckbox.addEventListener('change', syncOnlyMeState);
       syncOnlyMeState();
+    }
+
+    // Antes de submeter, garantir que os campos sejam habilitados temporariamente
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        if (onlyMeCheckbox && onlyMeCheckbox.checked) {
+          if (assignedSelect) {
+            assignedSelect.disabled = false;
+            assignedSelect.classList.remove('disabled-select');
+          }
+          if (tagSelect) {
+            tagSelect.disabled = false;
+            tagSelect.classList.remove('disabled-select');
+          }
+        }
+      });
     }
   });
 </script>
