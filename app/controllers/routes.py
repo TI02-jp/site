@@ -6866,12 +6866,14 @@ def tasks_new():
 
             # Redirecionar de volta para a pagina original quando apropriado
             if return_url and not task.is_private and return_url != request.url:
-                current_app.logger.info("Redirecionando para return_url: %s", return_url)
-                return redirect(return_url)
+                current_app.logger.info("Redirecionando para return_url: %s com highlight", return_url)
+                # Adicionar parâmetro highlight_task para destacar a tarefa criada
+                separator = '&' if '?' in return_url else '?'
+                return redirect(f"{return_url}{separator}highlight_task={task.id}")
 
             destination = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
-            current_app.logger.info("Redirecionando para %s", destination)
-            return redirect(url_for(destination))
+            current_app.logger.info("Redirecionando para %s com highlight", destination)
+            return redirect(url_for(destination, highlight_task=task.id))
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("Erro ao criar tarefa", exc_info=exc)
@@ -8161,7 +8163,7 @@ def delete_task(task_id):
         abort(403)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
         abort(404)
-    if current_user.role != "admin" and task.created_by != current_user.id:
+    if current_user.role != "admin" and task.created_by != current_user.id and task.assigned_to != current_user.id:
         abort(403)
 
     # Store task ID before deletion for broadcasting

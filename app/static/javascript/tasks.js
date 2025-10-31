@@ -278,7 +278,7 @@ const TaskResponses = (() => {
             }
         } catch (error) {
             console.error('[Tasks] Failed to load responses:', error);
-            window.alert('N�o foi poss�vel carregar as respostas da tarefa.');
+            window.alert('Não foi possível carregar as respostas da tarefa.');
         } finally {
             state.loading = false;
         }
