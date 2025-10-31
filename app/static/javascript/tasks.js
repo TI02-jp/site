@@ -1325,6 +1325,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const userSelect = document.getElementById('assigned_to');
     if (tagSelect && userSelect) {
         const loadUsers = (tagId) => {
+            // Salvar o valor atual antes de reconstruir o dropdown
+            const currentValue = userSelect.value;
+
             fetch(`/tasks/users/${tagId}`)
                 .then(res => res.json())
                 .then(users => {
@@ -1337,6 +1340,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         opt.textContent = u.name;
                         userSelect.appendChild(opt);
                     });
+
+                    // Restaurar o valor após reconstruir, se ainda existir nas opções
+                    if (currentValue) {
+                        userSelect.value = currentValue;
+                    }
                 });
         };
         if (tagSelect.value) {
