@@ -1395,13 +1395,15 @@ def _get_assignment_context(connection, task: Task) -> tuple[str, str | None]:
     return title, tag_name
 
 
-def _build_assignment_message(title: str, tag_name: str | None) -> str:
+def _build_assignment_message(title: str, tag_name: str | None, assignee_id: int | None) -> str:
     """Return a human-friendly notification message for a task assignment."""
 
+    if assignee_id:
+        return f'Tarefa "{title}" atribuída a você.'
     if tag_name:
         display = "Para Mim" if tag_name.startswith("__personal__") else tag_name
         return f'Tarefa "{title}" atribuída no setor {display}.'
-    return f'Tarefa "{title}" atribuída a você.'
+    return f'Tarefa "{title}" atribuída.'
 
 
 def _create_task_assignment_notification(connection, task: Task, assignee_id: int) -> None:
@@ -1417,7 +1419,7 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
         return
 
     title, tag_name = _get_assignment_context(connection, task)
-    message = _build_assignment_message(title, tag_name)
+    message = _build_assignment_message(title, tag_name, assignee_id)
     result = connection.execute(
         TaskNotification.__table__.insert().values(
             user_id=assignee_id,

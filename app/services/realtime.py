@@ -288,6 +288,19 @@ def broadcast_task_status_changed(
     )
 
 
+def broadcast_task_updated(
+    task_data: Dict[str, Any], exclude_user: Optional[int] = None
+) -> None:
+    """Broadcast that a task received attribute updates (e.g., reassignment)."""
+
+    _broadcaster.broadcast(
+        event_type="task:updated",
+        data=task_data,
+        scope="tasks",
+        exclude_user=exclude_user,
+    )
+
+
 def broadcast_task_response_created(
     task_id: int,
     response_data: Dict[str, Any],

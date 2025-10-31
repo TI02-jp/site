@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}">
+<section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}" data-current-user-role="{{ current_user.role }}">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Visão Geral de Tarefas</h2>
     <div class="kanban-actions">
@@ -67,6 +67,7 @@
     </div>
     {% endfor %}
   </div>
+{% include "tasks_transfer_modal.html" %}
 {% include "tasks_responses_panel.html" %}
 </section>
 <script>

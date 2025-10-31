@@ -6401,6 +6401,19 @@ def _user_can_access_task(task: Task, user: User | None) -> bool:
     )
 
 
+def _user_can_transfer_task(task: Task, user: User | None) -> bool:
+    """Return ``True`` when ``user`` is allowed to transfer ``task`` to another assignee."""
+
+    if user is None:
+        return False
+    if getattr(user, "role", None) == "admin":
+        return True
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        return False
+    return task.created_by == user_id or task.assigned_to == user_id
+
+
 def _task_visible_for_user(task: Task, user: User) -> bool:
     """Return True when ``task`` should be shown to ``user``."""
     return _user_can_access_task(task, user)
@@ -6789,11 +6802,9 @@ def tasks_new():
             notification_payloads: list[tuple[int, str]] = []
 
             if task.assigned_to:
-                # Evitar notificação duplicada do listener de atribuição
-                task._skip_assignment_notification = True
-                if task.assigned_to != current_user.id:
-                    creation_message = f'{creator_name} criou a tarefa "{task.title}".'
-                    notification_payloads.append((task.assigned_to, creation_message))
+                # Evitar notificação quando o criador é também o responsável
+                if task.assigned_to == current_user.id:
+                    task._skip_assignment_notification = True
             elif not task.is_private and tag and getattr(tag, "users", None):
                 sector_label = (
                     "Para Mim" if tag.nome.startswith(PERSONAL_TAG_PREFIX) else tag.nome
@@ -6825,20 +6836,7 @@ def tasks_new():
 
             # Broadcast task creation
             from app.services.realtime import broadcast_task_created, get_broadcaster
-            task_data = {
-                'id': task.id,
-                'title': task.title,
-                'description': task.description,
-                'status': task.status.value,
-                'priority': task.priority.value,
-                'tag_id': task.tag_id,
-                'tag_name': task.tag.nome,
-                'assigned_to': task.assigned_to,
-                'created_by': task.created_by,
-                'is_private': task.is_private,
-                'due_date': task.due_date.isoformat() if task.due_date else None,
-                'parent_id': task.parent_id
-            }
+            task_data = _serialize_task(task)
             if not task.is_private:
                 broadcast_task_created(task_data, exclude_user=current_user.id)
 
@@ -7153,6 +7151,214 @@ def tasks_users(tag_id):
         users.sort(key=lambda u: _sortable_text(u["name"]))
     return jsonify(users)
 
+
+@app.route("/tasks/<int:task_id>/transfer/options", methods=["GET"])
+@login_required
+def tasks_transfer_options(task_id: int):
+    """Return available assignees for transferring a task."""
+
+    task = Task.query.get_or_404(task_id)
+
+    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
+        abort(404)
+    if task.is_private and not _user_can_access_task(task, current_user):
+        abort(403)
+    if not _user_can_transfer_task(task, current_user):
+        abort(403)
+
+    requested_tag_id = request.args.get("tag_id", type=int)
+    is_admin = current_user.role == "admin"
+
+    tag_entries: dict[int, Tag] = {}
+    if is_admin:
+        available_tags = (
+            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
+            .order_by(Tag.nome)
+            .all()
+        )
+        for tag in available_tags:
+            tag_entries[tag.id] = tag
+    else:
+        accessible_ids = {tag_id for tag_id in _get_accessible_tag_ids(current_user) if tag_id}
+        if task.tag_id:
+            accessible_ids.add(task.tag_id)
+        if accessible_ids:
+            available_tags = (
+                Tag.query.filter(Tag.id.in_(accessible_ids))
+                .order_by(Tag.nome)
+                .all()
+            )
+            for tag in available_tags:
+                if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
+                    continue
+                tag_entries[tag.id] = tag
+    if task.tag and task.tag.id not in tag_entries:
+        tag_entries[task.tag.id] = task.tag
+
+    target_tag = task.tag
+    if requested_tag_id:
+        candidate_tag = Tag.query.get(requested_tag_id)
+        if candidate_tag is None:
+            abort(404)
+        if candidate_tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and not is_admin:
+            abort(403)
+        if not is_admin and not _can_user_access_tag(candidate_tag, current_user) and requested_tag_id != task.tag_id:
+            abort(403)
+        target_tag = candidate_tag
+        tag_entries[candidate_tag.id] = candidate_tag
+
+    tag_choices = [
+        (
+            tag_id,
+            "Para Mim" if tag.nome.startswith(PERSONAL_TAG_PREFIX) else tag.nome,
+        )
+        for tag_id, tag in tag_entries.items()
+        if tag is not None and (is_admin or tag.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER)
+    ]
+    tag_choices = _sort_choice_pairs(tag_choices)
+
+    tags_payload = [
+        {"id": value, "label": label, "is_current": value == task.tag_id}
+        for value, label in tag_choices
+    ]
+
+    choices = _build_task_user_choices(target_tag)
+    options = [
+        {"id": user_id, "label": label, "is_current": user_id == task.assigned_to}
+        for user_id, label in choices
+        if user_id
+    ]
+
+    payload = {
+        "success": True,
+        "options": options,
+        "current_assignee": task.assigned_to,
+        "assignee_name": task.assignee.name if task.assignee else None,
+        "task_title": task.title,
+        "tags": tags_payload,
+        "current_tag_id": task.tag_id,
+        "current_tag_name": task.tag.nome if task.tag else None,
+        "selected_tag_id": target_tag.id if target_tag else None,
+        "selected_tag_name": target_tag.nome if target_tag else None,
+    }
+
+    if not options:
+        payload["success"] = False
+        payload["message"] = "Nenhum colaborador disponível para receber esta tarefa."
+
+    return jsonify(payload)
+
+
+@app.route("/tasks/<int:task_id>/transfer", methods=["POST"])
+@login_required
+def tasks_transfer(task_id: int):
+    """Transfer a task to another collaborator."""
+
+    task = Task.query.get_or_404(task_id)
+
+    if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
+        abort(404)
+    if task.is_private and not _user_can_access_task(task, current_user):
+        abort(403)
+    if not _user_can_transfer_task(task, current_user):
+        abort(403)
+
+    data = request.get_json(silent=True) or {}
+    assignee_raw = data.get("assignee_id")
+    tag_raw = data.get("tag_id")
+    is_admin = current_user.role == "admin"
+
+    try:
+        assignee_id = int(assignee_raw)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Selecione um colaborador válido."}), 400
+
+    if assignee_id <= 0:
+        return jsonify({"success": False, "message": "Selecione um colaborador válido."}), 400
+
+    target_tag = task.tag
+    if tag_raw is not None:
+        try:
+            tag_id = int(tag_raw)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Selecione um setor válido."}), 400
+        if tag_id <= 0:
+            return jsonify({"success": False, "message": "Selecione um setor válido."}), 400
+        candidate_tag = Tag.query.get(tag_id)
+        if candidate_tag is None:
+            return jsonify({"success": False, "message": "Selecione um setor válido."}), 400
+        if candidate_tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and not is_admin:
+            return jsonify({"success": False, "message": "Selecione um setor válido."}), 400
+        if not is_admin and not _can_user_access_tag(candidate_tag, current_user) and candidate_tag.id != task.tag_id:
+            return jsonify({"success": False, "message": "Você não tem permissão para transferir para este setor."}), 403
+        target_tag = candidate_tag
+
+    valid_assignees = {
+        user_id for user_id, _ in _build_task_user_choices(target_tag) if user_id
+    }
+    if assignee_id not in valid_assignees:
+        return (
+            jsonify(
+                {"success": False, "message": "Colaborador não disponível para este setor."}
+            ),
+            400,
+        )
+
+    tag_changed = target_tag and target_tag.id != task.tag_id
+    if assignee_id == task.assigned_to and not tag_changed:
+        return jsonify(
+            {
+                "success": True,
+                "task": _serialize_task(task),
+                "message": "A tarefa já estava atribuída a este colaborador.",
+            }
+        )
+
+    new_assignee = User.query.get(assignee_id)
+    if new_assignee is None or not getattr(new_assignee, "ativo", True):
+        return jsonify({"success": False, "message": "Colaborador indisponível."}), 400
+
+    if target_tag and target_tag.id != task.tag_id:
+        task.tag_id = target_tag.id
+        task.tag = target_tag
+    task.assigned_to = assignee_id
+    task.assignee = new_assignee
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao transferir tarefa", exc_info=exc)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Não foi possível transferir a tarefa. Tente novamente.",
+                }
+            ),
+            500,
+        )
+
+    db.session.refresh(task)
+
+    task_data = _serialize_task(task)
+
+    if not task.is_private:
+        from app.services.realtime import broadcast_task_updated
+
+        broadcast_task_updated(task_data, exclude_user=current_user.id)
+
+    current_app.logger.info(
+        "Task %s transferida para o usuário %s por %s (setor %s)",
+        task.id,
+        assignee_id,
+        current_user.id,
+        target_tag.id if target_tag else task.tag_id,
+    )
+
+    return jsonify({"success": True, "task": task_data, "message": "Tarefa transferida com sucesso."})
+
 @app.route("/tasks/sector/<int:tag_id>")
 @login_required
 @meeting_only_access_check
@@ -7327,6 +7533,48 @@ def _ensure_response_participant(task_id: int, user_id: int) -> TaskResponsePart
         db.session.add(participant)
         db.session.flush()
     return participant
+
+
+def _serialize_task(task: Task) -> dict[str, object]:
+    """Return a JSON-serializable representation of ``task``."""
+
+    tag = getattr(task, "tag", None)
+    assignee = getattr(task, "assignee", None)
+    finisher = getattr(task, "finisher", None)
+    local_completed_at = (
+        task.completed_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+        if task.completed_at
+        else None
+    )
+    assignee_name = None
+    if assignee:
+        assignee_name = assignee.name or assignee.username
+    finisher_name = None
+    if finisher:
+        finisher_name = finisher.name or finisher.username
+
+    return {
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "status": task.status.value if task.status else None,
+        "priority": task.priority.value if task.priority else None,
+        "tag_id": task.tag_id,
+        "tag_name": tag.nome if tag else None,
+        "assigned_to": task.assigned_to,
+        "assignee_name": assignee_name,
+        "created_by": task.created_by,
+        "completed_by": task.completed_by,
+        "completed_by_name": finisher_name,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+        "completed_at_display": (
+            local_completed_at.strftime("%d/%m/%Y %H:%M") if local_completed_at else None
+        ),
+        "is_private": task.is_private,
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "parent_id": task.parent_id,
+        "updated_at": task.updated_at.isoformat() if getattr(task, "updated_at", None) else None,
+    }
 
 
 def _serialize_task_response(response: TaskResponse, viewer_id: int) -> dict[str, object]:
@@ -7853,54 +8101,39 @@ def update_task_status(task_id):
                 db.session.add(notification)
                 status_notification_records.append((user_id, notification))
 
-        db.session.add(history)
-        if status_notification_records:
-            db.session.flush()
-        db.session.commit()
+    db.session.add(history)
+    if status_notification_records:
+        db.session.flush()
+    db.session.commit()
 
-        # Broadcast status change
-        from app.services.realtime import broadcast_task_status_changed, get_broadcaster
-        task_data = {
-            'id': task.id,
-            'title': task.title,
-            'description': task.description,
-            'status': task.status.value,
-            'priority': task.priority.value,
-            'tag_id': task.tag_id,
-            'tag_name': task.tag.nome,
-            'assigned_to': task.assigned_to,
-            'created_by': task.created_by,
-            'completed_by': task.completed_by,
-            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
-            'is_private': task.is_private,
-            'due_date': task.due_date.isoformat() if task.due_date else None,
-            'parent_id': task.parent_id
-        }
-        if not task.is_private:
-            broadcast_task_status_changed(
-                task.id,
-                old_status.value,
-                new_status.value,
-                task_data,
-                exclude_user=current_user.id,
+    # Broadcast status change
+    from app.services.realtime import broadcast_task_status_changed, get_broadcaster
+    task_data = _serialize_task(task)
+    if not task.is_private:
+        broadcast_task_status_changed(
+            task.id,
+            old_status.value,
+            new_status.value,
+            task_data,
+            exclude_user=current_user.id,
+        )
+    if status_notification_records:
+        broadcaster = get_broadcaster()
+        for user_id, notification in status_notification_records:
+            broadcaster.broadcast(
+                event_type="notification:created",
+                data={
+                    "id": notification.id,
+                    "task_id": task.id,
+                    "type": notification.type,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat()
+                    if notification.created_at
+                    else None,
+                },
+                user_id=user_id,
+                scope="notifications",
             )
-        if status_notification_records:
-            broadcaster = get_broadcaster()
-            for user_id, notification in status_notification_records:
-                broadcaster.broadcast(
-                    event_type="notification:created",
-                    data={
-                        "id": notification.id,
-                        "task_id": task.id,
-                        "type": notification.type,
-                        "message": notification.message,
-                        "created_at": notification.created_at.isoformat()
-                        if notification.created_at
-                        else None,
-                    },
-                    user_id=user_id,
-                    scope="notifications",
-                )
 
     return jsonify({"success": True, "task": task_data})
 
@@ -7910,8 +8143,12 @@ def _delete_task_recursive(task: Task) -> None:
 
     for child in list(task.children or []):
         _delete_task_recursive(child)
-    TaskStatusHistory.query.filter_by(task_id=task.id).delete(synchronize_session=False)
-    TaskNotification.query.filter_by(task_id=task.id).delete(synchronize_session=False)
+
+    for history in TaskStatusHistory.query.filter_by(task_id=task.id).all():
+        db.session.delete(history)
+    for notification in TaskNotification.query.filter_by(task_id=task.id).all():
+        db.session.delete(notification)
+
     db.session.delete(task)
 
 @app.route("/tasks/<int:task_id>/delete", methods=["POST"])

@@ -1,0 +1,39 @@
+<div class="modal fade" id="taskTransferModal" tabindex="-1" aria-labelledby="taskTransferModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="taskTransferModalLabel">Transferir tarefa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">
+          Escolha o colaborador que assumirá
+          <strong data-transfer-task-title></strong>.
+        </p>
+        <div class="alert alert-success d-none" role="alert" data-transfer-success></div>
+        <div class="alert alert-danger d-none" role="alert" data-transfer-error></div>
+        <form id="task-transfer-form" data-transfer-form>
+          <input type="hidden" name="task_id" data-transfer-task-id>
+          <div class="mb-3">
+            <label for="task-transfer-tag" class="form-label">Novo setor</label>
+            <select class="form-select" id="task-transfer-tag" data-transfer-tag-select required>
+              <option value="" disabled selected>Selecione um setor</option>
+            </select>
+            <div class="form-text" data-transfer-current-tag></div>
+          </div>
+          <div class="mb-3">
+            <label for="task-transfer-select" class="form-label">Novo responsável</label>
+            <select class="form-select" id="task-transfer-select" data-transfer-select required>
+              <option value="" disabled selected>Selecione um colaborador</option>
+            </select>
+            <div class="form-text" data-transfer-current></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" form="task-transfer-form" data-transfer-submit>Transferir</button>
+      </div>
+    </div>
+  </div>
+</div>
