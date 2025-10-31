@@ -88,6 +88,7 @@ from app.forms import (
     OperationalProcedureForm,
     NotaDebitoForm,
     CadastroNotaForm,
+    PAGAMENTO_CHOICES,
 )
 import os, json, re, secrets, imghdr, time
 import requests
@@ -4654,6 +4655,42 @@ def notas_debito():
     )
 
 
+@app.route("/controle-notas/debito/<int:nota_id>/forma-pagamento", methods=["POST"])
+@login_required
+@meeting_only_access_check
+def notas_debito_update_forma_pagamento(nota_id: int):
+    """Atualiza a forma de pagamento de uma nota via requisicao assincrona."""
+    if not can_access_controle_notas():
+        abort(403)
+
+    pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestǜo') or user_has_tag('Financeiro')
+    if not pode_ver_forma_pagamento:
+        abort(403)
+
+    payload = request.get_json(silent=True) or {}
+    raw_value = payload.get("forma_pagamento", "")
+    if not isinstance(raw_value, str):
+        raw_value = ""
+
+    new_value = raw_value.strip().upper()
+    valid_values = {(choice or "").upper() for choice, _ in PAGAMENTO_CHOICES}
+    if new_value not in valid_values:
+        return jsonify({"success": False, "message": "Forma de pagamento invalida."}), 400
+
+    nota = NotaDebito.query.get_or_404(nota_id)
+    nota.forma_pagamento = new_value
+    db.session.commit()
+
+    label_map = {(choice or "").upper(): label for choice, label in PAGAMENTO_CHOICES}
+    return jsonify(
+        {
+            "success": True,
+            "forma_pagamento": nota.forma_pagamento,
+            "forma_pagamento_label": label_map.get(new_value, nota.forma_pagamento),
+        }
+    )
+
+
 @app.route("/controle-notas/cadastro", methods=["GET", "POST"])
 @login_required
 @meeting_only_access_check
@@ -6940,6 +6977,7 @@ def tasks_edit(task_id: int):
             return redirect(return_url)
         return redirect(url_for("tasks_view", task_id=task.id))
 
+    # Criar form (Flask binda automaticamente ao request.form no POST)
     form = TaskForm()
     parent_task = task.parent
 
@@ -6976,6 +7014,7 @@ def tasks_edit(task_id: int):
             assignee_choices.append((assignee.id, assignee_label))
     form.assigned_to.choices = _sort_choice_pairs(assignee_choices, keep_first=True)
 
+    # Popular campos no GET com dados da task existente
     if request.method == "GET":
         form.task_id.data = task.id
         form.title.data = task.title
@@ -7069,6 +7108,12 @@ def tasks_edit(task_id: int):
 
             db.session.commit()
 
+            # Broadcast task update para atualizar interface em tempo real
+            if not task.is_private:
+                from app.services.realtime import broadcast_task_updated
+                task_data = _serialize_task(task)
+                broadcast_task_updated(task_data, exclude_user=current_user.id)
+
             # Broadcast notificações em tempo real
             if edit_notification_records:
                 from app.services.realtime import get_broadcaster
@@ -7090,15 +7135,16 @@ def tasks_edit(task_id: int):
 
             flash("Tarefa atualizada com sucesso!", "success")
 
-            if return_url and return_url != request.url:
-                return redirect(return_url)
-
-            if not task.is_private:
-                target_tag_id = parent_task.tag_id if parent_task else task.tag_id
-                return redirect(url_for("tasks_sector", tag_id=target_tag_id))
+            # Redirecionar de volta para a pagina original quando apropriado
+            if return_url and not task.is_private and return_url != request.url:
+                current_app.logger.info("Redirecionando para return_url: %s com highlight", return_url)
+                # Adicionar parâmetro highlight_task para destacar a tarefa editada
+                separator = '&' if '?' in return_url else '?'
+                return redirect(f"{return_url}{separator}highlight_task={task.id}")
 
             destination = "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
-            return redirect(url_for(destination))
+            current_app.logger.info("Redirecionando para %s com highlight", destination)
+            return redirect(url_for(destination, highlight_task=task.id))
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("Erro ao atualizar tarefa", exc_info=exc)
@@ -7966,20 +8012,24 @@ def tasks_view(task_id):
     priority_order = ["low", "medium", "high"]
 
     # Determinar URL de retorno
-    if task.is_private:
-        cancel_url = (
-            url_for("tasks_overview")
-            if current_user.role == "admin"
-            else url_for("tasks_overview_mine")
-        )
-    elif _can_user_access_tag(task.tag, current_user):
-        cancel_url = url_for("tasks_history", tag_id=task.tag_id)
+    explicit_return_url = request.args.get("return_url")
+    if explicit_return_url:
+        cancel_url = explicit_return_url
     else:
-        cancel_url = url_for("tasks_history", assigned_by_me=1)
+        if task.is_private:
+            cancel_url = (
+                url_for("tasks_overview")
+                if current_user.role == "admin"
+                else url_for("tasks_overview_mine")
+            )
+        elif _can_user_access_tag(task.tag, current_user):
+            cancel_url = url_for("tasks_history", tag_id=task.tag_id)
+        else:
+            cancel_url = url_for("tasks_history", assigned_by_me=1)
 
-    # Usar referrer se disponível e seguro
-    if request.referrer and request.referrer != request.url:
-        cancel_url = request.referrer
+        # Usar referrer se disponível e seguro
+        if request.referrer and request.referrer != request.url:
+            cancel_url = request.referrer
 
     # Buscar histórico de alterações da tarefa
     from app.models.tables import TaskHistory

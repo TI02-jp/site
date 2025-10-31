@@ -58,7 +58,15 @@
                             <td class="text-start">{{ (n.acordo or '#N/A')|upper }}</td>
                             {% if pode_ver_forma_pagamento %}
                             <td class="text-start">
-                                <span class="badge forma-pagamento-badge-{{ n.forma_pagamento|replace(' ', '-')|replace('.', '')|lower }}">{{ n.forma_pagamento|upper }}</span>
+                                <select
+                                    class="form-select form-select-sm nota-forma-pagamento-select"
+                                    data-nota-id="{{ n.id }}"
+                                    data-original-value="{{ n.forma_pagamento or '' }}"
+                                    data-update-url="{{ url_for('notas_debito_update_forma_pagamento', nota_id=n.id) }}">
+                                    {% for value, label in nota_form.forma_pagamento.choices %}
+                                    <option value="{{ value }}" {% if (n.forma_pagamento or '') == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
                             </td>
                             {% endif %}
                             <td class="text-start">
@@ -234,27 +242,18 @@
           padding: 0.25rem 0.35rem;
           font-size: 0.7rem;
       }
-      .table-responsive table .badge {
-          font-size: 0.65rem;
-          padding: 0.25rem 0.45rem;
-      }
-    .forma-pagamento-badge-pix {
-        background-color: #d4edda !important;
-        color: #155724 !important;
-        border: 1px solid #c3e6cb;
-    }
-    .forma-pagamento-badge-dinheiro {
-        background-color: #cfe2ff !important;
-        color: #084298 !important;
-        border: 1px solid #b6d4fe;
-    }
-    .forma-pagamento-badge-débito {
-        background-color: #fff3cd !important;
-        color: #664d03 !important;
-        border: 1px solid #ffeaa7;
-    }
+            .table-responsive table .form-select {
+          padding: 0.15rem 1.4rem 0.15rem 0.4rem;
+          font-size: 0.7rem;
+          min-width: 7.5rem;
+      }
+      .nota-forma-pagamento-select.is-saving {
+          opacity: 0.65;
+      }
 </style>
 <script>
+const csrfToken = "{{ csrf_token() }}";
+
 document.addEventListener('DOMContentLoaded', function() {
     var modalEl = document.getElementById('notaModal');
     if (!modalEl) {
@@ -278,6 +277,79 @@ document.addEventListener('DOMContentLoaded', function() {
     var temObservacaoCheck = document.getElementById('temObservacaoCheck');
     var observacaoField = document.getElementById('observacaoField');
     var observacaoTextarea = document.getElementById('{{ nota_form.observacao.id }}');
+
+    function toggleSavingState(element, isSaving) {
+        if (!element) {
+            return;
+        }
+        if (isSaving) {
+            element.classList.add('is-saving');
+            element.disabled = true;
+        } else {
+            element.classList.remove('is-saving');
+            element.disabled = false;
+        }
+    }
+
+    var pagamentoSelects = document.querySelectorAll('.nota-forma-pagamento-select');
+    pagamentoSelects.forEach(function(select) {
+        var initialValue = select.dataset.originalValue || select.value || '';
+        select.dataset.originalValue = initialValue;
+
+        select.addEventListener('change', function(event) {
+            var target = event.currentTarget;
+            var previousValue = target.dataset.originalValue || '';
+            var updateUrl = target.dataset.updateUrl;
+
+            if (!updateUrl) {
+                return;
+            }
+
+            toggleSavingState(target, true);
+
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ forma_pagamento: target.value })
+            }).then(function(response) {
+                return response.json().catch(function() {
+                    return {};
+                }).then(function(payload) {
+                    if (!response.ok || !payload.success) {
+                        var errorMessage = payload && payload.message ? payload.message : 'Nao foi possivel atualizar a forma de pagamento.';
+                        var error = new Error(errorMessage);
+                        error.payload = payload;
+                        throw error;
+                    }
+                    return payload;
+                });
+            }).then(function() {
+                target.dataset.originalValue = target.value;
+                target.classList.add('is-valid');
+                setTimeout(function() {
+                    target.classList.remove('is-valid');
+                }, 1600);
+            }).catch(function(error) {
+                target.value = previousValue;
+                target.dataset.originalValue = previousValue;
+                target.classList.add('is-invalid');
+                setTimeout(function() {
+                    target.classList.remove('is-invalid');
+                }, 2000);
+                console.error('Falha ao atualizar forma de pagamento', error);
+                if (error && error.message) {
+                    alert(error.message);
+                } else {
+                    alert('Falha ao atualizar forma de pagamento.');
+                }
+            }).finally(function() {
+                toggleSavingState(target, false);
+            });
+        });
+    });
 
     if (empresaField) {
         empresaField.addEventListener('blur', function() {

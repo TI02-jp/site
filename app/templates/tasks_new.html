@@ -120,7 +120,7 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
-    <form method="POST" action="{{ url_for('tasks_new') }}" enctype="multipart/form-data" class="kanban-form">
+    <form method="POST" action="{% if is_editing %}{{ url_for('tasks_edit', task_id=editing_task.id) }}{% else %}{{ url_for('tasks_new') }}{% endif %}" enctype="multipart/form-data" class="kanban-form">
       {{ form.hidden_tag() }}
       {% if return_url %}
       <input type="hidden" name="return_url" value="{{ return_url }}">

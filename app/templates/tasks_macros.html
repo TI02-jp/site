@@ -61,7 +61,7 @@
 {% set is_creator = current_user.id == task.created_by %}
 {% set is_assignee = task.assigned_to == current_user.id %}
 {% set is_admin = current_user.role == 'admin' %}
-{% set can_transfer = is_admin or is_creator or is_assignee %}
+{% set can_transfer = (is_admin or is_creator or is_assignee) and task.status != TaskStatus.DONE %}
 {% set allow_subtask_pending = task.status == TaskStatus.PENDING and task.assigned_to and (is_creator or is_assignee) %}
 {% set allow_subtask_in_progress = task.status == TaskStatus.IN_PROGRESS and (is_creator or is_assignee) %}
 {% set allow_subtask = allow_subtask_pending or allow_subtask_in_progress %}
