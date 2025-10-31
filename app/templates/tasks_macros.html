@@ -11,6 +11,10 @@
       <span class="legend-label">Respostas</span>
     </span>
     <span class="legend-item">
+      <span class="action transfer legend-icon" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></span>
+      <span class="legend-label">Transferir</span>
+    </span>
+    <span class="legend-item">
       <span class="action edit legend-icon" aria-hidden="true"><i class="bi bi-pencil"></i></span>
       <span class="legend-label">Editar</span>
     </span>
@@ -56,13 +60,17 @@
 {% set show_subtask_status = is_subtask and task.status != TaskStatus.PENDING %}
 {% set is_creator = current_user.id == task.created_by %}
 {% set is_assignee = task.assigned_to == current_user.id %}
+{% set is_admin = current_user.role == 'admin' %}
+{% set can_transfer = is_admin or is_creator or is_assignee %}
 {% set allow_subtask_pending = task.status == TaskStatus.PENDING and task.assigned_to and (is_creator or is_assignee) %}
 {% set allow_subtask_in_progress = task.status == TaskStatus.IN_PROGRESS and (is_creator or is_assignee) %}
 {% set allow_subtask = allow_subtask_pending or allow_subtask_in_progress %}
 <li id="task-{{ task.id }}"
     class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}{% if is_subtask %} subtask-card{% endif %}"
     data-task-id="{{ task.id }}"
-    data-is-subtask="{{ 'true' if is_subtask else 'false' }}">
+    data-is-subtask="{{ 'true' if is_subtask else 'false' }}"
+    data-assigned-to="{{ task.assigned_to or '' }}"
+    data-created-by="{{ task.created_by }}">
   <div class="task-header">
     {% if has_children %}
     <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
@@ -121,21 +129,18 @@
     </div>
     {% set conversation = task.conversation_summary if task.conversation_summary is defined else None %}
     {% set show_responses = task.status in [TaskStatus.IN_PROGRESS, TaskStatus.DONE] %}
-    <div class="task-actions-container collapsed">
-      <button type="button"
-              class="task-actions-toggle"
-              aria-label="Mostrar ações da tarefa {{ task.title }}"
-              aria-controls="task-actions-{{ task.id }}"
-              aria-expanded="false"
-              title="Mostrar ações"
-              data-task-title="{{ task.title }}">
-        <i class="bi bi-chevron-left" aria-hidden="true"></i>
-      </button>
+    <div class="task-actions-container">
       <div class="task-actions{% if task.status == TaskStatus.IN_PROGRESS %} compact{% endif %}"
            id="task-actions-{{ task.id }}"
            data-allow-subtask="{{ 'true' if allow_subtask else 'false' }}"
            data-edit-url="{{ url_for('tasks_edit', task_id=task.id, return_url=request.url) }}"
-           data-edit-return-url="{{ request.url }}">
+           data-edit-return-url="{{ request.url }}"
+           data-transfer-url="{{ url_for('tasks_transfer', task_id=task.id) }}"
+           data-transfer-options-url="{{ url_for('tasks_transfer_options', task_id=task.id) }}"
+           data-can-transfer="{{ 'true' if can_transfer else 'false' }}"
+           data-task-title="{{ task.title }}"
+           data-task-tag-id="{{ task.tag_id or '' }}"
+           data-task-tag-name="{{ task.tag.nome if task.tag else '' }}">
         <button type="button" class="action view view-task" data-task-id="{{ task.id }}" title="Visualizar detalhes" aria-expanded="false" aria-controls="task-detail-{{ task.id }}" aria-label="Visualizar detalhes da tarefa {{ task.title }}"><i class="bi bi-eye"></i></button>
         {% if show_responses %}
         <button type="button"
@@ -153,6 +158,20 @@
             {% if conversation.unread_count %}{{ conversation.unread_count }}{% else %}{{ conversation.total_responses }}{% endif %}
           </span>
           {% endif %}
+        </button>
+        {% endif %}
+        {% if can_transfer %}
+        <button type="button"
+                class="action transfer transfer-task"
+                data-task-id="{{ task.id }}"
+                data-task-title="{{ task.title }}"
+                data-transfer-url="{{ url_for('tasks_transfer', task_id=task.id) }}"
+                data-transfer-options-url="{{ url_for('tasks_transfer_options', task_id=task.id) }}"
+                data-task-tag-id="{{ task.tag_id or '' }}"
+                data-task-tag-name="{{ task.tag.nome if task.tag else '' }}"
+                title="Transferir tarefa"
+                aria-label="Transferir tarefa {{ task.title }}">
+          <i class="bi bi-arrow-left-right"></i>
         </button>
         {% endif %}
         {% if task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS] %}
@@ -195,7 +214,7 @@
       </div>
       <div class="detail-field">
         <span class="detail-label">Responsável:</span>
-        <span class="detail-value">{{ task.assignee.name if task.assignee else 'Sem responsável' }}</span>
+        <span class="detail-value" data-task-assignee>{{ task.assignee.name if task.assignee else 'Sem responsável' }}</span>
       </div>
       <div class="detail-field">
         <span class="detail-label">Prazo:</span>

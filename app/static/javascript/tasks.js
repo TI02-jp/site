@@ -639,8 +639,502 @@ const TaskResponses = (() => {
     };
 })();
 
+const TaskTransfer = (() => {
+    let modalElement = null;
+    let modalInstance = null;
+    let form = null;
+    let tagSelect = null;
+    let assigneeSelect = null;
+    let hiddenTaskId = null;
+    let taskTitleTarget = null;
+    let successAlert = null;
+    let errorAlert = null;
+    let currentAssigneeInfo = null;
+    let currentTagInfo = null;
+    let submitButton = null;
+    let loading = false;
+    let fetching = false;
+
+    const state = {
+        taskId: null,
+        transferUrl: '',
+        optionsUrl: '',
+        selectedTagId: null,
+        currentTagId: null,
+        currentTagName: '',
+        tags: [],
+    };
+
+    function init() {
+        modalElement = document.getElementById('taskTransferModal');
+        if (!modalElement || typeof bootstrap === 'undefined') {
+            return;
+        }
+        modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        form = modalElement.querySelector('[data-transfer-form]');
+        tagSelect = modalElement.querySelector('[data-transfer-tag-select]');
+        assigneeSelect = modalElement.querySelector('[data-transfer-select]');
+        hiddenTaskId = modalElement.querySelector('[data-transfer-task-id]');
+        taskTitleTarget = modalElement.querySelector('[data-transfer-task-title]');
+        successAlert = modalElement.querySelector('[data-transfer-success]');
+        errorAlert = modalElement.querySelector('[data-transfer-error]');
+        currentAssigneeInfo = modalElement.querySelector('[data-transfer-current]');
+        currentTagInfo = modalElement.querySelector('[data-transfer-current-tag]');
+        submitButton = modalElement.querySelector('[data-transfer-submit]');
+
+        if (form) {
+            form.addEventListener('submit', handleSubmit);
+        }
+        if (tagSelect) {
+            tagSelect.addEventListener('change', handleTagChange);
+        }
+        modalElement.addEventListener('hidden.bs.modal', resetState);
+    }
+
+    function resetState() {
+        state.taskId = null;
+        state.transferUrl = '';
+        state.optionsUrl = '';
+        state.selectedTagId = null;
+        state.currentTagId = null;
+        state.currentTagName = '';
+        state.tags = [];
+        loading = false;
+        fetching = false;
+
+        if (form) {
+            form.reset();
+        }
+        if (tagSelect) {
+            tagSelect.innerHTML = '<option value="" disabled selected>Selecione um setor</option>';
+            tagSelect.disabled = false;
+        }
+        if (assigneeSelect) {
+            assigneeSelect.innerHTML = '<option value="" disabled selected>Selecione um colaborador</option>';
+            assigneeSelect.disabled = false;
+        }
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Transferir';
+            delete submitButton.dataset.originalText;
+        }
+        if (taskTitleTarget) {
+            taskTitleTarget.textContent = '';
+        }
+        if (currentAssigneeInfo) {
+            currentAssigneeInfo.textContent = '';
+        }
+        if (currentTagInfo) {
+            currentTagInfo.textContent = '';
+        }
+        hideAlert(successAlert);
+        hideAlert(errorAlert);
+    }
+
+    function hideAlert(alertElement) {
+        if (alertElement) {
+            alertElement.classList.add('d-none');
+            alertElement.textContent = '';
+        }
+    }
+
+    function showAlert(alertElement, message) {
+        if (!alertElement) {
+            return;
+        }
+        alertElement.textContent = message;
+        alertElement.classList.remove('d-none');
+    }
+
+    function setFetching(isFetching) {
+        fetching = isFetching;
+        if (tagSelect) {
+            tagSelect.disabled = isFetching || loading;
+        }
+        if (assigneeSelect) {
+            assigneeSelect.disabled = isFetching || loading;
+        }
+        if (!submitButton || loading) {
+            return;
+        }
+        if (isFetching) {
+            submitButton.dataset.originalText = submitButton.dataset.originalText || submitButton.textContent;
+            submitButton.textContent = 'Carregando...';
+            submitButton.disabled = true;
+        } else {
+            submitButton.disabled = false;
+            if (submitButton.dataset.originalText) {
+                submitButton.textContent = submitButton.dataset.originalText;
+            }
+        }
+    }
+
+    function setLoading(isLoading) {
+        loading = isLoading;
+        if (submitButton) {
+            if (isLoading) {
+                submitButton.dataset.originalText = submitButton.dataset.originalText || submitButton.textContent;
+                submitButton.textContent = 'Transferindo...';
+                submitButton.disabled = true;
+            } else if (!fetching && submitButton.dataset.originalText) {
+                submitButton.textContent = submitButton.dataset.originalText;
+                submitButton.disabled = false;
+            }
+        }
+        if (tagSelect) {
+            tagSelect.disabled = isLoading || fetching;
+        }
+        if (assigneeSelect) {
+            assigneeSelect.disabled = isLoading || fetching;
+        }
+    }
+
+    function populateTagOptions(tags = [], selectedTagId = null, currentTagName = '') {
+        if (!tagSelect) {
+            return;
+        }
+        tagSelect.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecione um setor';
+        placeholder.disabled = true;
+        tagSelect.appendChild(placeholder);
+
+        const normalizedSelected = selectedTagId !== null && typeof selectedTagId !== 'undefined'
+            ? String(selectedTagId)
+            : '';
+        let hasSelection = false;
+
+        tags.forEach((tag) => {
+            if (!tag || typeof tag.id === 'undefined') {
+                return;
+            }
+            const option = document.createElement('option');
+            option.value = String(tag.id);
+            option.textContent = tag.label || String(tag.id);
+            if (!hasSelection && normalizedSelected && option.value === normalizedSelected) {
+                option.selected = true;
+                hasSelection = true;
+            }
+            tagSelect.appendChild(option);
+        });
+
+        if (!hasSelection && tags.length > 0) {
+            const firstOption = tagSelect.querySelector('option[value]');
+            if (firstOption) {
+                firstOption.selected = true;
+                hasSelection = true;
+                state.selectedTagId = firstOption.value;
+            }
+        } else if (hasSelection) {
+            state.selectedTagId = normalizedSelected;
+        } else {
+            state.selectedTagId = '';
+        }
+
+        placeholder.selected = !hasSelection;
+        placeholder.hidden = hasSelection;
+        tagSelect.disabled = !hasSelection;
+
+        state.tags = tags;
+        if (typeof selectedTagId === 'number' || typeof selectedTagId === 'string') {
+            state.selectedTagId = String(selectedTagId);
+        }
+        state.currentTagName = currentTagName || state.currentTagName;
+        if (currentTagInfo) {
+            const label = currentTagName || state.currentTagName;
+            currentTagInfo.textContent = label ? `Atual: ${label}` : '';
+        }
+        if (!hasSelection && tags.length === 0) {
+            showAlert(errorAlert, 'Nenhum setor disponível para transferência.');
+            if (submitButton && !loading) {
+                submitButton.disabled = true;
+            }
+        }
+    }
+
+    function populateOptions(options = [], currentAssignee = null, assigneeName = '') {
+        if (!assigneeSelect) {
+            return;
+        }
+        assigneeSelect.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecione um colaborador';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        assigneeSelect.appendChild(placeholder);
+
+        let hasOptions = false;
+        options.forEach((option) => {
+            if (!option || !option.id) {
+                return;
+            }
+            const opt = document.createElement('option');
+            opt.value = String(option.id);
+            const baseLabel = option.label || String(option.id);
+            opt.textContent = option.is_current ? `${baseLabel} (atual)` : baseLabel;
+            assigneeSelect.appendChild(opt);
+            hasOptions = true;
+        });
+
+        if (currentAssigneeInfo) {
+            const label = assigneeName ? `Atual: ${assigneeName}` : 'Atual: sem responsável';
+            currentAssigneeInfo.textContent = label;
+        }
+
+        if (!hasOptions) {
+            showAlert(errorAlert, 'Nenhum colaborador disponível para receber esta tarefa.');
+            assigneeSelect.disabled = true;
+            if (submitButton && !loading) {
+                submitButton.disabled = true;
+            }
+        } else {
+            hideAlert(errorAlert);
+            assigneeSelect.disabled = loading || fetching;
+            if (submitButton && !loading && !fetching) {
+                submitButton.disabled = false;
+            }
+        }
+    }
+
+    function buildOptionsUrl(tagId) {
+        if (!state.optionsUrl) {
+            return null;
+        }
+        try {
+            const url = new URL(state.optionsUrl, window.location.origin);
+            if (tagId) {
+                url.searchParams.set('tag_id', tagId);
+            } else {
+                url.searchParams.delete('tag_id');
+            }
+            return url.toString();
+        } catch (error) {
+            if (!tagId) {
+                return state.optionsUrl;
+            }
+            const separator = state.optionsUrl.includes('?') ? '&' : '?';
+            return `${state.optionsUrl}${separator}tag_id=${encodeURIComponent(tagId)}`;
+        }
+    }
+
+    function fetchTransferOptions({ tagId = null, loadingLabel = 'Carregando...' } = {}) {
+        const url = buildOptionsUrl(tagId);
+        if (!url) {
+            return Promise.resolve(false);
+        }
+
+        hideAlert(successAlert);
+        hideAlert(errorAlert);
+        setFetching(true);
+        if (submitButton && !loading) {
+            submitButton.dataset.originalText = submitButton.dataset.originalText || submitButton.textContent;
+            submitButton.textContent = loadingLabel;
+        }
+        if (assigneeSelect) {
+            assigneeSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+            assigneeSelect.disabled = true;
+        }
+
+        return fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('options_fetch_failed');
+                }
+                return response.json();
+            })
+            .then((payload) => {
+                const tags = payload && Array.isArray(payload.tags) ? payload.tags : [];
+                const options = payload && Array.isArray(payload.options) ? payload.options : [];
+                const assigneeName = payload && payload.assignee_name ? payload.assignee_name : '';
+                const selectedTagId = payload && typeof payload.selected_tag_id !== 'undefined'
+                    ? payload.selected_tag_id
+                    : tagId;
+                const currentTagId = payload && typeof payload.current_tag_id !== 'undefined'
+                    ? payload.current_tag_id
+                    : state.currentTagId;
+                const currentTagName = payload && payload.current_tag_name ? payload.current_tag_name : state.currentTagName;
+
+                state.currentTagId = currentTagId;
+                state.currentTagName = currentTagName || state.currentTagName;
+                setFetching(false);
+                populateTagOptions(tags, selectedTagId, currentTagName);
+                populateOptions(options, payload ? payload.current_assignee : null, assigneeName);
+
+                if (payload && payload.message && payload.success === false) {
+                    showAlert(errorAlert, payload.message);
+                    if (submitButton && !loading) {
+                        submitButton.disabled = true;
+                    }
+                }
+                if (tagSelect && tagSelect.value) {
+                    state.selectedTagId = tagSelect.value;
+                } else if (selectedTagId) {
+                    state.selectedTagId = String(selectedTagId);
+                }
+
+                return true;
+            })
+            .catch((error) => {
+                setFetching(false);
+                console.error('[Tasks] Falha ao carregar opções de transferência:', error);
+                showAlert(errorAlert, 'Não foi possível carregar a lista de colaboradores. Tente novamente.');
+                if (submitButton && !loading) {
+                    submitButton.disabled = true;
+                }
+                if (assigneeSelect) {
+                    assigneeSelect.disabled = true;
+                }
+                return false;
+            });
+    }
+
+    function open(button) {
+        if (!modalElement || !modalInstance || !assigneeSelect || !submitButton) {
+            return Promise.resolve(false);
+        }
+        const actionsContainer = button.closest('.task-actions');
+        const taskId = button.dataset.taskId;
+        const taskTitle = button.dataset.taskTitle || (actionsContainer ? actionsContainer.dataset.taskTitle : '');
+        const transferUrl = button.dataset.transferUrl || (actionsContainer ? actionsContainer.dataset.transferUrl : '');
+        const optionsUrl = button.dataset.transferOptionsUrl || (actionsContainer ? actionsContainer.dataset.transferOptionsUrl : '');
+        const taskTagId = button.dataset.taskTagId || (actionsContainer ? actionsContainer.dataset.taskTagId : '');
+        const taskTagName = button.dataset.taskTagName || (actionsContainer ? actionsContainer.dataset.taskTagName : '');
+
+        if (!taskId || !transferUrl || !optionsUrl) {
+            showAlert(errorAlert, 'Não foi possível preparar a transferência desta tarefa.');
+            return Promise.resolve(false);
+        }
+
+        state.taskId = taskId;
+        state.transferUrl = transferUrl;
+        state.optionsUrl = optionsUrl;
+        state.selectedTagId = taskTagId || null;
+        state.currentTagId = taskTagId ? Number(taskTagId) : null;
+        state.currentTagName = taskTagName || '';
+
+        if (hiddenTaskId) {
+            hiddenTaskId.value = taskId;
+        }
+        if (taskTitleTarget) {
+            taskTitleTarget.textContent = taskTitle || '';
+        }
+        hideAlert(successAlert);
+        hideAlert(errorAlert);
+        if (currentAssigneeInfo) {
+            currentAssigneeInfo.textContent = '';
+        }
+        if (currentTagInfo) {
+            currentTagInfo.textContent = taskTagName ? `Atual: ${taskTagName}` : 'Atual: sem setor';
+        }
+        if (tagSelect) {
+            tagSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+            tagSelect.disabled = true;
+        }
+        assigneeSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+        assigneeSelect.disabled = true;
+        submitButton.disabled = true;
+
+        modalInstance.show();
+
+        const tagId = state.selectedTagId ? state.selectedTagId : null;
+        return fetchTransferOptions({ tagId, loadingLabel: 'Carregando...' });
+    }
+
+    function handleTagChange() {
+        if (!tagSelect || loading) {
+            return;
+        }
+        const selected = tagSelect.value;
+        if (!selected || selected === state.selectedTagId) {
+            return;
+        }
+        state.selectedTagId = selected;
+        if (assigneeSelect) {
+            assigneeSelect.innerHTML = '<option disabled selected>Carregando...</option>';
+            assigneeSelect.disabled = true;
+        }
+        if (submitButton && !loading) {
+            submitButton.disabled = true;
+        }
+        fetchTransferOptions({ tagId: selected, loadingLabel: 'Carregando...' }).catch(() => {});
+    }
+
+    function handleSubmit(event) {
+        event.preventDefault();
+        if (loading || fetching || !state.transferUrl || !assigneeSelect) {
+            return;
+        }
+        const assigneeId = assigneeSelect.value;
+        if (!assigneeId) {
+            showAlert(errorAlert, 'Selecione um colaborador válido.');
+            return;
+        }
+        const tagId = state.selectedTagId || (tagSelect ? tagSelect.value : '');
+        if (!tagId) {
+            showAlert(errorAlert, 'Selecione um setor válido.');
+            return;
+        }
+
+        hideAlert(successAlert);
+        hideAlert(errorAlert);
+        setLoading(true);
+
+        fetch(state.transferUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({
+                assignee_id: Number(assigneeId),
+                tag_id: Number(tagId),
+            }),
+        })
+            .then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.success) {
+                    const message = payload && payload.message
+                        ? payload.message
+                        : 'Não foi possível transferir a tarefa.';
+                    throw new Error(message);
+                }
+                const successMessage = payload.message || 'Tarefa transferida com sucesso.';
+                showAlert(successAlert, successMessage);
+                if (payload.task) {
+                    handleTaskUpdated(payload.task);
+                    highlightTaskCard(payload.task.id, { openDetails: true, scrollIntoView: true });
+                }
+                window.setTimeout(() => {
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 800);
+            })
+            .catch((error) => {
+                console.error('[Tasks] Erro ao transferir tarefa:', error);
+                const message = error && error.message ? error.message : 'Não foi possível transferir a tarefa. Tente novamente.';
+                showAlert(errorAlert, message);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }
+
+    return {
+        init,
+        open,
+    };
+})();
 // Global variable to store current user ID
 let currentUserId = 0;
+let currentUserRole = '';
 
 const TASK_HIGHLIGHT_MS = 3000;
 
@@ -696,29 +1190,14 @@ function highlightTaskCard(taskId, options = {}) {
 window.highlightTaskCard = highlightTaskCard;
 
 document.addEventListener('click', event => {
-    const toggle = event.target.closest('.task-actions-toggle');
-    if (!toggle) {
+    const transferButton = event.target.closest('.transfer-task');
+    if (transferButton) {
+        event.preventDefault();
+        TaskTransfer.open(transferButton).catch((error) => {
+            console.error('[Tasks] Falha ao abrir modal de transferência:', error);
+        });
         return;
     }
-    const container = toggle.closest('.task-actions-container');
-    if (!container) {
-        return;
-    }
-
-    const wasCollapsed = container.classList.contains('collapsed');
-    if (wasCollapsed) {
-        container.classList.remove('collapsed');
-    } else {
-        container.classList.add('collapsed');
-    }
-
-    const isExpanded = wasCollapsed;
-    toggle.setAttribute('aria-expanded', isExpanded.toString());
-
-    const taskTitle = toggle.dataset.taskTitle || '';
-    const labelAction = isExpanded ? 'Ocultar ações da tarefa' : 'Mostrar ações da tarefa';
-    toggle.setAttribute('aria-label', taskTitle ? `${labelAction} ${taskTitle}` : labelAction);
-    toggle.title = isExpanded ? 'Ocultar ações' : 'Mostrar ações';
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -726,7 +1205,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const kanbanElement = document.querySelector('.kanban');
     currentUserId = kanbanElement ? parseInt(kanbanElement.dataset.currentUser || '0', 10) : 0;
+    currentUserRole = kanbanElement ? kanbanElement.dataset.currentUserRole || '' : '';
     TaskResponses.init({ csrfToken, currentUserId });
+    TaskTransfer.init();
 
     // Setup real-time event handlers
     if (window.realtimeClient) {
@@ -1151,6 +1632,31 @@ function updateTaskCardContent(taskCard, taskData) {
         descElement.remove();
     }
 
+    const assigneeDisplay = taskData.assignee_name || 'Sem responsável';
+    if (typeof taskData.assigned_to !== 'undefined') {
+        taskCard.dataset.assignedTo = taskData.assigned_to ?? '';
+    }
+    if (typeof taskData.created_by !== 'undefined') {
+        taskCard.dataset.createdBy = taskData.created_by ?? '';
+    }
+
+    const detailAssignee = taskCard.querySelector('[data-task-assignee]');
+    if (detailAssignee) {
+        detailAssignee.textContent = assigneeDisplay;
+    }
+
+    taskCard.querySelectorAll('.task-meta').forEach((meta) => {
+        const label = meta.querySelector('.meta-label');
+        const value = meta.querySelector('.meta-value');
+        if (!label || !value) {
+            return;
+        }
+        const normalizedLabel = label.textContent ? label.textContent.trim().toLowerCase() : '';
+        if (normalizedLabel.startsWith('responsável')) {
+            value.textContent = assigneeDisplay;
+        }
+    });
+
     const hadDetailsOpen = taskCard.classList.contains('show-details');
     const wasCollapsed = taskCard.classList.contains('collapsed');
     const hasChildren = Boolean(taskCard.querySelector('.subtasks'));
@@ -1194,6 +1700,7 @@ function updateTaskCardContent(taskCard, taskData) {
     // Rebuild action buttons based on new status
     const actionsContainer = taskCard.querySelector('.task-actions');
     if (actionsContainer) {
+        actionsContainer.dataset.taskTitle = taskData.title || '';
         rebuildActionButtons(actionsContainer, taskData);
     }
 
@@ -1218,10 +1725,23 @@ function rebuildActionButtons(actionsContainer, taskData) {
     const deleteButton = actionsContainer.querySelector('.delete-task');
     const existingResponsesButton = actionsContainer.querySelector('.open-task-responses');
     const editButton = actionsContainer.querySelector('.edit-task');
+    const transferButton = actionsContainer.querySelector('.transfer-task');
     const allowSubtask = canCurrentUserAddSubtask(taskData);
     actionsContainer.dataset.allowSubtask = allowSubtask ? 'true' : 'false';
     const editBaseUrl = actionsContainer.dataset.editUrl || '';
     const editReturnUrl = actionsContainer.dataset.editReturnUrl || '';
+    const transferUrlBase = transferButton?.dataset.transferUrl || actionsContainer.dataset.transferUrl || '';
+    const transferOptionsUrlBase = transferButton?.dataset.transferOptionsUrl || actionsContainer.dataset.transferOptionsUrl || '';
+    const canTransfer = canCurrentUserTransfer(taskData);
+    actionsContainer.dataset.canTransfer = canTransfer ? 'true' : 'false';
+    const normalizedTransferUrl = transferUrlBase || `/tasks/${taskData.id}/transfer`;
+    const normalizedTransferOptionsUrl = transferOptionsUrlBase || `/tasks/${taskData.id}/transfer/options`;
+    actionsContainer.dataset.transferUrl = normalizedTransferUrl;
+    actionsContainer.dataset.transferOptionsUrl = normalizedTransferOptionsUrl;
+    actionsContainer.dataset.taskTagId = typeof taskData.tag_id !== 'undefined' && taskData.tag_id !== null
+        ? String(taskData.tag_id)
+        : '';
+    actionsContainer.dataset.taskTagName = taskData.tag_name || '';
 
     // Clear all buttons
     actionsContainer.innerHTML = '';
@@ -1238,6 +1758,25 @@ function rebuildActionButtons(actionsContainer, taskData) {
     } else {
         actionsContainer.appendChild(responsesButton);
         TaskResponses.ensureButtonForStatus(actionsContainer, taskData);
+    }
+
+    if (canTransfer) {
+        let button = transferButton;
+        if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'action transfer transfer-task';
+            button.innerHTML = '<i class="bi bi-arrow-left-right"></i>';
+        }
+        button.dataset.taskId = String(taskData.id);
+        button.dataset.taskTitle = taskData && taskData.title ? taskData.title : '';
+        button.dataset.transferUrl = normalizedTransferUrl;
+        button.dataset.transferOptionsUrl = normalizedTransferOptionsUrl;
+        button.dataset.taskTagId = typeof taskData.tag_id !== 'undefined' && taskData.tag_id !== null
+            ? String(taskData.tag_id)
+            : '';
+        button.dataset.taskTagName = taskData.tag_name || '';
+        actionsContainer.appendChild(button);
     }
 
     // Base class adjustments
@@ -1386,6 +1925,18 @@ function canCurrentUserAddSubtask(taskData) {
         return Boolean(taskData.assigned_to) && (isCreator || isAssignee);
     }
     return false;
+}
+
+function canCurrentUserTransfer(taskData) {
+    if (!taskData) {
+        return false;
+    }
+    if ((currentUserRole || '').toLowerCase() === 'admin') {
+        return true;
+    }
+    const isCreator = taskData.created_by === currentUserId;
+    const isAssignee = taskData.assigned_to === currentUserId;
+    return isCreator || isAssignee;
 }
 
 /**
