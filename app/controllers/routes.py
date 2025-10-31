@@ -4783,6 +4783,167 @@ def cadastro_notas():
     )
 
 
+@app.route("/controle-notas/totalizador", methods=["GET"])
+@login_required
+@meeting_only_access_check
+def notas_totalizador():
+    """Display aggregated Nota Débito data with optional period filters."""
+
+    if not can_access_controle_notas():
+        abort(403)
+
+    today = date.today()
+    default_start = today.replace(day=1)
+    default_end = today
+
+    data_inicial_raw = (request.args.get("data_inicial") or "").strip()
+    data_final_raw = (request.args.get("data_final") or "").strip()
+
+    def _parse_date(value: str) -> date | None:
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
+    data_inicial = _parse_date(data_inicial_raw) or default_start
+    data_final = _parse_date(data_final_raw) or default_end
+
+    if data_inicial > data_final:
+        flash("A data inicial não pode ser maior que a data final.", "warning")
+        data_inicial, data_final = default_start, default_end
+
+    base_query = NotaDebito.query.filter(
+        NotaDebito.data_emissao >= data_inicial,
+        NotaDebito.data_emissao <= data_final,
+    )
+
+    nota_form = NotaDebitoForm()
+    pagamento_choices = nota_form.forma_pagamento.choices
+    pagamento_label_map = {
+        (choice or "").upper(): label for choice, label in pagamento_choices
+    }
+    pagamento_value_map = {
+        (choice or "").upper(): (choice or "") for choice, _ in pagamento_choices
+    }
+
+    def format_currency(value: Decimal | None) -> str:
+        number = value if isinstance(value, Decimal) else Decimal(value or 0)
+        return (
+            f"R$ {number:,.2f}"
+            .replace(",", "_")
+            .replace(".", ",")
+            .replace("_", ".")
+        )
+
+    dados_totalizador: list[dict[str, object]] = []
+    notas_por_empresa: dict[str, dict[str, object]] = {}
+
+    notas_list = (
+        base_query.order_by(
+            sa.func.lower(NotaDebito.empresa),
+            NotaDebito.data_emissao.desc(),
+            NotaDebito.id.desc(),
+        ).all()
+    )
+
+    total_registros = 0
+    total_notas = 0
+    total_itens = 0
+    total_valor = Decimal("0")
+
+    for nota in notas_list:
+        empresa_key = (nota.empresa or "").strip().upper()
+        if not empresa_key:
+            empresa_key = "SEM EMPRESA"
+
+        grupo = notas_por_empresa.setdefault(
+            empresa_key,
+            {
+                "empresa": empresa_key,
+                "qtd_registros": 0,
+                "total_notas": 0,
+                "total_itens": 0,
+                "valor_total": Decimal("0"),
+                "notas": [],
+            },
+        )
+
+        valor_total = nota.total or Decimal("0")
+        valor_un = nota.valor_un or Decimal("0")
+
+        forma_pagamento_raw = (nota.forma_pagamento or "").strip()
+        forma_pagamento_value = forma_pagamento_raw.upper()
+
+        grupo["qtd_registros"] += 1
+        grupo["total_notas"] += int(nota.notas or 0)
+        grupo["total_itens"] += int(nota.qtde_itens or 0)
+        grupo["valor_total"] += Decimal(valor_total)
+        grupo["notas"].append(
+            {
+                "id": nota.id,
+                "data_emissao": nota.data_emissao,
+                "data_emissao_formatada": nota.data_emissao_formatada,
+                "empresa": empresa_key,
+                "notas": nota.notas,
+                "qtde_itens": nota.qtde_itens,
+                "valor_un": valor_un,
+                "valor_un_formatado": nota.valor_un_formatado,
+                "valor_total": valor_total,
+                "valor_total_formatado": nota.total_formatado,
+                "acordo": (nota.acordo or "").upper() if nota.acordo else "#N/A",
+                "forma_pagamento": forma_pagamento_raw,
+                "forma_pagamento_upper": forma_pagamento_value,
+                "forma_pagamento_choice_value": pagamento_value_map.get(
+                    forma_pagamento_value, forma_pagamento_raw
+                ),
+                "forma_pagamento_label": pagamento_label_map.get(
+                    forma_pagamento_value, forma_pagamento_value
+                ),
+                "observacao": nota.observacao or "",
+            }
+        )
+
+        total_registros += 1
+        total_notas += int(nota.notas or 0)
+        total_itens += int(nota.qtde_itens or 0)
+        total_valor += Decimal(valor_total)
+
+    def _sort_key_empresa(value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", value or "")
+        return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold()
+
+    for empresa_key in sorted(notas_por_empresa.keys(), key=_sort_key_empresa):
+        grupo = notas_por_empresa[empresa_key]
+        grupo["valor_total_formatado"] = format_currency(grupo["valor_total"])
+        dados_totalizador.append(grupo)
+
+    resumo_geral = {
+        "qtd_registros": total_registros,
+        "total_notas": total_notas,
+        "total_itens": total_itens,
+        "valor_total": total_valor,
+        "valor_total_formatado": format_currency(total_valor),
+    }
+
+    pode_ver_forma_pagamento = (
+        is_user_admin(current_user)
+        or user_has_tag("Gestão")
+        or user_has_tag("Financeiro")
+    )
+
+    return render_template(
+        "notas_totalizador.html",
+        dados_totalizador=dados_totalizador,
+        resumo_geral=resumo_geral,
+        data_inicial=data_inicial.isoformat(),
+        data_final=data_final.isoformat(),
+        pagamento_choices=pagamento_choices,
+        pode_ver_forma_pagamento=pode_ver_forma_pagamento,
+    )
+
+
 @app.route("/tags")
 @login_required
 def tags():
