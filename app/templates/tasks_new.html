@@ -120,7 +120,7 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
-    <form method="POST" enctype="multipart/form-data" class="kanban-form">
+    <form method="POST" action="{{ url_for('tasks_new') }}" enctype="multipart/form-data" class="kanban-form">
       {{ form.hidden_tag() }}
       {% if return_url %}
       <input type="hidden" name="return_url" value="{{ return_url }}">
@@ -235,14 +235,19 @@
         const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Salvando...';
 
+        // Armazenar a URL atual antes do submit
+        const currentUrl = window.location.href;
+
         // Se houver erro de validação, reabilitar o botão após um tempo
         setTimeout(function() {
-          if (window.location.href === form.action || !form.action) {
+          // Só reabilita se ainda estiver na mesma página (indica erro de validação)
+          if (window.location.href === currentUrl) {
             submitBtn.disabled = false;
             submitBtn.style.opacity = '1';
             submitBtn.style.cursor = 'pointer';
             submitBtn.textContent = originalText;
           }
+          // Se a URL mudou, o redirect funcionou e não fazemos nada
         }, 3000);
       });
     }
@@ -252,7 +257,6 @@
     const assignedWrapper = document.querySelector('.form-group-usuario');
     const tagSelect = document.getElementById('tag_id');
     const tagWrapper = document.querySelector('.form-group-setor');
-    const form = document.querySelector('.kanban-form');
 
     if (assignedSelect && assignedSelect.disabled) {
       assignedSelect.classList.add('disabled-select');
