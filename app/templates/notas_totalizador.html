@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Totalizador de Notas{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1400px;">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('notas_totalizador') }}">Totalizador</a>
+        </li>
+    </ul>
+
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+        <h1 class="text-primary mb-0">
+            Totalizador
+            <span class="badge bg-primary ms-2">{{ dados_totalizador|length }}</span>
+        </h1>
+        <form class="row g-2 align-items-end" method="get" action="{{ url_for('notas_totalizador') }}">
+            <div class="col-auto">
+                <label for="dataInicial" class="form-label mb-0 small text-muted text-uppercase">Data inicial</label>
+                <input type="date" id="dataInicial" name="data_inicial" class="form-control" value="{{ data_inicial }}">
+            </div>
+            <div class="col-auto">
+                <label for="dataFinal" class="form-label mb-0 small text-muted text-uppercase">Data final</label>
+                <input type="date" id="dataFinal" name="data_final" class="form-control" value="{{ data_final }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if dados_totalizador %}
+    <div class="accordion shadow-sm" id="totalizadorAccordion">
+        {% for grupo in dados_totalizador %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ loop.index }}">
+                <button class="accordion-button collapsed d-flex flex-wrap gap-3" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ loop.index }}"
+                        aria-expanded="false"
+                        aria-controls="collapse{{ loop.index }}">
+                    <span class="fw-semibold text-uppercase flex-grow-1">{{ grupo.empresa }}</span>
+                    <span class="small text-muted text-uppercase">Registros</span>
+                    <span class="fw-semibold">{{ grupo.qtd_registros }}</span>
+                    <span class="small text-muted text-uppercase">Notas</span>
+                    <span class="fw-semibold">{{ grupo.total_notas }}</span>
+                    <span class="small text-muted text-uppercase">Itens</span>
+                    <span class="fw-semibold">{{ grupo.total_itens }}</span>
+                    <span class="small text-muted text-uppercase">Valor Total</span>
+                    <span class="fw-semibold">{{ grupo.valor_total_formatado }}</span>
+                </button>
+            </h2>
+            <div id="collapse{{ loop.index }}" class="accordion-collapse collapse"
+                 aria-labelledby="heading{{ loop.index }}"
+                 data-bs-parent="#totalizadorAccordion">
+                <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0 text-start text-nowrap">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-start">Data Emissão</th>
+                                    <th class="text-start">Notas</th>
+                                    <th class="text-start">Itens</th>
+                                    <th class="text-start">Valor UN</th>
+                                    <th class="text-start">Valor Total</th>
+                                    <th class="text-start">Acordo</th>
+                                    {% if pode_ver_forma_pagamento %}
+                                    <th class="text-start">Pagamento</th>
+                                    {% endif %}
+                                    <th class="text-start">Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nota in grupo.notas %}
+                                <tr>
+                                    <td class="text-start">{{ nota.data_emissao_formatada }}</td>
+                                    <td class="text-start">{{ nota.notas }}</td>
+                                    <td class="text-start">{{ nota.qtde_itens }}</td>
+                                    <td class="text-start">{{ nota.valor_un_formatado }}</td>
+                                    <td class="text-start">{{ nota.valor_total_formatado }}</td>
+                                    <td class="text-start">{{ nota.acordo }}</td>
+                                    {% if pode_ver_forma_pagamento %}
+                                    <td class="text-start">
+                                        <select
+                                            class="form-select form-select-sm nota-forma-pagamento-select"
+                                            data-nota-id="{{ nota.id }}"
+                                            data-update-url="{{ url_for('notas_debito_update_forma_pagamento', nota_id=nota.id) }}"
+                                            data-original-value="{{ nota.forma_pagamento_choice_value }}">
+                                            {% for value, label in pagamento_choices %}
+                                            <option value="{{ value }}" {% if (nota.forma_pagamento_choice_value or '') == (value or '') %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    {% endif %}
+                                    <td class="text-start">{{ nota.observacao or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body p-4 text-center text-muted">
+            Nenhum registro encontrado para o período selecionado.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if pode_ver_forma_pagamento %}
+<script>
+const csrfToken = "{{ csrf_token() }}";
+
+document.addEventListener('DOMContentLoaded', function() {
+    function toggleSavingState(element, isSaving) {
+        if (!element) {
+            return;
+        }
+        if (isSaving) {
+            element.classList.add('is-saving');
+            element.disabled = true;
+        } else {
+            element.classList.remove('is-saving');
+            element.disabled = false;
+        }
+    }
+
+    document.querySelectorAll('.nota-forma-pagamento-select').forEach(function(select) {
+        var initialValue = select.dataset.originalValue || select.value || '';
+        select.dataset.originalValue = initialValue;
+
+        select.addEventListener('change', function(event) {
+            var target = event.currentTarget;
+            var previousValue = target.dataset.originalValue || '';
+            var updateUrl = target.dataset.updateUrl;
+
+            if (!updateUrl) {
+                return;
+            }
+
+            toggleSavingState(target, true);
+
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ forma_pagamento: target.value })
+            }).then(function(response) {
+                return response.json().catch(function() {
+                    return {};
+                }).then(function(payload) {
+                    if (!response.ok || !payload.success) {
+                        var errorMessage = payload && payload.message ? payload.message : 'Não foi possível atualizar a forma de pagamento.';
+                        var error = new Error(errorMessage);
+                        error.payload = payload;
+                        throw error;
+                    }
+                    return payload;
+                });
+            }).then(function() {
+                target.dataset.originalValue = target.value;
+                target.classList.add('is-valid');
+                setTimeout(function() {
+                    target.classList.remove('is-valid');
+                }, 1600);
+            }).catch(function(error) {
+                target.value = previousValue;
+                target.dataset.originalValue = previousValue;
+                target.classList.add('is-invalid');
+                setTimeout(function() {
+                    target.classList.remove('is-invalid');
+                }, 2000);
+                console.error('Falha ao atualizar forma de pagamento', error);
+                if (error && error.message) {
+                    alert(error.message);
+                } else {
+                    alert('Falha ao atualizar forma de pagamento.');
+                }
+            }).finally(function() {
+                toggleSavingState(target, false);
+            });
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
