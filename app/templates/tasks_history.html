@@ -17,6 +17,8 @@
     <div>
       {% if tag %}
       <a href="{{ url_for('tasks_sector', tag_id=tag.id, assigned_to_me=1 if assigned_to_me else None) }}" class="btn-history">Voltar</a>
+      {% elif only_me %}
+      <a href="{{ url_for('tasks_overview_personal') }}" class="btn-history">Voltar</a>
       {% else %}
       <a href="{{ url_for('tasks_overview', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Voltar</a>
       {% endif %}
