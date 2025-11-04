@@ -6832,6 +6832,74 @@ def tasks_overview_mine():
     )
 
 
+@app.route("/tasks/overview/personal")
+@login_required
+def tasks_overview_personal():
+    """Display only private tasks that belong to the current user."""
+
+    visible_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE]
+    query = (
+        Task.query.filter(Task.parent_id.is_(None))
+        .filter(Task.is_private.is_(True))
+        .filter(
+            sa.or_(
+                Task.created_by == current_user.id,
+                Task.assigned_to == current_user.id,
+            )
+        )
+    )
+    tasks = (
+        query.options(
+            joinedload(Task.tag),
+            joinedload(Task.assignee),
+            joinedload(Task.finisher),
+            joinedload(Task.creator),
+            joinedload(Task.children).joinedload(Task.assignee),
+            joinedload(Task.children).joinedload(Task.finisher),
+            joinedload(Task.children).joinedload(Task.tag),
+            joinedload(Task.children).joinedload(Task.creator),
+        )
+        .order_by(Task.due_date)
+        .limit(200)
+        .all()
+    )
+    tasks = _filter_tasks_for_user(tasks, current_user)
+    summaries = _load_task_response_summaries(
+        (task.id for task in _iter_tasks_with_children(tasks)),
+        current_user.id,
+    )
+    default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
+    for task in _iter_tasks_with_children(tasks):
+        task.conversation_summary = summaries.get(task.id) or default_summary.copy()
+    tasks_by_status = {status: [] for status in visible_statuses}
+    for t in tasks:
+        status = t.status
+        if isinstance(status, str):
+            try:
+                status = TaskStatus(status)
+            except Exception:
+                status = TaskStatus.PENDING
+        if status in tasks_by_status:
+            tasks_by_status[status].append(t)
+    done_sorted = sorted(
+        tasks_by_status[TaskStatus.DONE],
+        key=lambda x: x.completed_at or datetime.min,
+        reverse=True,
+    )
+    history_count = max(0, len(done_sorted) - 5)
+    tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
+
+    return render_template(
+        "tasks_overview_personal.html",
+        tasks_by_status=tasks_by_status,
+        TaskStatus=TaskStatus,
+        visible_statuses=visible_statuses,
+        history_count=history_count,
+        allow_delete=current_user.role == "admin",
+        history_url=url_for("tasks_history", only_me=1),
+    )
+
+
 def _sortable_text(value: str | None) -> str:
     """Return a lowercased, accent-free representation suitable for sorting."""
     if not value:
@@ -6896,6 +6964,9 @@ def tasks_new():
     choices: list[tuple[int, str]] = []
 
     form = TaskForm()
+    preset_only_me_param = (request.args.get("only_me", "") or "").lower()
+    if request.method == "GET" and preset_only_me_param in {"1", "true", "on", "yes"}:
+        form.only_me.data = True
     tag = parent_task.tag if parent_task else None
     if parent_task:
         form.parent_id.data = parent_task.id
@@ -7645,6 +7716,8 @@ def tasks_history(tag_id=None):
     assigned_to_me = assigned_param in {"1", "true", "on", "yes"}
     assigned_by_param = (request.args.get("assigned_by_me", "") or "").lower()
     assigned_by_me = assigned_by_param in {"1", "true", "on", "yes"}
+    only_me_param = (request.args.get("only_me", "") or "").lower()
+    only_me = only_me_param in {"1", "true", "on", "yes"}
     if tag_id:
         tag = Tag.query.get_or_404(tag_id)
         if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
@@ -7680,6 +7753,13 @@ def tasks_history(tag_id=None):
                 sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id)
             )
     if query is not None:
+        if only_me:
+            query = query.filter(Task.is_private.is_(True)).filter(
+                sa.or_(
+                    Task.created_by == current_user.id,
+                    Task.assigned_to == current_user.id,
+                )
+            )
         if assigned_to_me:
             query = query.filter(Task.assigned_to == current_user.id)
         if assigned_by_me:
@@ -7703,6 +7783,7 @@ def tasks_history(tag_id=None):
         tasks=tasks,
         assigned_to_me=assigned_to_me,
         assigned_by_me=assigned_by_me,
+        only_me=only_me,
     )
 
 
