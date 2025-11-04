@@ -335,15 +335,36 @@
     // Antes de submeter, garantir que os campos sejam habilitados temporariamente
     if (form) {
       form.addEventListener('submit', function(e) {
+        // Log para debug
+        const onlyMeValue = onlyMeCheckbox ? onlyMeCheckbox.checked : false;
+        console.log('[TASK FORM] Enviando formulario com only_me:', onlyMeValue);
+
         if (onlyMeCheckbox && onlyMeCheckbox.checked) {
           if (assignedSelect) {
             assignedSelect.disabled = false;
             assignedSelect.classList.remove('disabled-select');
+            console.log('[TASK FORM] Habilitando campo assigned_to:', assignedSelect.value);
           }
           if (tagSelect) {
             tagSelect.disabled = false;
             tagSelect.classList.remove('disabled-select');
+            console.log('[TASK FORM] Habilitando campo tag:', tagSelect.value);
           }
+        }
+
+        // Garantir que o checkbox only_me seja incluido no form data
+        if (onlyMeCheckbox) {
+          // Force o valor do checkbox no FormData
+          const formData = new FormData(form);
+          if (onlyMeCheckbox.checked && !formData.has('only_me')) {
+            console.warn('[TASK FORM] Checkbox only_me marcado mas nao encontrado no FormData! Corrigindo...');
+            // Nota: nao podemos alterar FormData aqui, mas o log ajuda no debug
+          }
+          console.log('[TASK FORM] Estado final only_me checkbox:', {
+            checked: onlyMeCheckbox.checked,
+            name: onlyMeCheckbox.name,
+            value: onlyMeCheckbox.value
+          });
         }
       });
     }

@@ -2719,6 +2719,16 @@ def cursos():
                 for tag_id in form.tags.data
                 if tag_id in tag_lookup
             ]
+
+            # Validação: verificar se setores e participantes não estão vazios
+            if not selected_sector_names:
+                flash("Selecione ao menos um setor válido para o curso.", "danger")
+                return redirect(url_for("cursos"))
+
+            if not selected_participant_names:
+                flash("Selecione ao menos um participante válido para o curso.", "danger")
+                return redirect(url_for("cursos"))
+
             should_add_to_calendar = bool(form.submit_add_to_calendar.data)
             meeting_query_params: dict[str, Any] = {}
             if should_add_to_calendar:
@@ -7103,6 +7113,28 @@ def tasks_new():
 
             db.session.commit()
 
+            # Verificar e recarregar tarefa do banco para garantir persistencia
+            db.session.refresh(task)
+
+            # Log detalhado do salvamento
+            current_app.logger.info(
+                f"Task {task.id} salva com sucesso no banco de dados. "
+                f"is_private={task.is_private}, tag_id={task.tag_id}, "
+                f"tag_nome={task.tag.nome if task.tag else 'None'}, "
+                f"created_by={task.created_by}, assigned_to={task.assigned_to}"
+            )
+
+            # Verificacao de integridade: garantir que is_private foi salvo corretamente
+            if task.is_private != is_private:
+                error_msg = (
+                    f"ERRO CRITICO: is_private nao foi salvo corretamente! "
+                    f"Esperado: {is_private}, Obtido do banco: {task.is_private}"
+                )
+                current_app.logger.error(error_msg)
+                flash("Erro ao salvar configuracao 'Somente para mim'. Por favor, tente novamente.", "danger")
+                db.session.rollback()
+                return redirect(url_for("tasks_new"))
+
             # Broadcast task creation
             from app.services.realtime import broadcast_task_created, get_broadcaster
             task_data = _serialize_task(task)
@@ -7339,6 +7371,28 @@ def tasks_edit(task_id: int):
                 edit_notification_records.append((user_id, notification))
 
             db.session.commit()
+
+            # Verificar e recarregar tarefa do banco para garantir persistencia
+            db.session.refresh(task)
+
+            # Log detalhado da edicao
+            current_app.logger.info(
+                f"Task {task.id} editada com sucesso no banco de dados. "
+                f"is_private={task.is_private}, tag_id={task.tag_id}, "
+                f"tag_nome={task.tag.nome if task.tag else 'None'}, "
+                f"created_by={task.created_by}, assigned_to={task.assigned_to}"
+            )
+
+            # Verificacao de integridade: garantir que is_private foi salvo corretamente
+            if task.is_private != is_private:
+                error_msg = (
+                    f"ERRO CRITICO: is_private nao foi atualizado corretamente na edicao! "
+                    f"Esperado: {is_private}, Obtido do banco: {task.is_private}"
+                )
+                current_app.logger.error(error_msg)
+                flash("Erro ao salvar configuracao 'Somente para mim'. Por favor, tente novamente.", "danger")
+                db.session.rollback()
+                return redirect(url_for("tasks_edit", task_id=task.id))
 
             # Broadcast task update para atualizar interface em tempo real
             if not task.is_private:
