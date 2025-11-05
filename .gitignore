@@ -14,6 +14,9 @@ env/
 env.test/
 uploads/
 
+# Ignorar arquivos e pastas de backup
+backups/
+
 # Ignorar o arquivo SQLite (se você estiver usando SQLite para o desenvolvimento local)
 *.db
 
@@ -44,3 +47,12 @@ nosetests.xml
 .claude/
 logs/
 .jsonl
+
+# Ignorar arquivos do Qodo AI
+.qodo/
+
+# Ignorar diretórios de migrações do Flask-Migrate
+migrations/
+
+# Ignorar diretório de instância do Flask
+instance/
