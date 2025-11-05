@@ -1084,61 +1084,148 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
     notify_field = getattr(form, "notify_attendees", None)
     should_notify = bool(notify_field.data) if notify_field else False
     if meeting.google_event_id:
+        # Always update the event with current settings
+        old_event_id = meeting.google_event_id  # Guardar ID antigo
+        create_meet_flag = form.create_meet.data
         previous_meet_link = meeting.meet_link
-        if form.create_meet.data:
-            if previous_meet_link:
-                create_meet_flag = None
+
+        try:
+            # Verifica se é necessário preservar a configuração do Meet
+            if previous_meet_link and form.create_meet.data:
+                create_meet_flag = None  # Preserva a configuração existente do Meet
+            try:
+                print(f"Updating existing event: ID={old_event_id}")
+                updated_event = update_event(
+                    old_event_id,
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                    create_meet=create_meet_flag,
+                    notify_attendees=should_notify,
+                )
+                print(f"Successfully updated event: ID={old_event_id}")
+            except RuntimeError as e:
+                error_str = str(e)
+                current_app.logger.warning(f"Failed to update event {old_event_id}: {error_str}")
+                
+                # Tentar excluir o evento antigo primeiro
+                try:
+                    delete_event(old_event_id)
+                    current_app.logger.info(f"Successfully deleted old event {old_event_id}")
+                except Exception as del_e:
+                    current_app.logger.warning(f"Failed to delete old event {old_event_id}: {del_e}")
+                
+                # Criar novo evento
+                try:
+                    if form.create_meet.data:
+                        updated_event = create_meet_event(
+                            form.subject.data,
+                            start_dt,
+                            end_dt,
+                            description,
+                            participant_emails,
+                            notify_attendees=should_notify,
+                        )
+                    else:
+                        updated_event = create_event(
+                            form.subject.data,
+                            start_dt,
+                            end_dt,
+                            description,
+                            participant_emails,
+                            notify_attendees=should_notify,
+                        )
+                    
+                    # Atualizar ID do evento no banco de dados
+                    meeting.google_event_id = updated_event["id"]
+                    current_app.logger.info(f"Created new event {updated_event['id']} to replace {old_event_id}")
+                except Exception as create_e:
+                    raise RuntimeError(f"Falha ao criar novo evento após erro na atualização: {create_e}")
+
+            # Atualiza o link do Meet baseado nas configurações
+            if form.create_meet.data:
+                # Se o evento já tem um link do Meet, mantém ele
+                # Se não tem, usa o novo link retornado pela API
+                meeting.meet_link = updated_event.get("hangoutLink") or previous_meet_link
             else:
-                create_meet_flag = True
-        else:
-            create_meet_flag = False
-        updated_event = update_event(
-            meeting.google_event_id,
-            form.subject.data,
-            start_dt,
-            end_dt,
-            description,
-            participant_emails,
-            create_meet=create_meet_flag,
-            notify_attendees=should_notify,
-        )
-        if form.create_meet.data:
-            meeting.meet_link = updated_event.get("hangoutLink") or previous_meet_link
-        else:
-            meeting.meet_link = None
+                # Se não quer mais Meet, remove o link
+                meeting.meet_link = None
+
+        except Exception as e:
+            error_msg = str(e)
+            if "Timeout" in error_msg:
+                flash_msg = "Tempo limite excedido ao tentar sincronizar com o Google Calendar. Tente novamente."
+            else:
+                flash_msg = f"Erro ao sincronizar com o Google Calendar: {error_msg}"
+            
+            current_app.logger.error(f"Failed to update Google Calendar event: {e}")
+            flash(flash_msg, "danger")
+            db.session.rollback()
+            return False, None
     else:
-        if form.create_meet.data:
-            updated_event = create_meet_event(
-                form.subject.data,
-                start_dt,
-                end_dt,
-                description,
-                participant_emails,
-                notify_attendees=should_notify,
+        # Create new event if no Google Calendar ID exists
+        try:
+            if form.create_meet.data:
+                updated_event = create_meet_event(
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+            else:
+                updated_event = create_event(
+                    form.subject.data,
+                    start_dt,
+                    end_dt,
+                    description,
+                    participant_emails,
+                    notify_attendees=should_notify,
+                )
+            meeting.meet_link = updated_event.get("hangoutLink")
+            meeting.google_event_id = updated_event.get("id")
+        except Exception as e:
+            current_app.logger.error(f"Failed to create Google Calendar event: {e}")
+            flash("A reunião não pôde ser criada no Google Calendar. Tente novamente.", "danger")
+            return False, None
+
+    try:
+        # Configurar host do Meet se necessário
+        if meeting.meet_host_id is None:
+            meeting.meet_host_id = meeting.criador_id
+
+        # Commit das alterações no banco
+        db.session.commit()
+
+        # Sincronizar preferências do Meet se necessário
+        if meeting.meet_link:
+            _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
+
+        # Invalidar cache após atualizar reunião
+        invalidate_calendar_cache()
+
+        # Se chegou até aqui, tudo funcionou corretamente
+        if meeting.meet_link:
+            flash(
+                Markup(
+                    f'Reunião atualizada com sucesso! <a href="{meeting.meet_link}" target="_blank">Link do Meet</a>'
+                ),
+                "success",
             )
         else:
-            updated_event = create_event(
-                form.subject.data,
-                start_dt,
-                end_dt,
-                description,
-                participant_emails,
-                notify_attendees=should_notify,
-            )
-        meeting.meet_link = updated_event.get("hangoutLink")
-        meeting.google_event_id = updated_event.get("id")
-    if meeting.meet_host_id is None:
-        meeting.meet_host_id = meeting.criador_id
-    db.session.commit()
-    if meeting.meet_link:
-        _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
+            flash("Reunião atualizada com sucesso!", "success")
+            
+        return True, MeetingOperationResult(meeting.id, meeting.meet_link)
 
-    flash("Reunião atualizada com sucesso!", "success")
-
-    # Invalidar cache após atualizar reunião
-    invalidate_calendar_cache()
-
-    return True, MeetingOperationResult(meeting.id, meeting.meet_link)
+    except Exception as e:
+        # Log do erro e rollback em caso de falha
+        current_app.logger.error(f"Failed to update meeting in database: {e}")
+        db.session.rollback()
+        flash("Erro ao atualizar a reunião no banco de dados. Tente novamente.", "danger")
+        return False, None
 
 
 def update_meeting_configuration(

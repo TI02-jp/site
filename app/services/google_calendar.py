@@ -269,20 +269,48 @@ def update_event(
     the event. When ``False``, any existing conference data is removed. If
     ``None``, the conference configuration is left unchanged.
     """
+    if not event_id:
+        raise ValueError("event_id não pode estar vazio")
+
     try:
         service = _build_service()
+        
+        try:
+            print(f"Getting event from Calendar: ID={event_id}")
+            existing_event = service.events().get(
+                calendarId=MEETING_ROOM_EMAIL,
+                eventId=event_id
+            ).execute()
+            print(f"Successfully got event: ID={event_id}")
+        except HttpError as e:
+            if e.resp.status == 404:
+                print(f"Event not found in Calendar: ID={event_id}")
+                raise RuntimeError(f"Evento não encontrado no Google Calendar (ID: {event_id})")
+            print(f"Error getting event from Calendar: ID={event_id}, error={str(e)}")
+            raise RuntimeError(f"Erro ao acessar evento no Google Calendar: {str(e)}")
+
+        print(f"Preparing event update payload: ID={event_id}")
         tz_name = get_calendar_timezone().key
         event = {
             "summary": summary,
             "start": {"dateTime": start.isoformat(), "timeZone": tz_name},
             "end": {"dateTime": end.isoformat(), "timeZone": tz_name},
+            # Mantem o ID do evento existente para garantir atualização
+            "id": existing_event["id"]
         }
+        
         if description:
             event["description"] = description
+            
         if attendees is not None:
             event["attendees"] = [{"email": email} for email in attendees]
+            
         kwargs = {}
-        if create_meet is True:
+        
+        # Preservar dados de conferência existentes se create_meet é None
+        if create_meet is None and "conferenceData" in existing_event:
+            event["conferenceData"] = existing_event["conferenceData"]
+        elif create_meet is True:
             event["conferenceData"] = {
                 "createRequest": {
                     "requestId": uuid4().hex,
@@ -293,18 +321,27 @@ def update_event(
         elif create_meet is False:
             event["conferenceData"] = None
             kwargs["conferenceDataVersion"] = 1
-        updated_event = (
-            service.events()
-            .patch(
-                calendarId=MEETING_ROOM_EMAIL,
-                eventId=event_id,
-                body=event,
-                sendUpdates=_send_updates_flag(notify_attendees),
-                **kwargs,
+
+        # Tentar atualizar o evento
+        try:
+            print(f"Updating event in Calendar: ID={event_id}")
+            updated_event = (
+                service.events()
+                .patch(
+                    calendarId=MEETING_ROOM_EMAIL,
+                    eventId=event_id,
+                    body=event,
+                    sendUpdates=_send_updates_flag(notify_attendees),
+                    **kwargs,
+                )
+                .execute()
             )
-            .execute()
-        )
-        return updated_event
+            print(f"Successfully updated event: ID={event_id}")
+            return updated_event
+        except HttpError as e:
+            error_reason = e._get_reason() if hasattr(e, '_get_reason') else str(e)
+            print(f"Failed to update event in Calendar: ID={event_id}, error={error_reason}")
+            raise RuntimeError(f"Falha ao atualizar evento no Google Calendar: {error_reason}")
     except (socket.timeout, socket.error) as e:
         print(f"Google Calendar API timeout on update_event: {e}")
         raise RuntimeError("Timeout ao atualizar evento no Google Calendar. Tente novamente.")

@@ -2966,6 +2966,7 @@ def acessos_editar(link_id: int):
 
 @app.route("/acessos/<int:link_id>/excluir", methods=["POST"])
 @login_required
+@csrf.exempt
 def acessos_excluir(link_id: int):
     """Delete an existing access shortcut."""
 
@@ -6880,12 +6881,8 @@ def tasks_overview_personal():
     query = (
         Task.query.filter(Task.parent_id.is_(None))
         .filter(Task.is_private.is_(True))
-        .filter(
-            sa.or_(
-                Task.created_by == current_user.id,
-                Task.assigned_to == current_user.id,
-            )
-        )
+        # Tasks privadas são visíveis apenas para quem criou
+        .filter(Task.created_by == current_user.id)
     )
     tasks = (
         query.options(
@@ -7035,12 +7032,16 @@ def tasks_new():
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_task_user_choices(tag)
     personal_tag = None
+    # Garantir que o valor do only_me seja preservado no POST
     if request.method == "POST":
+        # Forçar o valor do checkbox baseado no request.form
+        form.only_me.data = bool(request.form.get('only_me'))
         current_app.logger.info(
             f"Task create POST - only_me raw value: {request.form.get('only_me')}, "
-            f"form.only_me.data: {form.only_me.data}, "
+            f"form.only_me.data: {form.only_me.data}, " 
             f"tag_id: {form.tag_id.data}, assigned_to: {form.assigned_to.data}"
         )
+        
     if request.method == "POST" and form.only_me.data:
         personal_tag = _ensure_personal_tag(current_user)
         form.tag_id.data = personal_tag.id

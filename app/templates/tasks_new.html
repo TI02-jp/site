@@ -190,6 +190,8 @@
 
       <div class="form-group form-group-only-me">
         <div class="form-check">
+          {# Adiciona um campo hidden para garantir que o valor do checkbox seja enviado mesmo quando não marcado #}
+          <input type="hidden" name="only_me" value="0">
           {{ form.only_me(class="form-check-input", id="only-me-checkbox") }}
           <label class="form-check-label" for="only-me-checkbox">
             Somente para mim
