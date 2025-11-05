@@ -605,6 +605,54 @@ class Session(db.Model):
     user = db.relationship('User', backref=db.backref('sessions', lazy='dynamic'))
 
 
+class AuditLog(db.Model):
+    """Comprehensive audit trail for all user actions."""
+    __tablename__ = "audit_logs"
+    __table_args__ = (
+        db.Index('idx_audit_user_id', 'user_id'),
+        db.Index('idx_audit_action_type', 'action_type'),
+        db.Index('idx_audit_resource', 'resource_type', 'resource_id'),
+        db.Index('idx_audit_created_at', 'created_at'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Usuario que executou a acao
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    username = db.Column(db.String(80), nullable=False)  # Denormalizado para historico
+
+    # Contexto da acao
+    action_type = db.Column(db.String(50), nullable=False)  # 'login', 'logout', 'create_user', etc.
+    resource_type = db.Column(db.String(50), nullable=False)  # 'user', 'task', 'announcement', etc.
+    resource_id = db.Column(db.Integer, nullable=True)  # ID do recurso afetado
+
+    # Detalhes da acao
+    action_description = db.Column(db.String(255), nullable=False)
+    old_values = db.Column(db.JSON, nullable=True)  # Estado anterior
+    new_values = db.Column(db.JSON, nullable=True)  # Estado novo
+
+    # Contexto de rede
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.Text, nullable=True)
+
+    # Request tracking
+    request_id = db.Column(db.String(50), nullable=True)
+    endpoint = db.Column(db.String(255), nullable=True)
+
+    # Timestamp
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(SAO_PAULO_TZ),
+        nullable=False
+    )
+
+    # Relacionamentos
+    user = db.relationship("User", backref=db.backref("audit_logs", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<AuditLog {self.id}: {self.username} {self.action_type} {self.resource_type}>"
+
+
 class Consultoria(db.Model):
     """Stores consulting company credentials."""
     __tablename__ = 'consultorias'

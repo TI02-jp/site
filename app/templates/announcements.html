@@ -55,9 +55,10 @@
     border: 1px solid rgba(13, 110, 253, 0.08);
     background: #ffffff;
     box-shadow: 0 1rem 2rem -1.5rem rgba(13, 110, 253, 0.4);
-    height: 100%;
+    height: var(--announcement-card-height, 26rem);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .announcement-card.is-unread {
@@ -79,6 +80,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    overflow: hidden;
   }
 
   .announcement-card h3 {
@@ -415,6 +417,113 @@
       padding: 0.75rem 0.85rem 0.9rem 0.85rem;
     }
   }
+
+  .richtext-editor {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .richtext-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .richtext-toolbar .btn {
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .richtext-toolbar .btn.is-active {
+    background-color: rgba(13, 110, 253, 0.15);
+    border-color: rgba(13, 110, 253, 0.35);
+    color: #0b5ed7;
+  }
+
+  .richtext-color-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.125rem 0.4rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background: #fff;
+  }
+
+  .richtext-color-input {
+    min-width: 2.5rem;
+    width: 2.5rem;
+    height: 1.75rem;
+    padding: 0.125rem;
+    border: none;
+    background: transparent;
+  }
+
+  .richtext-color-input:focus {
+    outline: none;
+  }
+
+  .richtext-editable {
+    min-height: 10rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--bs-border-color);
+    background-color: #fff;
+    line-height: 1.5;
+    overflow-y: auto;
+    cursor: text;
+  }
+
+  .richtext-editable:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+  }
+
+  .richtext-editable.is-invalid {
+    border-color: #dc3545;
+    box-shadow: none;
+  }
+
+  .richtext-editable:empty:before {
+    content: attr(data-placeholder);
+    color: var(--bs-secondary-color);
+    pointer-events: none;
+  }
+
+  .announcement-body {
+    color: var(--bs-body-color);
+    word-break: break-word;
+  }
+
+  .announcement-body a {
+    color: var(--bs-primary);
+    text-decoration: underline;
+  }
+
+  .announcement-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    display: block;
+  }
+
+  .announcement-body ul,
+  .announcement-body ol {
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .announcement-body p {
+    margin-bottom: 0.75rem;
+  }
+
+  .announcement-body p:last-child,
+  .announcement-body ul:last-child,
+  .announcement-body ol:last-child {
+    margin-bottom: 0;
+  }
 </style>
 {% endblock %}
 
@@ -513,7 +622,7 @@
               {% endif %}
             </div>
             <div class="announcement-card-content">
-              <div class="text-body-secondary text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+              <div class="announcement-body text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content | safe }}</div>
               {% if image_count == 1 %}
               <div class="announcement-card-image" data-announcement-image-wrapper>
                 <img
@@ -593,7 +702,7 @@
               </div>
             </div>
             <div class="modal-body d-grid gap-2 text-start">
-              <div class="text-body-secondary text-start">{{ announcement.content.replace('\n', '<br>') | safe }}</div>
+              <div class="announcement-body text-start">{{ announcement.content | safe }}</div>
               {% if attachments %}
               <div class="d-grid gap-2">
                 {% for attachment in attachments %}
@@ -657,7 +766,19 @@
       <div class="modal fade announcement-edit-modal" id="editAnnouncementModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="editAnnouncementModalLabel-{{ announcement.id }}" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
-            <form method="POST" action="{{ url_for('update_announcement', announcement_id=announcement.id) }}" enctype="multipart/form-data" class="announcement-form">
+            <form
+              method="POST"
+              action="{{ url_for('update_announcement', announcement_id=announcement.id) }}"
+              enctype="multipart/form-data"
+              class="announcement-form"
+              data-field-names='{{ {
+                "date": edit_form.date.name,
+                "subject": edit_form.subject.name,
+                "content": edit_form.content.name,
+                "attachments": edit_form.attachments.name
+              } | tojson | safe }}'
+              data-initial-content='{{ edit_form.content.data | tojson | safe }}'
+            >
               {{ edit_form.hidden_tag() }}
               <div class="modal-header">
                 <div class="text-start">
@@ -668,13 +789,13 @@
               </div>
               <div class="modal-body">
                 <div class="row g-4">
-                  <div class="col-lg-6">
+                  <div class="col-12">
                     <div class="announcement-form-card h-100 d-grid gap-4">
                       <div class="d-grid gap-3">
                         <div class="d-grid gap-2">
                           <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Data</span>
                           {{ edit_form.date.label(class="visually-hidden") }}
-                          {{ edit_form.date(class="form-control", type="date") }}
+                          {{ edit_form.date(class="form-control", type="date", placeholder="Selecione a data") }}
                           {% for error in edit_form.date.errors %}
                           <div class="invalid-feedback d-block">{{ error }}</div>
                           {% endfor %}
@@ -682,7 +803,7 @@
                         <div class="d-grid gap-2">
                           <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Assunto</span>
                           {{ edit_form.subject.label(class="visually-hidden") }}
-                          {{ edit_form.subject(class="form-control") }}
+                          {{ edit_form.subject(class="form-control", placeholder="Qual é o título do comunicado?") }}
                           {% for error in edit_form.subject.errors %}
                           <div class="invalid-feedback d-block">{{ error }}</div>
                           {% endfor %}
@@ -690,8 +811,41 @@
                         <div class="d-grid gap-2">
                           <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Mensagem</span>
                           {{ edit_form.content.label(class="visually-hidden") }}
-                          {{ edit_form.content(class="form-control", rows="6") }}
-                          <small class="text-muted">Use parágrafos curtos para facilitar a leitura.</small>
+                          <div class="richtext-editor" data-richtext-root>
+                            <div class="richtext-toolbar" role="group" aria-label="Ferramentas de formatação do comunicado">
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="bold" data-richtext-toggle="bold" title="Negrito (Ctrl+B)">
+                                <i class="bi bi-type-bold"></i>
+                              </button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="italic" data-richtext-toggle="italic" title="Itálico (Ctrl+I)">
+                                <i class="bi bi-type-italic"></i>
+                              </button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="underline" data-richtext-toggle="underline" title="Sublinhar (Ctrl+U)">
+                                <i class="bi bi-type-underline"></i>
+                              </button>
+                              <div class="richtext-color-wrapper">
+                                <i class="bi bi-palette text-muted" aria-hidden="true"></i>
+                                <input type="color" class="richtext-color-input" value="#0b5ed7" data-richtext-command="foreColor" title="Escolher cor do texto">
+                              </div>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="insertUnorderedList" data-richtext-toggle="insertUnorderedList" title="Lista com marcadores">
+                                <i class="bi bi-list-ul"></i>
+                              </button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="insertOrderedList" data-richtext-toggle="insertOrderedList" title="Lista numerada">
+                                <i class="bi bi-list-ol"></i>
+                              </button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="removeFormat" title="Limpar formatação">
+                                <i class="bi bi-eraser"></i>
+                              </button>
+                            </div>
+                            <div class="richtext-editable{% if edit_form.content.errors %} is-invalid{% endif %}" contenteditable="true" data-richtext-editor data-placeholder="Digite a mensagem e use a barra de ferramentas para formatar." role="textbox" aria-multiline="true" tabindex="0" aria-label="Mensagem do comunicado"></div>
+                          </div>
+                          {{ edit_form.content(class="d-none") }}
+                          <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                            <small class="text-muted mb-0">Use negrito, itálico e cores para destacar partes importantes.</small>
+                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" data-preview-trigger>
+                              <i class="bi bi-eye"></i>
+                              <span>Visualizar prévia</span>
+                            </button>
+                          </div>
                           {% for error in edit_form.content.errors %}
                           <div class="invalid-feedback d-block">{{ error }}</div>
                           {% endfor %}
@@ -746,47 +900,6 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-lg-6">
-                    <div class="announcement-preview card border-0 shadow-sm h-100">
-                      <div class="card-body d-grid gap-3">
-                        <div class="d-flex flex-column gap-1">
-                          <span class="badge rounded-pill text-bg-primary align-self-start">Prévia em tempo real</span>
-                          <p class="text-uppercase text-muted fw-semibold small mb-0" data-preview-target="date" data-placeholder="Data do comunicado">{{ edit_form.date.data.strftime('%d de %B de %Y') if edit_form.date.data else 'Data do comunicado' }}</p>
-                          <h3 class="h5 mb-0" data-preview-target="subject" data-placeholder="Assunto do comunicado">{{ edit_form.subject.data or 'Assunto do comunicado' }}</h3>
-                        </div>
-                        <div class="text-body-secondary" data-preview-target="content" data-placeholder="Escreva o comunicado para visualizar a prévia.">
-                          {% if edit_form.content.data %}
-                          {{ edit_form.content.data.replace('\n', '<br>') | safe }}
-                          {% else %}
-                          Escreva o comunicado para visualizar a prévia.
-                          {% endif %}
-                        </div>
-                        <div class="d-grid gap-3{% if attachments %}{% else %} d-none{% endif %}" data-preview-target="attachments-section">
-                          {% if attachments %}
-                          <div class="d-grid gap-2" data-preview-target="existing-attachment-preview-list">
-                            {% for attachment in attachments %}
-                            <div class="preview-attachment" data-existing-preview="{{ attachment.id or loop.index }}">
-                              {% if attachment.is_image %}
-                              <img src="{{ url_for('static', filename=attachment.file_path) }}" alt="Prévia do anexo {{ attachment.display_name }}" class="flex-shrink-0">
-                              {% else %}
-                              <span class="attachment-icon flex-shrink-0">
-                                <i class="bi {% if attachment.is_pdf %}bi-file-earmark-pdf{% elif attachment.is_text %}bi-filetype-txt{% else %}bi-paperclip{% endif %}"></i>
-                              </span>
-                              {% endif %}
-                              <div class="attachment-details">
-                                <div class="fw-semibold text-truncate">{{ attachment.display_name }}</div>
-                                <div class="text-muted">{{ attachment.extension and attachment.extension[1:]|upper or 'ARQ' }}</div>
-                              </div>
-                            </div>
-                            {% endfor %}
-                          </div>
-                          {% endif %}
-                          <div class="text-muted small{% if attachments %} d-none{% endif %}" data-preview-target="attachments-empty">Nenhum anexo selecionado.</div>
-                          <div class="d-grid gap-2" data-preview-target="attachment-list"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
               <div class="modal-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
@@ -818,7 +931,18 @@
   <div class="modal fade announcement-modal" id="newAnnouncementModal" tabindex="-1" aria-labelledby="newAnnouncementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
-        <form method="POST" enctype="multipart/form-data" class="announcement-form">
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          class="announcement-form"
+          data-field-names='{{ {
+            "date": form.date.name,
+            "subject": form.subject.name,
+            "content": form.content.name,
+            "attachments": form.attachments.name
+          } | tojson | safe }}'
+          data-initial-content='{{ form.content.data | tojson | safe }}'
+        >
           {{ form.hidden_tag() }}
           <div class="modal-header">
             <div class="text-start">
@@ -829,7 +953,7 @@
           </div>
           <div class="modal-body">
             <div class="row g-4">
-              <div class="col-lg-6">
+              <div class="col-12">
                 <div class="announcement-form-card h-100 d-grid gap-4">
                   <div class="d-grid gap-3">
                     <div class="d-grid gap-2">
@@ -851,8 +975,41 @@
                     <div class="d-grid gap-2">
                       <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Mensagem</span>
                       {{ form.content.label(class="visually-hidden") }}
-                      {{ form.content(class="form-control", rows="6", placeholder="Compartilhe os detalhes importantes do comunicado...") }}
-                      <small class="text-muted">Use parágrafos curtos para facilitar a leitura.</small>
+                      <div class="richtext-editor" data-richtext-root>
+                        <div class="richtext-toolbar" role="group" aria-label="Ferramentas de formatação do comunicado">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="bold" data-richtext-toggle="bold" title="Negrito (Ctrl+B)">
+                            <i class="bi bi-type-bold"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="italic" data-richtext-toggle="italic" title="Itálico (Ctrl+I)">
+                            <i class="bi bi-type-italic"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="underline" data-richtext-toggle="underline" title="Sublinhar (Ctrl+U)">
+                            <i class="bi bi-type-underline"></i>
+                          </button>
+                          <div class="richtext-color-wrapper">
+                            <i class="bi bi-palette text-muted" aria-hidden="true"></i>
+                            <input type="color" class="richtext-color-input" value="#0b5ed7" data-richtext-command="foreColor" title="Escolher cor do texto">
+                          </div>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="insertUnorderedList" data-richtext-toggle="insertUnorderedList" title="Lista com marcadores">
+                            <i class="bi bi-list-ul"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="insertOrderedList" data-richtext-toggle="insertOrderedList" title="Lista numerada">
+                            <i class="bi bi-list-ol"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-richtext-command="removeFormat" title="Limpar formatação">
+                            <i class="bi bi-eraser"></i>
+                          </button>
+                        </div>
+                        <div class="richtext-editable{% if form.content.errors %} is-invalid{% endif %}" contenteditable="true" data-richtext-editor data-placeholder="Digite a mensagem e use a barra de ferramentas para formatar." role="textbox" aria-multiline="true" tabindex="0" aria-label="Mensagem do comunicado"></div>
+                      </div>
+                      {{ form.content(class="d-none") }}
+                      <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                        <small class="text-muted mb-0">Use negrito, itálico e cores para destacar partes importantes.</small>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" data-preview-trigger>
+                          <i class="bi bi-eye"></i>
+                          <span>Visualizar prévia</span>
+                        </button>
+                      </div>
                       {% for error in form.content.errors %}
                       <div class="invalid-feedback d-block">{{ error }}</div>
                       {% endfor %}
@@ -873,23 +1030,8 @@
                   </div>
                 </div>
               </div>
-              <div class="col-lg-6">
-                <div class="announcement-preview card border-0 shadow-sm h-100">
-                  <div class="card-body d-grid gap-3">
-                    <div class="d-flex flex-column gap-1">
-                      <span class="badge rounded-pill text-bg-primary align-self-start">Prévia em tempo real</span>
-                      <p class="text-uppercase text-muted fw-semibold small mb-0" data-preview-target="date" data-placeholder="Data do comunicado">Data do comunicado</p>
-                      <h3 class="h5 mb-0" data-preview-target="subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
-                    </div>
-                    <div class="text-body-secondary" data-preview-target="content" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
-                    <div class="d-grid gap-3 d-none" data-preview-target="attachments-section">
-                      <div class="text-muted small" data-preview-target="attachments-empty">Nenhum anexo selecionado.</div>
-                      <div class="d-grid gap-2" data-preview-target="attachment-list"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
+
           </div>
           <div class="modal-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
             <small class="text-muted">Revise os detalhes antes de publicar. Você pode editar a qualquer momento.</small>
@@ -900,6 +1042,39 @@
     </div>
   </div>
   {% endif %}
+</div>
+
+<div class="modal fade" id="announcementPreviewModal" tabindex="-1" aria-labelledby="announcementPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="announcementPreviewModalLabel">Prévia do comunicado</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-grid gap-3" data-preview-root>
+          <div class="d-flex flex-column gap-1">
+            <span class="badge rounded-pill text-bg-primary align-self-start">Prévia do comunicado</span>
+            <p class="text-uppercase text-muted fw-semibold small mb-0" data-preview-target="date" data-placeholder="Data do comunicado">Data do comunicado</p>
+            <h3 class="h5 mb-0" data-preview-target="subject" data-placeholder="Assunto do comunicado">Assunto do comunicado</h3>
+          </div>
+          <div class="announcement-body text-body-secondary" data-preview-target="content" data-placeholder="Escreva o comunicado para visualizar a prévia.">Escreva o comunicado para visualizar a prévia.</div>
+          <div class="d-grid gap-3 d-none" data-preview-target="attachments-wrapper">
+            <div class="d-grid gap-2 d-none" data-preview-existing-section>
+              <span class="text-muted small text-uppercase fw-semibold">Anexos atuais</span>
+              <div class="d-grid gap-2" data-preview-target="existing-attachment-preview-list"></div>
+              <div class="text-muted small" data-preview-existing-empty>Nenhum anexo cadastrado.</div>
+            </div>
+            <div class="d-grid gap-2 d-none" data-preview-new-section>
+              <span class="text-muted small text-uppercase fw-semibold">Novos anexos</span>
+              <div class="text-muted small" data-preview-target="attachments-empty">Nenhum anexo selecionado.</div>
+              <div class="d-grid gap-2" data-preview-target="attachment-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -921,6 +1096,30 @@
     });
 
     const supportsDataTransfer = typeof DataTransfer !== 'undefined';
+    const previewModalElement = document.getElementById('announcementPreviewModal');
+    const previewModalRoot = previewModalElement?.querySelector('[data-preview-root]');
+    const previewDate = previewModalRoot?.querySelector('[data-preview-target="date"]');
+    const previewSubject = previewModalRoot?.querySelector('[data-preview-target="subject"]');
+    const previewContent = previewModalRoot?.querySelector('[data-preview-target="content"]');
+    const previewAttachmentsWrapper = previewModalRoot?.querySelector('[data-preview-target="attachments-wrapper"]');
+    const previewExistingSection = previewModalRoot?.querySelector('[data-preview-existing-section]');
+    const previewExistingList = previewModalRoot?.querySelector('[data-preview-target="existing-attachment-preview-list"]');
+    const previewExistingEmpty = previewModalRoot?.querySelector('[data-preview-existing-empty]');
+    const previewNewSection = previewModalRoot?.querySelector('[data-preview-new-section]');
+    const previewAttachmentList = previewModalRoot?.querySelector('[data-preview-target="attachment-list"]');
+    const previewAttachmentsEmpty = previewModalRoot?.querySelector('[data-preview-target="attachments-empty"]');
+
+    let activePreviewContext = null;
+
+    if (previewModalElement) {
+      previewModalElement.addEventListener('hidden.bs.modal', () => {
+        const focusTarget = activePreviewContext?.focusTarget;
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          focusTarget.focus({ preventScroll: true });
+        }
+        activePreviewContext = null;
+      });
+    }
 
     const formatDate = (value, placeholder) => {
       if (!value) {
@@ -952,42 +1151,241 @@
         return;
       }
 
-      const dateInput = form.querySelector('input[name="date"]');
-      const subjectInput = form.querySelector('[name="subject"]');
-      const contentInput = form.querySelector('[name="content"]');
-      const attachmentInput = form.querySelector('input[type="file"][name="attachments"]');
+      const parseJsonDataset = (rawValue) => {
+        if (typeof rawValue !== 'string' || !rawValue.length || rawValue === 'null' || rawValue === 'undefined') {
+          return null;
+        }
+        try {
+          return JSON.parse(rawValue);
+        } catch (error) {
+          return null;
+        }
+      };
+
+      const parsedFieldMap = (() => {
+        const parsed = parseJsonDataset(form.dataset.fieldNames);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      })();
+
+      const fieldMap = {
+        date: typeof parsedFieldMap.date === 'string' ? parsedFieldMap.date : 'date',
+        subject: typeof parsedFieldMap.subject === 'string' ? parsedFieldMap.subject : 'subject',
+        content: typeof parsedFieldMap.content === 'string' ? parsedFieldMap.content : 'content',
+        attachments: typeof parsedFieldMap.attachments === 'string' ? parsedFieldMap.attachments : 'attachments',
+      };
+
+      const resolveFormControl = (key) => {
+        const fieldName = fieldMap[key];
+        if (!fieldName || !form.elements) {
+          return null;
+        }
+        let control = typeof form.elements.namedItem === 'function'
+          ? form.elements.namedItem(fieldName)
+          : form.elements[fieldName];
+        if (!control) {
+          return null;
+        }
+        if (control instanceof Element) {
+          return control;
+        }
+        if (typeof control.item === 'function') {
+          control = control.item(0);
+        } else if (Array.isArray(control)) {
+          control = control[0];
+        }
+        return control instanceof Element ? control : null;
+      };
+
+      const dateInput = resolveFormControl('date');
+      const subjectInput = resolveFormControl('subject');
+      const contentInput = resolveFormControl('content');
+      const attachmentInput = resolveFormControl('attachments');
       const dropzone = modal.querySelector('[data-dropzone]');
 
-      const previewDate = modal.querySelector('[data-preview-target="date"]');
-      const previewSubject = modal.querySelector('[data-preview-target="subject"]');
-      const previewContent = modal.querySelector('[data-preview-target="content"]');
-      const previewAttachmentsSection = modal.querySelector('[data-preview-target="attachments-section"]');
-      const previewAttachmentList = modal.querySelector('[data-preview-target="attachment-list"]');
-      const previewAttachmentsEmpty = modal.querySelector('[data-preview-target="attachments-empty"]');
-      const previewExistingList = modal.querySelector('[data-preview-target="existing-attachment-preview-list"]');
+      const richtextRoot = form.querySelector('[data-richtext-root]');
+      const richtextEditor = richtextRoot?.querySelector('[data-richtext-editor]');
+      const richtextControls = richtextRoot ? Array.from(richtextRoot.querySelectorAll('[data-richtext-command]')) : [];
+      const richtextToggleButtons = richtextRoot ? Array.from(richtextRoot.querySelectorAll('[data-richtext-toggle]')) : [];
+      const richtextColorInputs = richtextControls.filter((element) => element.matches('input[type="color"]'));
+      const scratchPad = document.createElement('div');
+      const decodeEntities = (value) => {
+        if (!value) {
+          return '';
+        }
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = value;
+        return textarea.value;
+      };
+      const sanitizeHtmlFragment = (html) => {
+        if (!html) {
+          return '';
+        }
+        return html
+          .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+          .replace(/\son\w+="[^"]*"/gi, '')
+          .replace(/\son\w+='[^']*'/gi, '')
+          .replace(/javascript:/gi, '');
+      };
+      const decode = (value) => decodeEntities(value || '');
+      let editorHasUserInput = false;
+      let initializingEditor = true;
+      const initialContent = (() => {
+        const rawDataset = form.dataset.initialContent;
+        const parsedDatasetValue = parseJsonDataset(rawDataset);
+        const datasetValue = (() => {
+          if (typeof parsedDatasetValue === 'string') {
+            return parsedDatasetValue;
+          }
+          if (!rawDataset || rawDataset === 'null' || rawDataset === 'undefined') {
+            return '';
+          }
+          return rawDataset;
+        })();
+        const fallbackValue = contentInput
+          ? (contentInput.value || contentInput.defaultValue || '')
+          : '';
+        if (datasetValue) {
+          return sanitizeHtmlFragment(decode(datasetValue));
+        }
+        if (fallbackValue) {
+          return sanitizeHtmlFragment(decode(fallbackValue));
+        }
+        return '';
+      })();
 
-      const selectedFiles = [];
-
-      const hasExistingPreviews = () => {
-        if (!previewExistingList) {
+      const hasMeaningfulContent = (html) => {
+        if (!html) {
           return false;
         }
-        return Array.from(previewExistingList.querySelectorAll('[data-existing-preview]')).some(
-          (element) => !element.classList.contains('is-marked-for-removal')
+        scratchPad.innerHTML = html;
+        const text = (scratchPad.textContent || '').replace(/\u00a0|\s/g, '');
+        const hasMedia = scratchPad.querySelector('img,video,audio,iframe,svg') !== null;
+        scratchPad.innerHTML = '';
+        return Boolean(text) || hasMedia;
+      };
+
+      const captureEditorValue = () => {
+        if (!contentInput) {
+          return { sanitized: '', meaningful: false };
+        }
+        if (!richtextEditor) {
+          const sanitized = sanitizeHtmlFragment(decode(contentInput.value));
+          const meaningful = hasMeaningfulContent(sanitized);
+          contentInput.value = meaningful ? sanitized : '';
+          return { sanitized, meaningful };
+        }
+        const sanitized = sanitizeHtmlFragment(richtextEditor.innerHTML || '');
+        const meaningful = hasMeaningfulContent(sanitized);
+        contentInput.value = meaningful ? sanitized : '';
+        return { sanitized, meaningful };
+      };
+
+      const applyInitialContent = () => {
+        if (!contentInput) {
+          return;
+        }
+        let contentToApply = sanitizeHtmlFragment(decode(contentInput.value));
+        if (!contentToApply && initialContent) {
+          contentToApply = initialContent;
+        }
+        contentInput.value = contentToApply;
+        if (richtextEditor) {
+          richtextEditor.innerHTML = contentToApply;
+          editorHasUserInput = false;
+          initializingEditor = true;
+          captureEditorValue();
+        }
+      };
+
+      const updateToolbarState = () => {
+        if (!richtextEditor || !richtextToggleButtons.length) {
+          return;
+        }
+        const selection = window.getSelection();
+        if (!selection || !selection.anchorNode || !richtextEditor.contains(selection.anchorNode)) {
+          richtextToggleButtons.forEach((button) => button.classList.remove('is-active'));
+          return;
+        }
+        richtextToggleButtons.forEach((button) => {
+          const command = button.dataset.richtextToggle;
+          if (!command) {
+            return;
+          }
+          let isActive = false;
+          try {
+            isActive = document.queryCommandState(command);
+          } catch (error) {
+            isActive = false;
+          }
+          button.classList.toggle('is-active', Boolean(isActive));
+        });
+      };
+
+      const selectedFiles = [];
+      const existingAttachmentSource = modal.querySelector('[data-existing-attachment-list]');
+
+      const syncExistingAttachmentPreview = () => {
+        if (!previewExistingList) {
+          return;
+        }
+        previewExistingList.innerHTML = '';
+        if (!existingAttachmentSource) {
+          if (previewExistingSection) {
+            previewExistingSection.classList.add('d-none');
+          }
+          if (previewExistingEmpty) {
+            previewExistingEmpty.classList.remove('d-none');
+          }
+          return;
+        }
+        const attachments = Array.from(existingAttachmentSource.querySelectorAll('[data-existing-attachment]')).filter(
+          (element) => !element.classList.contains('is-marked-for-removal'),
         );
+        attachments.forEach((attachment) => {
+          const clone = attachment.cloneNode(true);
+          clone.classList.remove('is-marked-for-removal');
+          clone.querySelectorAll('.form-check, [data-preview-remove]').forEach((node) => node.remove());
+          clone.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+          clone.querySelectorAll('label[for]').forEach((node) => node.removeAttribute('for'));
+          previewExistingList.appendChild(clone);
+        });
+        const hasExisting = previewExistingList.childElementCount > 0;
+        if (previewExistingSection) {
+          previewExistingSection.classList.toggle('d-none', !hasExisting);
+        }
+        if (previewExistingEmpty) {
+          previewExistingEmpty.classList.toggle('d-none', hasExisting);
+        }
+      };
+
+      const hasExistingPreviews = () => {
+        return Boolean(previewExistingList && previewExistingList.childElementCount > 0);
       };
 
       const updateAttachmentsVisibility = () => {
-        const shouldShow = hasExistingPreviews() || selectedFiles.length > 0;
-        if (previewAttachmentsSection) {
-          previewAttachmentsSection.classList.toggle('d-none', !shouldShow);
+        const hasExisting = hasExistingPreviews();
+        const hasNew = selectedFiles.length > 0;
+
+        if (previewExistingSection) {
+          previewExistingSection.classList.toggle('d-none', !hasExisting);
+        }
+        if (previewExistingEmpty) {
+          previewExistingEmpty.classList.toggle('d-none', hasExisting);
+        }
+        if (previewNewSection) {
+          previewNewSection.classList.toggle('d-none', !hasNew);
         }
         if (previewAttachmentsEmpty) {
-          previewAttachmentsEmpty.classList.toggle('d-none', shouldShow);
+          previewAttachmentsEmpty.classList.toggle('d-none', hasNew);
+        }
+        if (previewAttachmentsWrapper) {
+          previewAttachmentsWrapper.classList.toggle('d-none', !(hasExisting || hasNew));
         }
       };
 
       const updateTextPreview = () => {
+        const { sanitized, meaningful } = captureEditorValue();
+
         if (previewDate) {
           const placeholder = previewDate.dataset.placeholder || previewDate.textContent || '';
           const formatted = dateInput ? formatDate(dateInput.value, placeholder) : placeholder;
@@ -1002,16 +1400,152 @@
 
         if (previewContent) {
           const placeholder = previewContent.dataset.placeholder || '';
-          const value = contentInput ? contentInput.value.trim() : '';
-          if (value) {
-            previewContent.innerHTML = value.replace(/\n/g, '<br>');
+          if (meaningful) {
+            previewContent.innerHTML = sanitized;
+            previewContent.classList.remove('text-body-secondary');
+            if (!initializingEditor) {
+              editorHasUserInput = true;
+            }
+          } else if (!editorHasUserInput && initialContent) {
+            previewContent.innerHTML = initialContent;
             previewContent.classList.remove('text-body-secondary');
           } else {
             previewContent.textContent = placeholder;
             previewContent.classList.add('text-body-secondary');
           }
         }
+
+        syncExistingAttachmentPreview();
+        updateAttachmentsVisibility();
+        initializingEditor = false;
       };
+
+      if (richtextEditor) {
+        let lastSelectionRange = null;
+
+        const storeSelection = () => {
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            return;
+          }
+          const range = selection.getRangeAt(0);
+          if (!richtextEditor.contains(range.commonAncestorContainer)) {
+            return;
+          }
+          lastSelectionRange = range.cloneRange();
+        };
+
+        const handleSelectionChange = () => {
+          updateToolbarState();
+          storeSelection();
+        };
+
+        richtextControls.forEach((control) => {
+          const command = control.getAttribute('data-richtext-command');
+          if (!command) {
+            return;
+          }
+
+          if (control.matches('input[type="color"]')) {
+            control.addEventListener('input', (event) => {
+              const target = event.target;
+              if (!(target instanceof HTMLInputElement)) {
+                return;
+              }
+              const selection = window.getSelection();
+              if (lastSelectionRange && selection) {
+                selection.removeAllRanges();
+                selection.addRange(lastSelectionRange);
+              }
+              richtextEditor.focus({ preventScroll: true });
+              document.execCommand('foreColor', false, target.value);
+              updateTextPreview();
+              updateToolbarState();
+              storeSelection();
+            });
+            return;
+          }
+
+          control.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+          });
+
+          control.addEventListener('click', (event) => {
+            event.preventDefault();
+            const selection = window.getSelection();
+            if (lastSelectionRange && selection) {
+              selection.removeAllRanges();
+              selection.addRange(lastSelectionRange);
+            }
+            richtextEditor.focus({ preventScroll: true });
+            if (command === 'removeFormat') {
+              document.execCommand('removeFormat', false, null);
+              document.execCommand('foreColor', false, 'inherit');
+              richtextColorInputs.forEach((input) => {
+                input.value = input.defaultValue || '#000000';
+              });
+            } else if (command !== 'foreColor') {
+              document.execCommand(command, false, null);
+            }
+            updateTextPreview();
+            updateToolbarState();
+            storeSelection();
+          });
+        });
+
+        richtextEditor.addEventListener('input', () => {
+          updateTextPreview();
+          storeSelection();
+        });
+
+        richtextEditor.addEventListener('focus', () => {
+          updateToolbarState();
+          storeSelection();
+        });
+        richtextEditor.addEventListener('keyup', () => {
+          updateToolbarState();
+          storeSelection();
+        });
+        richtextEditor.addEventListener('mouseup', () => {
+          updateToolbarState();
+          storeSelection();
+        });
+
+        richtextEditor.addEventListener('keydown', (event) => {
+          if (event.key === 'Tab') {
+            event.preventDefault();
+            const focusable = Array.from(
+              modal.querySelectorAll(
+                'button, [href], input, select, textarea, [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
+              ),
+            ).filter((element) => !element.hasAttribute('disabled') && element.offsetParent !== null);
+            const currentIndex = focusable.indexOf(richtextEditor);
+            if (event.shiftKey) {
+              const previous = focusable[currentIndex - 1] || focusable[focusable.length - 1];
+              previous?.focus();
+            } else {
+              const next = focusable[currentIndex + 1] || focusable[0];
+              next?.focus();
+            }
+          }
+        });
+
+        modal.addEventListener('hidden.bs.modal', () => {
+          document.removeEventListener('selectionchange', handleSelectionChange);
+          lastSelectionRange = null;
+        });
+
+        modal.addEventListener('shown.bs.modal', () => {
+          document.addEventListener('selectionchange', handleSelectionChange);
+          lastSelectionRange = null;
+        });
+      } else {
+        contentInput?.addEventListener('input', updateTextPreview);
+      }
+
+      form.addEventListener('submit', () => {
+        captureEditorValue();
+      });
 
       const refreshAttachmentInput = () => {
         if (!supportsDataTransfer || !attachmentInput) {
@@ -1141,6 +1675,9 @@
       }
 
       previewAttachmentList?.addEventListener('click', (event) => {
+        if (activePreviewContext?.modal !== modal) {
+          return;
+        }
         const target = event.target.closest('[data-remove-index]');
         if (!target) {
           return;
@@ -1156,7 +1693,6 @@
 
       dateInput?.addEventListener('change', updateTextPreview);
       subjectInput?.addEventListener('input', updateTextPreview);
-      contentInput?.addEventListener('input', updateTextPreview);
 
       const removalInputs = form.querySelectorAll('[data-preview-remove]');
       removalInputs.forEach((input) => {
@@ -1168,19 +1704,51 @@
           modal.querySelectorAll(`[data-existing-preview='${previewId}'], [data-existing-attachment='${previewId}']`).forEach((element) => {
             element.classList.toggle('is-marked-for-removal', input.checked);
           });
+          syncExistingAttachmentPreview();
           updateAttachmentsVisibility();
         });
       });
 
+      const previewTriggers = modal.querySelectorAll('[data-preview-trigger]');
+      previewTriggers.forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          updateTextPreview();
+          renderAttachments();
+          const modalApi = window.bootstrap;
+          if (previewModalElement && modalApi?.Modal) {
+            activePreviewContext = {
+              focusTarget: richtextEditor || contentInput,
+              modal,
+            };
+            const previewInstance = modalApi.Modal.getOrCreateInstance(previewModalElement);
+            previewInstance.show();
+          }
+        });
+      });
+
       modal.addEventListener('shown.bs.modal', () => {
+        applyInitialContent();
+        updateToolbarState();
         updateTextPreview();
         renderAttachments();
         updateAttachmentsVisibility();
-        subjectInput?.focus();
+        if (subjectInput) {
+          subjectInput.focus();
+        } else {
+          richtextEditor?.focus();
+        }
       });
 
       modal.addEventListener('hidden.bs.modal', () => {
+        const modalApi = window.bootstrap;
+        if (previewModalElement && modalApi?.Modal) {
+          const previewInstance = modalApi.Modal.getInstance(previewModalElement);
+          previewInstance?.hide();
+        }
         form.reset();
+        applyInitialContent();
+        updateToolbarState();
         removalInputs.forEach((input) => {
           const previewId = input.dataset.previewRemove;
           if (!previewId) {
@@ -1195,8 +1763,13 @@
         renderAttachments();
         updateTextPreview();
         updateAttachmentsVisibility();
+        if (activePreviewContext?.modal === modal) {
+          activePreviewContext = null;
+        }
       });
 
+      applyInitialContent();
+      updateToolbarState();
       updateTextPreview();
       renderAttachments();
       updateAttachmentsVisibility();

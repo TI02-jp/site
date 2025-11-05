@@ -502,6 +502,20 @@ def _save_announcement_file(uploaded_file) -> dict[str, str | None]:
     }
 
 
+def _normalize_announcement_content(raw_content: str | None) -> str:
+    """Sanitize announcement bodies and preserve line breaks for plain text."""
+
+    cleaned = sanitize_html(raw_content or "")
+    if not cleaned:
+        return ""
+
+    if not re.search(r"<[a-zA-Z/][^>]*>", cleaned):
+        normalized = cleaned.replace("\r\n", "\n").replace("\r", "\n")
+        return normalized.replace("\n", "<br>")
+
+    return cleaned
+
+
 def _save_task_file(uploaded_file) -> dict[str, str | None]:
     """Persist an uploaded file for a task and return its storage metadata."""
 
@@ -818,129 +832,6 @@ _STATS_CACHE_KEY_PREFIX = "portal:stats:"
 _NOTIFICATION_COUNT_KEY_PREFIX = "portal:notifications:unread:"
 _NOTIFICATION_VERSION_KEY = "portal:notifications:version"
 
-_LOG_VIEWER_SOURCES = {
-    "app": {
-        "label": "Aplicativo",
-        "filename": "app.log",
-        "description": "Logs gerais da aplicação em formato texto.",
-    },
-    "slow": {
-        "label": "Requisições Lentas",
-        "filename": "slow_requests.log",
-        "description": "Somente entradas marcadas como SLOW REQUEST.",
-    },
-    "json": {
-        "label": "JSON Estruturado",
-        "filename": "app.jsonl",
-        "description": "Versão JSON para ingestão em observabilidade.",
-    },
-    "sql": {
-        "label": "SQL Lento",
-        "filename": "slow_queries.log",
-        "description": "Consultas acima de 1s capturadas pelo SQLAlchemy.",
-    },
-}
-
-_DEFAULT_LOG_LINES = 120
-_MIN_LOG_LINES = 50
-_MAX_LOG_LINES = 500
-_LOG_LINE_RE = re.compile(r'^\[(?P<timestamp>[^\]]+)\]\s+(?P<level>[A-Z]+)')
-_REQ_ID_RE = re.compile(r'req[_-]?id[:=]\s*([a-z0-9\-]+)', re.IGNORECASE)
-_STRUCTURED_FIELDS = {"timestamp", "level", "module", "func", "line", "message", "request_id"}
-_LOG_TAIL_CACHE_TTL = 5
-_LOG_CACHE_PREFIX = "portal:logtail:"
-
-
-def _tail_log_lines(file_path: Path, limit: int) -> list[str]:
-    """Read the last ``limit`` lines from a log file efficiently."""
-    if limit <= 0:
-        return []
-    try:
-        with file_path.open("r", encoding="utf-8", errors="replace") as handle:
-            return [line.rstrip("\n") for line in deque(handle, maxlen=limit)]
-    except FileNotFoundError:
-        return []
-    except OSError as exc:  # pylint: disable=broad-except
-        current_app.logger.warning("Falha ao ler log %s: %s", file_path, exc)
-        return []
-
-
-def _apply_highlight(text: str, terms: list[str]) -> Markup:
-    """Escape and highlight search terms within text."""
-    escaped_text: Markup = escape(text)
-    for term in terms:
-        if not term:
-            continue
-        escaped_term = escape(term)
-        escaped_text = escaped_text.replace(
-            escaped_term,
-            Markup(f"<mark>{escaped_term}</mark>"),
-        )
-    return escaped_text
-
-
-def _parse_log_line(line: str) -> dict[str, Any]:
-    """Parse a log line into structured fields when possible."""
-    try:
-        data = json.loads(line)
-        if isinstance(data, dict):
-            extra = {k: v for k, v in data.items() if k not in _STRUCTURED_FIELDS}
-            return {
-                "timestamp": data.get("timestamp"),
-                "level": data.get("level"),
-                "request_id": data.get("request_id"),
-                "message": data.get("message", ""),
-                "raw": line,
-                "structured": True,
-                "extra": extra,
-            }
-    except json.JSONDecodeError:
-        pass
-
-    match = _LOG_LINE_RE.match(line)
-    timestamp = match.group("timestamp") if match else None
-    level = match.group("level") if match else None
-    message = line
-    if match:
-        message = line[match.end():].strip()
-    return {
-        "timestamp": timestamp,
-        "level": level,
-        "request_id": None,
-        "message": message,
-        "raw": line,
-        "structured": False,
-        "extra": {},
-    }
-
-
-def _build_log_entries(lines: list[str], request_id_term: str, query_term: str) -> list[dict[str, Any]]:
-    """Create formatted entries with highlighting for display."""
-    terms = [request_id_term, query_term]
-    entries: list[dict[str, Any]] = []
-    for line in lines:
-        entry = _parse_log_line(line)
-        message_for_highlight = entry.get("message") or entry.get("raw", "")
-        entry["highlighted_message"] = _apply_highlight(message_for_highlight, terms)
-        if not entry.get("request_id"):
-            match = _REQ_ID_RE.search(line)
-            if match:
-                entry["request_id"] = match.group(1)
-            elif request_id_term and request_id_term in line:
-                entry["request_id"] = request_id_term
-        entries.append(entry)
-    return entries
-
-
-def _get_cached_log_tail(log_key: str, file_path: Path, limit: int, mtime: int) -> list[str]:
-    """Return cached tail of a log file with a short TTL to avoid repeated disk reads."""
-    cache_key = f"{_LOG_CACHE_PREFIX}{log_key}:{limit}:{mtime}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return list(cached)
-    lines = _tail_log_lines(file_path, limit)
-    cache.set(cache_key, tuple(lines), timeout=_LOG_TAIL_CACHE_TTL)
-    return lines
 
 
 def _get_stats_cache_timeout() -> int:
@@ -1227,6 +1118,8 @@ def normalize_contatos(contatos):
 @login_required
 def upload_image():
     """Handle image uploads from the WYSIWYG editor."""
+    from app.utils.audit import log_user_action, ActionType, ResourceType
+
     if "image" not in request.files:
         return jsonify({"error": "Nenhuma imagem enviada"}), 400
 
@@ -1254,6 +1147,21 @@ def upload_image():
         os.makedirs(upload_folder, exist_ok=True)
         file.save(file_path)
         file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+
+        # Log file upload
+        log_user_action(
+            action_type=ActionType.UPLOAD,
+            resource_type=ResourceType.FILE,
+            action_description=f'Fez upload de imagem {filename}',
+            new_values={
+                'original_filename': filename,
+                'saved_filename': unique_name,
+                'file_size_bytes': file_size,
+                'file_type': 'image',
+                'file_url': file_url,
+            }
+        )
+
         return jsonify({"image_url": file_url})
     except Exception as exc:
         current_app.logger.exception("Falha ao salvar upload de imagem", exc_info=exc)
@@ -1263,6 +1171,8 @@ def upload_image():
 @login_required
 def upload_file():
     """Handle file uploads (images + PDFs) from the WYSIWYG editor."""
+    from app.utils.audit import log_user_action, ActionType, ResourceType
+
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
 
@@ -1298,6 +1208,21 @@ def upload_file():
         os.makedirs(upload_folder, exist_ok=True)
         file.save(file_path)
         file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
+
+        # Log file upload
+        log_user_action(
+            action_type=ActionType.UPLOAD,
+            resource_type=ResourceType.FILE,
+            action_description=f'Fez upload de arquivo {filename}',
+            new_values={
+                'original_filename': filename,
+                'saved_filename': unique_name,
+                'file_size_bytes': file_size,
+                'file_type': 'pdf' if is_pdf else 'image',
+                'file_url': file_url,
+            }
+        )
+
         return jsonify({
             "file_url": file_url,
             "is_pdf": is_pdf,
@@ -1541,10 +1466,11 @@ def announcements():
             abort(403)
 
         if form.validate_on_submit():
+            cleaned_content = _normalize_announcement_content(form.content.data)
             announcement = Announcement(
                 date=form.date.data,
                 subject=form.subject.data,
-                content=form.content.data,
+                content=cleaned_content,
                 created_by=current_user,
             )
 
@@ -1745,7 +1671,7 @@ def update_announcement(announcement_id: int):
     if form.validate_on_submit():
         announcement.date = form.date.data
         announcement.subject = form.subject.data
-        announcement.content = form.content.data
+        announcement.content = _normalize_announcement_content(form.content.data)
 
         attachments_modified = False
         remove_ids = {
@@ -5345,6 +5271,8 @@ def google_callback():
 @limiter.limit("5 per minute", methods=["POST"])  # Brute-force protection
 def login():
     """Render the login page and handle authentication."""
+    from app.utils.audit import log_user_action, ActionType, ResourceType
+
     form = LoginForm()
     google_enabled = bool(
         current_app.config.get("GOOGLE_CLIENT_ID")
@@ -5355,6 +5283,19 @@ def login():
         if user and user.check_password(form.password.data):
             if not user.ativo:
                 flash("Seu usuário está inativo. Contate o administrador.", "danger")
+                # Log failed login attempt (inactive user)
+                import logging
+                user_actions_logger = logging.getLogger('user_actions')
+                user_actions_logger.warning(
+                    f"[{form.username.data}] FAILED_LOGIN session - Usuario inativo - IP: {request.remote_addr}",
+                    extra={
+                        'username': form.username.data,
+                        'action_type': 'failed_login',
+                        'resource_type': 'session',
+                        'ip_address': request.remote_addr,
+                        'reason': 'inactive_user',
+                    }
+                )
                 return redirect(url_for("login"))
             login_user(
                 user,
@@ -5375,9 +5316,32 @@ def login():
                 )
             )
             db.session.commit()
+
+            # Log successful login
+            log_user_action(
+                action_type=ActionType.LOGIN,
+                resource_type=ResourceType.SESSION,
+                action_description=f'Usuario {user.username} fez login com sucesso',
+                resource_id=user.id,
+                new_values={'remember_me': form.remember_me.data}
+            )
+
             flash("Login bem-sucedido!", "success")
             return redirect(_determine_post_login_redirect(user))
         else:
+            # Log failed login attempt
+            import logging
+            user_actions_logger = logging.getLogger('user_actions')
+            user_actions_logger.warning(
+                f"[{form.username.data}] FAILED_LOGIN session - Credenciais invalidas - IP: {request.remote_addr}",
+                extra={
+                    'username': form.username.data,
+                    'action_type': 'failed_login',
+                    'resource_type': 'session',
+                    'ip_address': request.remote_addr,
+                    'reason': 'invalid_credentials',
+                }
+            )
             flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form, google_enabled=google_enabled)
 
@@ -6223,6 +6187,16 @@ def relatorio_usuarios():
 @login_required
 def logout():
     """Log out the current user."""
+    from app.utils.audit import log_user_action, ActionType, ResourceType
+
+    # Log logout before actually logging out
+    log_user_action(
+        action_type=ActionType.LOGOUT,
+        resource_type=ResourceType.SESSION,
+        action_description=f'Usuario {current_user.username} fez logout',
+        resource_id=current_user.id,
+    )
+
     sid = session.get("sid")
     if sid:
         Session.query.filter_by(session_id=sid).delete()
@@ -6305,6 +6279,8 @@ def list_users():
                         form.email.errors.append("Email já cadastrado.")
                     flash("Usuário ou email já cadastrado.", "warning")
                 else:
+                    from app.utils.audit import log_user_action, ActionType, ResourceType
+
                     user = User(
                         username=form.username.data,
                         email=form.email.data,
@@ -6316,6 +6292,22 @@ def list_users():
                         user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
                     db.session.add(user)
                     db.session.commit()
+
+                    # Log user creation
+                    log_user_action(
+                        action_type=ActionType.CREATE,
+                        resource_type=ResourceType.USER,
+                        action_description=f'Criou usuario {user.username}',
+                        resource_id=user.id,
+                        new_values={
+                            'username': user.username,
+                            'email': user.email,
+                            'name': user.name,
+                            'role': user.role,
+                            'tags': [tag.nome for tag in user.tags] if user.tags else [],
+                        }
+                    )
+
                     flash("Novo usuário cadastrado com sucesso!", "success")
                     return redirect(url_for("list_users"))
 
@@ -6337,6 +6329,18 @@ def list_users():
                 if editing_user.is_master and current_user.id != editing_user.id:
                     abort(403)
                 if edit_form.validate_on_submit():
+                    from app.utils.audit import log_user_action, ActionType, ResourceType
+
+                    # Capture old values before changes
+                    old_values = {
+                        'username': editing_user.username,
+                        'email': editing_user.email,
+                        'name': editing_user.name,
+                        'role': editing_user.role,
+                        'ativo': editing_user.ativo,
+                        'tags': [tag.nome for tag in editing_user.tags] if editing_user.tags else [],
+                    }
+
                     editing_user.username = edit_form.username.data
                     editing_user.email = edit_form.email.data
                     editing_user.name = edit_form.name.data
@@ -6354,16 +6358,48 @@ def list_users():
 
                     new_password = request.form.get("new_password")
                     confirm_new_password = request.form.get("confirm_new_password")
+                    password_changed = False
                     if new_password:
                         if new_password != confirm_new_password:
                             edit_password_error = "As senhas devem ser iguais."
                         else:
                             editing_user.set_password(new_password)
+                            password_changed = True
 
                     if edit_password_error:
                         flash(edit_password_error, "danger")
                     else:
                         db.session.commit()
+
+                        # Capture new values after changes
+                        new_values = {
+                            'username': editing_user.username,
+                            'email': editing_user.email,
+                            'name': editing_user.name,
+                            'role': editing_user.role,
+                            'ativo': editing_user.ativo,
+                            'tags': [tag.nome for tag in editing_user.tags] if editing_user.tags else [],
+                        }
+
+                        # Log user update
+                        log_user_action(
+                            action_type=ActionType.UPDATE,
+                            resource_type=ResourceType.USER,
+                            action_description=f'Atualizou usuario {editing_user.username}',
+                            resource_id=editing_user.id,
+                            old_values=old_values,
+                            new_values=new_values,
+                        )
+
+                        # Log password change separately if applicable
+                        if password_changed:
+                            log_user_action(
+                                action_type=ActionType.CHANGE_PASSWORD,
+                                resource_type=ResourceType.USER,
+                                action_description=f'Trocou senha do usuario {editing_user.username}',
+                                resource_id=editing_user.id,
+                            )
+
                         flash("Usuário atualizado com sucesso!", "success")
                         return redirect(url_for("list_users"))
 
@@ -6503,78 +6539,6 @@ def list_users():
 def novo_usuario():
     """Redirect to the user list with the registration modal open."""
     return redirect(url_for("list_users", open_user_modal="1"))
-
-
-@app.route("/admin/logs", methods=["GET"])
-@login_required
-def admin_log_viewer():
-    """Render a lightweight log viewer restricted to master users."""
-    if not getattr(current_user, "is_master", False):
-        abort(403)
-
-    selected_log = request.args.get("log", "app")
-    if selected_log not in _LOG_VIEWER_SOURCES:
-        selected_log = "app"
-
-    limit = request.args.get("limit", type=int)
-    if limit is None:
-        limit = _DEFAULT_LOG_LINES
-    limit = max(_MIN_LOG_LINES, min(limit, _MAX_LOG_LINES))
-
-    request_id_filter = (request.args.get("request_id") or "").strip()
-    query_filter = (request.args.get("query") or "").strip()
-
-    log_dir = Path(current_app.root_path).parent / "logs"
-    meta = _LOG_VIEWER_SOURCES[selected_log]
-    file_path = log_dir / meta["filename"]
-
-    filters = []
-    if query_filter:
-        filters.append(query_filter.lower())
-    if request_id_filter:
-        filters.append(request_id_filter.lower())
-
-    file_exists = file_path.exists()
-    raw_lines: list[str] = []
-    filtered_lines: list[str] = []
-    file_size_bytes = 0
-
-    if file_exists:
-        stat_result = file_path.stat()
-        file_size_bytes = stat_result.st_size
-        mtime = int(stat_result.st_mtime)
-        raw_lines = _get_cached_log_tail(selected_log, file_path, limit, mtime)
-        if filters:
-            filtered_lines = [
-                line for line in raw_lines if all(token in line.lower() for token in filters)
-            ]
-        else:
-            filtered_lines = raw_lines
-    else:
-        filtered_lines = []
-
-    entries = _build_log_entries(
-        filtered_lines,
-        request_id_filter,
-        query_filter,
-    )
-
-    return render_template(
-        "admin/log_viewer.html",
-        log_sources=_LOG_VIEWER_SOURCES,
-        selected_log=selected_log,
-        entries=entries,
-        limit=limit,
-        request_id_filter=request_id_filter,
-        query_filter=query_filter,
-        file_exists=file_exists,
-        file_name=meta["filename"],
-        file_description=meta["description"],
-        file_path=str(file_path),
-        file_size_bytes=file_size_bytes,
-        min_limit=_MIN_LOG_LINES,
-        max_limit=_MAX_LOG_LINES,
-    )
 
 @app.route("/user/edit/<int:user_id>", methods=["GET"])
 @admin_required
