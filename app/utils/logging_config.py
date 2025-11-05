@@ -45,16 +45,19 @@ def setup_logging(app):
     """Configure structured logging with rotation for production use.
 
     Creates logs in the 'logs' directory with:
-    - app.log: General application logs (rotated daily, keeps 30 days)
+    - app.log: General application logs (rotated daily, keeps 60 days)
     - error.log: Error-level logs only (rotated daily, keeps 90 days)
-    - slow_requests.log: Extracted slow requests (rotated daily, keeps 30 days)
+    - warnings.log: Warning-level logs only (rotated daily, keeps 90 days)
+    - slow_requests.log: Extracted slow requests (rotated daily, keeps 60 days)
     - slow_queries.log: Database queries >1s (rotated weekly)
+    - user_actions.log: User actions audit trail (rotated daily, keeps 180 days)
+    - user_actions.jsonl: User actions in JSON format (rotated daily, keeps 180 days)
     """
     # Create logs directory if it doesn't exist
     log_dir = os.getenv("APP_LOG_DIR")
     if not log_dir:
-        # Default directory outside da aplicação para facilitar coleta por serviços Windows
-        root_dir = os.path.abspath(os.path.join(app.root_path, "..", ".."))
+        # Default directory inside the application
+        root_dir = os.path.abspath(os.path.join(app.root_path, ".."))
         log_dir = os.path.join(root_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -71,13 +74,13 @@ def setup_logging(app):
     )
     json_formatter = JsonFormatter()
 
-    # 1. General application log (rotated daily, keeps 30 days)
+    # 1. General application log (rotated daily, keeps 60 days)
     app_log_path = os.path.join(log_dir, 'app.log')
     app_handler = TimedRotatingFileHandler(
         app_log_path,
         when='midnight',
         interval=1,
-        backupCount=30,
+        backupCount=60,
         encoding='utf-8'
     )
     app_handler.setLevel(logging.INFO)
@@ -90,7 +93,7 @@ def setup_logging(app):
         json_log_path,
         when='midnight',
         interval=1,
-        backupCount=14,
+        backupCount=60,
         encoding='utf-8'
     )
     json_handler.setLevel(logging.INFO)
@@ -110,13 +113,28 @@ def setup_logging(app):
     error_handler.setFormatter(text_formatter)
     app.logger.addHandler(error_handler)
 
-    # 4. Slow request log (daily rotation)
+    # 4. Warning log (rotated daily, keeps 90 days)
+    warnings_log_path = os.path.join(log_dir, 'warnings.log')
+    warnings_handler = TimedRotatingFileHandler(
+        warnings_log_path,
+        when='midnight',
+        interval=1,
+        backupCount=90,
+        encoding='utf-8'
+    )
+    warnings_handler.setLevel(logging.WARNING)
+    # Filter to only capture WARNING level (not ERROR or CRITICAL)
+    warnings_handler.addFilter(lambda record: record.levelno == logging.WARNING)
+    warnings_handler.setFormatter(text_formatter)
+    app.logger.addHandler(warnings_handler)
+
+    # 5. Slow request log (daily rotation)
     slow_log_path = os.path.join(log_dir, 'slow_requests.log')
     slow_handler = TimedRotatingFileHandler(
         slow_log_path,
         when='midnight',
         interval=1,
-        backupCount=30,
+        backupCount=60,
         encoding='utf-8'
     )
     slow_handler.setLevel(logging.WARNING)
@@ -151,6 +169,37 @@ def setup_logging(app):
     slow_query_logger.setLevel(logging.WARNING)
     slow_query_logger.addHandler(slow_query_handler)
     slow_query_logger.propagate = False
+
+    # 7. User actions log - Text format (rotated daily, keeps 180 days for compliance)
+    user_actions_log_path = os.path.join(log_dir, 'user_actions.log')
+    user_actions_handler = TimedRotatingFileHandler(
+        user_actions_log_path,
+        when='midnight',
+        interval=1,
+        backupCount=180,  # 6 months retention for audit compliance
+        encoding='utf-8'
+    )
+    user_actions_handler.setLevel(logging.INFO)
+    user_actions_handler.setFormatter(text_formatter)
+
+    # 8. User actions log - JSON format (rotated daily, keeps 180 days)
+    user_actions_json_path = os.path.join(log_dir, 'user_actions.jsonl')
+    user_actions_json_handler = TimedRotatingFileHandler(
+        user_actions_json_path,
+        when='midnight',
+        interval=1,
+        backupCount=180,
+        encoding='utf-8'
+    )
+    user_actions_json_handler.setLevel(logging.INFO)
+    user_actions_json_handler.setFormatter(json_formatter)
+
+    # Create separate user actions logger
+    user_actions_logger = logging.getLogger('user_actions')
+    user_actions_logger.setLevel(logging.INFO)
+    user_actions_logger.addHandler(user_actions_handler)
+    user_actions_logger.addHandler(user_actions_json_handler)
+    user_actions_logger.propagate = False  # Don't propagate to root logger
 
     # Log initial startup message
     banner = "=" * 80
