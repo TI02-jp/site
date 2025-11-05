@@ -11,15 +11,74 @@
 {% endblock %}
 
 {% block content %}
+{% set status_meta = {
+  'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
+  'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
+  'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
+} %}
+{% set priority_labels = {
+  'low': 'Baixa',
+  'medium': 'Média',
+  'high': 'Alta'
+} %}
 <section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}" data-current-user-role="{{ current_user.role }}">
   <div class="kanban-header">
     <h2><i class="bi bi-kanban"></i>Visão Geral de Tarefas</h2>
     <div class="kanban-actions">
-      <form method="get" action="{{ url_for('tasks_overview') }}" class="assigned-filter" id="assigned-by-me-form">
-        <label for="assigned-by-me-checkbox">
-          <input type="checkbox" id="assigned-by-me-checkbox" name="assigned_by_me" value="1" {% if assigned_by_me %}checked{% endif %}>
-          Atribuídas por mim
-        </label>
+      <form method="get" action="{{ url_for('tasks_overview') }}" class="tasks-filter-form" id="tasks-filter-form">
+        <div class="filter-row">
+          <div class="filter-field">
+            <label for="keyword-filter">Palavra-chave</label>
+            <input type="search" id="keyword-filter" name="q" value="{{ keyword }}" placeholder="Título ou descrição">
+          </div>
+          <div class="filter-field">
+            <label for="priority-filter">Prioridade</label>
+            <select id="priority-filter" name="priority">
+              <option value="">Todas</option>
+              {% for priority in priorities %}
+              <option value="{{ priority.value }}" {% if selected_priority == priority.value %}selected{% endif %}>{{ priority_labels[priority.value] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="assignee-filter">Responsável</label>
+            <select id="assignee-filter" name="assignee_id">
+              <option value="">Todos</option>
+              {% for user in users %}
+              <option value="{{ user.id }}" {% if assignee_id == user.id %}selected{% endif %}>{{ user.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="creator-filter">Criador</label>
+            <select id="creator-filter" name="creator_id">
+              <option value="">Todos</option>
+              {% for user in users %}
+              <option value="{{ user.id }}" {% if creator_id == user.id %}selected{% endif %}>{{ user.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-field">
+            <label for="due-from-filter">Prazo a partir de</label>
+            <input type="date" id="due-from-filter" name="due_from" value="{{ due_from }}">
+          </div>
+          <div class="filter-field">
+            <label for="due-to-filter">Prazo até</label>
+            <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
+          </div>
+          <div class="filter-field checkbox-field">
+            <label for="assigned-by-me-checkbox">
+              <input type="checkbox" id="assigned-by-me-checkbox" name="assigned_by_me" value="1" {% if assigned_by_me %}checked{% endif %}>
+              Atribuídas por mim
+            </label>
+          </div>
+          <div class="filter-field actions-field">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('tasks_overview') }}" class="btn btn-secondary">Limpar</a>
+          </div>
+        </div>
       </form>
       {% if current_user.role == 'admin' %}
       <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
@@ -41,16 +100,6 @@
     {% endif %}
   {% endwith %}
   {% from "tasks_macros.html" import render_task, render_actions_legend with context %}
-  {% set status_meta = {
-    'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
-    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
-    'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
-  } %}
-  {% set priority_labels = {
-    'low': 'Baixa',
-    'medium': 'Média',
-    'high': 'Alta'
-  } %}
   {% set allow_delete = current_user.role == 'admin' %}
   {{ render_actions_legend() }}
   <div class="kanban-board">
