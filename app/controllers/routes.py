@@ -6667,6 +6667,24 @@ def tasks_overview():
     """Kanban view of all tasks grouped by status."""
     assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
     assigned_by_me = assigned_param in {"1", "true", "on", "yes"}
+    priority_param = (request.args.get("priority") or "").strip().lower()
+    keyword = (request.args.get("q") or "").strip()
+    assignee_param = (request.args.get("assignee_id") or "").strip()
+    creator_param = (request.args.get("creator_id") or "").strip()
+    due_from_raw = (request.args.get("due_from") or "").strip()
+    due_to_raw = (request.args.get("due_to") or "").strip()
+    selected_priority = None
+    selected_assignee_id = None
+    selected_creator_id = None
+
+    def _parse_date_param(raw_value):
+        if not raw_value:
+            return None
+        try:
+            return datetime.strptime(raw_value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
@@ -6680,7 +6698,46 @@ def tasks_overview():
         allowed_filters.append(Task.created_by == current_user.id)
         query = query.filter(sa.or_(*allowed_filters))
     if assigned_by_me:
+        selected_creator_id = current_user.id
         query = query.filter(Task.created_by == current_user.id)
+    elif creator_param:
+        try:
+            selected_creator_id = int(creator_param)
+        except ValueError:
+            selected_creator_id = None
+        if selected_creator_id:
+            query = query.filter(Task.created_by == selected_creator_id)
+    if assignee_param:
+        try:
+            selected_assignee_id = int(assignee_param)
+        except ValueError:
+            selected_assignee_id = None
+        if selected_assignee_id:
+            query = query.filter(Task.assigned_to == selected_assignee_id)
+    if priority_param:
+        try:
+            selected_priority = TaskPriority(priority_param)
+            query = query.filter(Task.priority == selected_priority)
+        except ValueError:
+            selected_priority = None
+    if keyword:
+        pattern = f"%{keyword}%"
+        query = query.filter(
+            sa.or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
+        )
+    due_from = _parse_date_param(due_from_raw)
+    due_to = _parse_date_param(due_to_raw)
+    if due_from:
+        query = query.filter(Task.due_date.isnot(None)).filter(Task.due_date >= due_from)
+    if due_to:
+        query = query.filter(Task.due_date.isnot(None)).filter(Task.due_date <= due_to)
+
+    active_users = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(User.name.asc())
+        .all()
+    )
+
     tasks = (
         query.options(
             joinedload(Task.tag),
@@ -6732,6 +6789,14 @@ def tasks_overview():
         history_count=history_count,
         assigned_by_me=assigned_by_me,
         allow_delete=current_user.role == "admin",
+        priorities=list(TaskPriority),
+        selected_priority=selected_priority.value if selected_priority else "",
+        keyword=keyword,
+        assignee_id=selected_assignee_id,
+        creator_id=selected_creator_id,
+        due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
+        due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
+        users=active_users,
     )
 
 
