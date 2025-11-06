@@ -6605,6 +6605,16 @@ def _filter_tasks_for_user(tasks: list[Task], user: User) -> list[Task]:
     return visible
 
 
+def _is_only_me_selected(values: list[str]) -> bool:
+    """Return True when 'Somente para mim' checkbox is effectively selected."""
+
+    truthy = {"1", "true", "on", "yes", "y"}
+    for value in values:
+        if isinstance(value, str) and value.lower() in truthy:
+            return True
+    return False
+
+
 def _get_task_notification_recipients(task: Task, exclude_user_id: int | None = None) -> set[int]:
     """
     Retorna os IDs dos usuários que devem receber notificações sobre uma tarefa.
@@ -6647,18 +6657,6 @@ def _iter_tasks_with_children(tasks: Iterable[Task]) -> Iterable[Task]:
             children = getattr(task, "children", None)
         if children:
             yield from _iter_tasks_with_children(children)
-
-
-def _ensure_personal_tag(user: User) -> Tag:
-    """Return (and create if needed) the personal tag for ``user``."""
-
-    tag_name = f"{PERSONAL_TAG_PREFIX}{user.id}"
-    tag = Tag.query.filter_by(nome=tag_name).first()
-    if not tag:
-        tag = Tag(nome=tag_name)
-        db.session.add(tag)
-        db.session.flush()
-    return tag
 
 
 @app.route("/tasks/overview")
@@ -7031,27 +7029,19 @@ def tasks_new():
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_task_user_choices(tag)
-    personal_tag = None
     # Garantir que o valor do only_me seja preservado no POST
     if request.method == "POST":
-        # Forçar o valor do checkbox baseado no request.form
-        form.only_me.data = bool(request.form.get('only_me'))
+        # Forçar o valor do checkbox com base em todos os valores enviados
+        form.only_me.data = _is_only_me_selected(request.form.getlist("only_me"))
         current_app.logger.info(
             f"Task create POST - only_me raw value: {request.form.get('only_me')}, "
             f"form.only_me.data: {form.only_me.data}, " 
             f"tag_id: {form.tag_id.data}, assigned_to: {form.assigned_to.data}"
         )
-        
+
     if request.method == "POST" and form.only_me.data:
-        personal_tag = _ensure_personal_tag(current_user)
-        form.tag_id.data = personal_tag.id
         form.assigned_to.data = current_user.id
-        if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
-            form.tag_id.choices.append((personal_tag.id, "Para Mim"))
-        current_app.logger.info(
-            f"Task create - only_me checked, personal_tag: {personal_tag.id}, "
-            f"tag_id updated to: {form.tag_id.data}"
-        )
+        current_app.logger.info("Task create - only_me checked, forcing self-assignment")
 
     if form.validate_on_submit():
         current_app.logger.info("Formulário validado com sucesso. Criando task...")
@@ -7067,9 +7057,6 @@ def tasks_new():
             f"assignee_id: {assignee_id}, tag_name: {tag.nome if tag else 'None'}"
         )
         if is_private:
-            personal_tag = personal_tag or _ensure_personal_tag(current_user)
-            tag = personal_tag
-            tag_id = personal_tag.id
             assignee_id = current_user.id
 
         try:
@@ -7318,24 +7305,17 @@ def tasks_edit(task_id: int):
         form.only_me.data = task.is_private
         form.assigned_to.data = task.assigned_to or (current_user.id if task.is_private else 0)
 
-    personal_tag = None
     if request.method == "POST":
+        form.only_me.data = _is_only_me_selected(request.form.getlist("only_me"))
         current_app.logger.info(
             f"Task edit POST (task {task_id}) - only_me raw value: {request.form.get('only_me')}, "
             f"form.only_me.data: {form.only_me.data}, "
             f"tag_id: {form.tag_id.data}, assigned_to: {form.assigned_to.data}"
         )
     if request.method == "POST" and form.only_me.data:
-        personal_tag = _ensure_personal_tag(current_user)
-        form.tag_id.data = personal_tag.id
         form.assigned_to.data = current_user.id
-        if all(choice[0] != personal_tag.id for choice in form.tag_id.choices):
-            updated_choices = list(form.tag_id.choices) + [(personal_tag.id, "Para Mim")]
-            form.tag_id.choices = _sort_choice_pairs(updated_choices)
-        tag = personal_tag
         current_app.logger.info(
-            f"Task edit - only_me checked, personal_tag: {personal_tag.id}, "
-            f"tag_id updated to: {form.tag_id.data}"
+            "Task edit - only_me checked, forcing self-assignment"
         )
 
     if form.validate_on_submit():
@@ -7351,9 +7331,6 @@ def tasks_edit(task_id: int):
             f"assignee_id: {assignee_id}, tag_name: {tag.nome if tag else 'None'}"
         )
         if is_private:
-            personal_tag = personal_tag or _ensure_personal_tag(current_user)
-            tag = personal_tag
-            tag_id = personal_tag.id
             assignee_id = current_user.id
 
         try:
