@@ -41,20 +41,11 @@
             </select>
           </div>
           <div class="filter-field">
-            <label for="assignee-filter">Responsável</label>
-            <select id="assignee-filter" name="assignee_id">
+            <label for="user-filter">Usuário</label>
+            <select id="user-filter" name="user_id">
               <option value="">Todos</option>
               {% for user in users %}
-              <option value="{{ user.id }}" {% if assignee_id == user.id %}selected{% endif %}>{{ user.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="filter-field">
-            <label for="creator-filter">Criador</label>
-            <select id="creator-filter" name="creator_id">
-              <option value="">Todos</option>
-              {% for user in users %}
-              <option value="{{ user.id }}" {% if creator_id == user.id %}selected{% endif %}>{{ user.name }}</option>
+              <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.name }}</option>
               {% endfor %}
             </select>
           </div>

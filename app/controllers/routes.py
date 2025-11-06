@@ -6668,13 +6668,11 @@ def tasks_overview():
     assigned_by_me = assigned_param in {"1", "true", "on", "yes"}
     priority_param = (request.args.get("priority") or "").strip().lower()
     keyword = (request.args.get("q") or "").strip()
-    assignee_param = (request.args.get("assignee_id") or "").strip()
-    creator_param = (request.args.get("creator_id") or "").strip()
+    user_param = (request.args.get("user_id") or "").strip()
     due_from_raw = (request.args.get("due_from") or "").strip()
     due_to_raw = (request.args.get("due_to") or "").strip()
     selected_priority = None
-    selected_assignee_id = None
-    selected_creator_id = None
+    selected_user_id = None
 
     def _parse_date_param(raw_value):
         if not raw_value:
@@ -6697,22 +6695,16 @@ def tasks_overview():
         allowed_filters.append(Task.created_by == current_user.id)
         query = query.filter(sa.or_(*allowed_filters))
     if assigned_by_me:
-        selected_creator_id = current_user.id
         query = query.filter(Task.created_by == current_user.id)
-    elif creator_param:
+    elif user_param:
         try:
-            selected_creator_id = int(creator_param)
+            selected_user_id = int(user_param)
         except ValueError:
-            selected_creator_id = None
-        if selected_creator_id:
-            query = query.filter(Task.created_by == selected_creator_id)
-    if assignee_param:
-        try:
-            selected_assignee_id = int(assignee_param)
-        except ValueError:
-            selected_assignee_id = None
-        if selected_assignee_id:
-            query = query.filter(Task.assigned_to == selected_assignee_id)
+            selected_user_id = None
+        if selected_user_id:
+            query = query.filter(
+                sa.or_(Task.assigned_to == selected_user_id, Task.created_by == selected_user_id)
+            )
     if priority_param:
         try:
             selected_priority = TaskPriority(priority_param)
@@ -6791,8 +6783,7 @@ def tasks_overview():
         priorities=list(TaskPriority),
         selected_priority=selected_priority.value if selected_priority else "",
         keyword=keyword,
-        assignee_id=selected_assignee_id,
-        creator_id=selected_creator_id,
+        user_id=selected_user_id,
         due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
         due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
         users=active_users,
