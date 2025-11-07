@@ -6670,11 +6670,62 @@ def _iter_tasks_with_children(tasks: Iterable[Task]) -> Iterable[Task]:
             yield from _iter_tasks_with_children(children)
 
 
+def _coerce_task_status(status_value) -> TaskStatus:
+    """Return a valid TaskStatus, defaulting to PENDING on errors."""
+
+    if isinstance(status_value, TaskStatus):
+        return status_value
+    try:
+        return TaskStatus(status_value)
+    except Exception:
+        return TaskStatus.PENDING
+
+
+def _group_root_tasks_by_status(
+    tasks: Iterable[Task], visible_statuses: Iterable[TaskStatus] | None = None
+) -> dict[TaskStatus, list[Task]]:
+    """Return a mapping of status -> root tasks, ensuring children stay nested."""
+
+    if visible_statuses:
+        ordered_statuses = list(visible_statuses)
+    else:
+        ordered_statuses = list(TaskStatus)
+
+    buckets: dict[TaskStatus, list[Task]] = {status: [] for status in ordered_statuses}
+    tracked_statuses = set(buckets.keys())
+    allow_extra_status = not visible_statuses
+
+    for task in tasks:
+        children = getattr(task, "children", None) or []
+        task.filtered_children = sorted(
+            children, key=lambda child: child.created_at or datetime.min
+        )
+        if getattr(task, "parent_id", None):
+            continue
+
+        status = _coerce_task_status(getattr(task, "status", None))
+        if status not in tracked_statuses:
+            if not allow_extra_status:
+                continue
+            buckets[status] = []
+            tracked_statuses.add(status)
+
+        buckets[status].append(task)
+
+    # Guarantee all requested statuses exist even if empty
+    for status in ordered_statuses:
+        buckets.setdefault(status, [])
+
+    return buckets
+
+
+
 @app.route("/tasks/overview")
 @login_required
 @meeting_only_access_check
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
+
     assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
     assigned_by_me = assigned_param in {"1", "true", "on", "yes"}
     priority_param = (request.args.get("priority") or "").strip().lower()
@@ -6695,9 +6746,11 @@ def tasks_overview():
 
     query = (
         Task.query.join(Tag)
-        .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+        .filter(Task.parent_id.is_(None))
+        .filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
         .filter(_user_task_access_filter(current_user))
     )
+
     if current_user.role != "admin":
         accessible_ids = _get_accessible_tag_ids(current_user)
         allowed_filters = []
@@ -6705,6 +6758,7 @@ def tasks_overview():
             allowed_filters.append(Task.tag_id.in_(accessible_ids))
         allowed_filters.append(Task.created_by == current_user.id)
         query = query.filter(sa.or_(*allowed_filters))
+
     if assigned_by_me:
         query = query.filter(Task.created_by == current_user.id)
     elif user_param:
@@ -6713,32 +6767,34 @@ def tasks_overview():
         except ValueError:
             selected_user_id = None
         if selected_user_id:
-            # Subquery para verificar se o usuário é acompanhante
             from app.models.tables import TaskFollower
+
             follower_subquery = (
                 db.session.query(TaskFollower.task_id)
                 .filter(TaskFollower.user_id == selected_user_id)
                 .subquery()
             )
-
             query = query.filter(
                 sa.or_(
                     Task.assigned_to == selected_user_id,
                     Task.created_by == selected_user_id,
-                    Task.id.in_(follower_subquery)
+                    Task.id.in_(follower_subquery),
                 )
             )
+
     if priority_param:
         try:
             selected_priority = TaskPriority(priority_param)
             query = query.filter(Task.priority == selected_priority)
         except ValueError:
             selected_priority = None
+
     if keyword:
         pattern = f"%{keyword}%"
         query = query.filter(
             sa.or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
         )
+
     due_from = _parse_date_param(due_from_raw)
     due_to = _parse_date_param(due_to_raw)
     if due_from:
@@ -6758,16 +6814,13 @@ def tasks_overview():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            # Removed status_history and attachments eager loading to reduce Cartesian product
-            # These will be loaded on-demand when needed (lazy loading)
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.creator),
-            # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
-        .limit(200)  # Added limit to prevent loading too many tasks at once
+        .limit(200)
         .all()
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
@@ -6778,17 +6831,9 @@ def tasks_overview():
     default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
     for task in _iter_tasks_with_children(tasks):
         task.conversation_summary = summaries.get(task.id) or default_summary.copy()
-    tasks_by_status = {status: [] for status in TaskStatus}
-    for t in tasks:
-        status = t.status
-        if isinstance(status, str):
-            try:
-                status = TaskStatus(status)
-            except Exception:
-                status = TaskStatus.PENDING
-        if status not in tasks_by_status:
-            status = TaskStatus.PENDING
-        tasks_by_status[status].append(t)
+
+    tasks_by_status = _group_root_tasks_by_status(tasks)
+
     done_sorted = sorted(
         tasks_by_status[TaskStatus.DONE],
         key=lambda x: x.completed_at or datetime.min,
@@ -6796,6 +6841,7 @@ def tasks_overview():
     )
     history_count = max(0, len(done_sorted) - 5)
     tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
+
     return render_template(
         "tasks_overview.html",
         tasks_by_status=tasks_by_status,
@@ -6811,7 +6857,6 @@ def tasks_overview():
         due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
         users=active_users,
     )
-
 
 @app.route("/tasks/overview/mine")
 @login_required
@@ -6864,16 +6909,7 @@ def tasks_overview_mine():
     default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
     for task in _iter_tasks_with_children(tasks):
         task.conversation_summary = summaries.get(task.id) or default_summary.copy()
-    tasks_by_status = {status: [] for status in visible_statuses}
-    for t in tasks:
-        status = t.status
-        if isinstance(status, str):
-            try:
-                status = TaskStatus(status)
-            except Exception:
-                status = TaskStatus.PENDING
-        if status in tasks_by_status:
-            tasks_by_status[status].append(t)
+    tasks_by_status = _group_root_tasks_by_status(tasks, visible_statuses)
     # Sort DONE tasks by completion date and show only last 5
     done_sorted = sorted(
         tasks_by_status[TaskStatus.DONE],
@@ -6929,16 +6965,7 @@ def tasks_overview_personal():
     default_summary = {"unread_count": 0, "total_responses": 0, "last_response": None}
     for task in _iter_tasks_with_children(tasks):
         task.conversation_summary = summaries.get(task.id) or default_summary.copy()
-    tasks_by_status = {status: [] for status in visible_statuses}
-    for t in tasks:
-        status = t.status
-        if isinstance(status, str):
-            try:
-                status = TaskStatus(status)
-            except Exception:
-                status = TaskStatus.PENDING
-        if status in tasks_by_status:
-            tasks_by_status[status].append(t)
+    tasks_by_status = _group_root_tasks_by_status(tasks, visible_statuses)
     done_sorted = sorted(
         tasks_by_status[TaskStatus.DONE],
         key=lambda x: x.completed_at or datetime.min,
@@ -7111,14 +7138,7 @@ def _user_has_task_privileges(task: Task, user: User | None) -> bool:
 
 def _user_task_access_filter(user: User):
     """Return SQLAlchemy filter for tasks accessible by user (including as follower)."""
-    from app.models.tables import TaskFollower
-
-    # Subquery para verificar se o usuário é acompanhante de alguma task
-    follower_subquery = (
-        db.session.query(TaskFollower.task_id)
-        .filter(TaskFollower.user_id == user.id)
-        .subquery()
-    )
+    from app.controllers.task_filters import get_follower_subquery
 
     # Usuário pode acessar se:
     # 1. Task não é privada OU
@@ -7129,7 +7149,7 @@ def _user_task_access_filter(user: User):
         Task.is_private.is_(False),
         Task.created_by == user.id,
         Task.assigned_to == user.id,
-        Task.id.in_(follower_subquery)
+        Task.id.in_(get_follower_subquery(user.id))
     )
 
 
@@ -7139,6 +7159,17 @@ def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
     return_url = request.args.get("return_url")  # Não usar request.referrer - queremos ir para "Minhas Tarefas"
+    form = TaskForm()
+
+    if request.method == "POST" and not parent_id:
+        posted_parent_id = form.parent_id.data
+        if not posted_parent_id:
+            try:
+                posted_parent_id = int(request.form.get("parent_id", "") or 0)
+            except (TypeError, ValueError):
+                posted_parent_id = None
+        parent_id = posted_parent_id or None
+
     parent_task = Task.query.get(parent_id) if parent_id else None
     if parent_task and parent_task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
@@ -7146,8 +7177,6 @@ def tasks_new():
         abort(403)
     requested_tag_id = request.args.get("tag_id", type=int)
     choices: list[tuple[int, str]] = []
-
-    form = TaskForm()
     preset_only_me_param = (request.args.get("only_me", "") or "").lower()
     if request.method == "GET" and preset_only_me_param in {"1", "true", "on", "yes"}:
         form.only_me.data = True
@@ -7284,10 +7313,21 @@ def tasks_new():
                 db.session.add(notification)
                 creation_notification_records.append((user_id, notification))
 
+            # Se for uma subtarefa, precisamos atualizar o parent_task também
+            if parent_task:
+                # Certifique-se de que o parent tem a lista de children atualizada
+                parent_task.children.append(task)
+                # Force a atualização do parent
+                parent_task.updated_at = datetime.utcnow()
+                # Atualize explicitamente o status has_children
+                parent_task.has_children = True
+            
             db.session.commit()
 
             # Verificar e recarregar tarefa do banco para garantir persistencia
             db.session.refresh(task)
+            if parent_task:
+                db.session.refresh(parent_task)
 
             # Log detalhado do salvamento
             current_app.logger.info(
@@ -7910,17 +7950,7 @@ def tasks_sector(tag_id):
         .all()
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
-    tasks_by_status = {status: [] for status in TaskStatus}
-    for t in tasks:
-        status = t.status
-        if isinstance(status, str):
-            try:
-                status = TaskStatus(status)
-            except Exception:
-                status = TaskStatus.PENDING
-        if status not in tasks_by_status:
-            status = TaskStatus.PENDING
-        tasks_by_status[status].append(t)
+    tasks_by_status = _group_root_tasks_by_status(tasks)
     done_sorted = sorted(
         tasks_by_status[TaskStatus.DONE],
         key=lambda x: x.completed_at or datetime.min,

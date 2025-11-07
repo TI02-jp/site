@@ -1100,6 +1100,7 @@ class Task(db.Model):
         default=False,
         server_default=db.text("0"),
     )
+    has_children = db.Column(db.Boolean, default=False, server_default=db.text("0"))
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.Enum(TaskStatus), nullable=False, default=TaskStatus.PENDING)
@@ -1211,6 +1212,30 @@ class Task(db.Model):
             default=None,
         )
         return _to_sao_paulo(latest)
+
+    def update_parent_has_children(self):
+        """Update has_children flag on parent task."""
+        if self.parent_id:
+            parent = db.session.get(Task, self.parent_id)
+            if parent:
+                has_children = bool(
+                    db.session.query(Task.id)
+                    .filter(Task.parent_id == parent.id)
+                    .first()
+                )
+                parent.has_children = has_children
+                db.session.add(parent)
+                
+@event.listens_for(Task, 'after_insert')
+@event.listens_for(Task, 'after_update')
+def task_after_insert_or_update(mapper, connection, target):
+    """Update parent has_children after task insert or update."""
+    target.update_parent_has_children()
+
+@event.listens_for(Task, 'after_delete')
+def task_after_delete(mapper, connection, target):
+    """Update parent has_children after task deletion."""
+    target.update_parent_has_children()
 
 
 class TaskResponse(db.Model):

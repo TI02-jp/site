@@ -10,6 +10,23 @@
   flex-direction: column;
 }
 
+/* Estilos atualizados para tarefas e subtarefas */
+.task-card {
+  position: relative;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+/* Container principal das subtarefas dentro do card pai */
+
+.status-done {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
 .kanban {
   flex: 1;
   display: flex;
@@ -296,11 +313,41 @@
   flex-direction: column;
   gap: 0.3rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: visible;
 }
 
 .task-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+
+.toggle-children {
+  margin-right: 0.4rem;
+  border: none;
+  background: rgba(148, 163, 184, 0.2);
+  color: #475569;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.toggle-children:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary);
+}
+
+.task-card[data-tree-depth]:not([data-tree-depth="0"]) {
+  margin-left: 0;
+}
+
+.task-card[data-tree-depth]:not([data-tree-depth="0"])::before {
+  display: none;
 }
 
 .task-card.show-details {
@@ -369,43 +416,95 @@
 }
 
 .subtask-card {
-  background: #f8fafc;
-  border-color: rgba(148, 163, 184, 0.35);
-  box-shadow: 0 8px 16px rgba(148, 163, 184, 0.18);
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.subtask-card:hover {
-  box-shadow: 0 12px 24px rgba(148, 163, 184, 0.22);
+.subtask-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.subtask-title-row .task-title {
-  font-size: var(--font-base);
+.subtask-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.subtask-card-title i {
+  color: rgba(15, 23, 42, 0.55);
 }
 
 .subtask-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.1rem 0.5rem;
+  padding: 0.15rem 0.6rem;
   border-radius: 999px;
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #475569;
   background: #e2e8f0;
   white-space: nowrap;
-  min-width: 0;
+}
+
+.subtask-status.status-pending {
+  background: rgba(253, 230, 138, 0.8);
+  color: #854d0e;
 }
 
 .subtask-status.status-in_progress {
-  background: rgba(11, 40, 139, 0.12);
-  color: var(--primary);
+  background: rgba(191, 219, 254, 0.85);
+  color: #1d4ed8;
 }
 
 .subtask-status.status-done {
-  background: rgba(34, 197, 94, 0.18);
+  background: rgba(187, 247, 208, 0.85);
   color: #166534;
+}
+
+.subtask-card-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.45rem;
+}
+
+.subtask-card-meta-grid .meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.subtask-card-meta-grid .meta-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subtask-card-meta-grid .meta-value {
+  font-size: var(--font-sm);
+  color: #0f172a;
+}
+
+.subtask-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-start;
 }
 
 .task-tag {
@@ -682,15 +781,212 @@
 
 .subtasks {
   list-style: none;
-  padding-left: 1.5rem;
+  padding-left: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.task-card.collapsed > .subtasks {
+.task-children-field .detail-value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.task-children-tree {
+  position: relative;
+  padding: 0.4rem 0.4rem 0.4rem 1.5rem;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.task-children-tree .tree-connector {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.6), rgba(148, 163, 184, 0.2));
+  border-radius: 1px;
+}
+
+.task-children-tree .tree-connector::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 0.15rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(148, 163, 184, 0.6);
+}
+
+.task-children-tree .task-card {
+  border-radius: 8px;
+}
+
+.task-card.collapsed .task-children-field {
   display: none;
+}
+
+.task-card.collapsed > .nested-task-stack {
+  display: none;
+}
+
+.nested-task-stack {
+  margin-top: 0.6rem;
+  padding: 0.55rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.95);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.task-card.show-details > .nested-task-stack {
+  display: flex;
+}
+
+.nested-stack-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nested-stack-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: uppercase;
+  font-size: var(--font-sm);
+  letter-spacing: 0.04em;
+}
+
+.nested-stack-title i {
+  color: var(--primary);
+}
+
+.nested-stack-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nested-stack-count {
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #312e81;
+  font-weight: 600;
+  font-size: var(--font-sm);
+}
+
+.nested-stack-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-sm);
+  text-decoration: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #312e81;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.nested-stack-add:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #0f172a;
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.nested-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nested-task-list > li.task-card {
+  margin: 0;
+}
+
+.subtask-inline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.subtask-inline-card {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inline-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: var(--font-base);
+}
+
+.inline-card-title i {
+  color: rgba(15, 23, 42, 0.35);
+}
+
+.inline-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.inline-card-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+}
+
+.inline-card-meta .meta-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inline-card-meta .meta-value {
+  font-size: var(--font-sm);
+  color: #0f172a;
+}
+
+.inline-card-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.inline-card-actions .action {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
 }
 
 .task-detail {
@@ -1448,4 +1744,69 @@ body.task-responses-open {
   .kanban {
     padding: 1rem;
   }
+}
+.subtasks-container {
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.subtasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subtasks-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+}
+
+.subtasks-title i {
+  color: var(--primary);
+}
+
+.subtasks-count {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #312e81;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.subtasks-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #312e81;
+  font-size: var(--font-sm);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.subtasks-add:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #0f172a;
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }

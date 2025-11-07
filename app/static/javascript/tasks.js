@@ -584,7 +584,7 @@ const TaskResponses = (() => {
             case 'in_progress':
                 return 'Em andamento';
             case 'done':
-                return 'Conclu�da';
+                return 'Concluída';
             case 'pending':
                 return 'Pendente';
             default:
@@ -1255,6 +1255,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.toggle-children').forEach(btn => {
         btn.addEventListener('click', () => {
             const card = btn.closest('.task-card');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            const newState = !isExpanded;
+            btn.setAttribute('aria-expanded', String(newState));
             card.classList.toggle('collapsed');
             const icon = btn.querySelector('i');
             icon.classList.toggle('bi-chevron-down');
@@ -1469,6 +1472,15 @@ function setupRealtimeHandlers() {
  * Handle task created event - add new task card to appropriate column
  */
 function handleTaskCreated(taskData) {
+    // IMPORTANT: Subtasks should not be rendered as independent cards
+    // They should only appear nested within their parent task card
+    if (taskData.parent_id) {
+        console.log('[Tasks] Skipping card creation for subtask:', taskData.id);
+        // Optionally: refresh the parent task card to show the new subtask
+        // This would require fetching updated parent data and re-rendering its children section
+        return;
+    }
+
     const statusColumn = document.querySelector(`.kanban-list[data-status="${taskData.status}"]`);
     if (!statusColumn) {
         console.warn('[Tasks] Status column not found for:', taskData.status);
@@ -1483,6 +1495,11 @@ function handleTaskCreated(taskData) {
 
     // Create task card (simplified version - you may need to expand this)
     const taskCard = createTaskCard(taskData);
+    if (!taskCard) {
+        console.error('[Tasks] Failed to create task card');
+        return;
+    }
+
     statusColumn.insertBefore(taskCard, statusColumn.firstChild);
 
     // Add animation
@@ -1600,9 +1617,19 @@ function handleTaskUpdated(taskData) {
  * This is a simplified version - expand as needed to match your HTML structure
  */
 function createTaskCard(taskData) {
+    // SAFETY CHECK: This function should NEVER be called for subtasks
+    // Subtasks should only be rendered via the server-side template nested in parent cards
+    if (taskData.parent_id) {
+        console.error('[Tasks] createTaskCard called for subtask - this should not happen!', taskData);
+        return null;
+    }
+
     const li = document.createElement('li');
     li.className = 'task-card';
     li.setAttribute('data-task-id', taskData.id);
+    li.setAttribute('data-is-subtask', 'false');  // Explicitly mark as non-subtask
+    li.setAttribute('data-created-by', taskData.created_by || '');
+    li.setAttribute('data-assigned-to', taskData.assigned_to || '');
 
     // Simplified HTML - you should match your actual task card structure
     li.innerHTML = `

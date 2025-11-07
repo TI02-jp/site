@@ -185,11 +185,11 @@
                 </div>
             </div>
             <div class="mb-3">
-                <span class="badge bg-warning text-dark me-2">Agendada</span>
-                <span class="badge bg-success me-2">Em Andamento</span>
-                <span class="badge bg-danger me-2">Realizada</span>
-                <span class="badge bg-primary me-2">Adiada</span>
-                <span class="badge bg-secondary">Cancelada</span>
+                <span class="badge bg-primary me-2">Agendada</span>
+                <span class="badge bg-warning text-dark me-2">Em Andamento</span>
+                <span class="badge bg-success me-2">Realizada</span>
+                <span class="badge bg-secondary me-2">Adiada</span>
+                <span class="badge bg-danger">Cancelada</span>
             </div>
             <div id="calendar"></div>
             <div class="modal fade" id="meetingModal" tabindex="-1" aria-hidden="true">
@@ -508,11 +508,15 @@
     </div>
     <style>
 @import url('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css');
+.tooltip-primary .tooltip-inner{background-color:#0d6efd;color:#fff;}
 .tooltip-warning .tooltip-inner{background-color:#ffc107;color:#000;}
 .tooltip-success .tooltip-inner{background-color:#198754;color:#fff;}
+.tooltip-secondary .tooltip-inner{background-color:#6c757d;color:#fff;}
 .tooltip-danger .tooltip-inner{background-color:#dc3545;color:#fff;}
+.tooltip-primary .tooltip-arrow::before{border-top-color:#0d6efd;border-bottom-color:#0d6efd;border-left-color:#0d6efd;border-right-color:#0d6efd;}
 .tooltip-warning .tooltip-arrow::before{border-top-color:#ffc107;border-bottom-color:#ffc107;border-left-color:#ffc107;border-right-color:#ffc107;}
 .tooltip-success .tooltip-arrow::before{border-top-color:#198754;border-bottom-color:#198754;border-left-color:#198754;border-right-color:#198754;}
+.tooltip-secondary .tooltip-arrow::before{border-top-color:#6c757d;border-bottom-color:#6c757d;border-left-color:#6c757d;border-right-color:#6c757d;}
 .tooltip-danger .tooltip-arrow::before{border-top-color:#dc3545;border-bottom-color:#dc3545;border-left-color:#dc3545;border-right-color:#dc3545;}
 .fc-daygrid-dot-event{display:flex;align-items:center;padding:0;border:none;background:none;}
 .fc-daygrid-dot-event .fc-event-dot{width:14px;height:14px;border-radius:50%;margin-right:4px;border:none;}
@@ -1929,8 +1933,10 @@
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
             var color = info.event.backgroundColor || info.event.borderColor;
             var cls = '';
-            if(color === '#ffc107'){cls='tooltip-warning';}
+            if(color === '#0d6efd'){cls='tooltip-primary';}
+            else if(color === '#ffc107'){cls='tooltip-warning';}
             else if(color === '#198754'){cls='tooltip-success';}
+            else if(color === '#6c757d'){cls='tooltip-secondary';}
             else if(color === '#dc3545'){cls='tooltip-danger';}
             info.el.setAttribute('data-bs-toggle', 'tooltip');
             info.el.setAttribute('data-bs-html', 'true');
