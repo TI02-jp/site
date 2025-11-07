@@ -1143,6 +1143,12 @@ class Task(db.Model):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    follow_up_assignments = db.relationship(
+        "TaskFollower",
+        backref="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     @property
     def progress(self) -> int:
@@ -1155,6 +1161,21 @@ class Task(db.Model):
 
     def __repr__(self):
         return f"<Task {self.title}>"
+    @property
+    def follow_up_users(self) -> list["User"]:
+        """Return users explicitly marked for acompanhamento."""
+        assignments = getattr(self, "follow_up_assignments", []) or []
+        return [entry.user for entry in assignments if entry.user]
+
+    @property
+    def follow_up_names(self) -> list[str]:
+        """Return a list of display names for acompanhamento."""
+        names: list[str] = []
+        for user in self.follow_up_users:
+            label = (user.name or user.username or "").strip()
+            if label:
+                names.append(label)
+        return names
 
 
     @property
@@ -1228,6 +1249,30 @@ class TaskResponseParticipant(db.Model):
     __table_args__ = (
         db.UniqueConstraint("task_id", "user_id", name="uq_task_response_participants_task_user"),
     )
+
+
+class TaskFollower(db.Model):
+    """Associates tasks to users marked for acompanhamento."""
+
+    __tablename__ = "task_followers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(
+        db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User")
+
+    __table_args__ = (
+        db.UniqueConstraint("task_id", "user_id", name="uq_task_followers_task_user"),
+    )
+
+    def __repr__(self):
+        return f"<TaskFollower task={self.task_id} user={self.user_id}>"
 
     def __repr__(self):
         return f"<TaskResponseParticipant task={self.task_id} user={self.user_id}>"

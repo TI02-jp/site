@@ -34,11 +34,40 @@
     max-width: 320px;
   }
 
-  .form-group-only-me .form-check-input {
+  .form-group-only-me .form-check-input,
+  .form-group-follow-up .form-check-input {
     width: 0.6rem;
     height: 0.6rem;
     margin-top: 0.25rem;
     border-radius: 0.2rem;
+  }
+
+  .follow-up-select-wrapper {
+    margin-top: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+    background: #fff;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .follow-up-select-wrapper.is-hidden {
+    display: none;
+  }
+
+  .follow-up-users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem 1rem;
+  }
+
+  .follow-up-users-grid .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0;
   }
 
   .assigned-disabled select:disabled {
@@ -199,6 +228,38 @@
         </div>
       </div>
 
+      <div class="form-group form-group-follow-up">
+        <div class="form-check">
+          {# Garante que o campo seja enviado com zero quando desmarcado #}
+          <input type="hidden" name="follow_up" value="0">
+          {{ form.follow_up(class="form-check-input", id="follow-up-checkbox") }}
+          <label class="form-check-label" for="follow-up-checkbox">
+            Acompanhamento
+          </label>
+        </div>
+        {% set selected_follow_up = form.follow_up_users.data or [] %}
+        <div class="follow-up-select-wrapper{% if not form.follow_up.data %} is-hidden{% endif %}" id="follow-up-wrapper">
+          <div class="follow-up-users-grid">
+            {% for value, label in form.follow_up_users.choices %}
+            <div class="form-check">
+              <input
+                class="form-check-input follow-up-user-checkbox"
+                type="checkbox"
+                id="follow-up-user-{{ value }}"
+                name="{{ form.follow_up_users.name }}"
+                value="{{ value }}"
+                {% if value in selected_follow_up %}checked{% endif %}
+                {% if not form.follow_up.data %}disabled{% endif %}
+              >
+              <label class="form-check-label" for="follow-up-user-{{ value }}">{{ label }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% for error in form.follow_up.errors %}<div class="error">{{ error }}</div>{% endfor %}
+        {% for error in form.follow_up_users.errors %}<div class="error">{{ error }}</div>{% endfor %}
+      </div>
+
       <div class="form-actions">
         <a href="{{ cancel_url }}" class="btn-history">Cancelar</a>
         {{ form.submit(class="btn-new-task") }}
@@ -255,6 +316,11 @@
     }
 
     const onlyMeCheckbox = document.getElementById('only-me-checkbox');
+    const followUpCheckbox = document.getElementById('follow-up-checkbox');
+    const followUpWrapper = document.getElementById('follow-up-wrapper');
+    const followUpUserCheckboxes = Array.from(
+      document.querySelectorAll('.follow-up-user-checkbox')
+    );
     const assignedSelect = document.getElementById('assigned_to');
     const assignedWrapper = document.querySelector('.form-group-usuario');
     const tagSelect = document.getElementById('tag_id');
@@ -329,9 +395,27 @@
       }
     }
 
+    function syncFollowUpState() {
+      const isChecked = !!(followUpCheckbox && followUpCheckbox.checked);
+      if (followUpWrapper) {
+        followUpWrapper.classList.toggle('is-hidden', !isChecked);
+      }
+      followUpUserCheckboxes.forEach((checkbox) => {
+        checkbox.disabled = !isChecked;
+        if (!isChecked) {
+          checkbox.checked = false;
+        }
+      });
+    }
+
     if (onlyMeCheckbox) {
       onlyMeCheckbox.addEventListener('change', syncOnlyMeState);
       syncOnlyMeState();
+    }
+
+    if (followUpCheckbox) {
+      followUpCheckbox.addEventListener('change', syncFollowUpState);
+      syncFollowUpState();
     }
 
     // Antes de submeter, garantir que os campos sejam habilitados temporariamente
@@ -352,6 +436,15 @@
             tagSelect.classList.remove('disabled-select');
             console.log('[TASK FORM] Habilitando campo tag:', tagSelect.value);
           }
+        }
+
+        if (followUpCheckbox && followUpUserCheckboxes.length) {
+          followUpUserCheckboxes.forEach((checkbox) => {
+            checkbox.disabled = !followUpCheckbox.checked;
+            if (!followUpCheckbox.checked) {
+              checkbox.checked = false;
+            }
+          });
         }
 
         // Garantir que o checkbox only_me seja incluido no form data

@@ -40,6 +40,7 @@ from app.models.tables import (
     Task,
     TaskStatus,
     TaskPriority,
+    TaskFollower,
     TaskStatusHistory,
     TaskNotification,
     NotificationType,
@@ -6569,9 +6570,16 @@ def _user_can_access_task(task: Task, user: User | None) -> bool:
     if not getattr(task, "is_private", False):
         return True
     user_id = getattr(user, "id", None)
-    return user_id is not None and (
-        task.created_by == user_id or task.assigned_to == user_id
-    )
+    if user_id is None:
+        return False
+    if (
+        task.created_by == user_id
+        or task.assigned_to == user_id
+        or task.completed_by == user_id
+    ):
+        return True
+    follow_up_entries = getattr(task, "follow_up_assignments", None) or []
+    return any(entry.user_id == user_id for entry in follow_up_entries)
 
 
 def _user_can_transfer_task(task: Task, user: User | None) -> bool:
@@ -6584,7 +6592,10 @@ def _user_can_transfer_task(task: Task, user: User | None) -> bool:
     user_id = getattr(user, "id", None)
     if user_id is None:
         return False
-    return task.created_by == user_id or task.assigned_to == user_id
+    if task.created_by == user_id or task.assigned_to == user_id:
+        return True
+    follow_up_entries = getattr(task, "follow_up_assignments", None) or []
+    return any(entry.user_id == user_id for entry in follow_up_entries)
 
 
 def _task_visible_for_user(task: Task, user: User) -> bool:
@@ -6685,7 +6696,7 @@ def tasks_overview():
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-        .filter(sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id))
+        .filter(_user_task_access_filter(current_user))
     )
     if current_user.role != "admin":
         accessible_ids = _get_accessible_tag_ids(current_user)
@@ -6702,8 +6713,20 @@ def tasks_overview():
         except ValueError:
             selected_user_id = None
         if selected_user_id:
+            # Subquery para verificar se o usuário é acompanhante
+            from app.models.tables import TaskFollower
+            follower_subquery = (
+                db.session.query(TaskFollower.task_id)
+                .filter(TaskFollower.user_id == selected_user_id)
+                .subquery()
+            )
+
             query = query.filter(
-                sa.or_(Task.assigned_to == selected_user_id, Task.created_by == selected_user_id)
+                sa.or_(
+                    Task.assigned_to == selected_user_id,
+                    Task.created_by == selected_user_id,
+                    Task.id.in_(follower_subquery)
+                )
             )
     if priority_param:
         try:
@@ -6796,13 +6819,23 @@ def tasks_overview_mine():
     """Kanban view of tasks created by the current user."""
 
     visible_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE]
+
+    # Subquery para tasks onde o usuário é acompanhante
+    from app.models.tables import TaskFollower
+    follower_subquery = (
+        db.session.query(TaskFollower.task_id)
+        .filter(TaskFollower.user_id == current_user.id)
+        .subquery()
+    )
+
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None))
         .filter(
             sa.or_(
                 Task.created_by == current_user.id,
-                sa.and_(Task.is_private.is_(True), Task.assigned_to == current_user.id),
+                Task.assigned_to == current_user.id,
+                Task.id.in_(follower_subquery),
             )
         )
     )
@@ -6974,6 +7007,132 @@ def _build_task_user_choices(tag_obj: Tag | None) -> list[tuple[int, str]]:
     return [(0, "Sem responsável"), *sorted_entries]
 
 
+def _build_follow_up_user_choices() -> list[tuple[int, str]]:
+    """Return active portal users for the acompanhamento multi-select."""
+    entries: dict[int, str] = {}
+    users = (
+        User.query.filter_by(ativo=True)
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+    for user in users:
+        label = (user.name or user.username or "").strip()
+        if not label:
+            label = user.username or f"Usuário {user.id}"
+        entries[user.id] = label
+    return _sort_choice_pairs(list(entries.items()))
+
+
+def _extract_follow_up_user_ids(form: TaskForm) -> list[int]:
+    """Return sanitized user IDs selected for acompanhamento."""
+
+    try:
+        selected_ids: list[int] = list(form.follow_up_users.data or [])
+    except (TypeError, ValueError):
+        selected_ids = []
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for user_id in selected_ids:
+        if not isinstance(user_id, int):
+            try:
+                user_id = int(user_id)
+            except (TypeError, ValueError):
+                continue
+        if user_id <= 0 or user_id in seen:
+            continue
+        seen.add(user_id)
+        normalized.append(user_id)
+    # Retorna a lista normalizada se houver usuários selecionados
+    return normalized
+
+
+def _sync_task_followers(task: Task, user_ids: list[int]) -> None:
+    """Persist acompanhamento participants for ``task`` in bulk."""
+
+    desired = [uid for uid in dict.fromkeys(user_ids) if isinstance(uid, int) and uid > 0]
+    desired_set = set(desired)
+
+    existing_rows = TaskFollower.query.filter_by(task_id=task.id).all()
+    existing = {row.user_id: row for row in existing_rows}
+
+    for user_id, follower in list(existing.items()):
+        if user_id not in desired_set:
+            db.session.delete(follower)
+
+    for user_id in desired:
+        if user_id in existing:
+            continue
+        db.session.add(TaskFollower(task_id=task.id, user_id=user_id))
+
+    # Garantir que as alterações fiquem disponíveis para o restante do fluxo
+    db.session.flush()
+
+
+def _task_follow_up_user_ids(task: Task) -> set[int]:
+    """Return a set with all acompanhamento participant IDs for ``task``."""
+
+    entries = getattr(task, "follow_up_assignments", None) or []
+    return {
+        entry.user_id
+        for entry in entries
+        if getattr(entry, "user_id", None)
+    }
+
+
+def _is_task_follow_up(task: Task, user: User | int | None) -> bool:
+    """Return True when ``user`` (or ``user_id``) is marked as acompanhamento."""
+
+    if user is None:
+        return False
+    user_id = user if isinstance(user, int) else getattr(user, "id", None)
+    if not user_id:
+        return False
+    return user_id in _task_follow_up_user_ids(task)
+
+
+def _user_has_task_privileges(task: Task, user: User | None) -> bool:
+    """Return True when user should have the same powers as the responsible."""
+
+    if user is None:
+        return False
+    if getattr(user, "role", None) == "admin":
+        return True
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        return False
+    if (
+        task.created_by == user_id
+        or task.assigned_to == user_id
+        or task.completed_by == user_id
+    ):
+        return True
+    return _is_task_follow_up(task, user_id)
+
+
+def _user_task_access_filter(user: User):
+    """Return SQLAlchemy filter for tasks accessible by user (including as follower)."""
+    from app.models.tables import TaskFollower
+
+    # Subquery para verificar se o usuário é acompanhante de alguma task
+    follower_subquery = (
+        db.session.query(TaskFollower.task_id)
+        .filter(TaskFollower.user_id == user.id)
+        .subquery()
+    )
+
+    # Usuário pode acessar se:
+    # 1. Task não é privada OU
+    # 2. É o criador OU
+    # 3. É o responsável OU
+    # 4. É acompanhante
+    return sa.or_(
+        Task.is_private.is_(False),
+        Task.created_by == user.id,
+        Task.assigned_to == user.id,
+        Task.id.in_(follower_subquery)
+    )
+
+
 @app.route("/tasks/new", methods=["GET", "POST"])
 @login_required
 def tasks_new():
@@ -7020,6 +7179,9 @@ def tasks_new():
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
         form.assigned_to.choices = _build_task_user_choices(tag)
+
+    form.follow_up_users.choices = _build_follow_up_user_choices()
+
     # Garantir que o valor do only_me seja preservado no POST
     if request.method == "POST":
         # Forçar o valor do checkbox com base em todos os valores enviados
@@ -7035,6 +7197,7 @@ def tasks_new():
         current_app.logger.info("Task create - only_me checked, forcing self-assignment")
 
     if form.validate_on_submit():
+        follow_up_user_ids = _extract_follow_up_user_ids(form)
         current_app.logger.info("Formulário validado com sucesso. Criando task...")
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         if not parent_task and (tag is None or tag.id != tag_id):
@@ -7083,6 +7246,8 @@ def tasks_new():
                         mime_type=saved["mime_type"],
                     )
                 )
+
+            _sync_task_followers(task, follow_up_user_ids)
 
             creator_name = current_user.name or current_user.username
             creation_now = datetime.utcnow()
@@ -7235,12 +7400,20 @@ def tasks_edit(task_id: int):
     is_admin = current_user.role == "admin"
     is_creator = task.created_by == current_user.id
     is_assignee = task.assigned_to == current_user.id if task.assigned_to else False
+    follow_up_ids = list(_task_follow_up_user_ids(task))
+    is_follow_up = current_user.id in follow_up_ids
 
     if task.is_private:
         if not _user_can_access_task(task, current_user):
             abort(403)
     else:
-        if not (_can_user_access_tag(task.tag, current_user) or is_admin or is_creator or is_assignee):
+        if not (
+            _can_user_access_tag(task.tag, current_user)
+            or is_admin
+            or is_creator
+            or is_assignee
+            or is_follow_up
+        ):
             abort(403)
 
     if task.status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS} and not is_admin:
@@ -7285,6 +7458,7 @@ def tasks_edit(task_id: int):
             assignee_label = (assignee.name or assignee.username or "").strip()
             assignee_choices.append((assignee.id, assignee_label))
     form.assigned_to.choices = _sort_choice_pairs(assignee_choices, keep_first=True)
+    form.follow_up_users.choices = _build_follow_up_user_choices()
 
     # Popular campos no GET com dados da task existente
     if request.method == "GET":
@@ -7295,6 +7469,8 @@ def tasks_edit(task_id: int):
         form.due_date.data = task.due_date
         form.only_me.data = task.is_private
         form.assigned_to.data = task.assigned_to or (current_user.id if task.is_private else 0)
+        form.follow_up_users.data = follow_up_ids
+        form.follow_up.data = bool(follow_up_ids)
 
     if request.method == "POST":
         form.only_me.data = _is_only_me_selected(request.form.getlist("only_me"))
@@ -7310,6 +7486,7 @@ def tasks_edit(task_id: int):
         )
 
     if form.validate_on_submit():
+        follow_up_user_ids = _extract_follow_up_user_ids(form)
         tag_id = parent_task.tag_id if parent_task else form.tag_id.data
         if not parent_task and (tag is None or tag.id != tag_id):
             tag = Tag.query.get(tag_id)
@@ -7349,6 +7526,8 @@ def tasks_edit(task_id: int):
                         mime_type=saved["mime_type"],
                     )
                 )
+
+            _sync_task_followers(task, follow_up_user_ids)
 
             # Notificar sobre a edição da tarefa
             editor_name = current_user.name or current_user.username
@@ -7780,16 +7959,14 @@ def tasks_history(tag_id=None):
             Task.tag_id == tag_id,
             Task.parent_id.is_(None),
             Task.status == TaskStatus.DONE,
-            sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id),
-        )
+        ).filter(_user_task_access_filter(current_user))
     else:
         tag = None
         if current_user.role == "admin":
             query = Task.query.filter(
                 Task.parent_id.is_(None),
                 Task.status == TaskStatus.DONE,
-                sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id),
-            )
+            ).filter(_user_task_access_filter(current_user))
         else:
             tag_ids = _get_accessible_tag_ids(current_user)
             filters = []
@@ -7801,15 +7978,22 @@ def tasks_history(tag_id=None):
                 Task.status == TaskStatus.DONE,
                 sa.or_(*filters),
             )
-            query = query.filter(
-                sa.or_(Task.is_private.is_(False), Task.created_by == current_user.id)
-            )
+            query = query.filter(_user_task_access_filter(current_user))
     if query is not None:
         if only_me:
+            # Subquery para tasks onde o usuário é acompanhante
+            from app.models.tables import TaskFollower
+            follower_subquery = (
+                db.session.query(TaskFollower.task_id)
+                .filter(TaskFollower.user_id == current_user.id)
+                .subquery()
+            )
+
             query = query.filter(Task.is_private.is_(True)).filter(
                 sa.or_(
                     Task.created_by == current_user.id,
                     Task.assigned_to == current_user.id,
+                    Task.id.in_(follower_subquery),
                 )
             )
         if assigned_to_me:
@@ -7847,21 +8031,14 @@ def _task_conversation_participant_ids(task: Task) -> set[int]:
         participant_ids.add(task.assigned_to)
     if task.completed_by:
         participant_ids.add(task.completed_by)
+    participant_ids.update(_task_follow_up_user_ids(task))
     return {uid for uid in participant_ids if uid}
 
 
 def _user_can_access_task_conversation(task: Task, user: User) -> bool:
     """Return True when ``user`` is allowed to view/post task responses."""
 
-    if user.role == "admin":
-        return True
-    if task.created_by == user.id:
-        return True
-    if task.assigned_to == user.id:
-        return True
-    if task.completed_by == user.id:
-        return True
-    return False
+    return _user_has_task_privileges(task, user)
 
 
 def _ensure_response_participant(task_id: int, user_id: int) -> TaskResponseParticipant:
@@ -7894,6 +8071,18 @@ def _serialize_task(task: Task) -> dict[str, object]:
     finisher_name = None
     if finisher:
         finisher_name = finisher.name or finisher.username
+    follow_up_payload: list[dict[str, object]] = []
+    for entry in getattr(task, "follow_up_assignments", []) or []:
+        user = entry.user
+        if not user:
+            continue
+        display_name = (user.name or user.username or "").strip() or None
+        follow_up_payload.append(
+            {
+                "id": user.id,
+                "name": display_name,
+            }
+        )
 
     return {
         "id": task.id,
@@ -7916,6 +8105,7 @@ def _serialize_task(task: Task) -> dict[str, object]:
         "due_date": task.due_date.isoformat() if task.due_date else None,
         "parent_id": task.parent_id,
         "updated_at": task.updated_at.isoformat() if getattr(task, "updated_at", None) else None,
+        "follow_up_users": follow_up_payload,
     }
 
 
@@ -8094,7 +8284,13 @@ def task_responses_list(task_id: int):
         abort(404)
     if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
-    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+    if (
+        not task.is_private
+        and not (
+            _can_user_access_tag(task.tag, current_user)
+            or _user_has_task_privileges(task, current_user)
+        )
+    ):
         abort(403)
     if not _user_can_access_task_conversation(task, current_user):
         abort(403)
@@ -8137,7 +8333,13 @@ def task_responses_create(task_id: int):
         abort(404)
     if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
-    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+    if (
+        not task.is_private
+        and not (
+            _can_user_access_tag(task.tag, current_user)
+            or _user_has_task_privileges(task, current_user)
+        )
+    ):
         abort(403)
     if not _user_can_access_task_conversation(task, current_user):
         abort(403)
@@ -8251,7 +8453,13 @@ def task_responses_mark_read(task_id: int):
         abort(404)
     if task.is_private and not _user_can_access_task(task, current_user):
         abort(403)
-    if not task.is_private and not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+    if (
+        not task.is_private
+        and not (
+            _can_user_access_tag(task.tag, current_user)
+            or _user_has_task_privileges(task, current_user)
+        )
+    ):
         abort(403)
     if not _user_can_access_task_conversation(task, current_user):
         abort(403)
@@ -8300,7 +8508,10 @@ def tasks_view(task_id):
     else:
         if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
             abort(404)
-        if not _can_user_access_tag(task.tag, current_user) and task.created_by != current_user.id:
+        if not (
+            _can_user_access_tag(task.tag, current_user)
+            or _user_has_task_privileges(task, current_user)
+        ):
             abort(403)
     priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"}
     priority_order = ["low", "medium", "high"]
@@ -8359,7 +8570,13 @@ def update_task_status(task_id):
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
         abort(404)
     # For private tasks, access is already validated above
-    if not task.is_private and not _can_user_access_tag(task.tag, current_user):
+    if (
+        not task.is_private
+        and not (
+            _can_user_access_tag(task.tag, current_user)
+            or _user_has_task_privileges(task, current_user)
+        )
+    ):
         current_app.logger.warning(f"Access denied: User {current_user.id} cannot access tag {task.tag.nome}")
         abort(403)
     data = request.get_json() or {}
@@ -8507,7 +8724,7 @@ def delete_task(task_id):
         abort(403)
     if task.tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER and current_user.role != "admin":
         abort(404)
-    if current_user.role != "admin" and task.created_by != current_user.id and task.assigned_to != current_user.id:
+    if current_user.role != "admin" and not _user_has_task_privileges(task, current_user):
         abort(403)
 
     # Store task ID before deletion for broadcasting

@@ -795,6 +795,18 @@ class TaskForm(FlaskForm):
         false_values=(False, "false", "", "0"),
         default=False,
     )
+    follow_up_users = SelectMultipleField(
+        "Usuários para acompanhamento",
+        coerce=int,
+        validators=[Optional()],
+        choices=[],
+        render_kw={"class": "form-select"},
+    )
+    follow_up = BooleanField(
+        "Acompanhamento",
+        false_values=(False, "false", "", "0"),
+        default=False,
+    )
     priority = SelectField(
         "Prioridade",
         choices=[("low", "Baixa"), ("medium", "Média"), ("high", "Alta")],

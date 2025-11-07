@@ -58,12 +58,16 @@
   'done': 'Concluída'
 } %}
 {% set show_subtask_status = is_subtask and task.status != TaskStatus.PENDING %}
+{% set follow_up_users = task.follow_up_users or [] %}
+{% set follow_up_ids = follow_up_users | map(attribute='id') | list %}
+{% set follow_up_names = task.follow_up_names or [] %}
 {% set is_creator = current_user.id == task.created_by %}
 {% set is_assignee = task.assigned_to == current_user.id %}
+{% set is_follow_up = current_user.id in follow_up_ids %}
 {% set is_admin = current_user.role == 'admin' %}
-{% set can_transfer = (is_admin or is_creator or is_assignee) and task.status != TaskStatus.DONE %}
-{% set allow_subtask_pending = task.status == TaskStatus.PENDING and task.assigned_to and (is_creator or is_assignee) %}
-{% set allow_subtask_in_progress = task.status == TaskStatus.IN_PROGRESS and (is_creator or is_assignee) %}
+{% set can_transfer = (is_admin or is_creator or is_assignee or is_follow_up) and task.status != TaskStatus.DONE %}
+{% set allow_subtask_pending = task.status == TaskStatus.PENDING and task.assigned_to and (is_creator or is_assignee or is_follow_up) %}
+{% set allow_subtask_in_progress = task.status == TaskStatus.IN_PROGRESS and (is_creator or is_assignee or is_follow_up) %}
 {% set allow_subtask = allow_subtask_pending or allow_subtask_in_progress %}
 <li id="task-{{ task.id }}"
     class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}{% if is_subtask %} subtask-card{% endif %}"
@@ -124,6 +128,12 @@
       <div class="task-meta">
         <span class="meta-label">Responsável:</span>
         <span class="meta-value">{{ task.assignee.name }}</span>
+      </div>
+      {% endif %}
+      {% if follow_up_names %}
+      <div class="task-meta">
+        <span class="meta-label">Acompanhando:</span>
+        <span class="meta-value">{{ follow_up_names|join(', ') }}</span>
       </div>
       {% endif %}
     </div>
@@ -193,7 +203,7 @@
         {% if allow_subtask %}
         <a class="action subtask" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Subtarefa"><i class="bi bi-node-plus"></i></a>
         {% endif %}
-        {% if allow_delete or task.created_by == current_user.id or task.assigned_to == current_user.id %}
+        {% if allow_delete or task.created_by == current_user.id or task.assigned_to == current_user.id or is_follow_up %}
         <button class="action delete delete-task" data-id="{{ task.id }}" data-title="{{ task.title }}" title="Excluir tarefa"><i class="bi bi-trash"></i></button>
         {% endif %}
       </div>
