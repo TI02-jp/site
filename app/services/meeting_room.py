@@ -108,11 +108,11 @@ STATUS_SEQUENCE = [
 ]
 
 STATUS_DETAILS = {
-    ReuniaoStatus.AGENDADA: {"label": "Agendada", "color": "#ffc107"},
-    ReuniaoStatus.EM_ANDAMENTO: {"label": "Em Andamento", "color": "#198754"},
-    ReuniaoStatus.REALIZADA: {"label": "Realizada", "color": "#dc3545"},
-    ReuniaoStatus.ADIADA: {"label": "Adiada", "color": "#0d6efd"},
-    ReuniaoStatus.CANCELADA: {"label": "Cancelada", "color": "#6c757d"},
+    ReuniaoStatus.AGENDADA: {"label": "Agendada", "color": "#0d6efd"},  # Azul
+    ReuniaoStatus.EM_ANDAMENTO: {"label": "Em Andamento", "color": "#ffc107"},  # Amarelo
+    ReuniaoStatus.REALIZADA: {"label": "Realizada", "color": "#198754"},  # Verde
+    ReuniaoStatus.ADIADA: {"label": "Adiada", "color": "#6c757d"},  # Cinza
+    ReuniaoStatus.CANCELADA: {"label": "Cancelada", "color": "#dc3545"},  # Vermelho
 }
 
 EDITABLE_STATUSES = {ReuniaoStatus.AGENDADA, ReuniaoStatus.ADIADA}

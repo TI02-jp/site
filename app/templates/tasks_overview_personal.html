@@ -53,8 +53,10 @@
       <ul class="kanban-list" data-status="{{ status.value }}">
         {% set column_tasks = tasks_by_status.get(status, []) %}
         {% if column_tasks %}
-          {% for task in column_tasks %}
+          {% for task in column_tasks if task.parent_id is none %}
             {{ render_task(task, TaskStatus, show_tag=False, priority_labels=priority_labels, allow_delete=allow_delete) }}
+          {% else %}
+            <li class="empty">Nenhuma tarefa neste status.</li>
           {% endfor %}
         {% else %}
           <li class="empty">Nenhuma tarefa neste status.</li>

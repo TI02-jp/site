@@ -46,12 +46,12 @@
 </div>
 {% endmacro %}
 
-{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False, is_subtask=False) %}
+{% macro render_task(task, TaskStatus, show_tag=False, priority_labels=None, allow_delete=False, is_subtask=False, depth=0) %}
 {% if task.is_private and task.created_by != current_user.id %}
 {% else %}
 {% set status_class = ' task-status-' ~ task.status.value %}
 {% set children = task.filtered_children if task.filtered_children is defined else task.children %}
-{% set has_children = children is not none and children|length > 0 %}
+{% set has_children = task.has_children or (children is not none and children|length > 0) %}
 {% set status_labels = {
   'pending': 'Pendente',
   'in_progress': 'Em andamento',
@@ -73,11 +73,17 @@
     class="task-card{{ status_class }}{% if has_children %} has-children{% endif %}{% if is_subtask %} subtask-card{% endif %}"
     data-task-id="{{ task.id }}"
     data-is-subtask="{{ 'true' if is_subtask else 'false' }}"
+    data-tree-depth="{{ depth }}"
     data-assigned-to="{{ task.assigned_to or '' }}"
     data-created-by="{{ task.created_by }}">
   <div class="task-header">
     {% if has_children %}
-    <button class="toggle-children" title="Alternar subtarefas"><i class="bi bi-chevron-down"></i></button>
+    <button class="toggle-children"
+            title="Alternar subtarefas"
+            aria-expanded="true"
+            aria-controls="nested-stack-{{ task.id }}">
+      <i class="bi bi-chevron-down"></i>
+    </button>
     {% endif %}
     <div class="task-info">
       {% set tag_label = 'Para Mim' if task.is_private and task.created_by == current_user.id else (task.tag.nome if task.tag else 'Sem setor') %}
@@ -267,11 +273,28 @@
     </div>
   </div>
   {% if has_children %}
-  <ul class="subtasks">
-    {% for child in children %}
-      {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete, is_subtask=True) }}
-    {% endfor %}
-  </ul>
+  <div class="nested-task-stack" id="nested-stack-{{ task.id }}" role="group" aria-label="Subtarefas de {{ task.title }}">
+    <div class="nested-stack-header">
+      <div class="nested-stack-title">
+        <i class="bi bi-diagram-3"></i>
+        <span>Subtarefas</span>
+      </div>
+      <div class="nested-stack-actions">
+        <span class="nested-stack-count">{{ children|length }}</span>
+        {% if allow_subtask %}
+        <a class="nested-stack-add" href="{{ url_for('tasks_new', parent_id=task.id, return_url=request.url) }}" title="Adicionar subtarefa">
+          <i class="bi bi-plus-circle"></i>
+          Nova
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    <ul class="nested-task-list">
+      {% for child in children %}
+        {{ render_task(child, TaskStatus, show_tag=show_tag, priority_labels=priority_labels, allow_delete=allow_delete, is_subtask=True, depth=depth + 1) }}
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
 </li>
 {% endif %}
