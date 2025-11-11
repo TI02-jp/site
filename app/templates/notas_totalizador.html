@@ -1,5 +1,102 @@
 {% extends "base.html" %}
 
+{% macro totalizador_accordion(section_id, titulo, dados, pode_ver_pagamento, pagamento_choices, descricao="", filter_value_key="titulo") -%}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+        <div>
+            <h2 class="h4 mb-0 text-primary">{{ titulo }}</h2>
+            {% if descricao %}
+            <p class="text-muted small mb-0">{{ descricao }}</p>
+            {% endif %}
+        </div>
+        <span class="badge bg-primary" data-counter-for="#{{ section_id }}">{{ dados|length }}</span>
+    </div>
+</div>
+{% if dados %}
+<div class="accordion shadow-sm mb-5" id="{{ section_id }}">
+    {% for grupo in dados %}
+    <div class="accordion-item"
+         data-totalizador-value="{{ grupo[filter_value_key]|default('') }}"
+         data-totalizador-registros="{{ grupo.qtd_registros }}">
+        <h2 class="accordion-header" id="{{ section_id }}Heading{{ loop.index }}">
+            <button class="accordion-button collapsed d-flex flex-wrap gap-3" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#{{ section_id }}Collapse{{ loop.index }}"
+                    aria-expanded="false"
+                    aria-controls="{{ section_id }}Collapse{{ loop.index }}">
+                <span class="fw-semibold text-uppercase flex-grow-1">{{ grupo.titulo }}</span>
+                <span class="small text-muted text-uppercase">Registros</span>
+                <span class="fw-semibold">{{ grupo.qtd_registros }}</span>
+                <span class="small text-muted text-uppercase">Notas</span>
+                <span class="fw-semibold">{{ grupo.total_notas }}</span>
+                <span class="small text-muted text-uppercase">Itens</span>
+                <span class="fw-semibold">{{ grupo.total_itens }}</span>
+                <span class="small text-muted text-uppercase">Valor Total</span>
+                <span class="fw-semibold">{{ grupo.valor_total_formatado }}</span>
+            </button>
+        </h2>
+        <div id="{{ section_id }}Collapse{{ loop.index }}" class="accordion-collapse collapse"
+             aria-labelledby="{{ section_id }}Heading{{ loop.index }}"
+             data-bs-parent="#{{ section_id }}">
+            <div class="accordion-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0 text-start text-nowrap">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-start">Data Emissao</th>
+                                <th class="text-start">Notas</th>
+                                <th class="text-start">Itens</th>
+                                <th class="text-start">Valor UN</th>
+                                <th class="text-start">Valor Total</th>
+                                <th class="text-start">Acordo</th>
+                                {% if pode_ver_pagamento %}
+                                <th class="text-start">Pagamento</th>
+                                {% endif %}
+                                <th class="text-start">Observacao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nota in grupo.notas %}
+                            <tr>
+                                <td class="text-start">{{ nota.data_emissao_formatada }}</td>
+                                <td class="text-start">{{ nota.notas }}</td>
+                                <td class="text-start">{{ nota.qtde_itens }}</td>
+                                <td class="text-start">{{ nota.valor_un_formatado }}</td>
+                                <td class="text-start">{{ nota.valor_total_formatado }}</td>
+                                <td class="text-start">{{ nota.acordo }}</td>
+                                {% if pode_ver_pagamento %}
+                                <td class="text-start">
+                                    <select
+                                        class="form-select form-select-sm nota-forma-pagamento-select"
+                                        data-nota-id="{{ nota.id }}"
+                                        data-update-url="{{ url_for('notas_debito_update_forma_pagamento', nota_id=nota.id) }}"
+                                        data-original-value="{{ nota.forma_pagamento_choice_value }}">
+                                        {% for value, label in pagamento_choices %}
+                                        <option value="{{ value }}" {% if (nota.forma_pagamento_choice_value or '') == (value or '') %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                {% endif %}
+                                <td class="text-start">{{ nota.observacao or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card shadow-sm mb-5">
+    <div class="card-body p-4 text-center text-muted">
+        Nenhum registro encontrado para o periodo selecionado.
+    </div>
+</div>
+{% endif %}
+{%- endmacro %}
+
 {% block title %}Totalizador de Notas{% endblock %}
 
 {% block sidebar_nav %}
@@ -10,7 +107,7 @@
 <div class="container mt-4" style="max-width: 1400px;">
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
+            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Debito</a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
@@ -20,107 +117,116 @@
         </li>
     </ul>
 
-    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
-        <h1 class="text-primary mb-0">
-            Totalizador
-            <span class="badge bg-primary ms-2">{{ dados_totalizador|length }}</span>
-        </h1>
-        <form class="row g-2 align-items-end" method="get" action="{{ url_for('notas_totalizador') }}">
-            <div class="col-auto">
-                <label for="dataInicial" class="form-label mb-0 small text-muted text-uppercase">Data inicial</label>
-                <input type="date" id="dataInicial" name="data_inicial" class="form-control" value="{{ data_inicial }}">
-            </div>
-            <div class="col-auto">
-                <label for="dataFinal" class="form-label mb-0 small text-muted text-uppercase">Data final</label>
-                <input type="date" id="dataFinal" name="data_final" class="form-control" value="{{ data_final }}">
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-funnel me-1"></i>Filtrar
-                </button>
-            </div>
-        </form>
-    </div>
+    <div class="mb-4">
+            <div class="d-flex flex-column gap-3">
+                <div class="d-flex flex-column gap-3">
+                <div class="d-flex flex-column flex-xl-row gap-3 align-items-xl-center justify-content-between w-100">
+                    <div class="d-flex flex-wrap gap-2">
+                        <input class="btn-check totalizador-filter-input" type="radio" name="totalizadorFiltro" id="filtroEmpresa" value="empresa" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="filtroEmpresa">
+                            <i class="bi bi-building me-1"></i>Por empresa
+                        </label>
 
-    {% if dados_totalizador %}
-    <div class="accordion shadow-sm" id="totalizadorAccordion">
-        {% for grupo in dados_totalizador %}
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading{{ loop.index }}">
-                <button class="accordion-button collapsed d-flex flex-wrap gap-3" type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#collapse{{ loop.index }}"
-                        aria-expanded="false"
-                        aria-controls="collapse{{ loop.index }}">
-                    <span class="fw-semibold text-uppercase flex-grow-1">{{ grupo.empresa }}</span>
-                    <span class="small text-muted text-uppercase">Registros</span>
-                    <span class="fw-semibold">{{ grupo.qtd_registros }}</span>
-                    <span class="small text-muted text-uppercase">Notas</span>
-                    <span class="fw-semibold">{{ grupo.total_notas }}</span>
-                    <span class="small text-muted text-uppercase">Itens</span>
-                    <span class="fw-semibold">{{ grupo.total_itens }}</span>
-                    <span class="small text-muted text-uppercase">Valor Total</span>
-                    <span class="fw-semibold">{{ grupo.valor_total_formatado }}</span>
-                </button>
-            </h2>
-            <div id="collapse{{ loop.index }}" class="accordion-collapse collapse"
-                 aria-labelledby="heading{{ loop.index }}"
-                 data-bs-parent="#totalizadorAccordion">
-                <div class="accordion-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped mb-0 text-start text-nowrap">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-start">Data Emissão</th>
-                                    <th class="text-start">Notas</th>
-                                    <th class="text-start">Itens</th>
-                                    <th class="text-start">Valor UN</th>
-                                    <th class="text-start">Valor Total</th>
-                                    <th class="text-start">Acordo</th>
-                                    {% if pode_ver_forma_pagamento %}
-                                    <th class="text-start">Pagamento</th>
-                                    {% endif %}
-                                    <th class="text-start">Observação</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for nota in grupo.notas %}
-                                <tr>
-                                    <td class="text-start">{{ nota.data_emissao_formatada }}</td>
-                                    <td class="text-start">{{ nota.notas }}</td>
-                                    <td class="text-start">{{ nota.qtde_itens }}</td>
-                                    <td class="text-start">{{ nota.valor_un_formatado }}</td>
-                                    <td class="text-start">{{ nota.valor_total_formatado }}</td>
-                                    <td class="text-start">{{ nota.acordo }}</td>
-                                    {% if pode_ver_forma_pagamento %}
-                                    <td class="text-start">
-                                        <select
-                                            class="form-select form-select-sm nota-forma-pagamento-select"
-                                            data-nota-id="{{ nota.id }}"
-                                            data-update-url="{{ url_for('notas_debito_update_forma_pagamento', nota_id=nota.id) }}"
-                                            data-original-value="{{ nota.forma_pagamento_choice_value }}">
-                                            {% for value, label in pagamento_choices %}
-                                            <option value="{{ value }}" {% if (nota.forma_pagamento_choice_value or '') == (value or '') %}selected{% endif %}>{{ label }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                    {% endif %}
-                                    <td class="text-start">{{ nota.observacao or '-' }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <input class="btn-check totalizador-filter-input" type="radio" name="totalizadorFiltro" id="filtroAcordo" value="acordo">
+                        <label class="btn btn-outline-primary btn-sm" for="filtroAcordo">
+                            <i class="bi bi-diagram-2 me-1"></i>Por tipo de acordo
+                        </label>
+
+                        {% if pode_ver_forma_pagamento %}
+                        <input class="btn-check totalizador-filter-input" type="radio" name="totalizadorFiltro" id="filtroPagamento" value="pagamento">
+                        <label class="btn btn-outline-primary btn-sm" for="filtroPagamento">
+                            <i class="bi bi-cash-coin me-1"></i>Por tipo de pagamento
+                        </label>
+                        {% endif %}
                     </div>
+                    <form class="row g-2 align-items-end flex-nowrap ms-xl-auto" method="get" action="{{ url_for('notas_totalizador') }}">
+                        <div class="col-auto">
+                            <label for="dataInicial" class="form-label mb-0 small text-muted text-uppercase">Data inicial</label>
+                            <input type="date" id="dataInicial" name="data_inicial" class="form-control" value="{{ data_inicial }}">
+                        </div>
+                        <div class="col-auto">
+                            <label for="dataFinal" class="form-label mb-0 small text-muted text-uppercase">Data final</label>
+                            <input type="date" id="dataFinal" name="data_final" class="form-control" value="{{ data_final }}">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <div class="card shadow-sm">
-        <div class="card-body p-4 text-center text-muted">
-            Nenhum registro encontrado para o período selecionado.
+
+    <div class="totalizador-section" data-totalizador-mode="empresa">
+        {% if tipos_empresa %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <label class="form-label small text-uppercase text-muted mb-2">Empresa</label>
+                <select class="form-select form-select-sm totalizador-type-filter" data-target="#totalizadorEmpresaAccordion">
+                    <option value="">Todas as empresas</option>
+                    {% for tipo in tipos_empresa %}
+                    <option value="{{ tipo }}">{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
+        {% endif %}
+        {{ totalizador_accordion(
+            "totalizadorEmpresaAccordion",
+            "Totalizador por Empresa",
+            dados_totalizador,
+            pode_ver_forma_pagamento,
+            pagamento_choices
+        ) }}
+    </div>
+
+    <div class="totalizador-section" data-totalizador-mode="acordo">
+        {% if tipos_acordo %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <label class="form-label small text-uppercase text-muted mb-2">Tipo de acordo</label>
+                <select class="form-select form-select-sm totalizador-type-filter" data-target="#totalizadorAcordoAccordion">
+                    <option value="">Todos os acordos</option>
+                    {% for tipo in tipos_acordo %}
+                    <option value="{{ tipo }}">{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+        {{ totalizador_accordion(
+            "totalizadorAcordoAccordion",
+            "Totalizador por Tipo de Acordo",
+            dados_totalizador_acordo,
+            pode_ver_forma_pagamento,
+            pagamento_choices
+        ) }}
+    </div>
+
+    {% if pode_ver_forma_pagamento %}
+    <div class="totalizador-section" data-totalizador-mode="pagamento">
+        {% if tipos_pagamento %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <label class="form-label small text-uppercase text-muted mb-2">Tipo de pagamento</label>
+                <select class="form-select form-select-sm totalizador-type-filter" data-target="#totalizadorPagamentoAccordion">
+                    <option value="">Todos os pagamentos</option>
+                    {% for tipo in tipos_pagamento %}
+                    <option value="{{ tipo.value }}">{{ tipo.label or tipo.value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+        {{ totalizador_accordion(
+            "totalizadorPagamentoAccordion",
+            "Totalizador por Tipo de Pagamento",
+            dados_totalizador_pagamento,
+            pode_ver_forma_pagamento,
+            pagamento_choices,
+        ) }}
     </div>
     {% endif %}
 </div>
@@ -128,83 +234,79 @@
 
 {% block scripts %}
 {{ super() }}
-{% if pode_ver_forma_pagamento %}
 <script>
-const csrfToken = "{{ csrf_token() }}";
-
 document.addEventListener('DOMContentLoaded', function() {
-    function toggleSavingState(element, isSaving) {
-        if (!element) {
-            return;
-        }
-        if (isSaving) {
-            element.classList.add('is-saving');
-            element.disabled = true;
-        } else {
-            element.classList.remove('is-saving');
-            element.disabled = false;
-        }
+    const sections = document.querySelectorAll('.totalizador-section');
+    const radios = document.querySelectorAll('.totalizador-filter-input');
+    const typeFilters = document.querySelectorAll('.totalizador-type-filter');
+
+    function showSection(mode) {
+        sections.forEach(section => {
+            section.style.display = section.dataset.totalizadorMode === mode ? '' : 'none';
+        });
     }
 
-    document.querySelectorAll('.nota-forma-pagamento-select').forEach(function(select) {
-        var initialValue = select.dataset.originalValue || select.value || '';
-        select.dataset.originalValue = initialValue;
+    function updateCounterForSelector(targetSelector) {
+        const target = document.querySelector(targetSelector);
+        if (!target) {
+            return;
+        }
+        const counter = document.querySelector(`[data-counter-for="${targetSelector}"]`);
+        if (!counter) {
+            return;
+        }
+        const visibleItems = Array.from(target.querySelectorAll('.accordion-item')).filter(item => item.style.display !== 'none');
+        const totalRegistros = visibleItems.reduce((sum, item) => {
+            const value = Number(item.dataset.totalizadorRegistros || 0);
+            return sum + (Number.isFinite(value) ? value : 0);
+        }, 0);
+        counter.textContent = totalRegistros;
+    }
 
-        select.addEventListener('change', function(event) {
-            var target = event.currentTarget;
-            var previousValue = target.dataset.originalValue || '';
-            var updateUrl = target.dataset.updateUrl;
+    function applyTypeFilter(select) {
+        const targetSelector = select.dataset.target;
+        const target = document.querySelector(targetSelector);
+        if (!target) {
+            return;
+        }
+        const selectedValue = (select.value || '').toUpperCase();
+        target.querySelectorAll('.accordion-item').forEach(item => {
+            const itemValue = (item.dataset.totalizadorValue || '').toUpperCase();
+            const matches = !selectedValue || itemValue === selectedValue;
+            item.style.display = matches ? '' : 'none';
+        });
 
-            if (!updateUrl) {
-                return;
+        updateCounterForSelector(targetSelector);
+    }
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                showSection(this.value);
             }
-
-            toggleSavingState(target, true);
-
-            fetch(updateUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({ forma_pagamento: target.value })
-            }).then(function(response) {
-                return response.json().catch(function() {
-                    return {};
-                }).then(function(payload) {
-                    if (!response.ok || !payload.success) {
-                        var errorMessage = payload && payload.message ? payload.message : 'Não foi possível atualizar a forma de pagamento.';
-                        var error = new Error(errorMessage);
-                        error.payload = payload;
-                        throw error;
-                    }
-                    return payload;
-                });
-            }).then(function() {
-                target.dataset.originalValue = target.value;
-                target.classList.add('is-valid');
-                setTimeout(function() {
-                    target.classList.remove('is-valid');
-                }, 1600);
-            }).catch(function(error) {
-                target.value = previousValue;
-                target.dataset.originalValue = previousValue;
-                target.classList.add('is-invalid');
-                setTimeout(function() {
-                    target.classList.remove('is-invalid');
-                }, 2000);
-                console.error('Falha ao atualizar forma de pagamento', error);
-                if (error && error.message) {
-                    alert(error.message);
-                } else {
-                    alert('Falha ao atualizar forma de pagamento.');
-                }
-            }).finally(function() {
-                toggleSavingState(target, false);
-            });
         });
     });
+
+    typeFilters.forEach(select => {
+        select.addEventListener('change', function() {
+            applyTypeFilter(this);
+        });
+        applyTypeFilter(select);
+    });
+
+    function updateAllCounters() {
+        document.querySelectorAll('[data-counter-for]').forEach(counter => {
+            const targetSelector = counter.getAttribute('data-counter-for');
+            updateCounterForSelector(targetSelector);
+        });
+    }
+
+    const initiallyChecked = document.querySelector('.totalizador-filter-input:checked');
+    if (initiallyChecked) {
+        showSection(initiallyChecked.value);
+    }
+
+    updateAllCounters();
 });
 </script>
-{% endif %}
 {% endblock %}
