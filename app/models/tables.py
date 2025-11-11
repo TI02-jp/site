@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 from flask_login import UserMixin
 from sqlalchemy import event, inspect, select
 from sqlalchemy.dialects import mysql
-from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -832,6 +832,52 @@ class Departamento(db.Model):
 
     def __repr__(self):
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
+
+
+class ClienteReuniao(db.Model):
+    """Client-specific meeting log linked to a company."""
+
+    __tablename__ = "cliente_reunioes"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey("tbl_empresas.id"), nullable=False)
+    data = db.Column(db.Date, nullable=True)
+    setor_id = db.Column(db.Integer, db.ForeignKey("setores.id"), nullable=True)
+    participantes = db.Column(
+        MutableList.as_mutable(db.JSON),
+        nullable=False,
+        default=list,
+    )
+    topicos = db.Column(
+        MutableList.as_mutable(db.JSON),
+        nullable=False,
+        default=list,
+    )
+    decisoes = db.Column(
+        db.Text().with_variant(mysql.LONGTEXT, "mysql"),
+        nullable=True,
+    )
+    acompanhar_ate = db.Column(db.Date, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    empresa = db.relationship(
+        "Empresa",
+        backref=db.backref("cliente_reunioes", lazy="dynamic"),
+    )
+    setor = db.relationship("Setor")
+    autor = db.relationship("User", foreign_keys=[created_by])
+    editor = db.relationship("User", foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f"<ClienteReuniao empresa={self.empresa_id} data={self.data}>"
 
 
 class ReuniaoStatus(str, Enum):

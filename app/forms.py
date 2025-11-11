@@ -495,6 +495,24 @@ class DepartamentoFinanceiroForm(FlaskForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
+class ClienteReuniaoForm(FlaskForm):
+    """Formulário para registrar reuniões com clientes."""
+
+    data = DateField("Data da reunião", format="%Y-%m-%d", validators=[Optional()])
+    participantes = SelectMultipleField(
+        "Participantes",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
+    setor_id = SelectField("Setor", coerce=int, validators=[Optional()], choices=[])
+    topicos_json = HiddenField("Tópicos", validators=[Optional()])
+    decisoes = TextAreaField("Decisões", validators=[Optional()])
+    acompanhar_ate = DateField("Acompanhar até", format="%Y-%m-%d", validators=[Optional()])
+    submit = SubmitField("Salvar reunião")
+
+
 class ConsultoriaForm(FlaskForm):
     """Formulário para cadastro de consultorias."""
     nome = StringField('Nome da Consultoria', validators=[DataRequired()])
