@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Minhas Tarefas{% endblock %}
+{% block title %}Central de Tarefas{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
@@ -12,8 +12,18 @@
 
 {% block content %}
 <section class="kanban" data-realtime data-realtime-scopes="tasks" data-current-user="{{ current_user.id }}" data-current-user-role="{{ current_user.role }}">
+  {% set status_meta = {
+    'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
+    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
+    'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
+  } %}
+  {% set priority_labels = {
+    'low': 'Baixa',
+    'medium': 'Media',
+    'high': 'Alta'
+  } %}
   <div class="kanban-header">
-    <h2><i class="bi bi-kanban"></i>Minhas Tarefas</h2>
+    <h2><i class="bi bi-kanban"></i>Central de Tarefas</h2>
     <div class="kanban-actions">
       <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
       {% if history_count > 0 %}
@@ -21,6 +31,58 @@
       {% endif %}
     </div>
   </div>
+  <form method="get" action="{{ url_for('tasks_overview_mine') }}" class="tasks-filter-form" id="tasks-filter-form">
+    <div class="filter-row">
+      <div class="filter-field">
+        <label for="keyword-filter">Palavra-chave</label>
+        <input type="search" id="keyword-filter" name="q" value="{{ keyword }}" placeholder="Título ou descrição">
+      </div>
+      <div class="filter-field">
+        <label for="priority-filter">Prioridade</label>
+        <select id="priority-filter" name="priority">
+          <option value="">Todas</option>
+          {% for value, label in priority_labels.items() %}
+          <option value="{{ value }}" {% if selected_priority == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if available_tags %}
+      <div class="filter-field">
+        <label for="tag-filter">Setor</label>
+        <select id="tag-filter" name="tag_id">
+          <option value="">Todos</option>
+          {% for tag in available_tags %}
+          <option value="{{ tag.id }}" {% if selected_tag_id == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </div>
+    <div class="filter-row">
+      <div class="filter-field">
+        <label for="due-from-filter">Prazo a partir de</label>
+        <input type="date" id="due-from-filter" name="due_from" value="{{ due_from }}">
+      </div>
+      <div class="filter-field">
+        <label for="due-to-filter">Prazo até</label>
+        <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
+      </div>
+      <div class="filter-field">
+        <label for="user-filter">Usuário</label>
+        <select id="user-filter" name="user_id">
+          <option value="">Todos</option>
+          {% for user in users %}
+          {% set display_name = (user.name or user.username or '').strip() %}
+          <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-field actions-field">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{{ url_for('tasks_overview_mine') }}" class="btn btn-secondary">Limpar</a>
+      </div>
+    </div>
+  </form>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -35,16 +97,6 @@
     {% endif %}
   {% endwith %}
   {% from "tasks_macros.html" import render_task, render_actions_legend with context %}
-  {% set status_meta = {
-    'pending': {'label': 'Pendente', 'icon': 'bi-hourglass'},
-    'in_progress': {'label': 'Em andamento', 'icon': 'bi-play-circle'},
-    'done': {'label': 'Concluída', 'icon': 'bi-check-circle'}
-  } %}
-  {% set priority_labels = {
-    'low': 'Baixa',
-    'medium': 'Media',
-    'high': 'Alta'
-  } %}
   {{ render_actions_legend() }}
   <div class="kanban-board">
     {% for status in visible_statuses %}
