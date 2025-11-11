@@ -4778,7 +4778,11 @@ def notas_totalizador():
         )
 
     dados_totalizador: list[dict[str, object]] = []
+    dados_totalizador_acordo: list[dict[str, object]] = []
+    dados_totalizador_pagamento: list[dict[str, object]] = []
     notas_por_empresa: dict[str, dict[str, object]] = {}
+    notas_por_acordo: dict[str, dict[str, object]] = {}
+    notas_por_pagamento: dict[str, dict[str, object]] = {}
 
     notas_list = (
         base_query.order_by(
@@ -4793,21 +4797,37 @@ def notas_totalizador():
     total_itens = 0
     total_valor = Decimal("0")
 
-    for nota in notas_list:
-        empresa_key = (nota.empresa or "").strip().upper()
-        if not empresa_key:
-            empresa_key = "SEM EMPRESA"
-
-        grupo = notas_por_empresa.setdefault(
-            empresa_key,
-            {
-                "empresa": empresa_key,
+    def _get_or_create_group(
+        storage: dict[str, dict[str, object]],
+        key: str,
+        titulo: str,
+        extra: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        grupo = storage.get(key)
+        if not grupo:
+            grupo = {
+                "titulo": titulo,
                 "qtd_registros": 0,
                 "total_notas": 0,
                 "total_itens": 0,
                 "valor_total": Decimal("0"),
                 "notas": [],
-            },
+            }
+            if extra:
+                grupo.update(extra)
+            storage[key] = grupo
+        return grupo
+
+    for nota in notas_list:
+        empresa_key = (nota.empresa or "").strip().upper()
+        if not empresa_key:
+            empresa_key = "SEM EMPRESA"
+
+        grupo_empresa = _get_or_create_group(
+            notas_por_empresa,
+            empresa_key,
+            empresa_key,
+            {"empresa": empresa_key},
         )
 
         valor_total = nota.total or Decimal("0")
@@ -4815,35 +4835,57 @@ def notas_totalizador():
 
         forma_pagamento_raw = (nota.forma_pagamento or "").strip()
         forma_pagamento_value = forma_pagamento_raw.upper()
+        acordo_key = (nota.acordo or "").strip().upper() or "SEM ACORDO"
+        pagamento_key = forma_pagamento_value or "SEM PAGAMENTO"
+        pagamento_label = pagamento_label_map.get(
+            pagamento_key, pagamento_key
+        ) or "SEM PAGAMENTO"
 
-        grupo["qtd_registros"] += 1
-        grupo["total_notas"] += int(nota.notas or 0)
-        grupo["total_itens"] += int(nota.qtde_itens or 0)
-        grupo["valor_total"] += Decimal(valor_total)
-        grupo["notas"].append(
-            {
-                "id": nota.id,
-                "data_emissao": nota.data_emissao,
-                "data_emissao_formatada": nota.data_emissao_formatada,
-                "empresa": empresa_key,
-                "notas": nota.notas,
-                "qtde_itens": nota.qtde_itens,
-                "valor_un": valor_un,
-                "valor_un_formatado": nota.valor_un_formatado,
-                "valor_total": valor_total,
-                "valor_total_formatado": nota.total_formatado,
-                "acordo": (nota.acordo or "").upper() if nota.acordo else "#N/A",
-                "forma_pagamento": forma_pagamento_raw,
-                "forma_pagamento_upper": forma_pagamento_value,
-                "forma_pagamento_choice_value": pagamento_value_map.get(
-                    forma_pagamento_value, forma_pagamento_raw
-                ),
-                "forma_pagamento_label": pagamento_label_map.get(
-                    forma_pagamento_value, forma_pagamento_value
-                ),
-                "observacao": nota.observacao or "",
-            }
+        grupo_acordo = _get_or_create_group(
+            notas_por_acordo,
+            acordo_key,
+            acordo_key,
+            {"acordo": acordo_key},
         )
+        grupo_pagamento = _get_or_create_group(
+            notas_por_pagamento,
+            pagamento_key,
+            pagamento_label,
+            {
+                "forma_pagamento": pagamento_key,
+                "forma_pagamento_label": pagamento_label,
+            },
+        )
+
+        registro_nota = {
+            "id": nota.id,
+            "data_emissao": nota.data_emissao,
+            "data_emissao_formatada": nota.data_emissao_formatada,
+            "empresa": empresa_key,
+            "notas": nota.notas,
+            "qtde_itens": nota.qtde_itens,
+            "valor_un": valor_un,
+            "valor_un_formatado": nota.valor_un_formatado,
+            "valor_total": valor_total,
+            "valor_total_formatado": nota.total_formatado,
+            "acordo": (nota.acordo or "").upper() if nota.acordo else "#N/A",
+            "forma_pagamento": forma_pagamento_raw,
+            "forma_pagamento_upper": forma_pagamento_value,
+            "forma_pagamento_choice_value": pagamento_value_map.get(
+                forma_pagamento_value, forma_pagamento_raw
+            ),
+            "forma_pagamento_label": pagamento_label_map.get(
+                forma_pagamento_value, forma_pagamento_value
+            ),
+            "observacao": nota.observacao or "",
+        }
+
+        for grupo_destino in (grupo_empresa, grupo_acordo, grupo_pagamento):
+            grupo_destino["qtd_registros"] += 1
+            grupo_destino["total_notas"] += int(nota.notas or 0)
+            grupo_destino["total_itens"] += int(nota.qtde_itens or 0)
+            grupo_destino["valor_total"] += Decimal(valor_total)
+            grupo_destino["notas"].append(registro_nota)
 
         total_registros += 1
         total_notas += int(nota.notas or 0)
@@ -4854,10 +4896,29 @@ def notas_totalizador():
         normalized = unicodedata.normalize("NFKD", value or "")
         return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold()
 
-    for empresa_key in sorted(notas_por_empresa.keys(), key=_sort_key_empresa):
-        grupo = notas_por_empresa[empresa_key]
-        grupo["valor_total_formatado"] = format_currency(grupo["valor_total"])
-        dados_totalizador.append(grupo)
+    def _finalizar_grupos(storage: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+        grupos_finalizados: list[dict[str, object]] = []
+        for chave in sorted(storage.keys(), key=_sort_key_empresa):
+            grupo = storage[chave]
+            grupo["valor_total_formatado"] = format_currency(grupo["valor_total"])
+            grupos_finalizados.append(grupo)
+        return grupos_finalizados
+
+    dados_totalizador = _finalizar_grupos(notas_por_empresa)
+    dados_totalizador_acordo = _finalizar_grupos(notas_por_acordo)
+    dados_totalizador_pagamento = _finalizar_grupos(notas_por_pagamento)
+
+    tipos_empresa = [grupo["titulo"] for grupo in dados_totalizador]
+    tipos_acordo = [grupo["titulo"] for grupo in dados_totalizador_acordo]
+    tipos_pagamento: list[dict[str, str]] = [
+        {
+            "value": grupo.get("forma_pagamento", ""),
+            "label": grupo.get("titulo")
+            or grupo.get("forma_pagamento_label")
+            or grupo.get("forma_pagamento", ""),
+        }
+        for grupo in dados_totalizador_pagamento
+    ]
 
     resumo_geral = {
         "qtd_registros": total_registros,
@@ -4881,6 +4942,11 @@ def notas_totalizador():
         data_final=data_final.isoformat(),
         pagamento_choices=pagamento_choices,
         pode_ver_forma_pagamento=pode_ver_forma_pagamento,
+        dados_totalizador_acordo=dados_totalizador_acordo,
+        dados_totalizador_pagamento=dados_totalizador_pagamento,
+        tipos_empresa=tipos_empresa,
+        tipos_acordo=tipos_acordo,
+        tipos_pagamento=tipos_pagamento,
     )
 
 
