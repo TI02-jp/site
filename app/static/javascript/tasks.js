@@ -1712,23 +1712,27 @@ function updateTaskCardContent(taskCard, taskData) {
     }
     taskCard.className = classNames.join(' ');
 
-    // Update subtask status chip
-    const statusChip = taskCard.querySelector('[data-subtask-status]');
-    if (statusChip) {
-        if (taskData.status === 'pending') {
-            statusChip.remove();
-        } else {
-            statusChip.textContent = taskStatusLabel(taskData.status);
-            statusChip.className = `subtask-status status-${taskData.status}`;
-        }
-    } else if (isSubtask && taskData.status !== 'pending') {
+    // Update subtask status chip only within the current subtask card
+    if (isSubtask) {
         const titleRow = taskCard.querySelector('.task-title-row');
         if (titleRow) {
-            const chip = document.createElement('span');
-            chip.className = `subtask-status status-${taskData.status}`;
-            chip.setAttribute('data-subtask-status', '');
-            chip.textContent = taskStatusLabel(taskData.status);
-            titleRow.appendChild(chip);
+            const statusChip = Array.from(titleRow.children || []).find((child) =>
+                child.hasAttribute && child.hasAttribute('data-subtask-status')
+            );
+            if (statusChip) {
+                if (taskData.status === 'pending') {
+                    statusChip.remove();
+                } else {
+                    statusChip.textContent = taskStatusLabel(taskData.status);
+                    statusChip.className = `subtask-status status-${taskData.status}`;
+                }
+            } else if (taskData.status !== 'pending') {
+                const chip = document.createElement('span');
+                chip.className = `subtask-status status-${taskData.status}`;
+                chip.setAttribute('data-subtask-status', '');
+                chip.textContent = taskStatusLabel(taskData.status);
+                titleRow.appendChild(chip);
+            }
         }
     }
 

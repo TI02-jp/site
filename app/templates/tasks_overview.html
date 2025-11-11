@@ -45,7 +45,17 @@
             <select id="user-filter" name="user_id">
               <option value="">Todos</option>
               {% for user in users %}
-              <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.name }}</option>
+              {% set display_name = (user.name or user.username or '').strip() %}
+              <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="tag-filter">Setor</label>
+            <select id="tag-filter" name="tag_id">
+              <option value="">Todos</option>
+              {% for tag in available_tags %}
+              <option value="{{ tag.id }}" {% if selected_tag_id == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
               {% endfor %}
             </select>
           </div>
@@ -59,12 +69,6 @@
             <label for="due-to-filter">Prazo até</label>
             <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
           </div>
-          <div class="filter-field checkbox-field">
-            <label for="assigned-by-me-checkbox">
-              <input type="checkbox" id="assigned-by-me-checkbox" name="assigned_by_me" value="1" {% if assigned_by_me %}checked{% endif %}>
-              Atribuídas por mim
-            </label>
-          </div>
           <div class="filter-field actions-field">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('tasks_overview') }}" class="btn btn-secondary">Limpar</a>
@@ -74,7 +78,7 @@
       {% if current_user.role == 'admin' %}
       <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
       {% endif %}
-      <a href="{{ url_for('tasks_history', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
+      <a href="{{ url_for('tasks_history') }}" class="btn-history">Histórico{% if history_count %} ({{ history_count }}){% endif %}</a>
     </div>
   </div>
 

@@ -7044,8 +7044,7 @@ def _group_root_tasks_by_status(
 def tasks_overview():
     """Kanban view of all tasks grouped by status."""
 
-    assigned_param = (request.args.get("assigned_by_me", "") or "").lower()
-    assigned_by_me = assigned_param in {"1", "true", "on", "yes"}
+    tag_param = (request.args.get("tag_id") or "").strip()
     priority_param = (request.args.get("priority") or "").strip().lower()
     keyword = (request.args.get("q") or "").strip()
     user_param = (request.args.get("user_id") or "").strip()
@@ -7053,6 +7052,8 @@ def tasks_overview():
     due_to_raw = (request.args.get("due_to") or "").strip()
     selected_priority = None
     selected_user_id = None
+    selected_tag_id = None
+    selected_tag_id = None
 
     def _parse_date_param(raw_value):
         if not raw_value:
@@ -7065,6 +7066,7 @@ def tasks_overview():
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None))
+        .filter(Task.is_private.is_(False))
         .filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
         .filter(_user_task_access_filter(current_user))
     )
@@ -7076,10 +7078,10 @@ def tasks_overview():
             allowed_filters.append(Task.tag_id.in_(accessible_ids))
         allowed_filters.append(Task.created_by == current_user.id)
         query = query.filter(sa.or_(*allowed_filters))
+    else:
+        accessible_ids = []
 
-    if assigned_by_me:
-        query = query.filter(Task.created_by == current_user.id)
-    elif user_param:
+    if user_param:
         try:
             selected_user_id = int(user_param)
         except ValueError:
@@ -7113,6 +7115,19 @@ def tasks_overview():
             sa.or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
         )
 
+    if tag_param:
+        try:
+            candidate_tag_id = int(tag_param)
+        except ValueError:
+            candidate_tag_id = None
+        if candidate_tag_id:
+            if current_user.role == "admin":
+                selected_tag_id = candidate_tag_id
+            elif candidate_tag_id in accessible_ids:
+                selected_tag_id = candidate_tag_id
+        if selected_tag_id:
+            query = query.filter(Task.tag_id == selected_tag_id)
+
     due_from = _parse_date_param(due_from_raw)
     due_to = _parse_date_param(due_to_raw)
     if due_from:
@@ -7125,6 +7140,20 @@ def tasks_overview():
         .order_by(User.name.asc())
         .all()
     )
+    if current_user.role == "admin":
+        available_tags = (
+            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+            .order_by(Tag.nome.asc())
+            .all()
+        )
+    else:
+        available_tags = (
+            Tag.query.filter(Tag.id.in_(accessible_ids))
+            .order_by(Tag.nome.asc())
+            .all()
+            if accessible_ids
+            else []
+        )
 
     tasks = (
         query.options(
@@ -7165,12 +7194,13 @@ def tasks_overview():
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
         history_count=history_count,
-        assigned_by_me=assigned_by_me,
         allow_delete=current_user.role == "admin",
         priorities=list(TaskPriority),
         selected_priority=selected_priority.value if selected_priority else "",
         keyword=keyword,
         user_id=selected_user_id,
+        available_tags=available_tags,
+        selected_tag_id=selected_tag_id,
         due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
         due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
         users=active_users,
@@ -7179,45 +7209,142 @@ def tasks_overview():
 @app.route("/tasks/overview/mine")
 @login_required
 def tasks_overview_mine():
-    """Kanban view of tasks created by the current user."""
+    """Kanban view of tasks where the current user participates."""
 
     visible_statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE]
 
-    # Subquery para tasks onde o usuário é acompanhante
+    keyword = (request.args.get("q") or "").strip()
+    priority_param = (request.args.get("priority") or "").strip().lower()
+    tag_param = (request.args.get("tag_id") or "").strip()
+    due_from_raw = (request.args.get("due_from") or "").strip()
+    due_to_raw = (request.args.get("due_to") or "").strip()
+    user_param = (request.args.get("user_id") or "").strip()
+    selected_user_id = None
+    selected_tag_id = None
+
+    accessible_tag_ids = _get_accessible_tag_ids(current_user)
+    available_tags = (
+        Tag.query.filter(Tag.id.in_(accessible_tag_ids))
+        .order_by(Tag.nome.asc())
+        .all()
+        if accessible_tag_ids
+        else []
+    )
+
+    def _parse_date_param(raw_value: str | None):
+        if not raw_value:
+            return None
+        try:
+            return datetime.strptime(raw_value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
     from app.models.tables import TaskFollower
+
     follower_subquery = (
         db.session.query(TaskFollower.task_id)
         .filter(TaskFollower.user_id == current_user.id)
         .subquery()
     )
 
+    participation_filters = [
+        Task.created_by == current_user.id,
+        Task.assigned_to == current_user.id,
+        Task.id.in_(follower_subquery),
+    ]
+    non_personal_tag_ids = [
+        tag_id
+        for tag_id in accessible_tag_ids
+        if tag_id is not None
+    ]
+    if non_personal_tag_ids:
+        participation_filters.append(Task.tag_id.in_(non_personal_tag_ids))
+
     query = (
         Task.query.join(Tag)
         .filter(Task.parent_id.is_(None))
-        .filter(
-            sa.or_(
-                Task.created_by == current_user.id,
-                Task.assigned_to == current_user.id,
-                Task.id.in_(follower_subquery),
-            )
-        )
+        .filter(Task.is_private.is_(False))
+        .filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+        .filter(sa.or_(*participation_filters))
     )
+
+    if user_param:
+        try:
+            selected_user_id = int(user_param)
+        except ValueError:
+            selected_user_id = None
+        if selected_user_id:
+            follower_filter_subquery = (
+                db.session.query(TaskFollower.task_id)
+                .filter(TaskFollower.user_id == selected_user_id)
+                .subquery()
+            )
+            query = query.filter(
+                sa.or_(
+                    Task.assigned_to == selected_user_id,
+                    Task.created_by == selected_user_id,
+                    Task.id.in_(follower_filter_subquery),
+                )
+            )
+
+    selected_priority = None
+    if priority_param:
+        try:
+            selected_priority = TaskPriority(priority_param)
+            query = query.filter(Task.priority == selected_priority)
+        except ValueError:
+            selected_priority = None
+
+    if keyword:
+        pattern = f"%{keyword}%"
+        query = query.filter(
+            sa.or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
+        )
+
+    if tag_param:
+        try:
+            candidate_tag_id = int(tag_param)
+        except ValueError:
+            candidate_tag_id = None
+        if candidate_tag_id and candidate_tag_id in accessible_tag_ids:
+            selected_tag_id = candidate_tag_id
+            query = query.filter(Task.tag_id == selected_tag_id)
+
+    due_from = _parse_date_param(due_from_raw)
+    due_to = _parse_date_param(due_to_raw)
+    if due_from:
+        query = query.filter(Task.due_date.isnot(None)).filter(Task.due_date >= due_from)
+    if due_to:
+        query = query.filter(Task.due_date.isnot(None)).filter(Task.due_date <= due_to)
+
+    # selected_tag_id already set above if applicable
+
     tasks = (
         query.options(
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            # Removed status_history and attachments eager loading to reduce Cartesian product
             joinedload(Task.children).joinedload(Task.assignee),
             joinedload(Task.children).joinedload(Task.finisher),
             joinedload(Task.children).joinedload(Task.tag),
             joinedload(Task.children).joinedload(Task.creator),
-            # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)
-        .limit(200)  # Added limit to prevent loading too many tasks at once
+        .limit(200)
         .all()
+    )
+    active_users = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(User.name.asc())
+        .all()
+    )
+    available_tags = (
+        Tag.query.filter(Tag.id.in_(accessible_tag_ids))
+        .order_by(Tag.nome.asc())
+        .all()
+        if accessible_tag_ids
+        else []
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
     summaries = _load_task_response_summaries(
@@ -7237,14 +7364,24 @@ def tasks_overview_mine():
     history_count = max(0, len(done_sorted) - 5)
     tasks_by_status[TaskStatus.DONE] = done_sorted[:5]
 
+    history_url = url_for("tasks_history")
+
     return render_template(
         "tasks_overview_mine.html",
+        keyword=keyword,
+        selected_priority=selected_priority.value if selected_priority else "",
+        available_tags=available_tags,
+        selected_tag_id=selected_tag_id,
+        due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
+        due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
+        selected_user_id=selected_user_id,
+        users=active_users,
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,
         visible_statuses=visible_statuses,
         history_count=history_count,
         allow_delete=current_user.role == "admin",
-        history_url=url_for("tasks_history", assigned_by_me=1),
+        history_url=history_url,
     )
 
 
@@ -7476,7 +7613,7 @@ def _user_task_access_filter(user: User):
 def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
-    return_url = request.args.get("return_url")  # Não usar request.referrer - queremos ir para "Minhas Tarefas"
+    return_url = request.args.get("return_url")  # Não usar request.referrer - queremos ir para a Central de Tarefas
     form = TaskForm()
 
     if request.method == "POST" and not parent_id:

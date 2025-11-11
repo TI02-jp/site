@@ -132,29 +132,24 @@
         </li>
         {% endif %}
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="false" aria-controls="tasksMenu">
+            {% set tasks_menu_active = request.endpoint in ['tasks_overview', 'tasks_overview_mine', 'tasks_overview_personal'] %}
+            <a class="nav-link" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="{{ 'true' if tasks_menu_active else 'false' }}" aria-controls="tasksMenu">
                 <i class="bi bi-list-task"></i>
                 TAREFAS
             </a>
-            <div class="collapse" id="tasksMenu">
+            <div class="collapse{% if tasks_menu_active %} show{% endif %}" id="tasksMenu">
                 <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tasks_overview_mine' %}active{% endif %}" href="{{ url_for('tasks_overview_mine') }}">Central de Tarefas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tasks_overview_personal' %}active{% endif %}" href="{{ url_for('tasks_overview_personal') }}">Somente Para Mim</a>
+                    </li>
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'tasks_overview' %}active{% endif %}" href="{{ url_for('tasks_overview') }}">Visão Geral</a>
                     </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'tasks_overview_mine' %}active{% endif %}" href="{{ url_for('tasks_overview_mine') }}">Minhas Tarefas</a>
-                    </li>
                     {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'tasks_overview_personal' %}active{% endif %}" href="{{ url_for('tasks_overview_personal') }}">Somente Para Mim</a>
-                    </li>
-                    {% for t in tasks_tags %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'tasks_sector' and request.view_args.get('tag_id') == t.id %}active{% endif %}" href="{{ url_for('tasks_sector', tag_id=t.id) }}">{{ t.nome }}</a>
-                    </li>
-                    {% endfor %}
                 </ul>
             </div>
         </li>
