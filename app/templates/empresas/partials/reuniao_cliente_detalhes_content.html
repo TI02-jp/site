@@ -1,0 +1,55 @@
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="info-group">
+            <span class="text-muted text-uppercase small">Data</span>
+            <p class="fs-5 fw-semibold mb-0">{{ reuniao.data.strftime('%d/%m/%Y') if reuniao.data else '-' }}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="info-group">
+            <span class="text-muted text-uppercase small">Setor</span>
+            <p class="fs-5 fw-semibold mb-0">{{ reuniao.setor.nome if reuniao.setor else 'Não informado' }}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="info-group">
+            <span class="text-muted text-uppercase small">Acompanhar até</span>
+            <p class="fs-5 fw-semibold mb-0">{{ reuniao.acompanhar_ate.strftime('%d/%m/%Y') if reuniao.acompanhar_ate else '—' }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h6 class="border-bottom pb-2"><i class="bi bi-person-check me-2"></i>Participantes</h6>
+    {% if participantes %}
+        <ul class="mb-0 ps-3">
+            {% for participante_id, nome in participantes %}
+                <li>{{ nome }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mb-0">Nenhum participante registrado.</p>
+    {% endif %}
+</div>
+
+<div class="mb-4">
+    <h6 class="border-bottom pb-2"><i class="bi bi-list-check me-2"></i>Tópicos</h6>
+    {% if topicos %}
+        <ul class="mb-0 ps-3">
+            {% for topico in topicos %}
+                <li>{{ topico }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mb-0">Nenhum tópico informado.</p>
+    {% endif %}
+</div>
+
+<div>
+    <h6 class="border-bottom pb-2"><i class="bi bi-journal-text me-2"></i>Decisões</h6>
+    {% if reuniao.decisoes %}
+        <div class="border rounded p-3 bg-light editor-content">{{ reuniao.decisoes|sanitize }}</div>
+    {% else %}
+        <p class="text-muted mb-0">Nenhuma decisão registrada.</p>
+    {% endif %}
+</div>

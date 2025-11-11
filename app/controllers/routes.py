@@ -31,6 +31,7 @@ from app.models.tables import (
     Consultoria,
     Setor,
     Tag,
+    ClienteReuniao,
     Inclusao,
     Session,
     SAO_PAULO_TZ,
@@ -90,6 +91,7 @@ from app.forms import (
     NotaDebitoForm,
     CadastroNotaForm,
     PAGAMENTO_CHOICES,
+    ClienteReuniaoForm,
 )
 import os, json, re, secrets, imghdr, time
 import requests
@@ -5604,6 +5606,24 @@ def visualizar_empresa(id):
     # injeta contatos_list na empresa para acesso no template
     empresa.contatos_list = contatos_list
 
+    cliente_reunioes = (
+        ClienteReuniao.query.options(
+            joinedload(ClienteReuniao.setor),
+        )
+        .filter_by(empresa_id=id)
+        .order_by(ClienteReuniao.data.desc(), ClienteReuniao.created_at.desc())
+        .all()
+    )
+    participante_ids: set[int] = set()
+    for reuniao in cliente_reunioes:
+        for participante in reuniao.participantes or []:
+            if isinstance(participante, int):
+                participante_ids.add(participante)
+    reunioes_participantes_map: dict[int, User] = {}
+    if participante_ids:
+        usuarios = User.query.filter(User.id.in_(participante_ids)).all()
+        reunioes_participantes_map = {usuario.id: usuario for usuario in usuarios}
+
     # fiscal_view: garante objeto mesmo quando fiscal é None
     if fiscal is None:
         fiscal_view = SimpleNamespace(
@@ -5641,6 +5661,8 @@ def visualizar_empresa(id):
         administrativo=administrativo,
         financeiro=financeiro,
         notas_fiscais=notas_fiscais,
+        reunioes_cliente=cliente_reunioes,
+        reunioes_participantes_map=reunioes_participantes_map,
         can_access_financeiro=can_access_financeiro,
     )
 
@@ -5880,6 +5902,22 @@ def gerenciar_departamentos(empresa_id):
                             "danger",
                         )
 
+    reunioes_cliente = (
+        ClienteReuniao.query.options(joinedload(ClienteReuniao.setor))
+        .filter_by(empresa_id=empresa_id)
+        .order_by(ClienteReuniao.data.desc(), ClienteReuniao.created_at.desc())
+        .all()
+    )
+    participante_ids: set[int] = set()
+    for reuniao in reunioes_cliente:
+        for participante in reuniao.participantes or []:
+            if isinstance(participante, int):
+                participante_ids.add(participante)
+    reunioes_participantes_map: dict[int, User] = {}
+    if participante_ids:
+        usuarios = User.query.filter(User.id.in_(participante_ids)).all()
+        reunioes_participantes_map = {usuario.id: usuario for usuario in usuarios}
+
     return render_template(
         "empresas/departamentos.html",
         empresa=empresa,
@@ -5895,7 +5933,221 @@ def gerenciar_departamentos(empresa_id):
         financeiro=financeiro,
         notas_fiscais=notas_fiscais,
         can_access_financeiro=can_access_financeiro,
+        reunioes_cliente=reunioes_cliente,
+        reunioes_participantes_map=reunioes_participantes_map,
     )
+
+
+def _populate_cliente_reuniao_form(form: ClienteReuniaoForm) -> None:
+    """Fill dynamic choices for the client meeting form."""
+
+    usuarios = (
+        User.query.filter_by(ativo=True)
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+    form.participantes.choices = [
+        (
+            usuario.id,
+            (usuario.name or usuario.username or f"Usuário {usuario.id}"),
+        )
+        for usuario in usuarios
+    ]
+
+    setores = Setor.query.order_by(Setor.nome.asc()).all()
+    setor_choices = [(0, "Selecione um setor")]
+    setor_choices.extend([(setor.id, setor.nome) for setor in setores])
+    form.setor_id.choices = setor_choices
+    if form.setor_id.data is None:
+        form.setor_id.data = 0
+
+
+def _parse_cliente_reuniao_topicos(payload: str | None) -> list[str]:
+    """Return a sanitized list of meeting topics."""
+
+    if not payload:
+        return []
+    try:
+        data = json.loads(payload)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    topicos: list[str] = []
+    for item in data:
+        if isinstance(item, str):
+            trimmed = item.strip()
+            if trimmed:
+                topicos.append(trimmed[:500])
+    return topicos
+
+
+def _resolve_reuniao_participantes(participante_ids: list[int]) -> list[tuple[int, str]]:
+    """Return participant tuples preserving the original order."""
+
+    ids = [pid for pid in participante_ids if isinstance(pid, int)]
+    if not ids:
+        return []
+    usuarios = User.query.filter(User.id.in_(ids)).all()
+    lookup = {
+        usuario.id: (usuario.name or usuario.username or f"Usuário {usuario.id}")
+        for usuario in usuarios
+    }
+    return [(pid, lookup.get(pid, f"Usuário {pid}")) for pid in ids]
+
+
+@app.route("/empresa/<int:empresa_id>/reunioes-cliente/nova", methods=["GET", "POST"])
+@login_required
+def nova_reuniao_cliente(empresa_id):
+    """Render and process the creation form for client meetings."""
+
+    empresa = Empresa.query.get_or_404(empresa_id)
+    form = ClienteReuniaoForm()
+    _populate_cliente_reuniao_form(form)
+
+    if form.validate_on_submit():
+        topicos = _parse_cliente_reuniao_topicos(form.topicos_json.data)
+        reuniao = ClienteReuniao(
+            empresa_id=empresa.id,
+            data=form.data.data,
+            setor_id=form.setor_id.data or None,
+            participantes=form.participantes.data or [],
+            topicos=topicos,
+            decisoes=sanitize_html(form.decisoes.data or ""),
+            acompanhar_ate=form.acompanhar_ate.data,
+            created_by=current_user.id,
+            updated_by=current_user.id,
+        )
+        db.session.add(reuniao)
+        try:
+            db.session.commit()
+            flash("Reunião registrada com sucesso!", "success")
+            return redirect(url_for("visualizar_empresa", id=empresa.id) + "#reunioes-cliente")
+        except SQLAlchemyError as exc:
+            current_app.logger.exception("Erro ao salvar reunião com cliente: %s", exc)
+            db.session.rollback()
+            flash("Não foi possível salvar a reunião. Tente novamente.", "danger")
+
+    if not form.topicos_json.data:
+        form.topicos_json.data = "[]"
+
+    return render_template(
+        "empresas/reuniao_cliente_form.html",
+        empresa=empresa,
+        form=form,
+        is_edit=False,
+        page_title="Adicionar reunião com cliente",
+    )
+
+
+@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_reuniao_cliente(empresa_id, reuniao_id):
+    """Allow updating an existing client meeting."""
+
+    reuniao = (
+        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        .options(joinedload(ClienteReuniao.setor))
+        .first_or_404()
+    )
+    form = ClienteReuniaoForm(obj=reuniao)
+    _populate_cliente_reuniao_form(form)
+
+    if request.method == "GET":
+        form.participantes.data = reuniao.participantes or []
+        form.setor_id.data = reuniao.setor_id or 0
+        form.topicos_json.data = json.dumps(reuniao.topicos or [])
+        form.decisoes.data = reuniao.decisoes or ""
+    if form.validate_on_submit():
+        topicos = _parse_cliente_reuniao_topicos(form.topicos_json.data)
+        reuniao.data = form.data.data
+        reuniao.setor_id = form.setor_id.data or None
+        reuniao.participantes = form.participantes.data or []
+        reuniao.topicos = topicos
+        reuniao.decisoes = sanitize_html(form.decisoes.data or "")
+        reuniao.acompanhar_ate = form.acompanhar_ate.data
+        reuniao.updated_by = current_user.id
+        try:
+            db.session.commit()
+            flash("Reunião atualizada com sucesso!", "success")
+            return redirect(url_for("visualizar_empresa", id=empresa_id) + "#reunioes-cliente")
+        except SQLAlchemyError as exc:
+            current_app.logger.exception("Erro ao atualizar reunião com cliente: %s", exc)
+            db.session.rollback()
+            flash("Não foi possível atualizar a reunião. Tente novamente.", "danger")
+
+    if not form.topicos_json.data:
+        form.topicos_json.data = "[]"
+
+    return render_template(
+        "empresas/reuniao_cliente_form.html",
+        empresa=reuniao.empresa,
+        form=form,
+        is_edit=True,
+        reuniao=reuniao,
+        page_title="Editar reunião com cliente",
+    )
+
+
+@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>")
+@login_required
+def visualizar_reuniao_cliente(empresa_id, reuniao_id):
+    """Display a single client meeting with all recorded details."""
+
+    reuniao = (
+        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        .options(joinedload(ClienteReuniao.setor))
+        .first_or_404()
+    )
+    participantes = _resolve_reuniao_participantes(reuniao.participantes or [])
+    return render_template(
+        "empresas/reuniao_cliente_visualizar.html",
+        reuniao=reuniao,
+        empresa=reuniao.empresa,
+        participantes=participantes,
+        topicos=reuniao.topicos or [],
+    )
+
+
+@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/detalhes")
+@login_required
+def reuniao_cliente_detalhes_modal(empresa_id, reuniao_id):
+    """Return rendered HTML snippet for modal visualization."""
+
+    reuniao = (
+        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        .options(joinedload(ClienteReuniao.setor))
+        .first_or_404()
+    )
+    participantes = _resolve_reuniao_participantes(reuniao.participantes or [])
+    html = render_template(
+        "empresas/partials/reuniao_cliente_detalhes_content.html",
+        reuniao=reuniao,
+        empresa=reuniao.empresa,
+        participantes=participantes,
+        topicos=reuniao.topicos or [],
+    )
+    return jsonify(
+        {
+            "title": f"Reunião com {reuniao.empresa.nome_empresa}",
+            "html": html,
+        }
+    )
+
+
+@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/excluir", methods=["POST"])
+@login_required
+def excluir_reuniao_cliente(empresa_id, reuniao_id):
+    """Delete a client meeting from the log."""
+
+    reuniao = ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id).first_or_404()
+    db.session.delete(reuniao)
+    try:
+        db.session.commit()
+        flash("Reunião excluída com sucesso.", "success")
+    except SQLAlchemyError as exc:
+        current_app.logger.exception("Erro ao excluir reunião com cliente: %s", exc)
+        db.session.rollback()
+        flash("Não foi possível excluir a reunião. Tente novamente.", "danger")
+    return redirect(url_for("visualizar_empresa", id=empresa_id) + "#reunioes-cliente")
 
 @app.route("/relatorios")
 @admin_required

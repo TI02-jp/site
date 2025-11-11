@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Reunião com Cliente{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 960px;">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Reunião com {{ empresa.nome_empresa }}</h2>
+                    <small class="opacity-75">Registrada em {{ reuniao.created_at.strftime('%d/%m/%Y %H:%M') if reuniao.created_at else '-' }}</small>
+                </div>
+                <div class="d-flex gap-2 mt-3 mt-md-0">
+                    <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}#reunioes-cliente" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                    </a>
+                    <a href="{{ url_for('editar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="btn btn-light btn-sm text-primary fw-semibold">
+                        <i class="bi bi-pencil me-1"></i>Editar
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            {% include "empresas/partials/reuniao_cliente_detalhes_content.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

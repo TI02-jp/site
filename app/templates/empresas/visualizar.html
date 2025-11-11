@@ -74,6 +74,7 @@
                         <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
                         <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                         <a href="#notas-fiscais" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt-cutoff me-1"></i>Notas Fiscais</a>
+                        <a href="#reunioes-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-people-fill me-1"></i>Reuniões</a>
                         {% if can_access_financeiro %}
                         <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
                         {% endif %}
@@ -715,6 +716,111 @@
     {% endif %}
     </div>
 
+    <div id="reunioes-cliente" class="section-anchor">
+        <div class="card shadow-lg mb-5">
+            <div class="card-header bg-primary text-white py-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Reuniões com Cliente</h3>
+                    <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                        <a href="{{ url_for('nova_reuniao_cliente', empresa_id=empresa.id) }}" class="btn btn-light btn-sm text-primary fw-semibold">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar reunião
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                {% if reunioes_cliente %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Setor</th>
+                                    <th>Participantes</th>
+                                    <th>Tópicos levantados</th>
+                                    <th>Acompanhar até</th>
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reuniao in reunioes_cliente %}
+                                <tr>
+                                    <td>{{ reuniao.data.strftime('%d/%m/%Y') if reuniao.data else '-' }}</td>
+                                    <td>{{ reuniao.setor.nome if reuniao.setor else 'Não informado' }}</td>
+                                    <td>
+                                        {% if reuniao.participantes %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% set total_participantes = reuniao.participantes|length %}
+                            {% for participante_id in reuniao.participantes[:3] %}
+                                {% set participante = reunioes_participantes_map.get(participante_id) %}
+                                {% set nome_participante = participante.name or participante.username or ('Usuário ' ~ participante_id) if participante else 'Usuário #' ~ participante_id %}
+                                <span class="participant-chip">
+                                    <i class="bi bi-person-badge"></i>{{ nome_participante }}
+                                </span>
+                            {% endfor %}
+                            {% if total_participantes > 3 %}
+                                <span class="participant-extra">+ {{ total_participantes - 3 }} outros</span>
+                            {% endif %}
+                        </div>
+                                        {% else %}
+                                            <span class="text-muted">Sem participantes</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if reuniao.topicos %}
+                                        <div class="topics-stack">
+                                            {% for topico in reuniao.topicos[:3] %}
+                                                <div class="topics-stack__item">
+                                                    <i class="bi bi-chat-dots"></i>
+                                                    <span>{{ topico }}</span>
+                                                </div>
+                                            {% endfor %}
+                                            {% if reuniao.topicos|length > 3 %}
+                                                <span class="text-muted small ms-4">+ {{ reuniao.topicos|length - 3 }} tópico(s)</span>
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                            <span class="text-muted">Nenhum tópico registrado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ reuniao.acompanhar_ate.strftime('%d/%m/%Y') if reuniao.acompanhar_ate else '—' }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ url_for('visualizar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}"
+                                               class="btn btn-outline-secondary btn-sm btn-reuniao-modal"
+                                               title="Visualizar"
+                                               data-reuniao-modal="{{ url_for('reuniao_cliente_detalhes_modal', empresa_id=empresa.id, reuniao_id=reuniao.id) }}">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('editar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="btn btn-outline-primary btn-sm" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('excluir_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir esta reunião?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Excluir">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-square-text fs-1 mb-3"></i>
+                        <p class="mb-2">Ainda não há reuniões registradas para este cliente.</p>
+                        <a href="{{ url_for('nova_reuniao_cliente', empresa_id=empresa.id) }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar reunião
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     {% if can_access_financeiro %}
     <div id="financeiro" class="section-anchor">
     {% if financeiro %}
@@ -803,6 +909,68 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Modal para detalhes de reunião com cliente -->
+<div class="modal fade" id="reuniaoClienteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="reuniaoClienteModalTitle"><i class="bi bi-people me-2"></i>Detalhes da reunião</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" id="reuniaoClienteModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Carregando detalhes da reunião...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .participant-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background-color: #eef4ff;
+        color: #0b3b8c;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: none;
+    }
+    .participant-chip i {
+        font-size: 0.95rem;
+    }
+    .participant-extra {
+        font-size: 0.78rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    .topics-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        text-transform: none;
+    }
+    .topics-stack__item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.4rem;
+        font-size: 0.9rem;
+    }
+    .topics-stack__item i {
+        color: #0d6efd;
+        margin-top: 0.1rem;
+    }
+    </style>
 </div>
 {% endblock %}
 
@@ -986,6 +1154,52 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     setupProcedureModal();
+
+    const reuniaoModalEl = document.getElementById('reuniaoClienteModal');
+    if (reuniaoModalEl && typeof bootstrap !== 'undefined') {
+        const reuniaoModal = new bootstrap.Modal(reuniaoModalEl);
+        const bodyEl = document.getElementById('reuniaoClienteModalBody');
+        const titleEl = document.getElementById('reuniaoClienteModalTitle');
+        const loadingTemplate = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-3 text-muted">Carregando detalhes da reunião...</p>
+            </div>`;
+        const errorTemplate = `
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>Não foi possível carregar os detalhes desta reunião.
+            </div>`;
+
+        document.querySelectorAll('.btn-reuniao-modal[data-reuniao-modal]').forEach((btn) => {
+            btn.addEventListener('click', async (event) => {
+                event.preventDefault();
+                const url = btn.getAttribute('data-reuniao-modal');
+                if (!url) {
+                    window.location.href = btn.getAttribute('href');
+                    return;
+                }
+                bodyEl.innerHTML = loadingTemplate;
+                titleEl.innerHTML = '<i class="bi bi-people me-2"></i>Detalhes da reunião';
+                reuniaoModal.show();
+                try {
+                    const response = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!response.ok) throw new Error('Erro ao carregar');
+                    const data = await response.json();
+                    if (data.title) {
+                        titleEl.innerHTML = `<i class="bi bi-people me-2"></i>${data.title}`;
+                    }
+                    bodyEl.innerHTML = data.html || errorTemplate;
+                } catch (error) {
+                    console.error('Erro ao carregar reunião:', error);
+                    bodyEl.innerHTML = errorTemplate;
+                }
+            });
+        });
+    }
 
     // Highlighting da seção ativa durante scroll
     const navLinks = document.querySelectorAll('.company-nav .btn');
