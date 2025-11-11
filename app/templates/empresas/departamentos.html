@@ -22,7 +22,7 @@
                             <strong>{{ empresa.nome_empresa }}</strong> - Código: {{ empresa.codigo_empresa }}
                         </span>
                     </div>
-                    <div class="d-flex justify-content-center flex-wrap gap-2">
+                    <div class="company-nav-links d-flex justify-content-center flex-wrap gap-2">
                         <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
                         <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
                         <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
@@ -75,6 +75,81 @@
     .topics-stack__item i {
         color: #0d6efd;
         margin-top: 0.08rem;
+    }
+    .company-nav-links {
+        gap: 0.45rem;
+    }
+    .section-anchor .card-body {
+        padding: 2.5rem;
+    }
+    .section-header-flex {
+        gap: 0.75rem;
+    }
+    .meetings-table tbody td[data-label] {
+        vertical-align: top;
+    }
+    @media (max-width: 992px) {
+        .section-anchor .card-body {
+            padding: 1.75rem 1.25rem;
+        }
+    }
+    @media (max-width: 768px) {
+        .company-nav-links {
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            justify-content: flex-start !important;
+            padding-bottom: 0.5rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        .company-nav-links .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+    }
+    @media (max-width: 576px) {
+        .dept-submit {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .dept-submit .btn {
+            width: 100%;
+        }
+        .section-header-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        .section-header-flex .btn {
+            width: 100%;
+        }
+    }
+    @media (max-width: 767.98px) {
+        .meetings-table thead {
+            display: none;
+        }
+        .meetings-table tbody tr {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            background-color: #fff;
+        }
+        .meetings-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            border: none;
+            padding: 0.35rem 0;
+        }
+        .meetings-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #0b288b;
+        }
+        .meetings-table tbody td.text-center {
+            justify-content: center;
+        }
     }
     </style>
 
@@ -201,7 +276,7 @@
                     </div>
                 </div>
                 
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Fiscal</button>
                 </div>
             </form>
@@ -323,7 +398,7 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Contábil</button>
                 </div>
             </form>
@@ -388,7 +463,7 @@
                 </div>
 
                 <!-- Botão de envio -->
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-blue px-5">
                         <i class="bi bi-check-lg me-2"></i>Salvar Departamento Pessoal
                     </button>
@@ -424,7 +499,7 @@
                         <input type="file" id="image-input-administrativo" accept="image/*" style="display: none;">
                     </div>
                 </div>
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-orange px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Administrativo</button>
                 </div>
             </form>
@@ -457,7 +532,7 @@
                         <input type="file" id="image-input-notas" accept="image/*" style="display: none;">
                     </div>
                 </div>
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Notas Fiscais</button>
                 </div>
             </form>
@@ -467,7 +542,7 @@
 
     <div class="card shadow-lg mb-5 section-anchor w-100" id="reunioes-cliente">
         <div class="card-header bg-primary text-white py-3">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div class="section-header-flex d-flex justify-content-between align-items-center flex-wrap">
                 <h3 class="mb-0 fw-semibold"><i class="bi bi-people-fill me-2"></i>Departamento Reuniões com Cliente</h3>
                 <a href="{{ url_for('nova_reuniao_cliente', empresa_id=empresa.id) }}" class="btn btn-light btn-sm text-primary fw-semibold mt-2 mt-md-0">
                     <i class="bi bi-plus-circle me-1"></i>Adicionar reunião
@@ -477,7 +552,7 @@
         <div class="card-body p-4">
             {% if reunioes_cliente %}
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                    <table class="table align-middle mb-0 meetings-table">
                         <thead class="table-light">
                             <tr>
                                 <th>Data</th>
@@ -491,9 +566,9 @@
                         <tbody>
                             {% for reuniao in reunioes_cliente %}
                             <tr>
-                                <td>{{ reuniao.data.strftime('%d/%m/%Y') if reuniao.data else '-' }}</td>
-                                <td>{{ reuniao.setor.nome if reuniao.setor else 'Não informado' }}</td>
-                                <td>
+                                <td data-label="Data">{{ reuniao.data.strftime('%d/%m/%Y') if reuniao.data else '-' }}</td>
+                                <td data-label="Setor">{{ reuniao.setor.nome if reuniao.setor else 'Não informado' }}</td>
+                                <td data-label="Participantes">
                                     {% if reuniao.participantes %}
                                         <div class="d-flex flex-wrap gap-1">
                                             {% set total_participantes = reuniao.participantes|length %}
@@ -512,7 +587,7 @@
                                         <span class="text-muted">Sem participantes</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td data-label="Tópicos">
                                     {% if reuniao.topicos %}
                                         <div class="topics-stack">
                                             {% for topico in reuniao.topicos[:3] %}
@@ -529,8 +604,8 @@
                                         <span class="text-muted">Nenhum tópico registrado</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ reuniao.acompanhar_ate.strftime('%d/%m/%Y') if reuniao.acompanhar_ate else '—' }}</td>
-                                <td class="text-center">
+                                <td data-label="Acompanhar até">{{ reuniao.acompanhar_ate.strftime('%d/%m/%Y') if reuniao.acompanhar_ate else '—' }}</td>
+                                <td class="text-center" data-label="Ações">
                                     <div class="btn-group btn-group-sm" role="group">
                                         <a href="{{ url_for('visualizar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}"
                                            class="btn btn-outline-secondary btn-sm btn-reuniao-modal"
@@ -581,7 +656,7 @@
                         <input type="file" id="image-input-financeiro" accept="image/*" style="display: none;">
                     </div>
                 </div>
-                <div class="d-flex justify-content-center mt-4 pt-3 border-top">
+                <div class="dept-submit d-flex justify-content-center mt-4 pt-3 border-top">
                     <button type="submit" class="btn btn-dept-blue px-5"><i class="bi bi-check-lg me-2"></i>Salvar Departamento Financeiro</button>
                 </div>
             </form>
