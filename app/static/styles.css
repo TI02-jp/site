@@ -2880,7 +2880,7 @@ Breakpoints Intermediários para Responsividade
 @media (max-width: 1024px) {
     :root {
         --sidebar-width: 180px;
-        --font-base: 0.9rem;
+        --font-base: 0.81rem; /* Mantém o mesmo ~10% de redução nas telas menores */
     }
 
     .main-content {
