@@ -465,19 +465,22 @@ def fetch_raw_events():
                 _fetch_event = None
 
 
-def invalidate_calendar_cache():
-    """Soft invalidate: shorten TTL instead of deleting cache completely.
+def invalidate_calendar_cache(force_refresh: bool = False):
+    """Soft invalidate the calendar cache, optionally forcing a refresh.
 
-    This prevents cache stampede - multiple requests won't hit the API simultaneously.
-    Old data is still available for 30 seconds while being refreshed.
+    When ``force_refresh`` is False we keep the existing data for 30s so in-flight
+    requests can still iterate while a fresh fetch runs. When True we drop both the
+    primary and stale caches to ensure no deleted event can be snapped back from memory.
     """
-    # Get current cache
     cached_events = calendar_cache.get("raw_calendar_events")
     if cached_events is not None:
-        # Shorten TTL to 30 seconds instead of deleting
-        # This allows in-flight requests to complete without stampeding the API
-        calendar_cache.set("raw_calendar_events", cached_events, ttl=30)
-    # Don't touch the stale cache - it serves as fallback
+        if force_refresh:
+            calendar_cache.delete("raw_calendar_events")
+        else:
+            # Shorten TTL to 30 seconds instead of deleting the entry entirely.
+            calendar_cache.set("raw_calendar_events", cached_events, ttl=30)
+    if force_refresh:
+        calendar_cache.delete("raw_calendar_events_stale")
 
     # Invalidate combined_events cache for all users
     # Since SimpleCache doesn't support pattern matching, we increment a version counter
@@ -1371,7 +1374,7 @@ def change_meeting_status(
         # Don't rollback DB for non-critical sync errors
 
     # Step 3: Invalidate cache after successful DB update
-    invalidate_calendar_cache()
+    invalidate_calendar_cache(force_refresh=True)
 
     # Add warning to event_data if Google sync failed
     if google_sync_failed:
@@ -1400,7 +1403,7 @@ def delete_meeting(meeting: Reuniao) -> bool:
     db.session.commit()
 
     # Invalidar cache após deletar reunião
-    invalidate_calendar_cache()
+    invalidate_calendar_cache(force_refresh=True)
 
     return True
 
