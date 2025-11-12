@@ -108,6 +108,7 @@ from google.auth.transport.requests import Request
 from app.services.cnpj import consultar_cnpj
 from app.services.courses import CourseStatus, get_courses_overview
 from app.services.google_calendar import get_calendar_timezone
+from app.services.calendar_cache import calendar_cache
 from app.services.meeting_room import (
     populate_participants_choices,
     fetch_raw_events,
@@ -5453,13 +5454,30 @@ def api_cnpj(cnpj):
 @limiter.limit("30 per minute")  # Limite de 30 req/min por IP (1 a cada 2s)
 def api_reunioes():
     """Return meetings with up-to-date status as JSON."""
-    raw_events = fetch_raw_events()
+    raw_events = []
+    fallback = None
+    try:
+        raw_events = fetch_raw_events()
+    except Exception:
+        current_app.logger.exception("Google Calendar fetch failed; using cached data fallback")
+        raw_events = calendar_cache.get("raw_calendar_events")
+        if raw_events is not None:
+            fallback = "primary-cache"
+        else:
+            raw_events = calendar_cache.get("raw_calendar_events_stale")
+            if raw_events is not None:
+                fallback = "stale-cache"
+            else:
+                raw_events = []
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
     events = combine_events(
         raw_events, now, current_user.id, is_user_admin(current_user)
     )
-    return jsonify(events)
+    response = jsonify(events)
+    if fallback:
+        response.headers["X-Calendar-Fallback"] = fallback
+    return response
 
 @app.route("/api/calendario-eventos")
 @login_required
