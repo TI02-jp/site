@@ -27,6 +27,8 @@
         flex: 1 1 auto;
         min-height: 0;
         display: flex;
+        max-height: calc(100vh - 9rem);
+        overflow-y: auto;
     }
     .agenda-calendar-body #calendar {
         flex: 1 1 auto;
@@ -35,7 +37,7 @@
     .modal-body { max-height: none; overflow-y: visible; }
     .participant-list { max-height: 200px; overflow-y: auto; }
     .fc .fc-scroller {
-        overflow: hidden !important;
+        overflow-y: auto !important;
     }
     .fc .fc-daygrid-event-harness { margin-bottom: 0; }
     .fc .fc-daygrid-event,
