@@ -3196,9 +3196,23 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
     }
 
 
+def _prune_old_notifications(retention_days: int = 60) -> int:
+    """Remove notifications older than the retention window."""
+
+    threshold = datetime.utcnow() - timedelta(days=retention_days)
+    deleted = (
+        TaskNotification.query.filter(TaskNotification.created_at < threshold)
+        .delete(synchronize_session=False)
+    )
+    if deleted:
+        db.session.commit()
+    return deleted
+
+
 def _get_user_notification_items(limit: int | None = 20):
     """Return serialized notifications and unread totals for the current user."""
 
+    _prune_old_notifications()
     notifications_query = (
         TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
         .options(
