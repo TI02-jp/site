@@ -5,57 +5,222 @@
 {% block extra_css %}
 <style>
   .notifications-header {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.16), rgba(13, 110, 253, 0.04));
+    border-radius: 1.25rem;
+    border: 1px solid rgba(13, 110, 253, 0.2);
+    padding: 1.75rem;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  }
+
+  .notifications-header__text h1 {
+    color: #0b3b8c;
+  }
+
+  .notifications-header__text p {
+    color: rgba(15, 23, 42, 0.72);
+  }
+
+  .notifications-header__cta {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
-  .notifications-header .btn {
-    padding: 0.375rem 0.75rem;
-    font-size: var(--font-base);
+  .notification-summary {
+    margin-top: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.85rem;
   }
 
-  @media (min-width: 768px) {
-    .notifications-header {
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 1rem;
-    }
+  .notification-summary__card {
+    border-radius: 1rem;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 1rem 1.25rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  }
+
+  .notification-summary__card small {
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .notification-summary__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    background: rgba(13, 110, 253, 0.08);
+  }
+
+  .notification-summary__card.text-success .notification-summary__icon {
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .notification-summary__card.text-warning .notification-summary__icon {
+    background: rgba(251, 191, 36, 0.18);
+  }
+
+  .notification-summary__card p {
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.72);
+    margin: 0;
   }
 
   .notification-card {
     border: none;
-    border-radius: 1rem;
-    overflow: hidden;
+    background: transparent;
+    padding: 0;
+  }
+
+  .notification-card .list-group {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.85rem;
   }
 
   .notification-card .list-group-item {
-    padding: 1.25rem;
+    border: none;
+    border-radius: 1.1rem;
+    padding: 1.5rem;
+    background: #fff;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .notification-card .list-group-item,
-  .notification-card .list-group-item .flex-grow-1,
-  .notification-card .list-group-item .d-flex {
-    text-align: left;
+  .notification-card .list-group-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
   }
 
-  .notification-actions .btn {
-    padding: 0.35rem 0.75rem;
-    font-size: var(--font-base);
+  .notification-row {
+    position: relative;
   }
 
   .notification-row-unread {
-    background: #fff7f0;
+    border: 1px solid rgba(13, 110, 253, 0.2);
+    background: linear-gradient(180deg, rgba(13, 110, 253, 0.08), #fff);
   }
 
-  .notification-row-unread .fw-semibold {
-    color: var(--primary);
+  .notification-icon {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: 1rem;
+    background: rgba(13, 110, 253, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0a58ca;
+    font-size: 1.4rem;
+  }
+
+  .notification-content__title {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .notification-pill {
+    border-radius: 999px;
+    padding: 0.25rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .notification-pill--new {
+    background: rgba(13, 110, 253, 0.15);
+    color: #0a58ca;
+  }
+
+  .notification-pill--read {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  .notification-type-badge {
+    border-radius: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+  }
+
+  .notification-type-badge--announcement {
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+    border-color: rgba(13, 110, 253, 0.3);
+  }
+
+  .notification-type-badge--task {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0c85c2;
+    border-color: rgba(14, 165, 233, 0.25);
+  }
+
+  .notification-type-badge--task-response {
+    background: rgba(16, 185, 129, 0.15);
+    color: #0f9d58;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .notification-type-badge--task-status {
+    background: rgba(251, 191, 36, 0.16);
+    color: #ca8a04;
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+
+  .notification-row-unread .notification-content__title {
+    color: #0d6efd;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .notification-row-unread::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid rgba(13, 110, 253, 0.25);
+    pointer-events: none;
+  }
+
+  .notification-actions .btn {
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+  }
+
+  .notification-actions .badge {
+    border-radius: 999px;
+    font-size: 0.85rem;
   }
 
   .notification-empty-state {
-    padding: 3rem 1.5rem;
+    padding: 4rem 2rem;
+    background: #fff;
+    border-radius: 1.25rem;
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
+  }
+
+  @media (max-width: 576px) {
+    .notification-actions {
+      width: 100%;
+    }
   }
 </style>
 {% endblock %}
@@ -66,34 +231,94 @@
 
 {% block content %}
 <div class="container py-4">
+  {% set total_notifications = notifications|length %}
+  {% set read_total = total_notifications - unread_total if total_notifications > unread_total else 0 %}
   <div class="notifications-header mb-4">
-    <div class="text-start">
-      <h1 class="h3 mb-1">Notificações</h1>
-      <p class="text-muted mb-0">Acompanhe as tarefas e avisos atribuídos para você.</p>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+      <div class="notifications-header__text">
+        <h1 class="h3 mb-1">Notificações</h1>
+        <p class="text-muted mb-0">Acompanhe as tarefas e avisos atribuídos para você.</p>
+      </div>
+      <div class="notifications-header__cta">
+        {% if current_user.role == 'admin' %}
+        <button
+          class="btn btn-sm btn-outline-primary"
+          id="markAllNotifications"
+          type="button"
+          {% if unread_total == 0 %}disabled{% endif %}
+        >
+          Marcar todas como lidas
+        </button>
+        {% endif %}
+        <span
+          class="badge bg-white text-primary border border-primary border-opacity-25 fw-semibold"
+          data-notifications-new-badge
+        >
+          {{ unread_total }} novas
+        </span>
+      </div>
     </div>
-    {% if current_user.role == 'admin' %}
-    <button
-      class="btn btn-sm btn-outline-primary"
-      id="markAllNotifications"
-      type="button"
-      {% if unread_total == 0 %}disabled{% endif %}
-    >
-      Marcar todas como lidas
-    </button>
-    {% endif %}
+      <div class="notification-summary">
+        <div class="notification-summary__card">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="notification-summary__icon text-primary">
+              <i class="bi bi-bell-fill"></i>
+            </span>
+            <div>
+              <small>Pendentes</small>
+              <div class="h4 mb-0 fw-semibold" data-notifications-pending>{{ unread_total }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="notification-summary__card text-success">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="notification-summary__icon text-success">
+              <i class="bi bi-check-circle-fill"></i>
+            </span>
+            <div>
+              <small>Lidas</small>
+              <div class="h4 mb-0 fw-semibold" data-notifications-read>{{ read_total }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
+
+  {% set notification_type_labels = {
+    'announcement': 'Comunicado',
+    'task': 'Tarefa',
+    'task_response': 'Resposta',
+    'task_status': 'Status'
+  } %}
 
   {% if notifications %}
   <div class="card shadow-sm notification-card">
     <ul class="list-group list-group-flush" id="notificationsList">
       {% for notification in notifications %}
       <li
-        class="list-group-item d-flex flex-column flex-lg-row gap-3 align-items-lg-start notification-row{% if not notification.is_read %} notification-row-unread{% endif %}"
+        class="list-group-item notification-row d-flex flex-column gap-3{% if not notification.is_read %} notification-row-unread{% endif %}"
         data-id="{{ notification.id }}"
+        data-notification-type="{{ notification.type or 'task' }}"
       >
-        <div class="flex-grow-1">
-          <div class="fw-semibold">{{ notification.message }}</div>
-          <div class="text-muted small">{{ notification.created_at_display }}</div>
+        {% set type_key = notification.type or 'task' %}
+        <div class="d-flex align-items-start gap-3">
+          <div class="notification-icon">
+            <i class="bi bi-bell-fill"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <div class="notification-content__title fw-semibold mb-1">{{ notification.message }}</div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="notification-type-badge notification-type-badge--{{ type_key|replace('_','-') }}">
+                  {{ notification_type_labels.get(type_key, 'Tarefa') }}
+                </span>
+                {% if not notification.is_read %}
+                <span class="notification-pill notification-pill--new">Novo</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="text-muted small">{{ notification.created_at_display }}</div>
+          </div>
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 align-items-start notification-actions">
           {% if notification.url %}
@@ -106,7 +331,7 @@
             Marcar como lida
           </button>
           {% else %}
-          <span class="badge bg-light text-muted">Lida</span>
+          <span class="notification-pill notification-pill--read">Lida</span>
           {% endif %}
         </div>
       </li>
@@ -131,6 +356,9 @@
     const list = document.getElementById('notificationsList');
     const markAllBtn = document.getElementById('markAllNotifications');
     const csrfToken = window.csrfToken || '';
+    const summaryPendingEl = document.querySelector('[data-notifications-pending]');
+    const summaryReadEl = document.querySelector('[data-notifications-read]');
+    const newBadgeEl = document.querySelector('[data-notifications-new-badge]');
 
     function updateNavBadge(unread) {
       const badge = document.querySelector('[data-notifications-badge]');
@@ -182,6 +410,25 @@
         });
     }
 
+    function updateSummaryCounts(unread) {
+      let totalCount = 0;
+      if (list) {
+        totalCount = list.querySelectorAll('.notification-row').length;
+      }
+
+      const readCount = Math.max(totalCount - unread, 0);
+
+      if (summaryPendingEl) {
+        summaryPendingEl.textContent = unread;
+      }
+      if (summaryReadEl) {
+        summaryReadEl.textContent = readCount;
+      }
+      if (newBadgeEl) {
+        newBadgeEl.textContent = `${unread} novas`;
+      }
+    }
+
     function handleUnreadState() {
       if (!list) {
         return;
@@ -192,6 +439,7 @@
         markAllBtn.disabled = unreadCount === 0;
       }
       updateNavBadge(unreadCount);
+      updateSummaryCounts(unreadCount);
     }
 
     if (list) {
