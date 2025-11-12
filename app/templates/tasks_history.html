@@ -10,34 +10,274 @@
 {% include 'sidebar_home.html' %}
 {% endblock %}
 
+{% set priority_labels = {"low": "Baixa", "medium": "Média", "high": "Alta"} %}
+{% macro history_url(to_me, by_me, only_flag) -%}
+  {%- if tag -%}
+    {{ url_for('tasks_history', tag_id=tag.id, assigned_to_me=to_me, assigned_by_me=by_me, only_me=only_flag) }}
+  {%- else -%}
+    {{ url_for('tasks_history', assigned_to_me=to_me, assigned_by_me=by_me, only_me=only_flag) }}
+  {%- endif -%}
+{%- endmacro %}
+{% set conversation_totals = namespace(total=0, unread=0) %}
+{% for task in tasks %}
+  {% if task.conversation_summary %}
+    {% set conversation_totals.total = conversation_totals.total + (task.conversation_summary.total_responses or 0) %}
+    {% set conversation_totals.unread = conversation_totals.unread + (task.conversation_summary.unread_count or 0) %}
+  {% endif %}
+{% endfor %}
+
 {% block content %}
-<section class="kanban" data-current-user="{{ current_user.id }}">
-  <div class="history-header">
-    <h2><i class="bi bi-archive"></i>Histórico{% if tag %} - {{ tag.nome }}{% endif %}</h2>
-    <div>
+<section class="kanban task-history" data-current-user="{{ current_user.id }}">
+  <header class="history-header">
+    <div class="history-header__titles">
+      <p class="history-eyebrow">Arquivo de tarefas concluídas</p>
+      <h2><i class="bi bi-archive"></i>Histórico{% if tag %} · {{ tag.nome }}{% endif %}</h2>
+      <p class="history-subtitle">
+        Acompanhe tarefas concluídas, visualize detalhes sem sair desta tela e acesse rapidamente as conversas.
+      </p>
+    </div>
+    <div class="history-actions">
       {% if tag %}
-      <a href="{{ url_for('tasks_sector', tag_id=tag.id, assigned_to_me=1 if assigned_to_me else None) }}" class="btn-history">Voltar</a>
+      <a href="{{ url_for('tasks_sector', tag_id=tag.id, assigned_to_me=1 if assigned_to_me else None) }}" class="btn-history">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
       {% elif only_me %}
-      <a href="{{ url_for('tasks_overview_personal') }}" class="btn-history">Voltar</a>
+      <a href="{{ url_for('tasks_overview_personal') }}" class="btn-history">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
       {% else %}
-      <a href="{{ url_for('tasks_overview', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">Voltar</a>
+      <a href="{{ url_for('tasks_overview', assigned_by_me=1 if assigned_by_me else None) }}" class="btn-history">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
       {% endif %}
     </div>
+  </header>
+
+  <div class="history-summary">
+    <div class="history-summary__card">
+      <span class="label">Visão atual</span>
+      <strong>{{ tag.nome if tag else 'Todos os setores acessíveis' }}</strong>
+    </div>
+    <div class="history-summary__card">
+      <span class="label">Total listado</span>
+      <strong>{{ tasks|length }} tarefas</strong>
+    </div>
+    <div class="history-summary__card">
+      <span class="label">Conversas</span>
+      <strong>{{ conversation_totals.total }} respostas</strong>
+      <span class="helper">{{ conversation_totals.unread }} pendentes</span>
+    </div>
   </div>
-  <ul class="history-list">
+
+  <div class="history-filters">
+    <button type="button" class="history-filter-pill {{ 'is-active' if assigned_to_me }}" data-filter-link="{{ history_url(None if assigned_to_me else 1, 1 if assigned_by_me else None, 1 if only_me else None) }}">
+      <i class="bi bi-person-check"></i>
+      Responsável por mim
+    </button>
+    <button type="button" class="history-filter-pill {{ 'is-active' if assigned_by_me }}" data-filter-link="{{ history_url(1 if assigned_to_me else None, None if assigned_by_me else 1, 1 if only_me else None) }}">
+      <i class="bi bi-person-plus"></i>
+      Criadas por mim
+    </button>
+    <button type="button" class="history-filter-pill {{ 'is-active' if only_me }}" data-filter-link="{{ history_url(1 if assigned_to_me else None, 1 if assigned_by_me else None, None if only_me else 1) }}">
+      <i class="bi bi-shield-lock"></i>
+      Somente privadas
+    </button>
+  </div>
+
+  <div class="history-grid">
     {% for task in tasks if not task.is_private or task.created_by == current_user.id %}
-    {% set tag_label = 'Para Mim' if task.is_private and task.created_by == current_user.id else task.tag.nome %}
-    <li class="history-item">
-      <span class="title">{{ task.title }}</span>
-      <span class="meta">{{ tag_label }}{% if task.completed_at %} - {{ task.completed_at.strftime('%d/%m/%Y') }}{% endif %}</span>
-      <a href="{{ url_for('tasks_view', task_id=task.id) }}" class="btn-view">Visualizar</a>
-    </li>
+    {% set tag_label = 'Para mim' if task.is_private and task.created_by == current_user.id else task.tag.nome %}
+    {% set completed_display = task.completed_at.strftime('%d/%m/%Y %H:%M') if task.completed_at else 'Sem registro' %}
+    {% set created_display = task.created_at.strftime('%d/%m/%Y %H:%M') if task.created_at else 'Sem registro' %}
+    {% set due_display = task.due_date.strftime('%d/%m/%Y') if task.due_date else 'Sem prazo' %}
+    {% set priority_display = priority_labels.get(task.priority.value, 'Não informada') if task.priority else 'Não informada' %}
+    {% set convo = task.conversation_summary %}
+    {% set modal_payload = {
+      "title": task.title,
+      "tag": tag_label,
+      "description": task.description or '',
+      "assignee": task.assignee.name if task.assignee else 'Sem responsável',
+      "creator": task.creator.name if task.creator else 'Não informado',
+      "finisher": task.finisher.name if task.finisher else 'Não informado',
+      "completed_at": completed_display,
+      "created_at": created_display,
+      "due_date": due_display,
+      "priority": priority_display,
+      "follow_ups": task.follow_up_names,
+      "conversation": {
+        "total": convo.total_responses if convo else 0,
+        "unread": convo.unread_count if convo else 0
+      },
+      "view_url": url_for('tasks_view', task_id=task.id)
+    } %}
+    <article class="history-card">
+      <div class="history-card__header">
+        <div>
+          <span class="history-card__tag">{{ tag_label }}</span>
+          <h3>{{ task.title }}</h3>
+        </div>
+        <div class="history-card__actions">
+          <button type="button"
+                  class="history-card__open"
+                  data-task-modal='{{ modal_payload|tojson }}'>
+            <i class="bi bi-eye"></i>
+            Visualizar
+          </button>
+          <a href="{{ url_for('tasks_view', task_id=task.id) }}" class="history-card__external" title="Abrir em nova página" target="_blank" rel="noopener">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+      </div>
+      <div class="history-card__meta">
+        <div>
+          <span class="label">Concluída em</span>
+          <strong>{{ completed_display }}</strong>
+        </div>
+        <div>
+          <span class="label">Responsável</span>
+          <strong>{{ task.assignee.name if task.assignee else 'Sem responsável' }}</strong>
+        </div>
+        <div>
+          <span class="label">Prioridade</span>
+          <strong>{{ priority_display }}</strong>
+        </div>
+      </div>
+      <p class="history-card__excerpt">
+        {{ task.description[:240] ~ ('...' if task.description and task.description|length > 240 else '') if task.description else 'Nenhuma descrição registrada.' }}
+      </p>
+      <div class="history-card__footer">
+        <div class="history-card__timeline">
+          <span><i class="bi bi-flag"></i> Criada {{ created_display }}</span>
+          <span><i class="bi bi-calendar-event"></i> Prazo {{ due_display }}</span>
+          <span><i class="bi bi-person-square"></i> Criada por {{ task.creator.name if task.creator else 'Não informado' }}</span>
+        </div>
+        <div class="history-card__conversation">
+          <span><i class="bi bi-chat-dots"></i> {{ (convo.total_responses if convo else 0) }} respostas</span>
+          {% if convo and convo.unread_count %}
+          <span class="history-card__badge">{{ convo.unread_count }} pendentes</span>
+          {% endif %}
+        </div>
+      </div>
+    </article>
     {% else %}
-    <li class="empty">Nenhuma tarefa.</li>
+    <div class="history-empty">
+      <i class="bi bi-inboxes"></i>
+      <p>Nenhuma tarefa encontrada para este filtro.</p>
+    </div>
     {% endfor %}
-  </ul>
-  
-{% include "tasks_responses_panel.html" %}
+  </div>
+
+  <div class="modal fade" id="taskHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <div>
+            <p class="modal-eyebrow mb-1" id="taskHistoryModalTag"></p>
+            <h5 class="modal-title mb-0" id="taskHistoryModalTitle">Detalhes da tarefa</h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="task-modal-meta" id="taskHistoryModalMeta"></div>
+          <div class="task-modal-description">
+            <h6>Descrição</h6>
+            <p id="taskHistoryModalDescription" class="mb-0 text-muted">Nenhum detalhe informado.</p>
+          </div>
+          <div class="task-modal-timeline">
+            <h6>Linha do tempo</h6>
+            <ul class="list-unstyled mb-0" id="taskHistoryModalTimeline"></ul>
+          </div>
+          <div class="task-modal-extra">
+            <div>
+              <span class="label">Seguidores</span>
+              <p id="taskHistoryModalFollowers" class="mb-0">Nenhum acompanhamento registrado.</p>
+            </div>
+            <div>
+              <span class="label">Conversas</span>
+              <p id="taskHistoryModalConversation" class="mb-0">Nenhuma resposta registrada.</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between">
+          <span class="text-muted small" id="taskHistoryModalCreator"></span>
+          <div class="d-flex gap-2">
+            <a href="#" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener" id="taskHistoryModalLink">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Abrir página completa
+            </a>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "tasks_responses_panel.html" %}
 </section>
 {% endblock %}
 
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('taskHistoryModal');
+  const modalInstance = modalEl ? new bootstrap.Modal(modalEl) : null;
+  const tagEl = document.getElementById('taskHistoryModalTag');
+  const titleEl = document.getElementById('taskHistoryModalTitle');
+  const metaEl = document.getElementById('taskHistoryModalMeta');
+  const descEl = document.getElementById('taskHistoryModalDescription');
+  const timeEl = document.getElementById('taskHistoryModalTimeline');
+  const followersEl = document.getElementById('taskHistoryModalFollowers');
+  const conversationEl = document.getElementById('taskHistoryModalConversation');
+  const creatorEl = document.getElementById('taskHistoryModalCreator');
+  const linkEl = document.getElementById('taskHistoryModalLink');
+
+  function fillMeta(payload) {
+    metaEl.innerHTML = `
+      <div><span>Responsável</span><strong>${payload.assignee}</strong></div>
+      <div><span>Prioridade</span><strong>${payload.priority}</strong></div>
+      <div><span>Prazo</span><strong>${payload.due_date}</strong></div>
+    `;
+  }
+
+  function fillTimeline(payload) {
+    const entries = [
+      { icon: 'bi-flag', label: 'Criada em', value: payload.created_at },
+      { icon: 'bi-check2-circle', label: 'Concluída em', value: payload.completed_at }
+    ];
+    timeEl.innerHTML = entries
+      .map(entry => `<li class="timeline-entry"><i class="bi ${entry.icon}"></i><div><span>${entry.label}</span><strong>${entry.value}</strong></div></li>`)
+      .join('');
+  }
+
+  document.querySelectorAll('.history-card__open').forEach((button) => {
+    button.addEventListener('click', () => {
+      const payload = JSON.parse(button.getAttribute('data-task-modal')) || {};
+      if (!modalInstance) return;
+      tagEl.textContent = payload.tag || '';
+      titleEl.textContent = payload.title || 'Detalhes da tarefa';
+      descEl.textContent = (payload.description || '').trim() || 'Nenhum detalhe informado.';
+      fillMeta(payload);
+      fillTimeline(payload);
+      followersEl.textContent = payload.follow_ups && payload.follow_ups.length
+        ? payload.follow_ups.join(', ')
+        : 'Nenhum acompanhamento registrado.';
+      const conversation = payload.conversation || {};
+      conversationEl.textContent = conversation.total
+        ? `${conversation.total} respostas (${conversation.unread || 0} pendentes)`
+        : 'Nenhuma resposta registrada.';
+      creatorEl.textContent = `Criada por ${payload.creator || 'Não informado'}`;
+      if (linkEl) {
+        linkEl.href = payload.view_url || '#';
+      }
+      modalInstance.show();
+    });
+  });
+
+  document.querySelectorAll('.history-filter-pill[data-filter-link]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const link = pill.getAttribute('data-filter-link');
+      if (link) window.location.href = link;
+    });
+  });
+});
+</script>
+{% endblock %}

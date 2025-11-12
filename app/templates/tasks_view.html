@@ -32,6 +32,11 @@
         <input type="text" value="{{ task.assignee.name if task.assignee else 'Sem responsável' }}" disabled>
       </div>
 
+      <div class="form-group form-group-usuario">
+        <label>Criada por</label>
+        <input type="text" value="{{ task.creator.name if task.creator else 'Não informado' }}" disabled>
+      </div>
+
       <div class="form-group form-group-titulo">
         <label>Título</label>
         <input type="text" value="{{ task.title }}" disabled>
