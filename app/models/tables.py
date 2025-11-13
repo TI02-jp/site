@@ -1031,6 +1031,18 @@ class GeneralCalendarEvent(db.Model):
         default=1,
         server_default="1",
     )
+    is_absence = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+    is_vacation = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
 
     participants = db.relationship(
         "GeneralCalendarEventParticipant",

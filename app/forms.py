@@ -643,6 +643,19 @@ class MeetingForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
             return False
+        special_flags = sum(
+            bool(flag)
+            for flag in (
+                self.is_birthday.data,
+                self.is_absence.data,
+                self.is_vacation.data,
+            )
+        )
+        if special_flags > 1:
+            message = "Selecione apenas um tipo especial por evento."
+            for field in (self.is_birthday, self.is_absence, self.is_vacation):
+                field.errors.append(message)
+            return False
 
         # Validar recorrência
         if self.recorrencia_tipo.data and self.recorrencia_tipo.data != 'NENHUMA':
@@ -689,6 +702,8 @@ class GeneralCalendarEventForm(FlaskForm):
         widget=widgets.ListWidget(prefix_label=False),
     )
     is_birthday = BooleanField("Marcar como aniversário", default=False)
+    is_absence = BooleanField("Ausência", default=False)
+    is_vacation = BooleanField("Férias", default=False)
     birthday_user_id = SelectField(
         "Colaborador aniversariante",
         coerce=int,
