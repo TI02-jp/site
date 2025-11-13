@@ -93,7 +93,72 @@
         background-color: #f58220;
         color: #fff;
     }
-    </style>
+    .badge-vacation {
+        background-color: #22c55e;
+        color: #fff;
+    }
+    .badge-absence {
+        background-color: #ef4444;
+        color: #fff;
+    }
+    .fc .vacation-event .fc-event-main {
+        background: #22c55e;
+        color: #fff;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+    }
+    .fc .vacation-event .fc-event-main .fc-event-title,
+    .fc .vacation-event .fc-event-main .fc-event-time {
+        color: inherit;
+    }
+    .fc .vacation-event .fc-event-dot {
+        background-color: #22c55e;
+        border-color: #22c55e;
+    }
+    .fc .absence-event .fc-event-main {
+        background: #ef4444;
+        color: #fff;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+    }
+    .fc .absence-event .fc-event-main .fc-event-title,
+    .fc .absence-event .fc-event-main .fc-event-time {
+        color: inherit;
+    }
+    .fc .absence-event .fc-event-dot {
+        background-color: #ef4444;
+        border-color: #ef4444;
+    }
+    .calendar-legend {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        padding: 0.75rem 0;
+        align-items: center;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    .legend-color.normal {
+        background-color: rgba(13, 110, 253, 0.9);
+    }
+    .legend-color.birthday {
+        background-color: #f58220;
+    }
+    .legend-color.vacation {
+        background-color: #22c55e;
+    }
+    .legend-color.absence {
+        background-color: #ef4444;
+    }
+</style>
 {% endblock %}
 
 {% block sidebar_nav %}
@@ -110,6 +175,24 @@
                 data-bs-toggle="modal"
                 data-bs-target="#calendarEventModal">Novo Evento</button>
         {% endif %}
+    </div>
+    <div class="calendar-legend">
+        <div class="legend-item">
+            <div class="legend-color normal"></div>
+            <span>Agenda</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color birthday"></div>
+            <span>Aniversário</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color vacation"></div>
+            <span>Férias</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color absence"></div>
+            <span>Ausência</span>
+        </div>
     </div>
     <div class="agenda-calendar-body">
         <div id="calendar"></div>
@@ -143,9 +226,17 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <div class="form-check mb-3">
+                                <div class="form-check mb-2">
                                     {{ form.is_birthday(class="form-check-input", id="is_birthday") }}
                                     <label class="form-check-label" for="is_birthday">Aniversário</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    {{ form.is_absence(class="form-check-input", id="is_absence") }}
+                                    <label class="form-check-label" for="is_absence">Ausência</label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.is_vacation(class="form-check-input", id="is_vacation") }}
+                                    <label class="form-check-label" for="is_vacation">Férias</label>
                                 </div>
                                 <div class="mb-3 d-none" id="birthdayUserWrapper">
                                     {{ form.birthday_user_id.label(class="form-label") }}
@@ -222,6 +313,8 @@
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <h5 class="modal-title mb-0" id="detailTitle"></h5>
                             <span class="badge badge-birthday d-none" id="detailBirthdayBadge">Aniversário</span>
+                            <span class="badge badge-vacation d-none" id="detailVacationBadge">Férias</span>
+                            <span class="badge badge-absence d-none" id="detailAbsenceBadge">Ausência</span>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -454,6 +547,26 @@
                         birthdayNameEl.textContent = '';
                     }
                 }
+                var vacationBadge = document.getElementById('detailVacationBadge');
+                var absenceBadge = document.getElementById('detailAbsenceBadge');
+                var isVacationEvent = Boolean(
+                    (currentEvent.extendedProps && (
+                        currentEvent.extendedProps.is_vacation ||
+                        currentEvent.extendedProps.is_vacation_event
+                    )) || currentEvent.is_vacation || currentEvent.is_vacation_event
+                );
+                var isAbsenceEvent = Boolean(
+                    (currentEvent.extendedProps && (
+                        currentEvent.extendedProps.is_absence ||
+                        currentEvent.extendedProps.is_absence_event
+                    )) || currentEvent.is_absence || currentEvent.is_absence_event
+                );
+                if (vacationBadge) {
+                    vacationBadge.classList.toggle('d-none', !isVacationEvent);
+                }
+                if (absenceBadge) {
+                    absenceBadge.classList.toggle('d-none', !isAbsenceEvent);
+                }
                 var creatorEl = document.getElementById('detailCreator');
                 if (currentEvent.extendedProps.creator) {
                     creatorEl.textContent = 'Criado por: ' + currentEvent.extendedProps.creator;
@@ -562,6 +675,8 @@
         var birthdayRecurringWrapper = document.getElementById('birthdayRecurringWrapper');
         var birthdayRecurringCheckbox = document.getElementById('birthday_recurs_annually');
         var birthdayRecurrenceYearsSelect = document.getElementById('birthday_recurrence_years');
+        var absenceCheckbox = document.getElementById('is_absence');
+        var vacationCheckbox = document.getElementById('is_vacation');
         var previousBirthdayParticipantId = null;
         var autoBirthdayTitle = '';
 
@@ -693,6 +808,26 @@
             updateTimeFieldsVisibility();
         }
 
+        function handleSpecialCheckboxChange(checkbox, callback) {
+            if (!checkbox) { return; }
+            checkbox.addEventListener('change', function() {
+                if (checkbox.checked) {
+                    [birthdayCheckbox, absenceCheckbox, vacationCheckbox].forEach(function(other) {
+                        if (other && other !== checkbox) {
+                            other.checked = false;
+                        }
+                    });
+                }
+                if (typeof callback === 'function') {
+                    callback();
+                }
+                if (checkbox !== birthdayCheckbox) {
+                    syncBirthdayState();
+                }
+                updateTimeFieldsVisibility();
+            });
+        }
+
         updateTimeFieldsVisibility();
         if (birthdaySelect && birthdaySelect.value && birthdaySelect.value !== '0') {
             previousBirthdayParticipantId = parseInt(birthdaySelect.value, 10) || null;
@@ -710,9 +845,9 @@
         if (endDateInput) {
             endDateInput.addEventListener('change', updateTimeFieldsVisibility);
         }
-        if (birthdayCheckbox) {
-            birthdayCheckbox.addEventListener('change', syncBirthdayState);
-        }
+        handleSpecialCheckboxChange(birthdayCheckbox, syncBirthdayState);
+        handleSpecialCheckboxChange(absenceCheckbox);
+        handleSpecialCheckboxChange(vacationCheckbox);
         if (birthdayRecurringCheckbox) {
             birthdayRecurringCheckbox.addEventListener('change', function() {
                 if (birthdayRecurringCheckbox.checked || !birthdayCheckbox || birthdayCheckbox.checked) {
@@ -800,6 +935,18 @@
                         }
                         if (typeof ev.is_birthday !== 'undefined') {
                             ev.extendedProps.is_birthday = ev.is_birthday;
+                        }
+                        if (typeof ev.is_vacation !== 'undefined') {
+                            ev.extendedProps.is_vacation = ev.is_vacation;
+                        }
+                        if (typeof ev.is_absence !== 'undefined') {
+                            ev.extendedProps.is_absence = ev.is_absence;
+                        }
+                        if (typeof ev.is_vacation_event !== 'undefined') {
+                            ev.extendedProps.is_vacation_event = ev.is_vacation_event;
+                        }
+                        if (typeof ev.is_absence_event !== 'undefined') {
+                            ev.extendedProps.is_absence_event = ev.is_absence_event;
                         }
                         if (typeof ev.birthday_recurs_annually !== 'undefined') {
                             ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
@@ -931,6 +1078,12 @@
                 birthdayRecurrenceYearsSelect.disabled = true;
                 delete birthdayRecurrenceYearsSelect.dataset.userToggled;
             }
+            if (absenceCheckbox) {
+                absenceCheckbox.checked = false;
+            }
+            if (vacationCheckbox) {
+                vacationCheckbox.checked = false;
+            }
             if (dateStr) {
                 form.start_date.value = dateStr;
                 form.end_date.value = dateStr;
@@ -986,6 +1139,22 @@
             if (birthdaySelect) {
                 var birthdayId = currentEvent.extendedProps.birthday_user_id || currentEvent.birthday_user_id || 0;
                 birthdaySelect.value = birthdayId ? String(birthdayId) : '0';
+            }
+            if (absenceCheckbox) {
+                absenceCheckbox.checked = Boolean(
+                    (currentEvent.extendedProps && (
+                        currentEvent.extendedProps.is_absence ||
+                        currentEvent.extendedProps.is_absence_event
+                    )) || currentEvent.is_absence || currentEvent.is_absence_event
+                );
+            }
+            if (vacationCheckbox) {
+                vacationCheckbox.checked = Boolean(
+                    (currentEvent.extendedProps && (
+                        currentEvent.extendedProps.is_vacation ||
+                        currentEvent.extendedProps.is_vacation_event
+                    )) || currentEvent.is_vacation || currentEvent.is_vacation_event
+                );
             }
             if (birthdayRecurringCheckbox) {
                 var recursAnnual = Boolean(
