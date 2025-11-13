@@ -57,16 +57,6 @@
         </select>
       </div>
       {% endif %}
-    </div>
-    <div class="filter-row">
-      <div class="filter-field">
-        <label for="due-from-filter">Prazo a partir de</label>
-        <input type="date" id="due-from-filter" name="due_from" value="{{ due_from }}">
-      </div>
-      <div class="filter-field">
-        <label for="due-to-filter">Prazo até</label>
-        <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
-      </div>
       <div class="filter-field">
         <label for="user-filter">Usuário</label>
         <select id="user-filter" name="user_id">
@@ -76,6 +66,14 @@
           <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
           {% endfor %}
         </select>
+      </div>
+      <div class="filter-field">
+        <label for="due-from-filter">Prazo a partir de</label>
+        <input type="date" id="due-from-filter" name="due_from" value="{{ due_from }}">
+      </div>
+      <div class="filter-field">
+        <label for="due-to-filter">Prazo até</label>
+        <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
       </div>
       <div class="filter-field actions-field">
         <button type="submit" class="btn btn-primary">Filtrar</button>

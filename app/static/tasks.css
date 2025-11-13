@@ -82,6 +82,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: flex-end;
 }
 
 .tasks-filter-form .filter-field {
@@ -89,6 +90,7 @@
   flex-direction: column;
   gap: 0.35rem;
   min-width: 11rem;
+  flex: 0 0 auto;
 }
 
 .tasks-filter-form .filter-field input,
@@ -130,6 +132,8 @@
   align-items: center;
   gap: 0.5rem;
   min-width: auto;
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .tasks-filter-form .actions-field .btn {
