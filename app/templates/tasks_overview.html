@@ -26,54 +26,99 @@
     <h2><i class="bi bi-kanban"></i>Visão Geral de Tarefas</h2>
     <div class="kanban-actions">
       <form method="get" action="{{ url_for('tasks_overview') }}" class="tasks-filter-form" id="tasks-filter-form">
+
         <div class="filter-row">
+
           <div class="filter-field">
+
             <label for="keyword-filter">Palavra-chave</label>
+
             <input type="search" id="keyword-filter" name="q" value="{{ keyword }}" placeholder="Título ou descrição">
+
           </div>
+
           <div class="filter-field">
+
             <label for="priority-filter">Prioridade</label>
+
             <select id="priority-filter" name="priority">
+
               <option value="">Todas</option>
+
               {% for priority in priorities %}
+
               <option value="{{ priority.value }}" {% if selected_priority == priority.value %}selected{% endif %}>{{ priority_labels[priority.value] }}</option>
+
               {% endfor %}
+
             </select>
+
           </div>
+
           <div class="filter-field">
-            <label for="user-filter">Usuário</label>
-            <select id="user-filter" name="user_id">
-              <option value="">Todos</option>
-              {% for user in users %}
-              {% set display_name = (user.name or user.username or '').strip() %}
-              <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="filter-field">
+
             <label for="tag-filter">Setor</label>
+
             <select id="tag-filter" name="tag_id">
+
               <option value="">Todos</option>
+
               {% for tag in available_tags %}
+
               <option value="{{ tag.id }}" {% if selected_tag_id == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
+
               {% endfor %}
+
             </select>
+
           </div>
-        </div>
-        <div class="filter-row">
+
           <div class="filter-field">
+
+            <label for="user-filter">Usuário</label>
+
+            <select id="user-filter" name="user_id">
+
+              <option value="">Todos</option>
+
+              {% for user in users %}
+
+              {% set display_name = (user.name or user.username or '').strip() %}
+
+              <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
+
+              {% endfor %}
+
+            </select>
+
+          </div>
+
+          <div class="filter-field">
+
             <label for="due-from-filter">Prazo a partir de</label>
+
             <input type="date" id="due-from-filter" name="due_from" value="{{ due_from }}">
+
           </div>
+
           <div class="filter-field">
+
             <label for="due-to-filter">Prazo até</label>
+
             <input type="date" id="due-to-filter" name="due_to" value="{{ due_to }}">
+
           </div>
+
           <div class="filter-field actions-field">
+
             <button type="submit" class="btn btn-primary">Filtrar</button>
+
             <a href="{{ url_for('tasks_overview') }}" class="btn btn-secondary">Limpar</a>
+
           </div>
+
         </div>
+
       </form>
       {% if current_user.role == 'admin' %}
       <a href="{{ url_for('tasks_new', return_url=request.url) }}" class="btn-new-task">Nova Tarefa</a>
