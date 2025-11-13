@@ -643,19 +643,6 @@ class MeetingForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
             return False
-        special_flags = sum(
-            bool(flag)
-            for flag in (
-                self.is_birthday.data,
-                self.is_absence.data,
-                self.is_vacation.data,
-            )
-        )
-        if special_flags > 1:
-            message = "Selecione apenas um tipo especial por evento."
-            for field in (self.is_birthday, self.is_absence, self.is_vacation):
-                field.errors.append(message)
-            return False
 
         # Validar recorrência
         if self.recorrencia_tipo.data and self.recorrencia_tipo.data != 'NENHUMA':
@@ -776,6 +763,20 @@ class GeneralCalendarEventForm(FlaskForm):
             self.birthday_recurs_annually.data = False
             self.birthday_recurrence_years.data = 1
         if not super().validate(extra_validators):
+            return False
+        # Validar que apenas um tipo especial foi selecionado
+        special_flags = sum(
+            bool(flag)
+            for flag in (
+                self.is_birthday.data,
+                self.is_absence.data,
+                self.is_vacation.data,
+            )
+        )
+        if special_flags > 1:
+            message = "Selecione apenas um tipo especial por evento."
+            for field in (self.is_birthday, self.is_absence, self.is_vacation):
+                field.errors.append(message)
             return False
         start_date = self.start_date.data
         end_date = self.end_date.data or start_date
