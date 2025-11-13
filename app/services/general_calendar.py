@@ -349,13 +349,13 @@ def serialize_events_for_calendar(
         event_classes: list[str] = []
 
         if is_birthday:
-            event_background = "#f58220"
-            event_border = "#f58220"
+            event_background = "#22c55e"
+            event_border = "#22c55e"
             event_text = "#ffffff"
             event_classes.append("birthday-event")
         elif is_vacation_event:
-            event_background = "#22c55e"
-            event_border = "#22c55e"
+            event_background = "#f58220"
+            event_border = "#f58220"
             event_text = "#ffffff"
             event_classes.append("vacation-event")
         elif is_absence_event:
