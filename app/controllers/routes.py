@@ -1271,6 +1271,17 @@ def can_access_controle_notas() -> bool:
     return False
 
 
+def can_access_notas_totalizador() -> bool:
+    """Return True if current user can access the Notas Totalizador view."""
+    if not current_user.is_authenticated:
+        return False
+
+    if is_user_admin(current_user):
+        return True
+
+    return user_has_tag('Financeiro')
+
+
 def is_meeting_only_user() -> bool:
     """Return True if current user has ONLY the 'reunião' tag (meeting-only access)."""
     if not current_user.is_authenticated:
@@ -4597,6 +4608,7 @@ def notas_debito():
 
     # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
     pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
+    pode_acessar_totalizador = can_access_notas_totalizador()
 
     return render_template(
         "notas_debito.html",
@@ -4607,6 +4619,7 @@ def notas_debito():
         cadastros=cadastros,
         cadastros_json=cadastros_json,
         pode_ver_forma_pagamento=pode_ver_forma_pagamento,
+        pode_acessar_totalizador=pode_acessar_totalizador,
     )
 
 
@@ -4727,6 +4740,7 @@ def cadastro_notas():
 
     # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
     pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
+    pode_acessar_totalizador = can_access_notas_totalizador()
 
     return render_template(
         "cadastro_notas.html",
@@ -4735,6 +4749,7 @@ def cadastro_notas():
         open_cadastro_modal=open_cadastro_modal,
         editing_cadastro=editing_cadastro,
         pode_ver_forma_pagamento=pode_ver_forma_pagamento,
+        pode_acessar_totalizador=pode_acessar_totalizador,
     )
 
 
@@ -4745,6 +4760,9 @@ def notas_totalizador():
     """Display aggregated Nota Débito data with optional period filters."""
 
     if not can_access_controle_notas():
+        abort(403)
+
+    if not can_access_notas_totalizador():
         abort(403)
 
     today = date.today()
