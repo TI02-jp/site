@@ -235,10 +235,92 @@
 {% block scripts %}
 {{ super() }}
 <script>
+const csrfToken = "{{ csrf_token() }}";
+
 document.addEventListener('DOMContentLoaded', function() {
     const sections = document.querySelectorAll('.totalizador-section');
     const radios = document.querySelectorAll('.totalizador-filter-input');
     const typeFilters = document.querySelectorAll('.totalizador-type-filter');
+    const pagamentoSelects = document.querySelectorAll('.nota-forma-pagamento-select');
+
+    function toggleSavingState(element, isSaving) {
+        if (!element) {
+            return;
+        }
+        if (isSaving) {
+            element.classList.add('is-saving');
+            element.disabled = true;
+        } else {
+            element.classList.remove('is-saving');
+            element.disabled = false;
+        }
+    }
+
+    function bindPagamentoSelect(select) {
+        if (!select) {
+            return;
+        }
+        const initialValue = select.dataset.originalValue || select.value || '';
+        select.dataset.originalValue = initialValue;
+
+        select.addEventListener('change', function(event) {
+            const target = event.currentTarget;
+            const previousValue = target.dataset.originalValue || '';
+            const updateUrl = target.dataset.updateUrl;
+
+            if (!updateUrl) {
+                return;
+            }
+
+            toggleSavingState(target, true);
+
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ forma_pagamento: target.value })
+            }).then(function(response) {
+                return response.json().catch(function() {
+                    return {};
+                }).then(function(payload) {
+                    if (!response.ok || !payload.success) {
+                        const errorMessage = payload && payload.message
+                            ? payload.message
+                            : 'Nao foi possivel atualizar a forma de pagamento.';
+                        const error = new Error(errorMessage);
+                        error.payload = payload;
+                        throw error;
+                    }
+                    return payload;
+                });
+            }).then(function() {
+                target.dataset.originalValue = target.value;
+                target.classList.add('is-valid');
+                setTimeout(function() {
+                    target.classList.remove('is-valid');
+                }, 1600);
+            }).catch(function(error) {
+                target.value = previousValue;
+                target.dataset.originalValue = previousValue;
+                target.classList.add('is-invalid');
+                setTimeout(function() {
+                    target.classList.remove('is-invalid');
+                }, 2000);
+                console.error('Falha ao atualizar forma de pagamento', error);
+                if (error && error.message) {
+                    alert(error.message);
+                } else {
+                    alert('Falha ao atualizar forma de pagamento.');
+                }
+            }).finally(function() {
+                toggleSavingState(target, false);
+            });
+        });
+    }
+
+    pagamentoSelects.forEach(bindPagamentoSelect);
 
     function showSection(mode) {
         sections.forEach(section => {
