@@ -5050,8 +5050,8 @@ def relatorios_consultorias():
     counts_consultoria = [total for _, total in por_consultoria]
     chart_consultoria = {
         "type": "bar",
-        "title": "Inclusões por consultoria",
-        "datasetLabel": "Total de inclusões",
+        "title": "Consultas por consultoria",
+        "datasetLabel": "Total de consultas",
         "labels": labels_consultoria,
         "values": counts_consultoria,
         "xTitle": "Consultoria",
@@ -5063,8 +5063,8 @@ def relatorios_consultorias():
     counts_usuario = [total for _, total in por_usuario]
     chart_usuario = {
         "type": "bar",
-        "title": "Inclusões por usuário",
-        "datasetLabel": "Total de inclusões",
+        "title": "Consultas por usuário",
+        "datasetLabel": "Total de consultas",
         "labels": labels_usuario,
         "values": counts_usuario,
         "xTitle": "Usuário",
