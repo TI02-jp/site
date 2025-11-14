@@ -458,7 +458,9 @@
                                     </div>
                                     {% set description_text = feedback.description | striptags | trim %}
                                     {% if description_text %}
-                                    <p class="acordo-item-description mb-0">{{ description_text }}</p>
+                                    <div class="acordo-item-description mb-0">
+                                        {{ feedback.description | safe }}
+                                    </div>
                                     {% else %}
                                     <p class="acordo-item-description text-muted mb-0">Nenhuma descrição cadastrada.</p>
                                     {% endif %}
@@ -592,7 +594,9 @@
                                         </div>
                                         {% set description_text = feedback.description | striptags | trim %}
                                         {% if description_text %}
-                                        <p class="acordo-item-description mb-0">{{ description_text }}</p>
+                                        <div class="acordo-item-description mb-0">
+                                            {{ feedback.description | safe }}
+                                        </div>
                                         {% else %}
                                         <p class="acordo-item-description text-muted mb-0">Nenhuma descrição cadastrada.</p>
                                         {% endif %}
