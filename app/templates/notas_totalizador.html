@@ -242,6 +242,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const radios = document.querySelectorAll('.totalizador-filter-input');
     const typeFilters = document.querySelectorAll('.totalizador-type-filter');
     const pagamentoSelects = document.querySelectorAll('.nota-forma-pagamento-select');
+    const STORAGE_PREFIX = 'notas_totalizador_';
+    const STORAGE_KEYS = {
+        mode: `${STORAGE_PREFIX}mode`,
+        '#totalizadorEmpresaAccordion': `${STORAGE_PREFIX}empresa_filter`,
+        '#totalizadorAcordoAccordion': `${STORAGE_PREFIX}acordo_filter`,
+        '#totalizadorPagamentoAccordion': `${STORAGE_PREFIX}pagamento_filter`,
+        dataInicial: `${STORAGE_PREFIX}data_inicial`,
+        dataFinal: `${STORAGE_PREFIX}data_final`
+    };
+    const dataInicialInput = document.getElementById('dataInicial');
+    const dataFinalInput = document.getElementById('dataFinal');
+
+    const storageAvailable = (() => {
+        try {
+            const testKey = `${STORAGE_PREFIX}test`;
+            localStorage.setItem(testKey, '1');
+            localStorage.removeItem(testKey);
+            return true;
+        } catch (error) {
+            console.warn('LocalStorage unavailable, filters will not persist.', error);
+            return false;
+        }
+    })();
+
+    function storageSet(key, value) {
+        if (!storageAvailable || !key) {
+            return;
+        }
+        try {
+            if (value === null || value === undefined || value === '') {
+                localStorage.removeItem(key);
+            } else {
+                localStorage.setItem(key, value);
+            }
+        } catch (error) {
+            console.warn('Failed to persist totalizador filter.', error);
+        }
+    }
+
+    function storageGet(key) {
+        if (!storageAvailable || !key) {
+            return null;
+        }
+        try {
+            const value = localStorage.getItem(key);
+            return value === null ? null : value;
+        } catch (error) {
+            console.warn('Failed to read totalizador filter.', error);
+            return null;
+        }
+    }
 
     function toggleSavingState(element, isSaving) {
         if (!element) {
@@ -328,6 +379,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function getStorageKeyForSelect(select) {
+        return STORAGE_KEYS[select.dataset.target] || null;
+    }
+
     function updateCounterForSelector(targetSelector) {
         const target = document.querySelector(targetSelector);
         if (!target) {
@@ -361,21 +416,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCounterForSelector(targetSelector);
     }
 
-    radios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.checked) {
-                showSection(this.value);
-            }
-        });
-    });
-
-    typeFilters.forEach(select => {
-        select.addEventListener('change', function() {
-            applyTypeFilter(this);
-        });
-        applyTypeFilter(select);
-    });
-
     function updateAllCounters() {
         document.querySelectorAll('[data-counter-for]').forEach(counter => {
             const targetSelector = counter.getAttribute('data-counter-for');
@@ -383,10 +423,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const initiallyChecked = document.querySelector('.totalizador-filter-input:checked');
-    if (initiallyChecked) {
-        showSection(initiallyChecked.value);
+    typeFilters.forEach(select => {
+        const storageKey = getStorageKeyForSelect(select);
+        const storedValue = storageGet(storageKey);
+        if (storedValue !== null) {
+            select.value = storedValue;
+        }
+
+        select.addEventListener('change', function() {
+            storageSet(storageKey, this.value || '');
+            applyTypeFilter(this);
+        });
+        applyTypeFilter(select);
+    });
+
+    radios.forEach(radio => {
+        if (radio.checked) {
+            storageSet(STORAGE_KEYS.mode, radio.value);
+        }
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                showSection(this.value);
+                storageSet(STORAGE_KEYS.mode, this.value);
+            }
+        });
+    });
+
+    const savedMode = storageGet(STORAGE_KEYS.mode);
+    if (savedMode) {
+        const savedRadio = document.querySelector(`.totalizador-filter-input[value="${savedMode}"]`);
+        if (savedRadio) {
+            savedRadio.checked = true;
+            showSection(savedMode);
+        }
+    } else {
+        const initiallyChecked = document.querySelector('.totalizador-filter-input:checked');
+        if (initiallyChecked) {
+            showSection(initiallyChecked.value);
+        }
     }
+
+    function restoreDateFilter(input, storageKey) {
+        if (!input) {
+            return;
+        }
+        const storedValue = storageGet(storageKey);
+        if (storedValue !== null) {
+            input.value = storedValue;
+        }
+        input.addEventListener('change', function() {
+            storageSet(storageKey, this.value || '');
+        });
+    }
+
+    restoreDateFilter(dataInicialInput, STORAGE_KEYS.dataInicial);
+    restoreDateFilter(dataFinalInput, STORAGE_KEYS.dataFinal);
 
     updateAllCounters();
 });
