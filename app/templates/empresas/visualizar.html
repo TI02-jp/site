@@ -2,6 +2,10 @@
 
 {% block title %}{{ empresa.nome_empresa|upper }} - DETALHES COMPLETOS{% endblock %}
 
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
 {% block breadcrumb %}
 <li class="breadcrumb-item text-uppercase"><a class="text-uppercase" href="{{ url_for('listar_empresas') }}">Empresas</a></li>
 <li class="breadcrumb-item active text-uppercase">{{ empresa.nome_empresa }}</li>

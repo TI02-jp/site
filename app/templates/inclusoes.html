@@ -4,6 +4,17 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1200px;">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('consultorias') }}">Consultorias</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('setores') }}">Setores</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('inclusoes') }}">Inclusões</a>
+        </li>
+    </ul>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="text-primary mb-1">

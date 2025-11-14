@@ -640,18 +640,6 @@
                     </ul>
                 </div>
 
-                <!-- Seção Administrativa -->
-                {% if current_user.role == 'admin' %}
-                <div class="nav-section">
-                    <div class="nav-section-title">Administração</div>
-                    <ul class="nav flex-column">
-                        {% set collapse_id = 'reportsMenuMain' %}
-                        {% include 'partials/sidebar_reports_menu.html' %}
-                        {% set collapse_id = None %}
-                    </ul>
-                </div>
-                {% endif %}
-
                 {% endblock %}
             </div>
 
