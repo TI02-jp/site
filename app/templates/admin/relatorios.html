@@ -126,6 +126,70 @@
             </div>
         </div>
 
+        <!-- Relatório de Tarefas -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header bg-info text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-kanban me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório de Tarefas</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Visualize prioridades, prazos e setores mais demandados de forma centralizada.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-info-subtle text-info">
+                            <i class="bi bi-lightning me-1"></i>Nova visão
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Status e prioridades</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Tarefas por setor</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Fluxo semanal de conclusões</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('relatorio_tarefas') }}" class="btn btn-info text-white w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatório de Cursos -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header text-white border-0" style="background-color: #0f766e !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-mortarboard-fill me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Relatório de Cursos</h5>
+                    </div>
+                </div>
+                    <div class="card-body">
+                        <p class="card-text text-muted">
+                            Indicadores sobre o catálogo interno de treinamentos e engajamento das equipes.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-success-subtle text-success">
+                                <i class="bi bi-star me-1"></i>Métrica atualizada
+                            </span>
+                        </div>
+                        <ul class="list-unstyled small text-muted mb-3">
+                            <li><i class="bi bi-check2 me-2 text-success"></i>Status dos cursos</li>
+                            <li><i class="bi bi-check2 me-2 text-success"></i>Instrutores e setores</li>
+                            <li><i class="bi bi-check2 me-2 text-success"></i>Cronograma mensal</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent border-0">
+                        <a href="{{ url_for('relatorio_cursos') }}" class="btn btn-success w-100 text-white">
+                            <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                        </a>
+                    </div>
+            </div>
+        </div>
+
         <!-- Relatório de Departamento Pessoal -->
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
