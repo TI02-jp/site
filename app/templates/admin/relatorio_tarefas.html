@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Relatorio de Tarefas{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div>
+            <h1 class="text-primary mb-1"><i class="bi bi-kanban me-2"></i>Relatório de Tarefas</h1>
+            <p class="text-muted mb-0">Monitore cargas de trabalho, riscos de prazo e fluxo de conclusões.</p>
+        </div>
+        <div class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>Dados consolidados em tempo real
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        {% for card in kpis %}
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted text-uppercase small">{{ card.label }}</span>
+                        <i class="bi {{ card.icon }} text-primary"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ card.value }}</h3>
+                    <p class="mb-0 text-muted small">{{ card.description }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Status geral</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="status-chart" height="240"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Risco de prazo</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="deadline-chart" height="240"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Insights rápidos</h5>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-3">
+                            <strong>{{ '%.1f'|format(completion_rate) }}%</strong> das tarefas cadastradas já foram concluídas.
+                        </li>
+                        <li class="mb-3">
+                            {% if avg_completion_days %}
+                            Tempo médio de execução de <strong>{{ '%.1f'|format(avg_completion_days) }} dias</strong> nas conclusões dos últimos 30 dias.
+                            {% else %}
+                            Sem dados recentes para calcular o tempo médio de execução.
+                            {% endif %}
+                        </li>
+                        <li class="mb-3">
+                            <strong>{{ overdue_tasks }}</strong> tarefas estão atrasadas e <strong>{{ due_soon_tasks }}</strong> vencem nos próximos 7 dias.
+                        </li>
+                        <li>
+                            <strong>{{ no_due_date_tasks }}</strong> tarefas aguardam definição de prazo e <strong>{{ open_tasks }}</strong> permanecem em aberto.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+                <h5 class="card-title mb-1">Quadro geral do mes atual</h5>
+                <span class="badge bg-light text-dark">{{ current_date.strftime("%B/%Y") if current_date else "" }}</span>
+            </div>
+            <div class="row g-4 align-items-center">
+                <div class="col-md-5">
+                    <div class="chart-wrapper" style="height: 220px;">
+                        <canvas id="general-overview-chart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="row g-3">
+                        <div class="col-6 col-lg-3">
+                            <div class="d-flex flex-column">
+                                <span class="text-muted text-uppercase small">Criadas</span>
+                                <strong class="fs-4">{{ general_overview_month.created }}</strong>
+                                <small class="text-muted">Tarefas abertas neste mes</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="d-flex flex-column">
+                                <span class="text-muted text-uppercase small">Concluidas</span>
+                                <strong class="fs-4">{{ general_overview_month.completed }}</strong>
+                                <small class="text-muted">Entregas no mes atual</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="d-flex flex-column">
+                                <span class="text-muted text-uppercase small">Reabertas</span>
+                                <strong class="fs-4">{{ general_overview_month.reopened }}</strong>
+                                <small class="text-muted">Concluidas que voltaram</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="d-flex flex-column">
+                                <span class="text-muted text-uppercase small">Saldo</span>
+                                <strong class="fs-4">{{ general_overview_month.net }}</strong>
+                                <small class="text-muted">Criadas - concluidas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-muted small">Backlog atual: </span>
+                        <strong>{{ general_overview_month.backlog }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if duration_metrics %}
+    <div class="row g-3 mt-1">
+        {% for metric in duration_metrics %}
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <span class="text-muted text-uppercase small">{{ metric.label }}</span>
+                    <h4 class="fw-bold my-2">{{ metric.value or 'Sem dados' }}</h4>
+                    <p class="text-muted small mb-0">{{ metric.description }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if aging_chart or insights %}
+    <div class="row g-4 mt-1">
+        {% if aging_chart %}
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Idade do backlog</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="aging-chart" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if insights %}
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Insights operacionais</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for insight in insights %}
+                        <li class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ insight.title }}</strong>
+                                    <p class="text-muted small mb-0">{{ insight.detail }}</p>
+                                </div>
+                                <span class="fs-5 fw-semibold">{{ insight.value }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Prioridade das tarefas abertas</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="priority-chart" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Setores mais demandados</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="sector-chart" height="260"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-3">Mostrando até 8 setores com maior volume de tarefas em aberto.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Usuários com mais demandas</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="user-chart" height="260"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-3">Considera tarefas abertas com responsável definido.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+                        <h5 class="card-title mb-1">Fluxo semanal: criacoes x conclusoes</h5>
+                        <span class="badge bg-light text-dark">Ultimas {{ flow_chart.labels|length }} semanas</span>
+                    </div>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="flow-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if service_area_chart %}
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+                        <h5 class="card-title mb-1">Chamados por area de atendimento</h5>
+                        <span class="badge bg-light text-dark">Ultimos {{ service_area_chart.labels|length }} meses</span>
+                    </div>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="service-area-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+    const chartPalette = ['#2563eb','#22c55e','#f97316','#a855f7','#facc15','#38bdf8','#ef4444','#14b8a6','#f472b6','#8b5cf6','#0ea5e9','#65a30d'];
+
+    function shadeColor(color, percent) {
+        const num = parseInt(color.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        let r = (num >> 16) + amt;
+        let g = (num >> 8 & 0x00ff) + amt;
+        let b = (num & 0x0000ff) + amt;
+        r = Math.max(Math.min(r, 255), 0);
+        g = Math.max(Math.min(g, 255), 0);
+        b = Math.max(Math.min(b, 255), 0);
+        return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+    }
+
+    function buildPalette(size) {
+        const colors = [];
+        for (let i = 0; i < size; i++) {
+            colors.push(chartPalette[i % chartPalette.length]);
+        }
+        return colors;
+    }
+
+    function createChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !config) {
+            return;
+        }
+        const type = config.type || 'bar';
+        const isBar = type === 'bar';
+        const isLine = type === 'line';
+        const labelCount = (config.labels && config.labels.length) ? config.labels.length : 0;
+        const datasetCount = (config.datasets && config.datasets.length) ? config.datasets.length : 1;
+        const palette = buildPalette(labelCount);
+        const datasetPalette = buildPalette(datasetCount);
+        let datasets;
+        if (config.datasets && config.datasets.length) {
+            datasets = config.datasets.map((dataset, index) => {
+                const dsType = dataset.type || type;
+                const color = dataset.borderColor || datasetPalette[index % datasetPalette.length];
+                const baseFillColor = palette.length ? palette[index % palette.length] : datasetPalette[index % datasetPalette.length];
+                const background =
+                    dataset.backgroundColor ||
+                    (dsType === 'line' ? 'rgba(37,99,235,0.15)' : baseFillColor);
+                return {
+                    label: dataset.label || '',
+                    data: dataset.values || [],
+                    type: dsType,
+                    backgroundColor: background,
+                    borderColor: color,
+                    borderWidth: dataset.borderWidth ?? (dsType === 'line' ? 3 : (dsType === 'bar' ? 0 : 2)),
+                    fill: dataset.fill ?? (dsType === 'line' ? false : !isBar),
+                    tension: dataset.tension ?? (dsType === 'line' ? 0.35 : undefined),
+                    pointRadius: dataset.pointRadius ?? (dsType === 'line' ? 4 : undefined),
+                    pointBackgroundColor: dataset.pointBackgroundColor ?? (dsType === 'line' ? '#ffffff' : undefined),
+                    borderRadius: dsType === 'bar' ? 12 : undefined,
+                    maxBarThickness: dsType === 'bar' ? 48 : undefined,
+                };
+            });
+        } else {
+            datasets = [{
+                label: config.datasetLabel || '',
+                data: config.values || [],
+                backgroundColor: isLine ? shadeColor('#2563eb', -10) : palette,
+                borderColor: isLine ? '#2563eb' : undefined,
+                borderWidth: isLine ? 3 : (isBar ? 0 : 2),
+                borderRadius: isBar ? 12 : undefined,
+                fill: !isLine,
+                tension: isLine ? 0.35 : undefined,
+                pointRadius: isLine ? 4 : undefined,
+                pointBackgroundColor: isLine ? '#ffffff' : undefined,
+                maxBarThickness: isBar ? 48 : undefined,
+                hoverBackgroundColor: isLine ? undefined : palette.map(color => shadeColor(color, 12)),
+            }];
+        }
+        new Chart(canvas, {
+            type,
+            data: {
+                labels: config.labels || [],
+                datasets,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 320, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: {
+                        display: !isBar,
+                        position: 'bottom',
+                        labels: { usePointStyle: true, padding: 12, font: { size: 11 } },
+                    },
+                    title: {
+                        display: Boolean(config.title),
+                        text: config.title,
+                        font: { size: 16, weight: '600' },
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleFont: { size: 12, weight: '600' },
+                        bodyFont: { size: 11 },
+                        padding: 10,
+                        callbacks: config.tooltipCallbacks || undefined,
+                    },
+                },
+                scales: (isBar || isLine) ? {
+                    x: {
+                        title: config.xTitle ? { display: true, text: config.xTitle } : undefined,
+                        ticks: { font: { size: 10 } },
+                        grid: { display: false },
+                    },
+                    y: {
+                        title: config.yTitle ? { display: true, text: config.yTitle } : undefined,
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0, font: { size: 10 } },
+                        grid: { color: '#e5e7eb' },
+                    },
+                } : undefined,
+                cutout: type === 'doughnut' ? '60%' : undefined,
+            },
+        });
+    }
+
+    createChart('status-chart', {{ status_chart|tojson }});
+    createChart('deadline-chart', {{ deadline_chart|tojson }});
+    createChart('priority-chart', {{ priority_chart|tojson }});
+    {% if aging_chart %}
+    createChart('aging-chart', {{ aging_chart|tojson }});
+    {% endif %}
+    createChart('general-overview-chart', {{ general_overview_chart|tojson }});
+    createChart('sector-chart', {{ sector_chart|tojson }});
+    createChart('user-chart', {{ user_chart|tojson }});
+    createChart('flow-chart', {{ flow_chart|tojson }});
+    {% if service_area_chart %}
+    createChart('service-area-chart', {{ service_area_chart|tojson }});
+    {% endif %}
+</script>
+{% endblock %}

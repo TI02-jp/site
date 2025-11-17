@@ -2,6 +2,15 @@
 
 {% block title %}Acessos{% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<style>
+.access-description-content {
+    white-space: pre-line;
+}
+</style>
+{% endblock %}
+
 {% block sidebar_nav %}
 {% include "sidebar_home.html" %}
 {% endblock %}
@@ -121,7 +130,7 @@
                                 class="collapse access-description mt-2"
                                 id="access-description-{{ link.id }}"
                             >
-                                <div class="small text-muted">
+                                <div class="small text-muted access-description-content">
                                     {{ link.description }}
                                 </div>
                             </div>

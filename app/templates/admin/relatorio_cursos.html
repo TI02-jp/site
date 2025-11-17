@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Relatorio de Cursos{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div>
+            <h1 class="text-primary mb-1"><i class="bi bi-mortarboard-fill me-2"></i>Relatorio de Cursos</h1>
+            <p class="text-muted mb-0">Acompanhe o desempenho do catalogo interno de treinamentos.</p>
+        </div>
+        <div class="text-muted small">
+            <i class="bi bi-collection-play me-1"></i>Total de cursos cadastrados: <strong>{{ total_courses }}</strong>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        {% for card in kpis %}
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <span class="text-muted text-uppercase small">{{ card.label }}</span>
+                    <h3 class="fw-bold my-2">{{ card.value }}</h3>
+                    <p class="text-muted small mb-0">{{ card.description }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Status dos cursos</h5>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="courses-status-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Instrutores em destaque</h5>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="courses-instructor-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Cronograma (ultimos meses)</h5>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="courses-flow-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Setores participantes</h5>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="courses-sector-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if participants_chart %}
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Participantes mais presentes</h5>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="courses-participants-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                <div>
+                    <h5 class="card-title mb-1">Resumo adicional</h5>
+                    <p class="text-muted small mb-0">Carga horaria media e indicadores gerais.</p>
+                </div>
+                <div class="text-muted small">
+                    {% if avg_workload_hours %}
+                    <i class="bi bi-clock-history me-1"></i>Carga horaria media: <strong>{{ '%.1f'|format(avg_workload_hours) }} horas</strong>
+                    {% else %}
+                    <i class="bi bi-clock-history me-1"></i>Nao ha carga horaria registrada
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+    function createChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !config) {
+            return;
+        }
+        const type = config.type || 'bar';
+        const isLine = type === 'line';
+        const datasetCount = (config.datasets && config.datasets.length) ? config.datasets.length : 1;
+        const palette = ['#2563eb','#22c55e','#f97316','#a855f7','#facc15','#38bdf8','#ef4444','#14b8a6'];
+        const colors = Array.from({ length: Math.max(config.labels?.length || 0, datasetCount) }, (_, idx) => palette[idx % palette.length]);
+        let datasets = config.datasets;
+        if (!datasets || !datasets.length) {
+            datasets = [{
+                label: config.datasetLabel || '',
+                data: config.values || [],
+                backgroundColor: colors,
+                borderRadius: type === 'bar' ? 12 : undefined,
+            }];
+        } else {
+            datasets = datasets.map((dataset, idx) => ({
+                label: dataset.label || '',
+                data: dataset.values || [],
+                type: dataset.type || type,
+                borderColor: dataset.borderColor || colors[idx % colors.length],
+                backgroundColor: dataset.backgroundColor || (dataset.type === 'line' ? 'rgba(37,99,235,0.15)' : colors[idx % colors.length]),
+                borderWidth: dataset.type === 'line' ? 3 : 0,
+                fill: dataset.fill ?? (dataset.type !== 'line'),
+                tension: dataset.type === 'line' ? 0.35 : undefined,
+                pointRadius: dataset.type === 'line' ? 4 : undefined,
+                pointBackgroundColor: dataset.type === 'line' ? '#fff' : undefined,
+            }));
+        }
+
+        new Chart(canvas, {
+            type,
+            data: {
+                labels: config.labels || [],
+                datasets,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: datasets.length > 1 || type !== 'bar',
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: Boolean(config.title),
+                        text: config.title,
+                    },
+                },
+                scales: type === 'doughnut' ? undefined : {
+                    x: {
+                        title: config.xTitle ? { display: true, text: config.xTitle } : undefined,
+                        grid: { display: false },
+                    },
+                    y: {
+                        title: config.yTitle ? { display: true, text: config.yTitle } : undefined,
+                        beginAtZero: true,
+                        grid: { color: '#e5e7eb' },
+                    },
+                },
+                cutout: type === 'doughnut' ? '60%' : undefined,
+            },
+        });
+    }
+
+    createChart('courses-status-chart', {{ status_chart|tojson }});
+    createChart('courses-flow-chart', {{ flow_chart|tojson }});
+    createChart('courses-instructor-chart', {{ instructor_chart|tojson }});
+    createChart('courses-sector-chart', {{ sector_chart|tojson }});
+    {% if participants_chart %}
+    createChart('courses-participants-chart', {{ participants_chart|tojson }});
+    {% endif %}
+</script>
+{% endblock %}
