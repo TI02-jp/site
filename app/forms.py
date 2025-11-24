@@ -18,6 +18,7 @@ from wtforms import (
     BooleanField,
     HiddenField,
     FieldList,
+    IntegerField,
     widgets
 )
 from wtforms.validators import (
@@ -29,6 +30,7 @@ from wtforms.validators import (
     ValidationError,
     URL,
     InputRequired,
+    NumberRange,
 )
 import re
 
@@ -485,12 +487,12 @@ class DepartamentoPessoalForm(DepartamentoForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
-class DepartamentoAdministrativoForm(FlaskForm):
+class DepartamentoAdministrativoForm(DepartamentoForm):
     """Formulário para o Departamento Administrativo."""
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
-class DepartamentoFinanceiroForm(FlaskForm):
+class DepartamentoFinanceiroForm(DepartamentoForm):
     """Formulário para o Departamento Financeiro."""
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
@@ -565,7 +567,32 @@ class CadastroNotaForm(FlaskForm):
     cadastro = StringField('Cadastro', validators=[Optional()])
     valor = StringField('Valor', validators=[Optional()])
     acordo = SelectField('Acordos', choices=ACORDO_CHOICES, validators=[Optional()])
+    usuario = StringField('Usuário', validators=[Optional(), Length(max=255)])
+    senha = StringField('Senha', validators=[Optional(), Length(max=255)])
     submit = SubmitField('Salvar')
+
+
+class NotaRecorrenteForm(FlaskForm):
+    """Formulário para notas fiscais emitidas de forma recorrente."""
+
+    empresa = StringField('Empresa', validators=[DataRequired(), Length(max=255)])
+    descricao = StringField('Descrição', validators=[Optional(), Length(max=255)])
+    valor = StringField('Valor', validators=[Optional(), Length(max=50)])
+    periodo_inicio = IntegerField(
+        'Dia inicial do período',
+        validators=[DataRequired(), NumberRange(min=1, max=31)],
+    )
+    periodo_fim = IntegerField(
+        'Dia final do período',
+        validators=[DataRequired(), NumberRange(min=1, max=31)],
+    )
+    dia_emissao = IntegerField(
+        'Dia da emissão',
+        validators=[DataRequired(), NumberRange(min=1, max=31)],
+    )
+    observacao = TextAreaField('Observação', validators=[Optional()])
+    ativo = BooleanField('Ativo', default=True)
+    submit = SubmitField('Salvar nota recorrente')
 
 
 class TagForm(FlaskForm):

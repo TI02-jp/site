@@ -307,6 +307,7 @@ class NotificationType(str, Enum):
     TASK_RESPONSE = "task_response"
     TASK_STATUS = "task_status"
     ANNOUNCEMENT = "announcement"
+    RECURRING_INVOICE = "recurring_invoice"
 
 
 class Announcement(db.Model):
@@ -730,6 +731,9 @@ class CadastroNota(db.Model):
     valor = db.Column(db.Numeric(10, 2), nullable=False)
     acordo = db.Column(db.String(100), nullable=True)
     forma_pagamento = db.Column(db.String(50), nullable=False)
+    usuario = db.Column(db.String(255), nullable=True)
+    senha = db.Column(db.String(255), nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -751,6 +755,52 @@ class CadastroNota(db.Model):
 
     def __repr__(self):
         return f"<CadastroNota {self.cadastro}>"
+
+
+class NotaRecorrente(db.Model):
+    """Stores recurring invoice definitions for monthly reminders."""
+
+    __tablename__ = "notas_recorrentes"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa = db.Column(db.String(255), nullable=False)
+    descricao = db.Column(db.String(255), nullable=True)
+    periodo_inicio = db.Column(db.Integer, nullable=False)
+    periodo_fim = db.Column(db.Integer, nullable=False)
+    dia_emissao = db.Column(db.Integer, nullable=False)
+    valor = db.Column(db.Numeric(10, 2), nullable=True)
+    observacao = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+    ultimo_aviso = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    @property
+    def valor_formatado(self) -> str:
+        """Return the stored value formatted as BRL currency."""
+
+        if self.valor is None:
+            return "R$ -"
+        return (
+            f"R$ {self.valor:,.2f}"
+            .replace(",", "_")
+            .replace(".", ",")
+            .replace("_", ".")
+        )
+
+    @property
+    def periodo_formatado(self) -> str:
+        """Return a string describing the monthly period window."""
+
+        return f"{self.periodo_inicio:02d} ao {self.periodo_fim:02d}"
+
+    def __repr__(self) -> str:
+        return f"<NotaRecorrente {self.empresa} dia {self.dia_emissao}>"
 
 
 class Inclusao(db.Model):

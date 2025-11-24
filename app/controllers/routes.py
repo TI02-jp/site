@@ -1,4 +1,4 @@
-"""Flask route handlers for the web application."""
+﻿"""Flask route handlers for the web application."""
 
 from flask import (
     render_template,
@@ -57,6 +57,7 @@ from app.models.tables import (
     GeneralCalendarEvent,
     NotaDebito,
     CadastroNota,
+    NotaRecorrente,
     Announcement,
     AnnouncementAttachment,
     OperationalProcedure,
@@ -90,10 +91,11 @@ from app.forms import (
     OperationalProcedureForm,
     NotaDebitoForm,
     CadastroNotaForm,
+    NotaRecorrenteForm,
     PAGAMENTO_CHOICES,
     ClienteReuniaoForm,
 )
-import os, json, re, secrets, imghdr, time
+import os, json, re, secrets, imghdr, time, calendar
 import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
@@ -3151,6 +3153,11 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
             if not message:
                 message = "Comunicado removido."
         action_label = "Abrir comunicado" if target_url else None
+    elif notification_type is NotificationType.RECURRING_INVOICE:
+        if not message:
+            message = "Emitir nota fiscal recorrente."
+        target_url = url_for("notas_recorrentes")
+        action_label = "Abrir notas recorrentes"
     else:
         task = notification.task
         if task:
@@ -3730,7 +3737,9 @@ def calendario_colaboradores():
 
     form = GeneralCalendarEventForm()
     populate_general_event_participants(form)
-    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
+    can_manage = (
+        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
+    )
     show_modal = False
     if form.validate_on_submit():
         if not can_manage:
@@ -3767,7 +3776,9 @@ def delete_calendario_evento(event_id):
     """Delete an event from the collaborators calendar."""
 
     event = GeneralCalendarEvent.query.get_or_404(event_id)
-    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
+    can_manage = (
+        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
+    )
     if not can_manage:
         abort(403)
     if not is_user_admin(current_user) and event.created_by_id != current_user.id:
@@ -4507,120 +4518,13 @@ def editar_setor(id):
 @login_required
 @meeting_only_access_check
 def notas_debito():
-    """List and manage Notas para Débito with modal-based CRUD."""
+    """Legacy entrypoint; redirect to cadastro view."""
 
     if not can_access_controle_notas():
         abort(403)
 
-    nota_form = NotaDebitoForm(prefix="nota")
-    notas = NotaDebito.query.order_by(NotaDebito.data_emissao.desc()).all()
-
-    # Buscar cadastros para autocomplete
-    cadastros = CadastroNota.query.order_by(CadastroNota.cadastro).all()
-    cadastros_json = json.dumps([{
-        'nome': (c.cadastro or '').upper(),
-        'valor': float(c.valor) if c.valor else 0,
-        'acordo': (c.acordo or '').upper()
-    } for c in cadastros])
-
-    open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")
-    editing_nota: NotaDebito | None = None
-
-    if request.method == "GET":
-        edit_id_raw = request.args.get("edit_nota_id")
-        if edit_id_raw:
-            try:
-                edit_id = int(edit_id_raw)
-            except (TypeError, ValueError):
-                abort(404)
-            editing_nota = NotaDebito.query.get_or_404(edit_id)
-            nota_form = NotaDebitoForm(prefix="nota", obj=editing_nota)
-            open_nota_modal = True
-
-    if request.method == "POST":
-        form_name = request.form.get("form_name")
-        if form_name == "nota_create":
-            open_nota_modal = True
-            if nota_form.validate_on_submit():
-                try:
-                    valor_un = float(nota_form.valor_un.data.replace(',', '.')) if nota_form.valor_un.data else None
-                    total = float(nota_form.total.data.replace(',', '.')) if nota_form.total.data else None
-                    notas_int = int(nota_form.notas.data)
-                    qtde_int = int(nota_form.qtde_itens.data)
-                except (ValueError, AttributeError):
-                    flash("Valores numéricos inválidos.", "warning")
-                else:
-                    nota = NotaDebito(
-                        data_emissao=nota_form.data_emissao.data,
-                        empresa=nota_form.empresa.data.strip().upper() if nota_form.empresa.data else '',
-                        notas=notas_int,
-                        qtde_itens=qtde_int,
-                        valor_un=valor_un,
-                        total=total,
-                        acordo=nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None,
-                        forma_pagamento=(nota_form.forma_pagamento.data or '').upper(),
-                        observacao=nota_form.observacao.data.strip() if nota_form.observacao.data else None
-                    )
-                    db.session.add(nota)
-                    db.session.commit()
-                    flash("Nota registrada com sucesso.", "success")
-                    return redirect(url_for("notas_debito"))
-        elif form_name == "nota_update":
-            open_nota_modal = True
-            nota_id_raw = request.form.get("nota_id")
-            try:
-                nota_id = int(nota_id_raw)
-            except (TypeError, ValueError):
-                abort(400)
-            editing_nota = NotaDebito.query.get_or_404(nota_id)
-            if nota_form.validate_on_submit():
-                try:
-                    valor_un = float(nota_form.valor_un.data.replace(',', '.')) if nota_form.valor_un.data else None
-                    total = float(nota_form.total.data.replace(',', '.')) if nota_form.total.data else None
-                    notas_int = int(nota_form.notas.data)
-                    qtde_int = int(nota_form.qtde_itens.data)
-                except (ValueError, AttributeError):
-                    flash("Valores numéricos inválidos.", "warning")
-                else:
-                    editing_nota.data_emissao = nota_form.data_emissao.data
-                    editing_nota.empresa = nota_form.empresa.data.strip().upper() if nota_form.empresa.data else ''
-                    editing_nota.notas = notas_int
-                    editing_nota.qtde_itens = qtde_int
-                    editing_nota.valor_un = valor_un
-                    editing_nota.total = total
-                    editing_nota.acordo = nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None
-                    editing_nota.forma_pagamento = (nota_form.forma_pagamento.data or '').upper()
-                    editing_nota.observacao = nota_form.observacao.data.strip() if nota_form.observacao.data else None
-                    db.session.commit()
-                    flash("Nota atualizada com sucesso.", "success")
-                    return redirect(url_for("notas_debito"))
-        elif form_name == "nota_delete":
-            nota_id_raw = request.form.get("nota_id")
-            try:
-                nota_id = int(nota_id_raw)
-            except (TypeError, ValueError):
-                abort(400)
-            nota = NotaDebito.query.get_or_404(nota_id)
-            db.session.delete(nota)
-            db.session.commit()
-            flash("Nota excluída com sucesso.", "success")
-            return redirect(url_for("notas_debito"))
-
-    # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
-    pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
-    pode_acessar_totalizador = can_access_notas_totalizador()
-
-    return render_template(
-        "notas_debito.html",
-        notas=notas,
-        nota_form=nota_form,
-        open_nota_modal=open_nota_modal,
-        editing_nota=editing_nota,
-        cadastros=cadastros,
-        cadastros_json=cadastros_json,
-        pode_ver_forma_pagamento=pode_ver_forma_pagamento,
-        pode_acessar_totalizador=pode_acessar_totalizador,
-    )
+    flash("O controle de notas foi incorporado à tela de Cadastros.", "info")
+    return redirect(url_for("cadastro_notas"))
 
 
 @app.route("/controle-notas/debito/<int:nota_id>/forma-pagamento", methods=["POST"])
@@ -4659,19 +4563,303 @@ def notas_debito_update_forma_pagamento(nota_id: int):
     )
 
 
+def _parse_decimal_input(raw_value: str | None) -> Decimal | None:
+    """Convert a localized string into a Decimal value."""
+
+    if not raw_value:
+        return None
+    cleaned = (raw_value or "").strip()
+    if not cleaned:
+        return None
+    cleaned = cleaned.replace("R$", "").replace(" ", "")
+    if "," in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    else:
+        cleaned = cleaned.replace(",", "")
+    try:
+        return Decimal(cleaned)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _format_decimal_input(value: Decimal | float | None) -> str:
+    """Format a Decimal into a string accepted by the recurring note modal."""
+
+    if value is None:
+        return ""
+    if not isinstance(value, Decimal):
+        value = Decimal(value)
+    return (
+        f"{value:,.2f}"
+        .replace(",", "_")
+        .replace(".", ",")
+        .replace("_", ".")
+    )
+
+
+def _get_month_day(year: int, month: int, desired_day: int) -> date:
+    """Return a valid date for ``desired_day`` inside ``year``/``month``."""
+
+    last_day = calendar.monthrange(year, month)[1]
+    clamped_day = max(1, min(desired_day, last_day))
+    return date(year, month, clamped_day)
+
+
+def _next_emission_date(recorrente: NotaRecorrente, reference: date | None = None) -> date:
+    """Return the next emission date for ``recorrente`` after ``reference``."""
+
+    if reference is None:
+        reference = date.today()
+
+    candidate = _get_month_day(reference.year, reference.month, recorrente.dia_emissao)
+    if candidate >= reference:
+        return candidate
+
+    next_month = reference.month + 1
+    next_year = reference.year
+    if next_month > 12:
+        next_month = 1
+        next_year += 1
+    return _get_month_day(next_year, next_month, recorrente.dia_emissao)
+
+
+def _normalize_tag_slug(name: str | None) -> str:
+    """Normalize tag labels for comparisons."""
+
+    if not name:
+        return ""
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_only = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return ascii_only.lower().replace(" ", "")
+
+
+_CONTROLE_NOTAS_ALLOWED_TAGS = {"gestao", "gestão", "financeiro", "emissornfe"}
+
+
+def _controle_notas_notification_user_ids() -> list[int]:
+    """Return IDs for users that must receive Controle de Notas reminders."""
+
+    users = (
+        User.query.options(joinedload(User.tags))
+        .filter(User.ativo.is_(True))
+        .all()
+    )
+    ids: list[int] = []
+    for user in users:
+        if not user.id:
+            continue
+        if is_user_admin(user):
+            ids.append(user.id)
+            continue
+        for tag in getattr(user, "tags", []) or []:
+            slug = _normalize_tag_slug(getattr(tag, "nome", ""))
+            if slug in _CONTROLE_NOTAS_ALLOWED_TAGS:
+                ids.append(user.id)
+                break
+    return ids
+
+
+def _trigger_recorrente_notifications(reference_date: date | None = None) -> int:
+    """Emit notifications for recurring invoices due on ``reference_date``."""
+
+    today = reference_date or date.today()
+    ativos = NotaRecorrente.query.filter(NotaRecorrente.ativo.is_(True)).all()
+    if not ativos:
+        return 0
+
+    user_ids = _controle_notas_notification_user_ids()
+    if not user_ids:
+        return 0
+
+    due_records: list[NotaRecorrente] = []
+    for registro in ativos:
+        due_date = _get_month_day(today.year, today.month, registro.dia_emissao)
+        if due_date != today:
+            continue
+        if registro.ultimo_aviso == today:
+            continue
+        due_records.append(registro)
+
+    if not due_records:
+        return 0
+
+    now = datetime.utcnow()
+    created_notifications: list[tuple[int, TaskNotification]] = []
+    touched_users: set[int] = set()
+
+    for registro in due_records:
+        descricao = (registro.descricao or "").strip()
+        periodo = registro.periodo_formatado
+        base_message = f"Emitir NF {registro.empresa}"
+        if descricao:
+            base_message += f" - {descricao}"
+        message = f"{base_message} (período {periodo})." if periodo else base_message
+        truncated = message[:255]
+
+        for user_id in user_ids:
+            notification = TaskNotification(
+                user_id=user_id,
+                task_id=None,
+                announcement_id=None,
+                type=NotificationType.RECURRING_INVOICE.value,
+                message=truncated,
+                created_at=now,
+            )
+            db.session.add(notification)
+            created_notifications.append((user_id, notification))
+            touched_users.add(user_id)
+        registro.ultimo_aviso = today
+
+    if not created_notifications:
+        return 0
+
+    db.session.commit()
+
+    for user_id in touched_users:
+        _invalidate_notification_cache(user_id)
+
+    try:
+        from app.services.realtime import get_broadcaster
+
+        broadcaster = get_broadcaster()
+        for user_id, notification in created_notifications:
+            broadcaster.broadcast(
+                event_type="notification:created",
+                data={
+                    "id": notification.id,
+                    "type": notification.type,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat()
+                    if notification.created_at
+                    else None,
+                },
+                user_id=user_id,
+                scope="notifications",
+            )
+    except Exception:
+        pass
+
+    return len(created_notifications)
+
+
 @app.route("/controle-notas/cadastro", methods=["GET", "POST"])
 @login_required
 @meeting_only_access_check
 def cadastro_notas():
-    """List and manage Cadastro de Notas with modal-based CRUD."""
+    """List and manage Cadastro de Notas with modal-based CRUD integrado às notas."""
 
     if not can_access_controle_notas():
         abort(403)
 
+    _trigger_recorrente_notifications()
+
+    pode_ver_forma_pagamento = (
+        is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
+    )
     cadastro_form = CadastroNotaForm(prefix="cadastro")
-    cadastros = CadastroNota.query.order_by(CadastroNota.cadastro).all()
+    nota_form = NotaDebitoForm(prefix="nota")
+    search_term = (request.args.get("q") or "").strip()
+    cadastros_query = CadastroNota.query.filter(CadastroNota.ativo.is_(True))
+    if search_term:
+        pattern = f"%{search_term}%"
+        cadastros_query = cadastros_query.filter(sa.func.upper(CadastroNota.cadastro).ilike(pattern.upper()))
+    cadastros = cadastros_query.order_by(CadastroNota.cadastro).all()
+
+    data_inicial_raw = (request.args.get("data_inicial") or "").strip()
+    data_final_raw = (request.args.get("data_final") or "").strip()
+
+    def _parse_date(value: str) -> date | None:
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
+    data_inicial = _parse_date(data_inicial_raw)
+    data_final = _parse_date(data_final_raw)
+
+    notas_query = NotaDebito.query
+    if data_inicial and data_final:
+        if data_inicial > data_final:
+            data_inicial, data_final = data_final, data_inicial
+        notas_query = notas_query.filter(
+            NotaDebito.data_emissao >= data_inicial,
+            NotaDebito.data_emissao <= data_final,
+        )
+    notas_registradas = notas_query.order_by(NotaDebito.data_emissao.desc()).all()
+
     open_cadastro_modal = request.args.get("open_cadastro_modal") in ("1", "true", "True")
+    open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")
     editing_cadastro: CadastroNota | None = None
+    editing_nota: NotaDebito | None = None
+
+    notas_por_empresa: dict[str, list[NotaDebito]] = defaultdict(list)
+    for nota in notas_registradas:
+        empresa_key = (nota.empresa or "").strip().upper() or "SEM EMPRESA"
+        notas_por_empresa[empresa_key].append(nota)
+
+    def _format_currency_value(value: Decimal | float | int | None) -> str:
+        number = Decimal(value or 0)
+        return (
+            f"R$ {number:,.2f}"
+            .replace(",", "_")
+            .replace(".", ",")
+            .replace("_", ".")
+        )
+
+    cadastros_info: list[dict[str, object]] = []
+    cadastro_empresas: set[str] = set()
+
+    for cadastro in cadastros:
+        empresa_key = (cadastro.cadastro or "").strip().upper() or "SEM EMPRESA"
+        cadastro_empresas.add(empresa_key)
+        notas_relacionadas = notas_por_empresa.get(empresa_key, [])
+        total_valor = Decimal("0")
+        total_itens = 0
+        ultima_data = None
+        for nota in notas_relacionadas:
+            total_valor += Decimal(nota.total or 0)
+            total_itens += int(nota.qtde_itens or 0)
+            if nota.data_emissao:
+                if ultima_data is None or nota.data_emissao > ultima_data:
+                    ultima_data = nota.data_emissao
+        cadastros_info.append(
+            {
+                "cadastro": cadastro,
+                "empresa_key": empresa_key,
+                "notas": notas_relacionadas,
+                "total_notas": len(notas_relacionadas),
+                "total_itens": total_itens,
+                "total_valor": total_valor,
+                "total_valor_formatado": _format_currency_value(total_valor),
+                "ultima_data": ultima_data,
+                "ultima_data_formatada": ultima_data.strftime("%d/%m/%Y") if ultima_data else "-",
+            }
+        )
+
+    cadastros_info.sort(key=lambda item: item["empresa_key"])
+
+    notas_sem_cadastro: list[dict[str, object]] = []
+    for empresa_key, notas_lista in notas_por_empresa.items():
+        if empresa_key in cadastro_empresas:
+            continue
+        total_valor = Decimal("0")
+        total_itens = 0
+        for nota in notas_lista:
+            total_valor += Decimal(nota.total or 0)
+            total_itens += int(nota.qtde_itens or 0)
+        notas_sem_cadastro.append(
+            {
+                "empresa": empresa_key,
+                "notas": notas_lista,
+                "total_notas": len(notas_lista),
+                "total_itens": total_itens,
+                "total_valor_formatado": _format_currency_value(total_valor),
+            }
+        )
+
+    notas_sem_cadastro.sort(key=lambda item: item["empresa"])
 
     if request.method == "GET":
         edit_id_raw = request.args.get("edit_cadastro_id")
@@ -4684,6 +4872,16 @@ def cadastro_notas():
             cadastro_form = CadastroNotaForm(prefix="cadastro", obj=editing_cadastro)
             open_cadastro_modal = True
 
+        edit_nota_id_raw = request.args.get("edit_nota_id")
+        if edit_nota_id_raw:
+            try:
+                edit_nota_id = int(edit_nota_id_raw)
+            except (TypeError, ValueError):
+                abort(404)
+            editing_nota = NotaDebito.query.get_or_404(edit_nota_id)
+            nota_form = NotaDebitoForm(prefix="nota", obj=editing_nota)
+            open_nota_modal = True
+
     if request.method == "POST":
         form_name = request.form.get("form_name")
         if form_name == "cadastro_create":
@@ -4695,11 +4893,13 @@ def cadastro_notas():
                     flash("Valor inválido.", "warning")
                 else:
                     cadastro = CadastroNota(
-                        pix="49991352070",
+                        pix=None,
                         cadastro=cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else '',
                         valor=valor,
                         acordo=cadastro_form.acordo.data.strip().upper() if cadastro_form.acordo.data else None,
-                        forma_pagamento=''
+                        forma_pagamento='',
+                        usuario=cadastro_form.usuario.data.strip() if cadastro_form.usuario.data else None,
+                        senha=cadastro_form.senha.data.strip() if cadastro_form.senha.data else None,
                     )
                     db.session.add(cadastro)
                     db.session.commit()
@@ -4719,10 +4919,12 @@ def cadastro_notas():
                 except (ValueError, AttributeError):
                     flash("Valor inválido.", "warning")
                 else:
-                    editing_cadastro.pix = "49991352070"
+                    editing_cadastro.pix = None
                     editing_cadastro.cadastro = cadastro_form.cadastro.data.strip().upper() if cadastro_form.cadastro.data else ''
                     editing_cadastro.valor = valor
                     editing_cadastro.acordo = cadastro_form.acordo.data.strip().upper() if cadastro_form.acordo.data else None
+                    editing_cadastro.usuario = cadastro_form.usuario.data.strip() if cadastro_form.usuario.data else None
+                    editing_cadastro.senha = cadastro_form.senha.data.strip() if cadastro_form.senha.data else None
                     db.session.commit()
                     flash("Cadastro atualizado com sucesso.", "success")
                     return redirect(url_for("cadastro_notas"))
@@ -4733,23 +4935,226 @@ def cadastro_notas():
             except (TypeError, ValueError):
                 abort(400)
             cadastro = CadastroNota.query.get_or_404(cadastro_id)
-            db.session.delete(cadastro)
+            cadastro.ativo = False
             db.session.commit()
-            flash("Cadastro excluído com sucesso.", "success")
+            flash("Cadastro desativado com sucesso.", "success")
+            return redirect(url_for("cadastro_notas"))
+        elif form_name == "nota_create":
+            open_nota_modal = True
+            if nota_form.validate_on_submit():
+                try:
+                    notas_int = int(nota_form.notas.data)
+                    qtde_int = int(nota_form.qtde_itens.data)
+                except (ValueError, TypeError):
+                    flash("Quantidade de notas/itens inválida.", "warning")
+                else:
+                    valor_un = _parse_decimal_input(nota_form.valor_un.data)
+                    total = _parse_decimal_input(nota_form.total.data)
+                    nota = NotaDebito(
+                        data_emissao=nota_form.data_emissao.data,
+                        empresa=nota_form.empresa.data.strip().upper() if nota_form.empresa.data else '',
+                        notas=notas_int,
+                        qtde_itens=qtde_int,
+                        valor_un=valor_un,
+                        total=total,
+                        acordo=nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None,
+                        forma_pagamento=(nota_form.forma_pagamento.data or '').upper() if pode_ver_forma_pagamento else '',
+                        observacao=nota_form.observacao.data.strip() if nota_form.observacao.data else None
+                    )
+                    db.session.add(nota)
+                    db.session.commit()
+                    flash("Nota registrada com sucesso.", "success")
+                    return redirect(url_for("cadastro_notas"))
+        elif form_name == "nota_update":
+            open_nota_modal = True
+            nota_id_raw = request.form.get("nota_id")
+            try:
+                nota_id = int(nota_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            editing_nota = NotaDebito.query.get_or_404(nota_id)
+            if nota_form.validate_on_submit():
+                try:
+                    notas_int = int(nota_form.notas.data)
+                    qtde_int = int(nota_form.qtde_itens.data)
+                except (ValueError, TypeError):
+                    flash("Quantidade de notas/itens inválida.", "warning")
+                else:
+                    valor_un = _parse_decimal_input(nota_form.valor_un.data)
+                    total = _parse_decimal_input(nota_form.total.data)
+                    editing_nota.data_emissao = nota_form.data_emissao.data
+                    editing_nota.empresa = nota_form.empresa.data.strip().upper() if nota_form.empresa.data else ''
+                    editing_nota.notas = notas_int
+                    editing_nota.qtde_itens = qtde_int
+                    editing_nota.valor_un = valor_un
+                    editing_nota.total = total
+                    editing_nota.acordo = nota_form.acordo.data.strip().upper() if nota_form.acordo.data else None
+                    if pode_ver_forma_pagamento:
+                        editing_nota.forma_pagamento = (nota_form.forma_pagamento.data or '').upper()
+                    editing_nota.observacao = nota_form.observacao.data.strip() if nota_form.observacao.data else None
+                    db.session.commit()
+                    flash("Nota atualizada com sucesso.", "success")
+                    return redirect(url_for("cadastro_notas"))
+        elif form_name == "nota_delete":
+            nota_id_raw = request.form.get("nota_id")
+            try:
+                nota_id = int(nota_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            nota = NotaDebito.query.get_or_404(nota_id)
+            db.session.delete(nota)
+            db.session.commit()
+            flash("Nota excluída com sucesso.", "success")
             return redirect(url_for("cadastro_notas"))
 
-    # Verificar se usuário pode ver forma de pagamento (apenas Gestão e Financeiro)
-    pode_ver_forma_pagamento = is_user_admin(current_user) or user_has_tag('Gestão') or user_has_tag('Financeiro')
     pode_acessar_totalizador = can_access_notas_totalizador()
 
     return render_template(
         "cadastro_notas.html",
         cadastros=cadastros,
+        cadastros_info=cadastros_info,
+        notas_sem_cadastro=notas_sem_cadastro,
         cadastro_form=cadastro_form,
+        nota_form=nota_form,
         open_cadastro_modal=open_cadastro_modal,
+        open_nota_modal=open_nota_modal,
         editing_cadastro=editing_cadastro,
+        editing_nota=editing_nota,
         pode_ver_forma_pagamento=pode_ver_forma_pagamento,
         pode_acessar_totalizador=pode_acessar_totalizador,
+        data_inicial=data_inicial,
+        data_final=data_final,
+        search_term=search_term,
+    )
+
+@app.route("/controle-notas/recorrentes", methods=["GET", "POST"])
+@login_required
+@meeting_only_access_check
+def notas_recorrentes():
+    """Manage recurring invoices that trigger monthly notifications."""
+
+    if not can_access_controle_notas():
+        abort(403)
+
+    _trigger_recorrente_notifications()
+
+    recorrente_form = NotaRecorrenteForm(prefix="recorrente")
+    open_recorrente_modal = request.args.get("open_recorrente_modal") in ("1", "true", "True")
+    editing_recorrente: NotaRecorrente | None = None
+
+    if request.method == "GET":
+        edit_id_raw = request.args.get("edit_recorrente_id")
+        if edit_id_raw:
+            try:
+                edit_id = int(edit_id_raw)
+            except (TypeError, ValueError):
+                abort(404)
+            editing_recorrente = NotaRecorrente.query.get_or_404(edit_id)
+            recorrente_form = NotaRecorrenteForm(prefix="recorrente", obj=editing_recorrente)
+            recorrente_form.valor.data = _format_decimal_input(editing_recorrente.valor)
+            open_recorrente_modal = True
+
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
+        if form_name in {"recorrente_create", "recorrente_update"}:
+            open_recorrente_modal = True
+            target: NotaRecorrente | None = None
+            if form_name == "recorrente_update":
+                recorrente_id_raw = request.form.get("recorrente_id")
+                try:
+                    recorrente_id = int(recorrente_id_raw)
+                except (TypeError, ValueError):
+                    abort(400)
+                target = NotaRecorrente.query.get_or_404(recorrente_id)
+                editing_recorrente = target
+
+            if recorrente_form.validate_on_submit():
+                valor_decimal = _parse_decimal_input(recorrente_form.valor.data)
+                enterprise = (recorrente_form.empresa.data or "").strip().upper()
+                descricao = (recorrente_form.descricao.data or "").strip()
+                observacao = (recorrente_form.observacao.data or "").strip()
+                is_active = bool(recorrente_form.ativo.data)
+                periodo_inicio = recorrente_form.periodo_inicio.data or 1
+                periodo_fim = recorrente_form.periodo_fim.data or 1
+                dia_emissao = recorrente_form.dia_emissao.data or 1
+
+                if target is None:
+                    target = NotaRecorrente()
+                    db.session.add(target)
+
+                target.empresa = enterprise
+                target.descricao = descricao or None
+                target.valor = valor_decimal
+                target.observacao = observacao or None
+                target.ativo = is_active
+                target.periodo_inicio = periodo_inicio
+                target.periodo_fim = periodo_fim
+                target.dia_emissao = dia_emissao
+
+                db.session.commit()
+                flash("Nota recorrente salva com sucesso.", "success")
+                return redirect(url_for("notas_recorrentes"))
+        elif form_name == "recorrente_delete":
+            recorrente_id_raw = request.form.get("recorrente_id")
+            try:
+                recorrente_id = int(recorrente_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            registro = NotaRecorrente.query.get_or_404(recorrente_id)
+            db.session.delete(registro)
+            db.session.commit()
+            flash("Nota recorrente removida.", "success")
+            return redirect(url_for("notas_recorrentes"))
+        elif form_name == "recorrente_toggle":
+            recorrente_id_raw = request.form.get("recorrente_id")
+            try:
+                recorrente_id = int(recorrente_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            registro = NotaRecorrente.query.get_or_404(recorrente_id)
+            registro.ativo = not bool(registro.ativo)
+            db.session.commit()
+            status_label = "ativada" if registro.ativo else "pausada"
+            flash(f"Nota recorrente {status_label}.", "success")
+            return redirect(url_for("notas_recorrentes"))
+
+    hoje = date.today()
+    recorrentes = (
+        NotaRecorrente.query.order_by(
+            NotaRecorrente.ativo.desc(),
+            sa.func.upper(NotaRecorrente.empresa),
+            NotaRecorrente.dia_emissao,
+        ).all()
+    )
+    recorrentes_info = []
+    for registro in recorrentes:
+        proxima = _next_emission_date(registro, hoje)
+        recorrentes_info.append(
+            {
+                "registro": registro,
+                "proxima_data": proxima,
+                "dias_restantes": (proxima - hoje).days,
+                "emissao_hoje": proxima == hoje,
+                "valor_input": _format_decimal_input(registro.valor),
+            }
+        )
+
+    pode_acessar_totalizador = can_access_notas_totalizador()
+    cadastros = (
+        CadastroNota.query.filter(CadastroNota.ativo.is_(True))
+        .order_by(CadastroNota.cadastro)
+        .all()
+    )
+
+    return render_template(
+        "notas_recorrentes.html",
+        recorrentes_info=recorrentes_info,
+        recorrente_form=recorrente_form,
+        open_recorrente_modal=open_recorrente_modal,
+        editing_recorrente=editing_recorrente,
+        editing_recorrente_valor=_format_decimal_input(editing_recorrente.valor) if editing_recorrente else "",
+        pode_acessar_totalizador=pode_acessar_totalizador,
+        cadastros=cadastros,
     )
 
 
@@ -4764,6 +5169,8 @@ def notas_totalizador():
 
     if not can_access_notas_totalizador():
         abort(403)
+
+    _trigger_recorrente_notifications()
 
     today = date.today()
     default_start = today.replace(day=1)
@@ -5502,7 +5909,9 @@ def api_reunioes():
 def api_general_calendar_events():
     """Return collaborator calendar events as JSON."""
 
-    can_manage = is_user_admin(current_user) or user_has_tag("Gestão")
+    can_manage = (
+        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
+    )
     events = serialize_events_for_calendar(
         current_user.id, can_manage, is_user_admin(current_user)
     )
@@ -5768,6 +6177,16 @@ def visualizar_empresa(id):
     if financeiro:
         financeiro.envio_fisico = _prepare_envio_fisico(financeiro)
 
+    usuarios_responsaveis = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+    responsaveis_map = {
+        str(usuario.id): (usuario.name or usuario.username or f"Usuário {usuario.id}")
+        for usuario in usuarios_responsaveis
+    }
+
     return render_template(
         "empresas/visualizar.html",
         empresa=empresa,
@@ -5780,6 +6199,7 @@ def visualizar_empresa(id):
         reunioes_cliente=cliente_reunioes,
         reunioes_participantes_map=reunioes_participantes_map,
         can_access_financeiro=can_access_financeiro,
+        responsaveis_map=responsaveis_map,
     )
 
     ## Rota para gerenciar departamentos de uma empresa
@@ -5791,6 +6211,7 @@ def gerenciar_departamentos(empresa_id):
     empresa = Empresa.query.get_or_404(empresa_id)
 
     can_access_financeiro = user_has_tag("financeiro")
+    responsavel_value = (request.form.get("responsavel") or "").strip() if request.method == "POST" else None
 
     # Consolidated query: load all departments in one query instead of 6 separate queries
     dept_tipos = [
@@ -5828,6 +6249,16 @@ def gerenciar_departamentos(empresa_id):
         if can_access_financeiro
         else None
     )
+    usuarios_responsaveis = [
+        {
+            "id": str(usuario.id),
+            "label": usuario.name or usuario.username or f"Usuário {usuario.id}",
+        }
+        for usuario in User.query.filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    ]
+    usuarios_responsaveis_ids = [usuario["id"] for usuario in usuarios_responsaveis]
 
     if request.method == "GET":
         fiscal_form = DepartamentoFiscalForm(obj=fiscal)
@@ -5895,12 +6326,17 @@ def gerenciar_departamentos(empresa_id):
     if request.method == "POST":
         form_processed_successfully = False
 
+        def _set_responsavel(departamento_obj):
+            if departamento_obj is not None:
+                departamento_obj.responsavel = responsavel_value or None
+
         if form_type == "fiscal" and fiscal_form.validate():
             if not fiscal:
                 fiscal = Departamento(empresa_id=empresa_id, tipo="Departamento Fiscal")
                 db.session.add(fiscal)
 
             fiscal_form.populate_obj(fiscal)
+            _set_responsavel(fiscal)
             if "malote" not in (fiscal_form.envio_fisico.data or []):
                 fiscal.malote_coleta = None
             else:
@@ -5920,6 +6356,7 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(contabil)
 
             contabil_form.populate_obj(contabil)
+            _set_responsavel(contabil)
             if "malote" not in (contabil_form.envio_fisico.data or []):
                 contabil.malote_coleta = None
             else:
@@ -5941,6 +6378,7 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(pessoal)
 
             pessoal_form.populate_obj(pessoal)
+            _set_responsavel(pessoal)
             flash("Departamento Pessoal salvo com sucesso!", "success")
             form_processed_successfully = True
 
@@ -5952,6 +6390,7 @@ def gerenciar_departamentos(empresa_id):
                 db.session.add(administrativo)
 
             administrativo_form.populate_obj(administrativo)
+            _set_responsavel(administrativo)
             flash("Departamento Administrativo salvo com sucesso!", "success")
             form_processed_successfully = True
         elif form_type == "financeiro":
@@ -5965,6 +6404,7 @@ def gerenciar_departamentos(empresa_id):
                     db.session.add(financeiro)
 
                 financeiro_form.populate_obj(financeiro)
+                _set_responsavel(financeiro)
                 flash("Departamento Financeiro salvo com sucesso!", "success")
                 form_processed_successfully = True
 
@@ -5977,6 +6417,7 @@ def gerenciar_departamentos(empresa_id):
 
             particularidades_texto = request.form.get("particularidades_texto", "")
             notas_fiscais.particularidades_texto = particularidades_texto
+            _set_responsavel(notas_fiscais)
             flash("Departamento Notas Fiscais salvo com sucesso!", "success")
             form_processed_successfully = True
 
@@ -6051,6 +6492,8 @@ def gerenciar_departamentos(empresa_id):
         can_access_financeiro=can_access_financeiro,
         reunioes_cliente=reunioes_cliente,
         reunioes_participantes_map=reunioes_participantes_map,
+        usuarios_responsaveis=usuarios_responsaveis,
+        usuarios_responsaveis_ids=usuarios_responsaveis_ids,
     )
 
 
@@ -10115,3 +10558,4 @@ def delete_task(task_id):
 ## ============================================================================
 ## HEALTH CHECK ENDPOINTS - For monitoring and load balancers
 ## ============================================================================
+

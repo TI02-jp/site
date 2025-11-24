@@ -10,10 +10,10 @@
 <div class="container mt-4" style="max-width: 1400px;">
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
+            <a class="nav-link active" href="{{ url_for('cadastro_notas') }}">Cadastros</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link active" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
+            <a class="nav-link" href="{{ url_for('notas_recorrentes') }}">Notas Recorrentes</a>
         </li>
         {% if pode_acessar_totalizador %}
         <li class="nav-item">
@@ -22,69 +22,212 @@
         {% endif %}
     </ul>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="text-primary mb-0">
-            Cadastro
-            <span class="badge bg-primary ms-2">{{ cadastros|length }}</span>
-        </h1>
-        <button type="button" class="btn btn-primary" data-cadastro-modal="create" data-bs-toggle="modal" data-bs-target="#cadastroModal">
+    <div class="d-flex align-items-center mb-3 flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <h1 class="text-primary mb-0">
+                Cadastro
+                <span class="badge bg-primary ms-2">{{ cadastros|length }}</span>
+            </h1>
+        </div>
+        <form class="d-flex flex-wrap align-items-center gap-2 ms-auto" method="GET" action="{{ url_for('cadastro_notas') }}" style="min-width: 260px;">
+            <div class="input-group input-group-sm" style="min-width: 240px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" name="q" placeholder="Pesquisar empresa" value="{{ search_term }}">
+            </div>
+            <button class="btn btn-outline-primary btn-sm" type="submit">Buscar</button>
+            {% if search_term %}
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('cadastro_notas') }}">Limpar</a>
+            {% endif %}
+        </form>
+        <button type="button" class="btn btn-primary ms-auto" data-cadastro-modal="create" data-bs-toggle="modal" data-bs-target="#cadastroModal">
             <i class="bi bi-plus-lg me-1"></i>Novo Cadastro
         </button>
     </div>
     <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0 text-nowrap text-start">
-                    <thead>
-                        <tr>
-                            <th class="text-start">Cadastro</th>
-                            <th class="text-start">Valor</th>
-                            <th class="text-start">Acordos</th>
-                            <th class="text-start">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for c in cadastros %}
-                        <tr>
-                            <td class="text-start">{{ c.cadastro|upper }}</td>
-                            <td class="text-start">{{ c.valor_formatado }}</td>
-                            <td class="text-start">{{ (c.acordo or '#N/A')|upper }}</td>
-                            <td class="text-start">
-                                <button type="button"
-                                        class="btn btn-custom btn-sm me-1"
-                                        title="Editar"
-                                        data-cadastro-modal="edit"
-                                        data-bs-target="#cadastroModal"
-                                        data-bs-toggle="modal"
-                                        data-cadastro-id="{{ c.id }}"
-                                        data-cadastro-nome="{{ c.cadastro|e }}"
-                                        data-cadastro-valor="{{ c.valor }}"
-                                        data-cadastro-acordo="{{ (c.acordo or '')|upper }}">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button type="button"
-                                        class="btn btn-danger btn-sm"
-                                        title="Excluir"
-                                        data-cadastro-delete
-                                        data-cadastro-id="{{ c.id }}"
-                                        data-cadastro-nome="{{ c.cadastro|e }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-start py-5 text-muted">
-                                <i class="bi bi-file-text fs-1 d-block mb-3"></i>
-                                Nenhum cadastro encontrado
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="card-body">
+            {% if cadastros_info %}
+            <div class="accordion" id="cadastroAccordion">
+                {% for entry in cadastros_info %}
+                {% set c = entry.cadastro %}
+                <div class="accordion-item mb-3">
+                    <h2 class="accordion-header" id="cadastroHeading{{ loop.index }}">
+                        <button class="accordion-button collapsed d-flex flex-wrap gap-3" type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#cadastroCollapse{{ loop.index }}"
+                                aria-expanded="false"
+                                aria-controls="cadastroCollapse{{ loop.index }}">
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold text-uppercase">{{ c.cadastro|upper }}</div>
+                                <div class="text-muted small">Acordo: {{ (c.acordo or '#N/A')|upper }}</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small">Última nota</div>
+                                <div class="fw-semibold">{{ entry.ultima_data_formatada }}</div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="cadastroCollapse{{ loop.index }}" class="accordion-collapse collapse"
+                         aria-labelledby="cadastroHeading{{ loop.index }}"
+                         data-bs-parent="#cadastroAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-3 align-items-center mb-3">
+                                <div class="col-md-2 col-sm-6">
+                                    <div class="text-muted small">Acordo</div>
+                                    <div class="fw-semibold">{{ (c.acordo or '#N/A')|upper }}</div>
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <div class="text-muted small">Valor Base</div>
+                                    <div class="fw-semibold">{{ c.valor_formatado }}</div>
+                                </div>
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="text-muted small">Usuário</div>
+                                    <div class="fw-semibold">{{ c.usuario or '-' }}</div>
+                                </div>
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="text-muted small">Senha</div>
+                                    <div class="fw-semibold">{{ c.senha or '-' }}</div>
+                                </div>
+                                <div class="col-md-2 col-sm-12 d-flex justify-content-md-end justify-content-start gap-2">
+                                    <button type="button"
+                                            class="btn btn-custom btn-sm"
+                                            title="Editar cadastro"
+                                            data-cadastro-modal="edit"
+                                            data-bs-target="#cadastroModal"
+                                            data-bs-toggle="modal"
+                                            data-cadastro-id="{{ c.id }}"
+                                            data-cadastro-nome="{{ c.cadastro|e }}"
+                                            data-cadastro-valor="{{ c.valor }}"
+                                            data-cadastro-acordo="{{ (c.acordo or '')|upper }}">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            title="Desativar cadastro"
+                                            data-cadastro-delete
+                                            data-cadastro-id="{{ c.id }}"
+                                            data-cadastro-nome="{{ c.cadastro|e }}">
+                                        <i class="bi bi-pause-circle me-1"></i>Desativar
+                                    </button>
+                                </div>
+                            </div>
+                    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                title="Nova nota"
+                                data-nota-modal="create"
+                                data-nota-empresa="{{ c.cadastro|e }}"
+                                data-nota-acordo="{{ (c.acordo or '')|upper }}"
+                                data-nota-valor-base="{{ c.valor }}">
+                            <i class="bi bi-plus-circle me-1"></i>Nova nota
+                        </button>
+                    </div>
+                    <h6 class="fw-semibold mb-2">Notas para Débito</h6>
+                    {% if entry.notas %}
+                            <div class="table-responsive">
+                                <table class="table table-sm text-nowrap align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Data Emissão</th>
+                                            <th>Notas</th>
+                                            <th>Itens</th>
+                                            <th>Valor UN</th>
+                                            <th>Total</th>
+                                            <th>Acordo</th>
+                                            {% if pode_ver_forma_pagamento %}
+                                            <th>Pagamento</th>
+                                            {% endif %}
+                                            <th class="text-center">Obs.</th>
+                                            <th class="text-end">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for nota in entry.notas %}
+                                        <tr>
+                                            <td>{{ nota.data_emissao_formatada }}</td>
+                                            <td>{{ nota.notas }}</td>
+                                            <td>{{ nota.qtde_itens }}</td>
+                                            <td>{{ nota.valor_un_formatado }}</td>
+                                            <td class="fw-semibold">{{ nota.total_formatado }}</td>
+                                            <td>{{ (nota.acordo or '#N/A')|upper }}</td>
+                                            {% if pode_ver_forma_pagamento %}
+                                            <td>
+                                                <select
+                                                    class="form-select form-select-sm nota-forma-pagamento-select"
+                                                    data-nota-id="{{ nota.id }}"
+                                                    data-update-url="{{ url_for('notas_debito_update_forma_pagamento', nota_id=nota.id) }}"
+                                                    data-original-value="{{ nota.forma_pagamento or '' }}">
+                                                    {% for value, label in nota_form.forma_pagamento.choices %}
+                                                    <option value="{{ value }}" {% if (nota.forma_pagamento or '') == value %}selected{% endif %}>{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                            {% elif nota.forma_pagamento %}
+                                            <td>{{ (nota.forma_pagamento or '-')|upper }}</td>
+                                            {% else %}
+                                            <td>-</td>
+                                            {% endif %}
+                                            <td class="text-center">
+                                                {% if nota.observacao %}
+                                                <i class="bi bi-chat-left-text text-primary"
+                                                   data-bs-toggle="tooltip"
+                                                   title="{{ nota.observacao }}"></i>
+                                                {% else %}
+                                                <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="d-flex justify-content-end flex-wrap gap-1">
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sm"
+                                                            title="Editar nota"
+                                                            data-nota-modal="edit"
+                                                            data-nota-id="{{ nota.id }}"
+                                                            data-nota-empresa="{{ nota.empresa|e }}"
+                                                            data-nota-data="{{ nota.data_emissao.strftime('%Y-%m-%d') if nota.data_emissao else '' }}"
+                                                            data-nota-notas="{{ nota.notas }}"
+                                                            data-nota-qtde="{{ nota.qtde_itens }}"
+                                                            data-nota-valor-un="{{ nota.valor_un if nota.valor_un is not none else '' }}"
+                                                            data-nota-total="{{ nota.total if nota.total is not none else '' }}"
+                                                            data-nota-acordo="{{ (nota.acordo or '')|upper }}"
+                                                            data-nota-forma="{{ (nota.forma_pagamento or '')|upper }}"
+                                                            data-nota-observacao="{{ (nota.observacao or '')|e }}">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-outline-danger btn-sm"
+                                                            title="Excluir nota"
+                                                            data-nota-delete
+                                                            data-nota-id="{{ nota.id }}"
+                                                            data-nota-empresa="{{ nota.empresa|e }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-light border d-flex align-items-center mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Nenhuma nota cadastrada para esta empresa.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-journal-text fs-1 d-block mb-3"></i>
+                Nenhum cadastro encontrado.
+            </div>
+            {% endif %}
         </div>
     </div>
+
 </div>
 
 <!-- Modal de Cadastro -->
@@ -92,7 +235,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <form method="POST" action="{{ url_for('cadastro_notas') }}" novalidate>
-                {{ cadastro_form.hidden_tag() }}
+    {{ cadastro_form.hidden_tag() }}
                 <input type="hidden" name="form_name" id="cadastroFormName" value="{{ 'cadastro_update' if editing_cadastro else 'cadastro_create' }}">
                 <input type="hidden" name="cadastro_id" id="cadastroIdField" value="{{ editing_cadastro.id if editing_cadastro else '' }}">
                 <div class="modal-header border-0 pb-0 px-4 pt-4">
@@ -113,16 +256,25 @@
                                 {{ cadastro_form.cadastro(class="form-control") }}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="{{ cadastro_form.valor.id }}" class="form-label fw-semibold">{{ cadastro_form.valor.label.text }}</label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
                                 {{ cadastro_form.valor(class="form-control") }}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="{{ cadastro_form.acordo.id }}" class="form-label fw-semibold">{{ cadastro_form.acordo.label.text }}</label>
                             {{ cadastro_form.acordo(class="form-select") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ cadastro_form.usuario.id }}" class="form-label fw-semibold">{{ cadastro_form.usuario.label.text }}</label>
+                            {{ cadastro_form.usuario(class="form-control") }}
+                        </div>
+                        <div class="col-md-12">
+                            <label for="{{ cadastro_form.senha.id }}" class="form-label fw-semibold">{{ cadastro_form.senha.label.text }}</label>
+                            {{ cadastro_form.senha(class="form-control") }}
+                            <div class="form-text">A senha fica visível para consulta.</div>
                         </div>
                     </div>
                 </div>
@@ -137,11 +289,87 @@
     </div>
 </div>
 
+<!-- Modal de Nota -->
+<div class="modal fade" id="notaModal" tabindex="-1" aria-labelledby="notaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('cadastro_notas') }}" novalidate>
+                {{ nota_form.hidden_tag() }}
+                <input type="hidden" name="form_name" id="notaFormName" value="{{ 'nota_update' if editing_nota else 'nota_create' }}">
+                <input type="hidden" name="nota_id" id="notaIdField" value="{{ editing_nota.id if editing_nota else '' }}">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div class="w-100 d-flex justify-content-between align-items-start">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="notaModalLabel">
+                            <i class="bi bi-receipt-cutoff"></i>
+                            <span id="notaModalTitle">{{ 'Editar Nota' if editing_nota else 'Nova Nota' }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.data_emissao.id }}" class="form-label fw-semibold">{{ nota_form.data_emissao.label.text }}</label>
+                            {{ nota_form.data_emissao(class="form-control", type="date") }}
+                        </div>
+                        <div class="col-md-8">
+                            <label for="{{ nota_form.empresa.id }}" class="form-label fw-semibold">{{ nota_form.empresa.label.text }}</label>
+                            {{ nota_form.empresa(class="form-control") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.notas.id }}" class="form-label fw-semibold">{{ nota_form.notas.label.text }}</label>
+                            {{ nota_form.notas(class="form-control") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.qtde_itens.id }}" class="form-label fw-semibold">{{ nota_form.qtde_itens.label.text }}</label>
+                            {{ nota_form.qtde_itens(class="form-control") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.acordo.id }}" class="form-label fw-semibold">{{ nota_form.acordo.label.text }}</label>
+                            {{ nota_form.acordo(class="form-control") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.valor_un.id }}" class="form-label fw-semibold">{{ nota_form.valor_un.label.text }}</label>
+                            {{ nota_form.valor_un(class="form-control") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.total.id }}" class="form-label fw-semibold">{{ nota_form.total.label.text }}</label>
+                            {{ nota_form.total(class="form-control") }}
+                        </div>
+                        {% if pode_ver_forma_pagamento %}
+                        <div class="col-md-4">
+                            <label for="{{ nota_form.forma_pagamento.id }}" class="form-label fw-semibold">{{ nota_form.forma_pagamento.label.text }}</label>
+                            {{ nota_form.forma_pagamento(class="form-select") }}
+                        </div>
+                        {% endif %}
+                        <div class="col-12">
+                            <label for="{{ nota_form.observacao.id }}" class="form-label fw-semibold">{{ nota_form.observacao.label.text }}</label>
+                            {{ nota_form.observacao(class="form-control", rows=3) }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ nota_form.submit(class="btn btn-primary", id="notaModalSubmit") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <!-- Form oculto para exclusão -->
 <form method="POST" action="{{ url_for('cadastro_notas') }}" id="deleteCadastroForm" style="display: none;">
-    {{ cadastro_form.hidden_tag() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="form_name" value="cadastro_delete">
     <input type="hidden" name="cadastro_id" id="deleteCadastroId">
+</form>
+<form method="POST" action="{{ url_for('cadastro_notas') }}" id="deleteNotaForm" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_name" value="nota_delete">
+    <input type="hidden" name="nota_id" id="deleteNotaId">
 </form>
 {% endblock %}
 
@@ -239,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var cadastroId = target.getAttribute('data-cadastro-id');
             var nome = target.getAttribute('data-cadastro-nome');
 
-            if (confirm('Deseja realmente excluir o cadastro "' + nome + '"?')) {
+            if (confirm('Deseja desativar o cadastro "' + nome + '"?')) {
                 document.getElementById('deleteCadastroId').value = cadastroId;
                 document.getElementById('deleteCadastroForm').submit();
             }
@@ -277,6 +505,194 @@ document.addEventListener('DOMContentLoaded', function() {
     {% else %}
     setMode('create', { preserveValues: true });
     {% endif %}
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    var notaModalEl = document.getElementById('notaModal');
+    if (!notaModalEl) {
+        return;
+    }
+
+    var notaModal = new bootstrap.Modal(notaModalEl);
+    var notaFormName = document.getElementById('notaFormName');
+    var notaIdField = document.getElementById('notaIdField');
+    var dataField = document.getElementById('{{ nota_form.data_emissao.id }}');
+    var empresaField = document.getElementById('{{ nota_form.empresa.id }}');
+    var notasField = document.getElementById('{{ nota_form.notas.id }}');
+    var qtdeField = document.getElementById('{{ nota_form.qtde_itens.id }}');
+    var valorUnField = document.getElementById('{{ nota_form.valor_un.id }}');
+    var totalField = document.getElementById('{{ nota_form.total.id }}');
+    var acordoField = document.getElementById('{{ nota_form.acordo.id }}');
+    var formaPagamentoField = document.getElementById('{{ nota_form.forma_pagamento.id }}');
+    var observacaoField = document.getElementById('{{ nota_form.observacao.id }}');
+    var notaSubmitButton = document.getElementById('notaModalSubmit');
+
+    if (empresaField) {
+        empresaField.addEventListener('blur', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
+
+    function recalcTotal() {
+        if (!notasField || !valorUnField || !totalField) return;
+        var notasVal = parseFloat((notasField.value || '').replace(',', '.'));
+        var valorUnVal = parseFloat((valorUnField.value || '').replace(',', '.'));
+        if (isNaN(notasVal) || isNaN(valorUnVal)) {
+            return;
+        }
+        var total = notasVal * valorUnVal;
+        totalField.value = total.toFixed(2).replace('.', ',');
+    }
+
+    function setNotaMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            notaFormName.value = 'nota_update';
+            notaIdField.value = data.id || '';
+            if (notaSubmitButton) {
+                notaSubmitButton.value = 'Atualizar';
+            }
+        } else {
+            notaFormName.value = 'nota_create';
+            notaIdField.value = '';
+            if (notaSubmitButton) {
+                notaSubmitButton.value = 'Salvar';
+            }
+        }
+
+        if (!data.preserveValues || mode === 'edit') {
+            if (dataField) dataField.value = data.data || '';
+            if (empresaField) empresaField.value = data.empresa || '';
+            if (notasField) notasField.value = data.notas || '';
+            if (qtdeField) qtdeField.value = data.qtde || '';
+            if (valorUnField) valorUnField.value = data.valor_un || '';
+            if (totalField) totalField.value = data.total || '';
+            if (acordoField) acordoField.value = data.acordo || '';
+            if (formaPagamentoField) formaPagamentoField.value = data.forma || '';
+            if (observacaoField) observacaoField.value = data.observacao || '';
+            recalcTotal();
+        }
+    }
+
+    document.querySelectorAll('[data-nota-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setNotaMode('create', {
+                empresa: button.getAttribute('data-nota-empresa') || '',
+                acordo: button.getAttribute('data-nota-acordo') || '',
+                valor_un: button.getAttribute('data-nota-valor-base') || ''
+            });
+            notaModal.show();
+        });
+    });
+
+    document.querySelectorAll('[data-nota-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setNotaMode('edit', {
+                id: button.getAttribute('data-nota-id'),
+                data: button.getAttribute('data-nota-data') || '',
+                empresa: button.getAttribute('data-nota-empresa') || '',
+                notas: button.getAttribute('data-nota-notas') || '',
+                qtde: button.getAttribute('data-nota-qtde') || '',
+                valor_un: button.getAttribute('data-nota-valor-un') || '',
+                total: button.getAttribute('data-nota-total') || '',
+                acordo: button.getAttribute('data-nota-acordo') || '',
+                forma: button.getAttribute('data-nota-forma') || '',
+                observacao: button.getAttribute('data-nota-observacao') || ''
+            });
+            notaModal.show();
+        });
+    });
+
+    if (notasField) {
+        notasField.addEventListener('input', recalcTotal);
+        notasField.addEventListener('blur', recalcTotal);
+    }
+    if (valorUnField) {
+        valorUnField.addEventListener('input', recalcTotal);
+        valorUnField.addEventListener('blur', recalcTotal);
+    }
+
+    var deleteNotaForm = document.getElementById('deleteNotaForm');
+    var deleteNotaId = document.getElementById('deleteNotaId');
+    document.querySelectorAll('[data-nota-delete]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var notaId = button.getAttribute('data-nota-id');
+            var empresa = button.getAttribute('data-nota-empresa');
+            if (confirm('Excluir a nota da empresa "' + empresa + '"?')) {
+                deleteNotaId.value = notaId;
+                deleteNotaForm.submit();
+            }
+        });
+    });
+
+    notaModalEl.addEventListener('hidden.bs.modal', function() {
+        setNotaMode('create', { preserveValues: true });
+    });
+
+    {% if open_nota_modal %}
+    {% if editing_nota %}
+    setNotaMode('edit', {
+        id: '{{ editing_nota.id }}',
+        data: '{{ editing_nota.data_emissao.strftime("%Y-%m-%d") if editing_nota.data_emissao else "" }}',
+        empresa: {{ editing_nota.empresa|tojson }},
+        notas: '{{ editing_nota.notas }}',
+        qtde: '{{ editing_nota.qtde_itens }}',
+        valor_un: '{{ editing_nota.valor_un if editing_nota.valor_un is not none else "" }}',
+        total: '{{ editing_nota.total if editing_nota.total is not none else "" }}',
+        acordo: {{ (editing_nota.acordo or '')|upper|tojson }},
+        forma: {{ (editing_nota.forma_pagamento or '')|upper|tojson }},
+        observacao: {{ (editing_nota.observacao or '')|tojson }}
+    });
+    {% else %}
+    setNotaMode('create', { preserveValues: true });
+    {% endif %}
+    notaModal.show();
+    {% else %}
+    setNotaMode('create', { preserveValues: true });
+    {% endif %}
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    var selects = document.querySelectorAll('.nota-forma-pagamento-select');
+    if (!selects.length) {
+        return;
+    }
+
+    selects.forEach(function(select) {
+        select.addEventListener('change', function(event) {
+            var target = event.currentTarget;
+            var updateUrl = target.getAttribute('data-update-url');
+            if (!updateUrl) {
+                return;
+            }
+            var original = (target.getAttribute('data-original-value') || '').toUpperCase();
+            var selected = (target.value || '').toUpperCase();
+            if (selected === original) {
+                return;
+            }
+
+            var button = target;
+            button.disabled = true;
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken || ''
+                },
+                body: JSON.stringify({ forma_pagamento: selected })
+            }).then(function(response) {
+                button.disabled = false;
+                if (!response.ok) {
+                    throw new Error('Falha ao atualizar forma de pagamento');
+                }
+                target.setAttribute('data-original-value', selected);
+            }).catch(function() {
+                button.disabled = false;
+                target.value = original;
+                alert('Não foi possível atualizar a forma de pagamento.');
+            });
+        });
+    });
 });
 </script>
 {% endblock %}
