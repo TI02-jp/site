@@ -15,6 +15,9 @@
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('notas_recorrentes') }}">Notas Recorrentes</a>
+        </li>
         {% if pode_acessar_totalizador %}
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('notas_totalizador') }}">Totalizador</a>

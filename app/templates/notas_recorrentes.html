@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Notas Recorrentes{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1400px;">
+        <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastros</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('notas_recorrentes') }}">Notas Recorrentes</a>
+        </li>
+        {% if pode_acessar_totalizador %}
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('notas_totalizador') }}">Totalizador</a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="text-primary mb-1">
+                Notas Recorrentes
+                <span class="badge bg-primary ms-2">{{ recorrentes_info|length }}</span>
+            </h1>
+            <p class="text-muted mb-0">Registre notas fiscais com emissão mensal automática e receba um lembrete no dia certo.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-recorrente-modal="create">
+            <i class="bi bi-plus-lg me-1"></i>Nova nota recorrente
+        </button>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-bell me-2 fs-4"></i>
+            <div>
+                <strong>Como funciona:</strong> no dia configurado em cada nota, os responsáveis pelo Controle de Notas recebem uma notificação automática para emitir a NF referente ao período informado.
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 text-nowrap align-middle">
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Descrição</th>
+                            <th>Período</th>
+                            <th>Dia emissão</th>
+                            <th>Valor</th>
+                            <th>Próxima emissão</th>
+                            <th>Status</th>
+                            <th class="text-center">Obs.</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recorrentes_info %}
+                        {% set registro = item.registro %}
+                        <tr class="{% if item.emissao_hoje %}table-warning{% endif %}">
+                            <td class="fw-semibold">{{ registro.empresa }}</td>
+                            <td>{{ registro.descricao or '-' }}</td>
+                            <td>{{ registro.periodo_formatado }}</td>
+                            <td>{{ "%02d"|format(registro.dia_emissao) }}</td>
+                            <td>{{ registro.valor_formatado }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span>{{ item.proxima_data.strftime('%d/%m/%Y') }}</span>
+                                    {% if item.emissao_hoje %}
+                                    <span class="badge bg-danger text-uppercase mt-1">Hoje</span>
+                                    {% elif item.dias_restantes == 1 %}
+                                    <span class="badge bg-warning text-dark text-uppercase mt-1">Amanhã</span>
+                                    {% elif item.dias_restantes >= 2 %}
+                                    <span class="badge bg-light text-muted mt-1">Em {{ item.dias_restantes }} dias</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if registro.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Pausado</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if registro.observacao %}
+                                <i class="bi bi-chat-left-text text-primary" data-bs-toggle="tooltip" title="{{ registro.observacao }}"></i>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end flex-wrap gap-1">
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm"
+                                            title="Editar"
+                                            data-recorrente-modal="edit"
+                                            data-recorrente-id="{{ registro.id }}"
+                                            data-recorrente-empresa="{{ registro.empresa|e }}"
+                                            data-recorrente-descricao="{{ (registro.descricao or '')|e }}"
+                                            data-recorrente-valor="{{ item.valor_input }}"
+                                            data-recorrente-periodo-inicio="{{ registro.periodo_inicio }}"
+                                            data-recorrente-periodo-fim="{{ registro.periodo_fim }}"
+                                            data-recorrente-dia-emissao="{{ registro.dia_emissao }}"
+                                            data-recorrente-observacao="{{ (registro.observacao or '')|e }}"
+                                            data-recorrente-ativo="{{ '1' if registro.ativo else '0' }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            title="{{ 'Pausar' if registro.ativo else 'Ativar' }}"
+                                            data-recorrente-toggle
+                                            data-recorrente-id="{{ registro.id }}"
+                                            data-recorrente-empresa="{{ registro.empresa|e }}"
+                                            data-recorrente-status="{{ 'pausar' if registro.ativo else 'ativar' }}">
+                                        <i class="bi bi-power"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            title="Excluir"
+                                            data-recorrente-delete
+                                            data-recorrente-id="{{ registro.id }}"
+                                            data-recorrente-empresa="{{ registro.empresa|e }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="py-5 text-center text-muted">
+                                <i class="bi bi-calendar-check fs-1 d-block mb-3"></i>
+                                Nenhuma nota recorrente cadastrada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="notasRecorrentesModal" tabindex="-1" aria-labelledby="recorrenteModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" action="{{ url_for('notas_recorrentes') }}" novalidate>
+                {{ recorrente_form.hidden_tag() }}
+                <input type="hidden" name="form_name" id="recorrenteFormName" value="recorrente_create">
+                <input type="hidden" name="recorrente_id" id="recorrenteIdField">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-semibold" id="recorrenteModalTitle">Nova nota recorrente</h5>
+                        <p class="text-muted small mb-0">Informe período, valor e dia do lembrete.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.empresa.id }}">{{ recorrente_form.empresa.label.text }}</label>
+                            {{ recorrente_form.empresa(class="form-control", list="empresaCadastrosList") }}
+                            <datalist id="empresaCadastrosList">
+                                {% for c in cadastros %}
+                                <option value="{{ c.cadastro|upper }}">{{ c.cadastro|upper }}</option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.descricao.id }}">{{ recorrente_form.descricao.label.text }}</label>
+                            {{ recorrente_form.descricao(class="form-control", placeholder="Serviço / referência") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.valor.id }}">{{ recorrente_form.valor.label.text }}</label>
+                            {{ recorrente_form.valor(class="form-control", placeholder="Opcional") }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.periodo_inicio.id }}">{{ recorrente_form.periodo_inicio.label.text }}</label>
+                            {{ recorrente_form.periodo_inicio(class="form-control", min="1", max="31") }}
+                            <small class="text-muted">Dia inicial do período faturado.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.periodo_fim.id }}">{{ recorrente_form.periodo_fim.label.text }}</label>
+                            {{ recorrente_form.periodo_fim(class="form-control", min="1", max="31") }}
+                            <small class="text-muted">Dia final do período faturado.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.dia_emissao.id }}">{{ recorrente_form.dia_emissao.label.text }}</label>
+                            {{ recorrente_form.dia_emissao(class="form-control", min="1", max="31") }}
+                            <small class="text-muted">Dia do lembrete/ emissão.</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold" for="{{ recorrente_form.observacao.id }}">{{ recorrente_form.observacao.label.text }}</label>
+                            {{ recorrente_form.observacao(class="form-control", rows="3") }}
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ recorrente_form.ativo(class="form-check-input", id=recorrente_form.ativo.id) }}
+                                <label class="form-check-label fw-semibold" for="{{ recorrente_form.ativo.id }}">Ativo (gera notificação)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    {{ recorrente_form.submit(class="btn btn-primary", id="recorrenteModalSubmit") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden forms -->
+<form method="POST" action="{{ url_for('notas_recorrentes') }}" id="deleteRecorrenteForm" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_name" value="recorrente_delete">
+    <input type="hidden" name="recorrente_id" id="deleteRecorrenteId">
+</form>
+<form method="POST" action="{{ url_for('notas_recorrentes') }}" id="toggleRecorrenteForm" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_name" value="recorrente_toggle">
+    <input type="hidden" name="recorrente_id" id="toggleRecorrenteId">
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalEl = document.getElementById('notasRecorrentesModal');
+    if (!modalEl) {
+        return;
+    }
+    var recorrenteModal = new bootstrap.Modal(modalEl);
+    var formNameInput = document.getElementById('recorrenteFormName');
+    var idInput = document.getElementById('recorrenteIdField');
+    var titleWrapper = document.getElementById('recorrenteModalTitle');
+    var submitButton = document.getElementById('recorrenteModalSubmit');
+    var empresaField = document.getElementById('{{ recorrente_form.empresa.id }}');
+    var descricaoField = document.getElementById('{{ recorrente_form.descricao.id }}');
+    var valorField = document.getElementById('{{ recorrente_form.valor.id }}');
+    var periodoInicioField = document.getElementById('{{ recorrente_form.periodo_inicio.id }}');
+    var periodoFimField = document.getElementById('{{ recorrente_form.periodo_fim.id }}');
+    var diaEmissaoField = document.getElementById('{{ recorrente_form.dia_emissao.id }}');
+    var observacaoField = document.getElementById('{{ recorrente_form.observacao.id }}');
+    var ativoField = document.getElementById('{{ recorrente_form.ativo.id }}');
+
+    if (empresaField) {
+        empresaField.addEventListener('blur', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
+
+    function setMode(mode, preset) {
+        var data = preset || {};
+        if (mode === 'edit') {
+            formNameInput.value = 'recorrente_update';
+            titleWrapper.textContent = 'Editar nota recorrente';
+            if (submitButton) {
+                submitButton.value = 'Atualizar';
+            }
+            idInput.value = data.id || '';
+            empresaField.value = data.empresa || '';
+            descricaoField.value = data.descricao || '';
+            valorField.value = data.valor || '';
+            periodoInicioField.value = data.periodo_inicio || '';
+            periodoFimField.value = data.periodo_fim || '';
+            diaEmissaoField.value = data.dia_emissao || '';
+            observacaoField.value = data.observacao || '';
+            ativoField.checked = data.ativo !== '0';
+        } else {
+            formNameInput.value = 'recorrente_create';
+            titleWrapper.textContent = 'Nova nota recorrente';
+            if (submitButton) {
+                submitButton.value = 'Salvar';
+            }
+            idInput.value = '';
+            if (!data.preserveValues) {
+                empresaField.value = '';
+                descricaoField.value = '';
+                valorField.value = '';
+                periodoInicioField.value = '';
+                periodoFimField.value = '';
+                diaEmissaoField.value = '';
+                observacaoField.value = '';
+                ativoField.checked = true;
+            }
+        }
+    }
+
+    document.querySelectorAll('[data-recorrente-modal="create"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setMode('create', { preserveValues: false });
+            recorrenteModal.show();
+        });
+    });
+
+    document.querySelectorAll('[data-recorrente-modal="edit"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            setMode('edit', {
+                id: target.getAttribute('data-recorrente-id'),
+                empresa: target.getAttribute('data-recorrente-empresa') || '',
+                descricao: target.getAttribute('data-recorrente-descricao') || '',
+                valor: target.getAttribute('data-recorrente-valor') || '',
+                periodo_inicio: target.getAttribute('data-recorrente-periodo-inicio') || '',
+                periodo_fim: target.getAttribute('data-recorrente-periodo-fim') || '',
+                dia_emissao: target.getAttribute('data-recorrente-dia-emissao') || '',
+                observacao: target.getAttribute('data-recorrente-observacao') || '',
+                ativo: target.getAttribute('data-recorrente-ativo') || '1'
+            });
+            recorrenteModal.show();
+        });
+    });
+
+    var deleteForm = document.getElementById('deleteRecorrenteForm');
+    var deleteIdField = document.getElementById('deleteRecorrenteId');
+    document.querySelectorAll('[data-recorrente-delete]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            var id = target.getAttribute('data-recorrente-id');
+            var empresa = target.getAttribute('data-recorrente-empresa');
+            if (confirm('Excluir a nota recorrente de "' + empresa + '"?')) {
+                deleteIdField.value = id;
+                deleteForm.submit();
+            }
+        });
+    });
+
+    var toggleForm = document.getElementById('toggleRecorrenteForm');
+    var toggleIdField = document.getElementById('toggleRecorrenteId');
+    document.querySelectorAll('[data-recorrente-toggle]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            var id = target.getAttribute('data-recorrente-id');
+            var empresa = target.getAttribute('data-recorrente-empresa');
+            var status = target.getAttribute('data-recorrente-status');
+            if (confirm('Deseja ' + status + ' as notificações de "' + empresa + '"?')) {
+                toggleIdField.value = id;
+                toggleForm.submit();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        new bootstrap.Tooltip(el);
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        setMode('create', { preserveValues: true });
+    });
+
+    {% if open_recorrente_modal %}
+    {% if editing_recorrente %}
+    setMode('edit', {
+        id: '{{ editing_recorrente.id }}',
+        empresa: {{ editing_recorrente.empresa|tojson }},
+        descricao: {{ (editing_recorrente.descricao or '')|tojson }},
+        valor: '{{ editing_recorrente_valor }}',
+        periodo_inicio: '{{ editing_recorrente.periodo_inicio }}',
+        periodo_fim: '{{ editing_recorrente.periodo_fim }}',
+        dia_emissao: '{{ editing_recorrente.dia_emissao }}',
+        observacao: {{ (editing_recorrente.observacao or '')|tojson }},
+        ativo: '{{ "1" if editing_recorrente.ativo else "0" }}'
+    });
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+    recorrenteModal.show();
+    {% else %}
+    setMode('create', { preserveValues: true });
+    {% endif %}
+});
+</script>
+{% endblock %}

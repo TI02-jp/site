@@ -67,7 +67,7 @@
         </li>
         {% if can_access_controle_notas() %}
         <li class="nav-item">
-            <a class="nav-link{% if request.endpoint in ['notas_debito', 'cadastro_notas'] %} active{% endif %}" href="{{ url_for('notas_debito') }}">
+            <a class="nav-link{% if request.endpoint in ['cadastro_notas', 'notas_recorrentes', 'notas_totalizador'] %} active{% endif %}" href="{{ url_for('cadastro_notas') }}">
                 <i class="bi bi-receipt-cutoff"></i>
                 CONTROLE NOTAS
             </a>

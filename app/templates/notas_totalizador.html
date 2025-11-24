@@ -25,14 +25,12 @@
                     aria-expanded="false"
                     aria-controls="{{ section_id }}Collapse{{ loop.index }}">
                 <span class="fw-semibold text-uppercase flex-grow-1">{{ grupo.titulo }}</span>
-                <span class="small text-muted text-uppercase">Registros</span>
-                <span class="fw-semibold">{{ grupo.qtd_registros }}</span>
-                <span class="small text-muted text-uppercase">Notas</span>
-                <span class="fw-semibold">{{ grupo.total_notas }}</span>
-                <span class="small text-muted text-uppercase">Itens</span>
-                <span class="fw-semibold">{{ grupo.total_itens }}</span>
-                <span class="small text-muted text-uppercase">Valor Total</span>
-                <span class="fw-semibold">{{ grupo.valor_total_formatado }}</span>
+                <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
+                    <span class="d-flex align-items-center gap-1">
+                        <span class="text-uppercase">Valor</span>
+                        <span class="fw-semibold text-dark">{{ grupo.valor_total_formatado }}</span>
+                    </span>
+                </div>
             </button>
         </h2>
         <div id="{{ section_id }}Collapse{{ loop.index }}" class="accordion-collapse collapse"
@@ -44,6 +42,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="text-start">Data Emissao</th>
+                                <th class="text-start">Empresa</th>
                                 <th class="text-start">Notas</th>
                                 <th class="text-start">Itens</th>
                                 <th class="text-start">Valor UN</th>
@@ -59,6 +58,7 @@
                             {% for nota in grupo.notas %}
                             <tr>
                                 <td class="text-start">{{ nota.data_emissao_formatada }}</td>
+                                <td class="text-start">{{ nota.empresa }}</td>
                                 <td class="text-start">{{ nota.notas }}</td>
                                 <td class="text-start">{{ nota.qtde_itens }}</td>
                                 <td class="text-start">{{ nota.valor_un_formatado }}</td>
@@ -105,12 +105,12 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1400px;">
-    <ul class="nav nav-tabs mb-4">
+        <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('notas_debito') }}">Notas para Debito</a>
+            <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastros</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastro</a>
+            <a class="nav-link" href="{{ url_for('notas_recorrentes') }}">Notas Recorrentes</a>
         </li>
         <li class="nav-item">
             <a class="nav-link active" href="{{ url_for('notas_totalizador') }}">Totalizador</a>

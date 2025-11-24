@@ -61,6 +61,7 @@
     .participant-extra {
         font-size: 0.75rem;
         color: #6c757d;
+        
         font-weight: 500;
         margin-left: 0.3rem;
     }
@@ -88,6 +89,26 @@
     }
     .section-header-flex {
         gap: 0.75rem;
+    }
+    .dept-header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .dept-responsavel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #e6e9f0;
+    }
+    .dept-responsavel label {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+    }
+    .dept-responsavel-select {
+        min-width: 220px;
     }
     .meetings-table tbody td[data-label] {
         vertical-align: top;
@@ -125,6 +146,16 @@
         .section-header-flex .btn {
             width: 100%;
         }
+        .dept-header-bar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .dept-responsavel {
+            width: 100%;
+        }
+        .dept-responsavel-select {
+            width: 100%;
+        }
     }
     @media (max-width: 767.98px) {
         .meetings-table thead {
@@ -157,10 +188,32 @@
     }
     </style>
 
+    {% macro responsavel_dropdown(form_id, value) %}
+    {% set current_value = (value or '') | string %}
+    <div class="dept-responsavel">
+        <label class="small fw-semibold text-white-50">Responsável</label>
+        <select class="form-select form-select-sm dept-responsavel-select responsavel-select" name="responsavel" form="{{ form_id }}">
+            <option value="">Selecione</option>
+            {% for usuario in usuarios_responsaveis %}
+                {% set option_value = usuario.id %}
+                <option value="{{ option_value }}" {% if option_value == current_value %}selected{% endif %}>{{ usuario.label }}</option>
+            {% endfor %}
+            {% if current_value and current_value not in usuarios_responsaveis_ids %}
+                <option value="{{ current_value }}" selected>Responsável atual: {{ current_value }}</option>
+            {% endif %}
+        </select>
+    </div>
+    {% endmacro %}
+
     <div class="card shadow-lg mb-5 section-anchor w-100" id="fiscal">
-        <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3></div>
+        <div class="card-header bg-dept-blue text-white py-3">
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
+                {{ responsavel_dropdown('fiscal-form', fiscal_form.responsavel.data) }}
+            </div>
+        </div>
         <div class="card-body p-4">
-            <form method="POST" enctype="multipart/form-data">
+            <form id="fiscal-form" method="POST" enctype="multipart/form-data">
                 {{ fiscal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="fiscal">
                 
@@ -289,9 +342,14 @@
     </div>
 
     <div class="card shadow-lg mb-5 section-anchor w-100" id="contabil">
-        <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3></div>
+        <div class="card-header bg-dept-orange text-white py-3">
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
+                {{ responsavel_dropdown('contabil-form', contabil_form.responsavel.data) }}
+            </div>
+        </div>
         <div class="card-body p-4">
-            <form method="POST" enctype="multipart/form-data">
+            <form id="contabil-form" method="POST" enctype="multipart/form-data">
                 {{ contabil_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="contabil">
                 
@@ -412,12 +470,15 @@
 
     <div class="card shadow-lg mb-5 section-anchor w-100" id="pessoal">
         <div class="card-header bg-dept-blue text-white py-3">
-            <h3 class="mb-0 fw-semibold">
-                <i class="bi bi-people me-2"></i>Departamento Pessoal
-            </h3>
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold">
+                    <i class="bi bi-people me-2"></i>Departamento Pessoal
+                </h3>
+                {{ responsavel_dropdown('pessoal-form', pessoal_form.responsavel.data) }}
+            </div>
         </div>
         <div class="card-body p-4">
-            <form method="POST" enctype="multipart/form-data">
+            <form id="pessoal-form" method="POST" enctype="multipart/form-data">
                 {{ pessoal_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="pessoal">
 
@@ -490,9 +551,14 @@
 
 
     <div class="card shadow-lg mb-5 section-anchor w-100" id="administrativo">
-        <div class="card-header bg-dept-orange text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3></div>
+        <div class="card-header bg-dept-orange text-white py-3">
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
+                {{ responsavel_dropdown('administrativo-form', administrativo_form.responsavel.data) }}
+            </div>
+        </div>
         <div class="card-body p-4">
-            <form method="POST">
+            <form id="administrativo-form" method="POST">
                 {{ administrativo_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="administrativo">
                 <h5 class="text-dept-orange border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
@@ -512,9 +578,14 @@
     </div>
 
     <div class="card shadow-lg mb-5 section-anchor w-100" id="notas-fiscais">
-        <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-receipt-cutoff me-2"></i>Departamento Notas Fiscais</h3></div>
+        <div class="card-header bg-dept-blue text-white py-3">
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt-cutoff me-2"></i>Departamento Notas Fiscais</h3>
+                {{ responsavel_dropdown('notas-fiscais-form', notas_fiscais.responsavel if notas_fiscais else '') }}
+            </div>
+        </div>
         <div class="card-body p-4">
-            <form method="POST">
+            <form id="notas-fiscais-form" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="form_type" value="notas_fiscais">
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Informações e Procedimentos</h5>
@@ -547,7 +618,7 @@
     <div class="card shadow-lg mb-5 section-anchor w-100" id="reunioes-cliente">
         <div class="card-header bg-primary text-white py-3">
             <div class="section-header-flex d-flex justify-content-between align-items-center flex-wrap">
-                <h3 class="mb-0 fw-semibold"><i class="bi bi-people-fill me-2"></i>Departamento Reuniões com Cliente</h3>
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-people-fill me-2"></i>Reunião com cliente</h3>
                 <a href="{{ url_for('nova_reuniao_cliente', empresa_id=empresa.id) }}" class="btn btn-light btn-sm text-primary fw-semibold mt-2 mt-md-0">
                     <i class="bi bi-plus-circle me-1"></i>Adicionar reunião
                 </a>
@@ -645,11 +716,16 @@
         </div>
     </div>
 
-    {% if can_access_financeiro %}
-    <div class="card shadow-lg mb-5 section-anchor w-100" id="financeiro">
-        <div class="card-header bg-dept-blue text-white py-3"><h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3></div>
+{% if can_access_financeiro %}
+<div class="card shadow-lg mb-5 section-anchor w-100" id="financeiro">
+        <div class="card-header bg-dept-blue text-white py-3">
+            <div class="dept-header-bar">
+                <h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3>
+                {{ responsavel_dropdown('financeiro-form', financeiro_form.responsavel.data if financeiro_form else '') }}
+            </div>
+        </div>
         <div class="card-body p-4">
-            <form method="POST">
+            <form id="financeiro-form" method="POST">
                 {{ financeiro_form.hidden_tag() }}
                 <input type="hidden" name="form_type" value="financeiro">
                 <h5 class="text-dept-blue border-bottom pb-2 mb-3"><i class="bi bi-pencil-square me-2"></i>Particularidades</h5>
@@ -848,6 +924,30 @@ document.addEventListener("DOMContentLoaded", function () {
     {% if can_access_financeiro %}
     initializeQuill('#editor-financeiro', '#particularidades-financeiro', '#image-input-financeiro');
     {% endif %}
+
+    // Auto-salvar responsável ao mudar o dropdown
+    document.querySelectorAll('.responsavel-select').forEach(select => {
+        select.addEventListener('change', () => {
+            const formId = select.getAttribute('form');
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            const formData = new FormData(form);
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('Falha ao salvar o responsável.');
+                }
+            }).catch(() => {
+                console.error('Erro de rede ao salvar o responsável.');
+            });
+        });
+    });
 
     // Menção de procedimentos no editor de Notas
     function setupProcedureMention(editorSelector, inputSelector, suggestionsSelector) {

@@ -12,6 +12,23 @@
 {% endblock %}
 
 {% block content %}
+{% macro render_responsavel_badge(value) %}
+    {% set value_str = (value or '') | string %}
+    {% set nome_resp = responsaveis_map.get(value_str) if responsaveis_map else None %}
+    {% if nome_resp %}
+        <span class="badge bg-light text-primary border border-primary-subtle px-3 py-2">
+            <i class="bi bi-person-check me-1"></i>Responsável: {{ nome_resp }}
+        </span>
+    {% elif value %}
+        <span class="badge bg-light text-primary border border-primary-subtle px-3 py-2">
+            <i class="bi bi-person-check me-1"></i>Responsável: {{ value }}
+        </span>
+    {% else %}
+        <span class="badge bg-light text-muted border px-3 py-2">
+            <i class="bi bi-person-dash me-1"></i>Sem responsável
+        </span>
+    {% endif %}
+{% endmacro %}
 {% macro render_badge_list(items, badge_class, icon_class, placeholder_html) %}
     {% if items %}
         <div class="d-flex flex-wrap gap-2">
@@ -238,7 +255,10 @@
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-blue text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Departamento Fiscal</h3>
+                        {{ render_responsavel_badge(fiscal.responsavel) }}
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if fiscal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ fiscal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#fiscal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
@@ -371,7 +391,10 @@
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-orange text-white py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-calculator me-2"></i>Departamento Contábil</h3>
+                        {{ render_responsavel_badge(contabil.responsavel) }}
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if contabil.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ contabil.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#contabil" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
@@ -519,9 +542,12 @@
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
                 <div class="card-header bg-dept-blue text-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
                         <h3 class="mb-0 fw-semibold"><i class="bi bi-people me-2"></i>Departamento Pessoal</h3>
-                        <div class="d-flex align-items-center gap-2">
+                        {{ render_responsavel_badge(pessoal.responsavel) }}
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
                             {% if pessoal.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ pessoal.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                             <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#pessoal" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
                         </div>
@@ -653,8 +679,11 @@
     {% if administrativo %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-orange text-white py-3">
-                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-gear me-2"></i>Departamento Administrativo</h3>
+                        {{ render_responsavel_badge(administrativo.responsavel) }}
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if administrativo.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ administrativo.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#administrativo" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
@@ -686,8 +715,11 @@
     {% if notas_fiscais %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-blue text-white py-3">
-                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt-cutoff me-2"></i>Departamento Notas Fiscais</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-receipt-cutoff me-2"></i>Departamento Notas Fiscais</h3>
+                        {{ render_responsavel_badge(notas_fiscais.responsavel) }}
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if notas_fiscais.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ notas_fiscais.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#notas-fiscais" class="btn btn-dept-orange btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
@@ -830,8 +862,11 @@
     {% if financeiro %}
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-blue text-white py-3">
-                 <div class="d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h3 class="mb-0 fw-semibold"><i class="bi bi-cash-stack me-2"></i>Departamento Financeiro</h3>
+                        {{ render_responsavel_badge(financeiro.responsavel) }}
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if financeiro.updated_at %}<small class="opacity-75"><i class="bi bi-clock me-1"></i>Atualizado: {{ financeiro.updated_at.strftime('%d/%m/%Y às %H:%M') }}</small>{% endif %}
                         <a href="{{ url_for('gerenciar_departamentos', empresa_id=empresa.id) }}#financeiro" class="btn btn-dept-blue btn-sm"><i class="bi bi-pencil me-1"></i>Editar</a>
