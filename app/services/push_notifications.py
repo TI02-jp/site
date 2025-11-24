@@ -5,6 +5,8 @@ Service for sending Web Push Notifications to users.
 import os
 import json
 import logging
+from datetime import datetime
+from app.models.tables import SAO_PAULO_TZ
 from typing import List, Optional
 from pywebpush import webpush, WebPushException
 from app import db
@@ -94,8 +96,7 @@ def send_push_notification(
             )
 
             # Update last_used_at timestamp
-            from datetime import datetime
-            subscription.last_used_at = datetime.utcnow()
+            subscription.last_used_at = datetime.now(SAO_PAULO_TZ)
             results["sent"] += 1
 
             logger.info(f"Push notification sent successfully to user {user_id}")

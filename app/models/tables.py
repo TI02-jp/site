@@ -75,6 +75,12 @@ SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 CALENDAR_TZ = get_calendar_timezone()
 
 
+def sao_paulo_now_naive() -> datetime:
+    """Return current datetime in São Paulo timezone, naive for MySQL DATETIME."""
+
+    return datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)
+
+
 def _normalize_utc(dt: datetime) -> datetime:
     """Return ``dt`` converted to an aware UTC timestamp."""
 
@@ -202,7 +208,7 @@ class User(db.Model, UserMixin):
     ativo = db.Column(db.Boolean, default=True)
     role = db.Column(db.String(20), default='user')
     is_master = db.Column(db.Boolean, default=False)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=sao_paulo_now_naive)
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
     google_id = db.Column(db.String(255), unique=True)
     google_refresh_token = db.Column(db.String(255))
@@ -232,9 +238,9 @@ class AccessLink(db.Model):
     url = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255))
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime, default=sao_paulo_now_naive, onupdate=sao_paulo_now_naive, nullable=False
     )
 
     created_by = db.relationship("User", backref=db.backref("access_links", lazy=True))
@@ -257,7 +263,7 @@ class AnnouncementAttachment(db.Model):
     file_path = db.Column(db.String(255), nullable=False)
     original_name = db.Column(db.String(255))
     mime_type = db.Column(db.String(128))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     def __repr__(self) -> str:
         return f"<AnnouncementAttachment {self.original_name or self.file_path}>"
@@ -326,11 +332,11 @@ class Announcement(db.Model):
         db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -486,9 +492,9 @@ class DiretoriaEvent(db.Model):
     total_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     photos = db.Column(db.JSON, nullable=True, default=list)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime, default=sao_paulo_now_naive, onupdate=sao_paulo_now_naive, nullable=False
     )
 
     created_by = db.relationship("User", backref=db.backref("diretoria_events", lazy=True))
@@ -703,7 +709,7 @@ class NotaDebito(db.Model):
     acordo = db.Column(db.String(100), nullable=True)
     forma_pagamento = db.Column(db.String(50), nullable=False)
     observacao = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive)
 
     @property
     def data_emissao_formatada(self):
@@ -734,7 +740,7 @@ class CadastroNota(db.Model):
     usuario = db.Column(db.String(255), nullable=True)
     senha = db.Column(db.String(255), nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive)
 
     @property
     def valor_formatado(self):
@@ -772,11 +778,11 @@ class NotaRecorrente(db.Model):
     observacao = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     ultimo_aviso = db.Column(db.Date, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -875,8 +881,8 @@ class Departamento(db.Model):
     )
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
     )
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
@@ -910,11 +916,11 @@ class ClienteReuniao(db.Model):
     acompanhar_ate = db.Column(db.Date, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     updated_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -1140,7 +1146,7 @@ class TaskAttachment(db.Model):
     file_path = db.Column(db.String(255), nullable=False)
     original_name = db.Column(db.String(255))
     mime_type = db.Column(db.String(128))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     def __repr__(self) -> str:
         return f"<TaskAttachment {self.original_name or self.file_path}>"
@@ -1214,9 +1220,9 @@ class Task(db.Model):
     status = db.Column(db.Enum(TaskStatus), nullable=False, default=TaskStatus.PENDING)
     priority = db.Column(db.Enum(TaskPriority), nullable=False, default=TaskPriority.MEDIUM)
     due_date = db.Column(db.Date)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime, default=sao_paulo_now_naive, onupdate=sao_paulo_now_naive, nullable=False
     )
     completed_at = db.Column(db.DateTime)
     tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), nullable=False)
@@ -1355,7 +1361,7 @@ class TaskResponse(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     body = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     author = db.relationship("User")
 
@@ -1396,7 +1402,7 @@ class TaskFollower(db.Model):
     user_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     user = db.relationship("User")
 
@@ -1421,7 +1427,7 @@ class TaskStatusHistory(db.Model):
     )
     from_status = db.Column(db.Enum(TaskStatus))
     to_status = db.Column(db.Enum(TaskStatus), nullable=False)
-    changed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    changed_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     changed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     task = db.relationship(
@@ -1441,7 +1447,7 @@ class TaskHistory(db.Model):
     task_id = db.Column(
         db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
     )
-    changed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    changed_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     changed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     field_name = db.Column(db.String(50), nullable=False)
     old_value = db.Column(db.Text)
@@ -1542,7 +1548,7 @@ class TaskNotification(db.Model):
         server_default=NotificationType.TASK.value,
     )
     message = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     read_at = db.Column(db.DateTime)
 
     user = db.relationship("User")
@@ -1575,8 +1581,8 @@ class PushSubscription(db.Model):
     p256dh_key = db.Column(db.String(200), nullable=False)
     auth_key = db.Column(db.String(100), nullable=False)
     user_agent = db.Column(db.String(500), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    last_used_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+    last_used_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     user = db.relationship("User", backref=db.backref("push_subscriptions", lazy=True))
 
@@ -1596,9 +1602,9 @@ class OperationalProcedure(db.Model):
         nullable=True,
     )
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime, default=sao_paulo_now_naive, onupdate=sao_paulo_now_naive, nullable=False
     )
 
     created_by = db.relationship(
@@ -1652,7 +1658,7 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
             task_id=task.id,
             type=NotificationType.TASK.value,
             message=(message[:255] if message else None),
-            created_at=datetime.utcnow(),
+            created_at=sao_paulo_now_naive(),
         )
     )
 
@@ -1765,7 +1771,7 @@ def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> 
             task_id=task.id,
             type=NotificationType.TASK.value,
             message=message[:255] if message else None,
-            created_at=datetime.utcnow(),
+            created_at=sao_paulo_now_naive(),
         )
     )
 
@@ -1846,7 +1852,7 @@ def _record_task_change(connection, task: Task, field_name: str, old_value, new_
     connection.execute(
         TaskHistory.__table__.insert().values(
             task_id=task.id,
-            changed_at=datetime.utcnow(),
+            changed_at=sao_paulo_now_naive(),
             changed_by=changed_by,
             field_name=field_name,
             old_value=old_val_str,
@@ -1873,7 +1879,7 @@ def _record_task_creation(mapper, connection, target):
     connection.execute(
         TaskHistory.__table__.insert().values(
             task_id=target.id,
-            changed_at=datetime.utcnow(),
+            changed_at=sao_paulo_now_naive(),
             changed_by=changed_by or target.created_by,
             field_name='task',
             old_value=None,

@@ -4,6 +4,7 @@ from flask import jsonify
 from sqlalchemy import text
 from datetime import datetime
 from app import app, db, limiter
+from app.models.tables import SAO_PAULO_TZ
 
 
 @app.route("/health")
@@ -21,7 +22,7 @@ def health_check():
 
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(SAO_PAULO_TZ).isoformat(),
         "checks": {}
     }
 
@@ -146,7 +147,7 @@ def db_pool_status():
         pool = db.engine.pool
         pool_status = {
             "status": "ok",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(SAO_PAULO_TZ).isoformat(),
             "pool": {
                 "size": pool.size(),  # Base pool size
                 "checked_out": pool.checkedout(),  # Currently checked out connections
@@ -189,6 +190,6 @@ def db_pool_status():
     except Exception as e:
         return jsonify({
             "status": "error",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(SAO_PAULO_TZ).isoformat(),
             "error": str(e)
         }), 500
