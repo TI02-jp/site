@@ -8380,12 +8380,21 @@ def tasks_overview():
     tag_param = (request.args.get("tag_id") or "").strip()
     priority_param = (request.args.get("priority") or "").strip().lower()
     keyword = (request.args.get("q") or "").strip()
-    user_param = (request.args.get("user_id") or "").strip()
+    user_params = request.args.getlist("user_id")
+    # compat: aceita antigo user_id_2
+    user_param_second = (request.args.get("user_id_2") or "").strip()
+    if user_param_second:
+        user_params.append(user_param_second)
+    if not user_params:
+        fallback_single = (request.args.get("user_id") or "").strip()
+        if fallback_single:
+            user_params = [fallback_single]
     due_from_raw = (request.args.get("due_from") or "").strip()
     due_to_raw = (request.args.get("due_to") or "").strip()
     selected_priority = None
+    selected_user_ids: list[int] = []
     selected_user_id = None
-    selected_tag_id = None
+    selected_user_id_2 = None
     selected_tag_id = None
 
     def _parse_date_param(raw_value):
@@ -8414,26 +8423,41 @@ def tasks_overview():
     else:
         accessible_ids = []
 
-    if user_param:
+    def _parse_user_param(raw_value):
+        if not raw_value:
+            return None
         try:
-            selected_user_id = int(user_param)
+            return int(raw_value)
         except ValueError:
-            selected_user_id = None
-        if selected_user_id:
-            from app.models.tables import TaskFollower
+            return None
 
+    selected_user_ids = []
+    for raw_user in user_params[:2]:  # limite de 2
+        parsed = _parse_user_param(raw_user)
+        if parsed is not None and parsed not in selected_user_ids:
+            selected_user_ids.append(parsed)
+    if selected_user_ids:
+        selected_user_id = selected_user_ids[0]
+        if len(selected_user_ids) > 1:
+            selected_user_id_2 = selected_user_ids[1]
+
+    if selected_user_ids:
+        from app.models.tables import TaskFollower
+
+        def _participant_filter(target_user_id: int):
             follower_subquery = (
                 db.session.query(TaskFollower.task_id)
-                .filter(TaskFollower.user_id == selected_user_id)
+                .filter(TaskFollower.user_id == target_user_id)
                 .subquery()
             )
-            query = query.filter(
-                sa.or_(
-                    Task.assigned_to == selected_user_id,
-                    Task.created_by == selected_user_id,
-                    Task.id.in_(follower_subquery),
-                )
+            return sa.or_(
+                Task.assigned_to == target_user_id,
+                Task.created_by == target_user_id,
+                Task.id.in_(follower_subquery),
             )
+
+        for uid in selected_user_ids:
+            query = query.filter(_participant_filter(uid))
 
     if priority_param:
         try:
@@ -8531,7 +8555,8 @@ def tasks_overview():
         priorities=list(TaskPriority),
         selected_priority=selected_priority.value if selected_priority else "",
         keyword=keyword,
-        user_id=selected_user_id,
+        selected_user_id=selected_user_id,
+        selected_user_id_2=selected_user_id_2,
         available_tags=available_tags,
         selected_tag_id=selected_tag_id,
         due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
@@ -8551,8 +8576,17 @@ def tasks_overview_mine():
     tag_param = (request.args.get("tag_id") or "").strip()
     due_from_raw = (request.args.get("due_from") or "").strip()
     due_to_raw = (request.args.get("due_to") or "").strip()
-    user_param = (request.args.get("user_id") or "").strip()
+    user_params = request.args.getlist("user_id")
+    user_param_second = (request.args.get("user_id_2") or "").strip()
+    if user_param_second:
+        user_params.append(user_param_second)
+    if not user_params:
+        fallback_single = (request.args.get("user_id") or "").strip()
+        if fallback_single:
+            user_params = [fallback_single]
+    selected_user_ids: list[int] = []
     selected_user_id = None
+    selected_user_id_2 = None
     selected_tag_id = None
 
     accessible_tag_ids = _get_accessible_tag_ids(current_user)
@@ -8601,24 +8635,38 @@ def tasks_overview_mine():
         .filter(sa.or_(*participation_filters))
     )
 
-    if user_param:
+    def _parse_user_param(raw_value: str | None):
+        if not raw_value:
+            return None
         try:
-            selected_user_id = int(user_param)
+            return int(raw_value)
         except ValueError:
-            selected_user_id = None
-        if selected_user_id:
+            return None
+
+    for raw_user in user_params[:2]:
+        parsed = _parse_user_param(raw_user)
+        if parsed is not None and parsed not in selected_user_ids:
+            selected_user_ids.append(parsed)
+    if selected_user_ids:
+        selected_user_id = selected_user_ids[0]
+        if len(selected_user_ids) > 1:
+            selected_user_id_2 = selected_user_ids[1]
+
+    if selected_user_ids:
+        def _participant_filter(target_user_id: int):
             follower_filter_subquery = (
                 db.session.query(TaskFollower.task_id)
-                .filter(TaskFollower.user_id == selected_user_id)
+                .filter(TaskFollower.user_id == target_user_id)
                 .subquery()
             )
-            query = query.filter(
-                sa.or_(
-                    Task.assigned_to == selected_user_id,
-                    Task.created_by == selected_user_id,
-                    Task.id.in_(follower_filter_subquery),
-                )
+            return sa.or_(
+                Task.assigned_to == target_user_id,
+                Task.created_by == target_user_id,
+                Task.id.in_(follower_filter_subquery),
             )
+
+        for uid in selected_user_ids:
+            query = query.filter(_participant_filter(uid))
 
     selected_priority = None
     if priority_param:
@@ -8708,6 +8756,7 @@ def tasks_overview_mine():
         due_from=due_from.strftime("%Y-%m-%d") if due_from else "",
         due_to=due_to.strftime("%Y-%m-%d") if due_to else "",
         selected_user_id=selected_user_id,
+        selected_user_id_2=selected_user_id_2,
         users=active_users,
         tasks_by_status=tasks_by_status,
         TaskStatus=TaskStatus,

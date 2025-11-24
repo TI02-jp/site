@@ -58,14 +58,17 @@
       </div>
       {% endif %}
       <div class="filter-field">
-        <label for="user-filter">Usuário</label>
-        <select id="user-filter" name="user_id">
+        <label for="user-filter">Usuário (até 2)</label>
+        <select id="user-filter" class="form-select">
           <option value="">Todos</option>
           {% for user in users %}
           {% set display_name = (user.name or user.username or '').strip() %}
-          <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ display_name or 'Usuário ' ~ user.id }}</option>
+          <option value="{{ user.id }}">{{ display_name or 'Usuário ' ~ user.id }}</option>
           {% endfor %}
         </select>
+        <input type="hidden" name="user_id" id="user-primary" value="{{ selected_user_id or '' }}">
+        <input type="hidden" name="user_id_2" id="user-secondary" value="{{ selected_user_id_2 or '' }}">
+        <div id="user-selection-chips" class="mt-1 d-flex gap-1 flex-wrap"></div>
       </div>
       <div class="filter-field">
         <label for="due-from-filter">Prazo a partir de</label>
@@ -120,6 +123,61 @@
 </section>
 <script>
   const csrfToken = "{{ csrf_token() }}";
+  (function setupUserSelect() {
+    const selectEl = document.getElementById('user-filter');
+    const primaryInput = document.getElementById('user-primary');
+    const secondaryInput = document.getElementById('user-secondary');
+    const chipsContainer = document.getElementById('user-selection-chips');
+    if (!selectEl || !primaryInput || !secondaryInput || !chipsContainer) return;
+
+    const renderChips = () => {
+      chipsContainer.innerHTML = '';
+      const usersMap = {};
+      Array.from(selectEl.options).forEach(opt => {
+        usersMap[opt.value] = opt.textContent || opt.innerText || '';
+      });
+      const ids = [primaryInput.value, secondaryInput.value].filter(Boolean);
+      ids.forEach((id, idx) => {
+        const chip = document.createElement('span');
+        chip.className = 'badge bg-light text-dark border';
+        chip.textContent = usersMap[id] || `Usuário ${id}`;
+        chip.style.cursor = 'pointer';
+        chip.title = 'Clique para remover';
+        chip.addEventListener('click', () => {
+          if (idx === 0) {
+            primaryInput.value = secondaryInput.value;
+            secondaryInput.value = '';
+          } else {
+            secondaryInput.value = '';
+          }
+          renderChips();
+        });
+        chipsContainer.appendChild(chip);
+      });
+    };
+
+    selectEl.addEventListener('change', () => {
+      const chosen = selectEl.value;
+      if (!chosen) {
+        primaryInput.value = '';
+        secondaryInput.value = '';
+        renderChips();
+        return;
+      }
+      if (!primaryInput.value) {
+        primaryInput.value = chosen;
+      } else if (!secondaryInput.value && chosen !== primaryInput.value) {
+        secondaryInput.value = chosen;
+      } else if (chosen !== primaryInput.value && chosen !== secondaryInput.value) {
+        primaryInput.value = secondaryInput.value;
+        secondaryInput.value = chosen;
+      }
+      selectEl.value = '';
+      renderChips();
+    });
+
+    renderChips();
+  })();
 </script>
 <script src="{{ url_for('static', filename='javascript/realtime.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
