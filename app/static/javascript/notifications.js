@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   function escapeHtml(text) {
     if (!text) {
       return '';
@@ -32,14 +32,14 @@
     }
     if (diff < hour) {
       const minutes = Math.round(diff / minute);
-      return `${minutes} min atrás`;
+      return `${minutes} min atrÃ¡s`;
     }
     if (diff < day) {
       const hours = Math.round(diff / hour);
-      return `${hours} h atrás`;
+      return `${hours} h atrÃ¡s`;
     }
     const days = Math.round(diff / day);
-    return `${days} d atrás`;
+    return `${days} d atrÃ¡s`;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -69,10 +69,111 @@
 
     const displayedNotificationIds = new Set();
 
-    // Suporte para notificações do sistema
+    // Suporte para notificaÃ§Ãµes do sistema
     const supportsNotifications = 'Notification' in window;
     const supportsServiceWorker = 'serviceWorker' in navigator;
     let notificationPermission = supportsNotifications ? Notification.permission : 'denied';
+    const permissionBannerId = 'notificationPermissionBanner';
+    let audioContext = null;
+
+    function ensureAudioContext() {
+      if (!('AudioContext' in window || 'webkitAudioContext' in window)) {
+        return null;
+      }
+      if (!audioContext) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new Ctx();
+      }
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+      return audioContext;
+    }
+
+    function playNotificationSound() {
+      try {
+        const ctx = ensureAudioContext();
+        if (ctx) {
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, now);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 1.0);
+          return;
+        }
+      } catch (error) {
+        console.debug('[Notifications] Som nao reproduzido via WebAudio:', error);
+      }
+
+      // Fallback simples usando áudio embutido (pequeno beep)
+      try {
+        const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+        beep.volume = 0.6;
+        beep.play().catch(() => {});
+      } catch (e) {
+        console.debug('[Notifications] Fallback de áudio falhou:', e);
+      }
+    }
+
+    function renderPermissionBanner(status) {
+      if (!supportsNotifications) {
+        return;
+      }
+
+      let banner = document.getElementById(permissionBannerId);
+      if (status === 'granted') {
+        if (banner) {
+          banner.remove();
+        }
+        return;
+      }
+
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = permissionBannerId;
+        banner.className = 'alert alert-warning d-flex align-items-center gap-3 mb-0 shadow-sm';
+        banner.style.position = 'sticky';
+        banner.style.top = '0';
+        banner.style.zIndex = '1100';
+        banner.style.borderRadius = '0';
+        banner.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+        const anchor = document.querySelector('.wrapper') || document.body.firstChild;
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(banner, anchor);
+        } else {
+          document.body.prepend(banner);
+        }
+      }
+
+      if (status === 'default') {
+        banner.innerHTML = `
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <i class="bi bi-bell fs-5 text-warning"></i>
+            <div class="flex-grow-1">As notificacoes estao bloqueadas no navegador. Clique no cadeado da barra de endereco e permita notificacoes para o JP.</div>
+            <button type="button" class="btn btn-sm btn-primary" id="permissionBannerAllow">Ativar notificacoes</button>
+          </div>
+        `;
+        const allowBtn = banner.querySelector('#permissionBannerAllow');
+        if (allowBtn) {
+          allowBtn.addEventListener('click', () => {
+            requestNotificationPermission();
+          });
+        }
+      } else {
+        banner.innerHTML = `
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <i class="bi bi-bell-slash fs-5 text-danger"></i>
+            <div class="flex-grow-1">As notificacoes estao bloqueadas no navegador. Clique no cadeado da barra de endereco e permita notificacoes para o JP.</div>
+          </div>
+        `;
+      }
+    }
+    renderPermissionBanner(notificationPermission);
 
     function updateLastKnownId(id) {
       if (!id) {
@@ -168,7 +269,7 @@
       displayedNotificationIds.add(id);
     }
 
-    // Função para obter chave pública VAPID do servidor
+    // FunÃ§Ã£o para obter chave pÃºblica VAPID do servidor
     async function getVapidPublicKey() {
       try {
         const response = await fetch('/notifications/vapid-public-key');
@@ -180,7 +281,7 @@
       }
     }
 
-    // Função para converter chave VAPID de base64 para Uint8Array
+    // FunÃ§Ã£o para converter chave VAPID de base64 para Uint8Array
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
       const base64 = (base64String + padding)
@@ -196,40 +297,41 @@
       return outputArray;
     }
 
-    // Função para subscrever ao Push usando Service Worker
+    // FunÃ§Ã£o para subscrever ao Push usando Service Worker
     async function subscribeToPush() {
       if (!supportsServiceWorker || !supportsNotifications) {
-        console.log('[Notifications] Push não suportado neste navegador');
+        console.log('[Notifications] Push nÃ£o suportado neste navegador');
+        renderPermissionBanner(notificationPermission);
         return false;
       }
 
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        // Obter chave pública VAPID
+        // Obter chave pÃºblica VAPID
         const vapidPublicKey = await getVapidPublicKey();
         if (!vapidPublicKey) {
-          console.error('[Notifications] Chave VAPID não disponível');
+          console.error('[Notifications] Chave VAPID nÃ£o disponÃ­vel');
           return false;
         }
 
         const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
-        // Verificar se já existe uma subscrição
+        // Verificar se jÃ¡ existe uma subscriÃ§Ã£o
         let subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-          // Criar nova subscrição
+          // Criar nova subscriÃ§Ã£o
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey
           });
-          console.log('[Notifications] Nova subscrição Push criada');
+          console.log('[Notifications] Nova subscriÃ§Ã£o Push criada');
         } else {
-          console.log('[Notifications] Subscrição Push já existe');
+          console.log('[Notifications] SubscriÃ§Ã£o Push jÃ¡ existe');
         }
 
-        // Enviar subscrição para o servidor
+        // Enviar subscriÃ§Ã£o para o servidor
         const response = await fetch('/notifications/subscribe', {
           method: 'POST',
           headers: {
@@ -240,10 +342,10 @@
         });
 
         if (response.ok) {
-          console.log('[Notifications] Subscrição Push registrada no servidor');
+          console.log('[Notifications] SubscriÃ§Ã£o Push registrada no servidor');
           return true;
         } else {
-          console.error('[Notifications] Erro ao registrar subscrição no servidor');
+          console.error('[Notifications] Erro ao registrar subscriÃ§Ã£o no servidor');
           return false;
         }
       } catch (error) {
@@ -252,21 +354,22 @@
       }
     }
 
-    // Função para solicitar permissão de notificações do sistema
+    // FunÃ§Ã£o para solicitar permissÃ£o de notificaÃ§Ãµes do sistema
     async function requestNotificationPermission() {
       if (!supportsNotifications) {
-        console.log('[Notifications] Notificações do sistema não suportadas');
+        console.log('[Notifications] NotificaÃ§Ãµes do sistema nÃ£o suportadas');
         return false;
       }
 
       if (notificationPermission === 'granted') {
-        // Se já tem permissão, subscrever ao Push
+        // Se jÃ¡ tem permissÃ£o, subscrever ao Push
         subscribeToPush();
         return true;
       }
 
       if (notificationPermission === 'denied') {
-        console.log('[Notifications] Permissão negada pelo usuário');
+        console.log('[Notifications] PermissÃ£o negada pelo usuÃ¡rio');
+        renderPermissionBanner(notificationPermission);
         return false;
       }
 
@@ -274,37 +377,38 @@
         const permission = await Notification.requestPermission();
         notificationPermission = permission;
         console.log('[Notifications] Permissão:', permission);
+        renderPermissionBanner(notificationPermission);
 
         if (permission === 'granted') {
-          // Subscrever ao Push após obter permissão
+          // Subscrever ao Push apÃ³s obter permissÃ£o
           await subscribeToPush();
         }
 
         return permission === 'granted';
       } catch (error) {
-        console.error('[Notifications] Erro ao solicitar permissão:', error);
+        console.error('[Notifications] Erro ao solicitar permissÃ£o:', error);
         return false;
       }
     }
 
-    // Função para criar notificação do sistema usando Service Worker
+    // FunÃ§Ã£o para criar notificaÃ§Ã£o do sistema usando Service Worker
     async function showSystemNotification(item) {
       if (!item) {
         return;
       }
 
-      // Verificar se temos permissão
+      // Verificar se temos permissÃ£o
       if (notificationPermission !== 'granted') {
         const granted = await requestNotificationPermission();
         if (!granted) {
-          console.log('[Notifications] Usando notificação in-app (sem permissão do sistema)');
+          console.log('[Notifications] Usando notificaÃ§Ã£o in-app (sem permissÃ£o do sistema)');
           return false;
         }
       }
 
-      const title = 'JP Contábil';
+      const title = 'JP ContÃ¡bil';
       const options = {
-        body: item.message || 'Nova notificação',
+        body: item.message || 'Nova notificaÃ§Ã£o',
         icon: '/static/images/icon-192x192.png',
         badge: '/static/images/icon-192x192.png',
         tag: item.id ? `notification-${item.id}` : 'jp-notification',
@@ -313,23 +417,25 @@
           notificationId: item.id,
           dateOfArrival: Date.now()
         },
-        requireInteraction: true, // Mantém a notificação visível até o usuário interagir
+        requireInteraction: true, // MantÃ©m a notificaÃ§Ã£o visÃ­vel atÃ© o usuÃ¡rio interagir
         silent: false, // Som ativado
         vibrate: [200, 100, 200],
-        renotify: true, // Renotifica mesmo se já existe uma com a mesma tag
+        renotify: true, // Renotifica mesmo se jÃ¡ existe uma com a mesma tag
         timestamp: Date.now()
       };
 
       try {
-        // Tentar usar Service Worker se disponível
+        // Tentar usar Service Worker se disponÃ­vel
         if (supportsServiceWorker && navigator.serviceWorker.ready) {
           const registration = await navigator.serviceWorker.ready;
           await registration.showNotification(title, options);
-          console.log('[Notifications] Notificação do sistema mostrada via SW');
+          playNotificationSound();
+          console.log('[Notifications] Notificacao do sistema mostrada via SW');
           return true;
         } else {
           // Fallback para Notification API direta
           const notification = new Notification(title, options);
+          playNotificationSound();
 
           notification.onclick = function(event) {
             event.preventDefault();
@@ -340,24 +446,24 @@
             notification.close();
           };
 
-          console.log('[Notifications] Notificação do sistema mostrada diretamente');
+          console.log('[Notifications] NotificaÃ§Ã£o do sistema mostrada diretamente');
           return true;
         }
       } catch (error) {
-        console.error('[Notifications] Erro ao mostrar notificação do sistema:', error);
+        console.error('[Notifications] Erro ao mostrar notificaÃ§Ã£o do sistema:', error);
         return false;
       }
     }
 
-    // Solicitar permissão automaticamente ao carregar a página
+    // Solicitar permissÃ£o automaticamente ao carregar a pÃ¡gina
     setTimeout(() => {
       if (supportsNotifications && notificationPermission === 'default') {
-        console.log('[Notifications] Solicitando permissão para notificações do sistema...');
+        console.log('[Notifications] Solicitando permissÃ£o para notificaÃ§Ãµes do sistema...');
         requestNotificationPermission().then(granted => {
           if (granted) {
-            console.log('[Notifications] Permissão concedida! Notificações do Windows habilitadas.');
+            console.log('[Notifications] PermissÃ£o concedida! NotificaÃ§Ãµes do Windows habilitadas.');
           } else {
-            console.log('[Notifications] Permissão negada. As notificações ficarão apenas no navegador.');
+            console.log('[Notifications] PermissÃ£o negada. As notificaÃ§Ãµes ficarÃ£o apenas no navegador.');
           }
         });
       }
@@ -374,19 +480,19 @@
         knownNotificationIds.add(id);
       }
 
-      // SEMPRE criar notificação do sistema (desktop) se tivermos permissão
-      // Isso garante que apareça como pop-up nativo do Windows
+      // SEMPRE criar notificaÃ§Ã£o do sistema (desktop) se tivermos permissÃ£o
+      // Isso garante que apareÃ§a como pop-up nativo do Windows
       if (notificationPermission === 'granted') {
         showSystemNotification(item).then(success => {
           if (success) {
-            console.log('[Notifications] Notificação do Windows exibida com sucesso!');
+            console.log('[Notifications] NotificaÃ§Ã£o do Windows exibida com sucesso!');
           }
         }).catch(error => {
-          console.error('[Notifications] Falha ao criar notificação do sistema:', error);
+          console.error('[Notifications] Falha ao criar notificaÃ§Ã£o do sistema:', error);
         });
       } else {
-        // Se não temos permissão, tentar solicitar novamente
-        console.log('[Notifications] Tentando solicitar permissão novamente...');
+        // Se nÃ£o temos permissÃ£o, tentar solicitar novamente
+        console.log('[Notifications] Tentando solicitar permissÃ£o novamente...');
         requestNotificationPermission().then(granted => {
           if (granted) {
             showSystemNotification(item);
@@ -397,7 +503,7 @@
       if (!toastContainer) {
         return;
       }
-      const message = escapeHtml(item.message || 'Nova notificação');
+      const message = escapeHtml(item.message || 'Nova notificaÃ§Ã£o');
       const time = formatRelativeTime(item.created_at);
       const actionLabel = escapeHtml(item.action_label || 'Abrir');
       const toast = document.createElement('div');
@@ -406,7 +512,7 @@
         <span class="notification-toast__title">${message}</span>
         <div class="notification-toast__meta">
           <span>${time || 'agora'}</span>
-          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notificação">
+          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notificaÃ§Ã£o">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -422,6 +528,7 @@
       requestAnimationFrame(() => {
         toast.classList.add('show');
       });
+      playNotificationSound();
 
       const handleOpen = () => {
         if (!item.url) {
@@ -455,9 +562,7 @@
         });
       }
 
-      setTimeout(() => {
-        hideToast(toast);
-      }, 6500);
+      // Mantém o toast até interação explícita (abrir ou fechar)
     }
 
     function fetchNotifications(options = {}) {
@@ -478,7 +583,7 @@
       })
         .then((response) => {
           if (!response.ok) {
-            throw new Error('Erro ao carregar notificações');
+            throw new Error('Erro ao carregar notificaÃ§Ãµes');
           }
           return response.json();
         })
@@ -678,7 +783,7 @@
           try {
             payload = JSON.parse(event.data);
           } catch (error) {
-            console.warn('Falha ao interpretar evento de notificação.', error);
+            console.warn('Falha ao interpretar evento de notificaÃ§Ã£o.', error);
             return;
           }
 
@@ -735,7 +840,7 @@
       }
     });
 
-    // Expor função globalmente para poder ser chamada pela UI
+    // Expor funÃ§Ã£o globalmente para poder ser chamada pela UI
     window.jpNotifications = {
       requestPermission: requestNotificationPermission,
       hasPermission: () => notificationPermission === 'granted',
@@ -744,3 +849,8 @@
     };
   });
 })();
+
+
+
+
+
