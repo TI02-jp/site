@@ -145,6 +145,11 @@ from app.utils.performance_middleware import track_custom_span
 from urllib.parse import urlunsplit
 from mimetypes import guess_type
 
+def utc3_now() -> datetime:
+    """Return current datetime in São Paulo timezone."""
+
+    return datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)
+
 GOOGLE_OAUTH_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -1783,7 +1788,7 @@ def mark_announcement_read(announcement_id: int):
         TaskNotification.user_id == current_user.id,
     ).all()
 
-    now = datetime.utcnow()
+    now = utc3_now()
     updated = 0
     already_read = False
 
@@ -3195,7 +3200,7 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
     if not message:
         message = "Atualização disponível."
 
-    created_at = notification.created_at or datetime.utcnow()
+    created_at = notification.created_at or utc3_now()
     if created_at.tzinfo is None:
         created_at_iso = created_at.isoformat() + "Z"
         display_dt = created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
@@ -3218,7 +3223,7 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
 def _prune_old_notifications(retention_days: int = 60) -> int:
     """Remove notifications older than the retention window."""
 
-    threshold = datetime.utcnow() - timedelta(days=retention_days)
+    threshold = utc3_now() - timedelta(days=retention_days)
     deleted = (
         TaskNotification.query.filter(TaskNotification.created_at < threshold)
         .delete(synchronize_session=False)
@@ -3273,7 +3278,7 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
     if not active_user_rows:
         return
 
-    now = datetime.utcnow()
+    now = utc3_now()
     subject = (announcement.subject or "").strip()
     if subject:
         base_message = f"Novo comunicado: {subject}"
@@ -3502,7 +3507,7 @@ def mark_notification_read(notification_id):
         TaskNotification.user_id == current_user.id,
     ).first_or_404()
     if not notification.read_at:
-        notification.read_at = datetime.utcnow()
+        notification.read_at = utc3_now()
         db.session.commit()
         _invalidate_notification_cache(current_user.id)
     return jsonify({"success": True})
@@ -3517,7 +3522,7 @@ def mark_all_notifications_read():
             TaskNotification.user_id == current_user.id,
             TaskNotification.read_at.is_(None),
         ).update(
-            {TaskNotification.read_at: datetime.utcnow()},
+            {TaskNotification.read_at: utc3_now()},
             synchronize_session=False,
         )
     )
@@ -3554,7 +3559,7 @@ def subscribe_push_notifications():
         existing.p256dh_key = p256dh
         existing.auth_key = auth
         existing.user_agent = request.headers.get("User-Agent", "")[:500]
-        existing.last_used_at = datetime.utcnow()
+        existing.last_used_at = utc3_now()
     else:
         # Criar nova subscrição
         subscription = PushSubscription(
@@ -4683,7 +4688,7 @@ def _trigger_recorrente_notifications(reference_date: date | None = None) -> int
     if not due_records:
         return 0
 
-    now = datetime.utcnow()
+    now = utc3_now()
     created_notifications: list[tuple[int, TaskNotification]] = []
     touched_users: set[int] = set()
 
@@ -7206,7 +7211,7 @@ def relatorio_tarefas():
     """Expose tactical dashboards about the global task workload."""
     today = date.today()
     upcoming_limit = today + timedelta(days=7)
-    now = datetime.utcnow()
+    now = utc3_now()
     trend_weeks = 6
     overview_query = (
         Task.query.join(Tag)
@@ -9062,7 +9067,7 @@ def tasks_new():
             _sync_task_followers(task, follow_up_user_ids)
 
             creator_name = current_user.name or current_user.username
-            creation_now = datetime.utcnow()
+            creation_now = utc3_now()
             notification_payloads: list[tuple[int, str]] = []
 
             if task.assigned_to:
@@ -9101,7 +9106,7 @@ def tasks_new():
                 # Certifique-se de que o parent tem a lista de children atualizada
                 parent_task.children.append(task)
                 # Force a atualização do parent
-                parent_task.updated_at = datetime.utcnow()
+                parent_task.updated_at = utc3_now()
                 # Atualize explicitamente o status has_children
                 parent_task.has_children = True
             
@@ -9355,7 +9360,7 @@ def tasks_edit(task_id: int):
             # Notificar sobre a edição da tarefa
             editor_name = current_user.name or current_user.username
             edit_message = f'{editor_name} editou a tarefa "{task.title}".'
-            edit_now = datetime.utcnow()
+            edit_now = utc3_now()
             edit_recipients = _get_task_notification_recipients(task, exclude_user_id=current_user.id)
 
             edit_notification_records: list[tuple[int, TaskNotification]] = []
@@ -10168,7 +10173,7 @@ def task_responses_create(task_id: int):
     if not cleaned_body.strip():
         return jsonify({"success": False, "error": "empty_response"}), 400
 
-    created_at = datetime.utcnow()
+    created_at = utc3_now()
     response = TaskResponse(
         task_id=task.id,
         author_id=current_user.id,
@@ -10182,7 +10187,7 @@ def task_responses_create(task_id: int):
 
     recipients: set[int] = set()
     notification_records: list[tuple[int, TaskNotification]] = []
-    now = datetime.utcnow()
+    now = utc3_now()
     sender_name = current_user.name or current_user.username
     body_preview = re.sub(r'<[^>]+>', '', cleaned_body).replace('\n', ' ').strip()
     if len(body_preview) > 90:
@@ -10280,7 +10285,7 @@ def task_responses_mark_read(task_id: int):
         return jsonify({"success": False, "error": "conversation_unavailable"}), 409
 
     participant = _ensure_response_participant(task.id, current_user.id)
-    now = datetime.utcnow()
+    now = utc3_now()
     participant.last_read_at = now
 
     (
@@ -10428,7 +10433,7 @@ def update_task_status(task_id):
             task.completed_at = None
         elif new_status == TaskStatus.DONE:
             task.completed_by = current_user.id
-            task.completed_at = datetime.utcnow()
+            task.completed_at = utc3_now()
         elif new_status == TaskStatus.PENDING:
             task.assigned_to = None
             task.completed_by = None
@@ -10439,7 +10444,7 @@ def update_task_status(task_id):
 
         status_notification_records: list[tuple[int, TaskNotification]] = []
         actor_name = current_user.name or current_user.username
-        now = datetime.utcnow()
+        now = utc3_now()
         local_display = (
             now.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ).strftime("%d/%m/%Y às %H:%M")
         )

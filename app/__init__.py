@@ -6,6 +6,7 @@ import time
 import logging
 import secrets
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 from flask import Flask, request, redirect, session, g, jsonify
@@ -30,6 +31,8 @@ from app.utils.performance_middleware import (
 )
 
 load_dotenv()
+
+SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 
 app = Flask(__name__)
 
@@ -228,12 +231,12 @@ def _update_session_activity():
 
     from app.models.tables import Session, SAO_PAULO_TZ
 
-    now_utc = datetime.utcnow()
+    now_utc = datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)
     sid = session.get('sid')
     if not sid:
         return
 
-    now_sp = datetime.now(SAO_PAULO_TZ)
+    now_sp = datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)
     user_agent = request.headers.get('User-Agent')
     ip_address = request.remote_addr
 
@@ -319,7 +322,7 @@ def load_user(user_id):
 @app.context_processor
 def inject_now():
     """Inject current UTC time into templates as ``now()``."""
-    return {'now': datetime.utcnow}
+    return {'now': lambda: datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)}
 
 
 @app.template_filter('time_since')
@@ -331,7 +334,7 @@ def _time_since(value):
     """
     if not value:
         return 'agora'
-    delta = datetime.utcnow() - value
+    delta = datetime.now(SAO_PAULO_TZ).replace(tzinfo=None) - value
     seconds = int(delta.total_seconds())
     if seconds < 60:
         return 'agora'
