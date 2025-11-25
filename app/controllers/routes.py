@@ -8589,12 +8589,17 @@ def tasks_overview_mine():
     selected_user_id_2 = None
     selected_tag_id = None
 
-    accessible_tag_ids = _get_accessible_tag_ids(current_user)
+    owned_sector_tags = [
+        tag
+        for tag in (current_user.tags or [])
+        if not tag.nome.startswith(PERSONAL_TAG_PREFIX)
+    ]
+    owned_sector_tag_ids = [tag.id for tag in owned_sector_tags]
     available_tags = (
-        Tag.query.filter(Tag.id.in_(accessible_tag_ids))
+        Tag.query.filter(Tag.id.in_(owned_sector_tag_ids))
         .order_by(Tag.nome.asc())
         .all()
-        if accessible_tag_ids
+        if owned_sector_tag_ids
         else []
     )
 
@@ -8619,13 +8624,8 @@ def tasks_overview_mine():
         Task.assigned_to == current_user.id,
         Task.id.in_(follower_subquery),
     ]
-    non_personal_tag_ids = [
-        tag_id
-        for tag_id in accessible_tag_ids
-        if tag_id is not None
-    ]
-    if non_personal_tag_ids:
-        participation_filters.append(Task.tag_id.in_(non_personal_tag_ids))
+    if owned_sector_tag_ids:
+        participation_filters.append(Task.tag_id.in_(owned_sector_tag_ids))
 
     query = (
         Task.query.join(Tag)
@@ -8687,7 +8687,7 @@ def tasks_overview_mine():
             candidate_tag_id = int(tag_param)
         except ValueError:
             candidate_tag_id = None
-        if candidate_tag_id and candidate_tag_id in accessible_tag_ids:
+        if candidate_tag_id and candidate_tag_id in owned_sector_tag_ids:
             selected_tag_id = candidate_tag_id
             query = query.filter(Task.tag_id == selected_tag_id)
 
@@ -8721,10 +8721,10 @@ def tasks_overview_mine():
         .all()
     )
     available_tags = (
-        Tag.query.filter(Tag.id.in_(accessible_tag_ids))
+        Tag.query.filter(Tag.id.in_(owned_sector_tag_ids))
         .order_by(Tag.nome.asc())
         .all()
-        if accessible_tag_ids
+        if owned_sector_tag_ids
         else []
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
