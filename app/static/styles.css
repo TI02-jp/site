@@ -2643,8 +2643,14 @@ Notification Toast Container - Estilo WhatsApp
 }
 
 .notification-toast.show {
-    opacity: 1;
-    transform: translateX(0) scale(1);
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.notification-toast.no-animate {
+  transition: none;
+  opacity: 1;
+  transform: translateX(0) scale(1);
 }
 
 .notification-toast.hide {
@@ -2693,11 +2699,8 @@ Notification Toast Container - Estilo WhatsApp
     gap: 0.35rem;
 }
 
-.notification-toast__meta span::before {
-    content: '\f017';
-    font-family: 'bootstrap-icons';
-    font-size: var(--font-xs);
-    color: var(--primary);
+.notification-toast__time-text {
+    display: inline-block;
 }
 
 /* Botão de fechar */

@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   function escapeHtml(text) {
     if (!text) {
       return '';
@@ -15,12 +15,21 @@
     if (!isoString) {
       return '';
     }
-    const date = new Date(isoString);
+
+    // Handle datetime strings from Python ('YYYY-MM-DD HH:MM:SS') that may be
+    // parsed as UTC instead of local time. Replacing the space with 'T'
+    // standardizes the format to be parsed as local time.
+    const parsableDateString = typeof isoString === 'string'
+      ? isoString.split('.')[0].replace(' ', 'T')
+      : isoString;
+
+    const date = new Date(parsableDateString);
     if (Number.isNaN(date.getTime())) {
       return '';
     }
     const now = Date.now();
     let diff = now - date.getTime();
+
     if (diff < 0) {
       diff = 0;
     }
@@ -32,14 +41,14 @@
     }
     if (diff < hour) {
       const minutes = Math.round(diff / minute);
-      return `${minutes} min atrÃ¡s`;
+      return `${minutes} min atrás`;
     }
     if (diff < day) {
       const hours = Math.round(diff / hour);
-      return `${hours} h atrÃ¡s`;
+      return `${hours} h atrás`;
     }
     const days = Math.round(diff / day);
-    return `${days} d atrÃ¡s`;
+    return `${days} d atrás`;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -63,13 +72,18 @@
     const csrfToken = window.csrfToken || '';
     let isOpen = false;
     let isFetching = false;
+    let unreadCount = 0;
     const knownNotificationIds = new Set();
     let initialFetchComplete = false;
     let lastKnownNotificationId = 0;
+    let toastTimeTimer = null;
+    const TOAST_TIME_UPDATE_MS = 30000;
 
     const displayedNotificationIds = new Set();
+    const TOAST_STORAGE_KEY = 'jpPersistentToasts';
+    const DISMISSED_STORAGE_KEY = 'jpDismissedToasts';
 
-    // Suporte para notificaÃ§Ãµes do sistema
+    // Suporte para notificações do sistema
     const supportsNotifications = 'Notification' in window;
     const supportsServiceWorker = 'serviceWorker' in navigator;
     let notificationPermission = supportsNotifications ? Notification.permission : 'denied';
@@ -107,7 +121,7 @@
           return;
         }
       } catch (error) {
-        console.debug('[Notifications] Som nao reproduzido via WebAudio:', error);
+        console.debug('[Notifications] Som não reproduzido via WebAudio:', error);
       }
 
       // Fallback simples usando áudio embutido (pequeno beep)
@@ -154,8 +168,8 @@
         banner.innerHTML = `
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <i class="bi bi-bell fs-5 text-warning"></i>
-            <div class="flex-grow-1">As notificacoes estao bloqueadas no navegador. Clique no cadeado da barra de endereco e permita notificacoes para o JP.</div>
-            <button type="button" class="btn btn-sm btn-primary" id="permissionBannerAllow">Ativar notificacoes</button>
+            <div class="flex-grow-1">As notificações estão bloqueadas no navegador. Clique no cadeado da barra de endereço e permita notificações para o JP.</div>
+            <button type="button" class="btn btn-sm btn-primary" id="permissionBannerAllow">Ativar notificações</button>
           </div>
         `;
         const allowBtn = banner.querySelector('#permissionBannerAllow');
@@ -168,7 +182,7 @@
         banner.innerHTML = `
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <i class="bi bi-bell-slash fs-5 text-danger"></i>
-            <div class="flex-grow-1">As notificacoes estao bloqueadas no navegador. Clique no cadeado da barra de endereco e permita notificacoes para o JP.</div>
+            <div class="flex-grow-1">As notificações estão bloqueadas no navegador. Clique no cadeado da barra de endereço e permita notificações para o JP.</div>
           </div>
         `;
       }
@@ -186,10 +200,13 @@
     }
 
     function setBadge(count) {
-      const hasUnread = Boolean(count && count > 0);
+      if (typeof count === 'number' && !Number.isNaN(count)) {
+        unreadCount = count;
+      }
+      const hasUnread = Boolean(unreadCount && unreadCount > 0);
       if (countBadge) {
         if (hasUnread) {
-          countBadge.textContent = count;
+          countBadge.textContent = unreadCount;
           countBadge.hidden = false;
         } else {
           countBadge.hidden = true;
@@ -199,13 +216,40 @@
         button.classList.toggle('has-unread', hasUnread);
       }
       if (navBadge) {
-        navBadge.textContent = String(count || 0);
+        navBadge.textContent = String(unreadCount || 0);
         if (hasUnread) {
           navBadge.classList.remove('d-none');
         } else {
           navBadge.classList.add('d-none');
         }
       }
+    }
+
+
+
+    function updateToastTimes() {
+      if (!toastContainer) {
+        return;
+      }
+      const timeEls = toastContainer.querySelectorAll('.notification-toast__time');
+      timeEls.forEach((el) => {
+        const createdAt = el.dataset.createdAt;
+        const label = formatRelativeTime(createdAt);
+        if (label) {
+          const textNode = el.querySelector('.notification-toast__time-text');
+          if (textNode) {
+            textNode.textContent = label;
+          }
+        }
+      });
+    }
+
+    function ensureToastTimeUpdater() {
+      if (toastTimeTimer || !toastContainer) {
+        return;
+      }
+      updateToastTimes();
+      toastTimeTimer = setInterval(updateToastTimes, TOAST_TIME_UPDATE_MS);
     }
 
     function renderNotifications(items) {
@@ -269,7 +313,84 @@
       displayedNotificationIds.add(id);
     }
 
-    // FunÃ§Ã£o para obter chave pÃºblica VAPID do servidor
+    function loadStoredToasts() {
+      try {
+        const raw = localStorage.getItem(TOAST_STORAGE_KEY);
+        if (!raw) {
+          return [];
+        }
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.debug('[Notifications] Falha ao ler toasts persistidos:', error);
+        return [];
+      }
+    }
+
+    function persistToast(item) {
+      if (!item || !item.id || item.is_read) {
+        return;
+      }
+      try {
+        const existing = loadStoredToasts()
+          .filter((toast) => toast && toast.id !== item.id)
+          .slice(-4); // keep last few toasts to avoid unbounded storage
+        existing.push({
+          id: item.id,
+          message: item.message || '',
+          created_at: item.created_at || null,
+          url: item.url || '',
+          action_label: item.action_label || null,
+          type: item.type || null,
+          is_read: Boolean(item.is_read),
+        });
+        localStorage.setItem(TOAST_STORAGE_KEY, JSON.stringify(existing));
+      } catch (error) {
+        console.debug('[Notifications] Falha ao persistir toast:', error);
+      }
+    }
+
+    function removeStoredToast(id) {
+      if (!id) {
+        return;
+      }
+      try {
+        const remaining = loadStoredToasts().filter((toast) => toast && toast.id !== id);
+        localStorage.setItem(TOAST_STORAGE_KEY, JSON.stringify(remaining));
+      } catch (error) {
+        console.debug('[Notifications] Falha ao remover toast persistido:', error);
+      }
+    }
+
+    function loadDismissedToasts() {
+      try {
+        const raw = localStorage.getItem(DISMISSED_STORAGE_KEY);
+        if (!raw) {
+          return new Set();
+        }
+        const parsed = JSON.parse(raw);
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        console.debug('[Notifications] Falha ao ler toasts fechados:', error);
+        return new Set();
+      }
+    }
+
+    const dismissedToasts = loadDismissedToasts();
+
+    function rememberDismissedToast(id) {
+      if (!id) {
+        return;
+      }
+      try {
+        dismissedToasts.add(id);
+        localStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify(Array.from(dismissedToasts)));
+      } catch (error) {
+        console.debug('[Notifications] Falha ao salvar toast fechado:', error);
+      }
+    }
+
+    // Função para obter chave pública VAPID do servidor
     async function getVapidPublicKey() {
       try {
         const response = await fetch('/notifications/vapid-public-key');
@@ -281,7 +402,7 @@
       }
     }
 
-    // FunÃ§Ã£o para converter chave VAPID de base64 para Uint8Array
+    // Função para converter chave VAPID de base64 para Uint8Array
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
       const base64 = (base64String + padding)
@@ -297,10 +418,10 @@
       return outputArray;
     }
 
-    // FunÃ§Ã£o para subscrever ao Push usando Service Worker
+    // Função para subscrever ao Push usando Service Worker
     async function subscribeToPush() {
       if (!supportsServiceWorker || !supportsNotifications) {
-        console.log('[Notifications] Push nÃ£o suportado neste navegador');
+        console.log('[Notifications] Push não suportado neste navegador');
         renderPermissionBanner(notificationPermission);
         return false;
       }
@@ -308,30 +429,30 @@
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        // Obter chave pÃºblica VAPID
+        // Obter chave pública VAPID
         const vapidPublicKey = await getVapidPublicKey();
         if (!vapidPublicKey) {
-          console.error('[Notifications] Chave VAPID nÃ£o disponÃ­vel');
+          console.error('[Notifications] Chave VAPID não disponível');
           return false;
         }
 
         const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
-        // Verificar se jÃ¡ existe uma subscriÃ§Ã£o
+        // Verificar se já existe uma subscrição
         let subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-          // Criar nova subscriÃ§Ã£o
+          // Criar nova subscrição
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey
           });
-          console.log('[Notifications] Nova subscriÃ§Ã£o Push criada');
+          console.log('[Notifications] Nova subscrição Push criada');
         } else {
-          console.log('[Notifications] SubscriÃ§Ã£o Push jÃ¡ existe');
+          console.log('[Notifications] Subscrição Push já existe');
         }
 
-        // Enviar subscriÃ§Ã£o para o servidor
+        // Enviar subscrição para o servidor
         const response = await fetch('/notifications/subscribe', {
           method: 'POST',
           headers: {
@@ -342,10 +463,10 @@
         });
 
         if (response.ok) {
-          console.log('[Notifications] SubscriÃ§Ã£o Push registrada no servidor');
+          console.log('[Notifications] Subscrição Push registrada no servidor');
           return true;
         } else {
-          console.error('[Notifications] Erro ao registrar subscriÃ§Ã£o no servidor');
+          console.error('[Notifications] Erro ao registrar subscrição no servidor');
           return false;
         }
       } catch (error) {
@@ -354,21 +475,21 @@
       }
     }
 
-    // FunÃ§Ã£o para solicitar permissÃ£o de notificaÃ§Ãµes do sistema
+    // Função para solicitar permissão de notificações do sistema
     async function requestNotificationPermission() {
       if (!supportsNotifications) {
-        console.log('[Notifications] NotificaÃ§Ãµes do sistema nÃ£o suportadas');
+        console.log('[Notifications] Notificações do sistema não suportadas');
         return false;
       }
 
       if (notificationPermission === 'granted') {
-        // Se jÃ¡ tem permissÃ£o, subscrever ao Push
+        // Se já tem permissão, subscrever ao Push
         subscribeToPush();
         return true;
       }
 
       if (notificationPermission === 'denied') {
-        console.log('[Notifications] PermissÃ£o negada pelo usuÃ¡rio');
+        console.log('[Notifications] Permissão negada pelo usuário');
         renderPermissionBanner(notificationPermission);
         return false;
       }
@@ -380,35 +501,35 @@
         renderPermissionBanner(notificationPermission);
 
         if (permission === 'granted') {
-          // Subscrever ao Push apÃ³s obter permissÃ£o
+          // Subscrever ao Push após obter permissão
           await subscribeToPush();
         }
 
         return permission === 'granted';
       } catch (error) {
-        console.error('[Notifications] Erro ao solicitar permissÃ£o:', error);
+        console.error('[Notifications] Erro ao solicitar permissão:', error);
         return false;
       }
     }
 
-    // FunÃ§Ã£o para criar notificaÃ§Ã£o do sistema usando Service Worker
+    // Função para criar notificação do sistema usando Service Worker
     async function showSystemNotification(item) {
       if (!item) {
         return;
       }
 
-      // Verificar se temos permissÃ£o
+      // Verificar se temos permissão
       if (notificationPermission !== 'granted') {
         const granted = await requestNotificationPermission();
         if (!granted) {
-          console.log('[Notifications] Usando notificaÃ§Ã£o in-app (sem permissÃ£o do sistema)');
+          console.log('[Notifications] Usando notificação in-app (sem permissão do sistema)');
           return false;
         }
       }
 
-      const title = 'JP ContÃ¡bil';
+      const title = 'JP Contábil';
       const options = {
-        body: item.message || 'Nova notificaÃ§Ã£o',
+        body: item.message || 'Nova notificação',
         icon: '/static/images/icon-192x192.png',
         badge: '/static/images/icon-192x192.png',
         tag: item.id ? `notification-${item.id}` : 'jp-notification',
@@ -417,20 +538,20 @@
           notificationId: item.id,
           dateOfArrival: Date.now()
         },
-        requireInteraction: true, // MantÃ©m a notificaÃ§Ã£o visÃ­vel atÃ© o usuÃ¡rio interagir
+        requireInteraction: true, // Mantém a notificação visível até o usuário interagir
         silent: false, // Som ativado
         vibrate: [200, 100, 200],
-        renotify: true, // Renotifica mesmo se jÃ¡ existe uma com a mesma tag
+        renotify: true, // Renotifica mesmo se já existe uma com a mesma tag
         timestamp: Date.now()
       };
 
       try {
-        // Tentar usar Service Worker se disponÃ­vel
+        // Tentar usar Service Worker se disponível
         if (supportsServiceWorker && navigator.serviceWorker.ready) {
           const registration = await navigator.serviceWorker.ready;
           await registration.showNotification(title, options);
           playNotificationSound();
-          console.log('[Notifications] Notificacao do sistema mostrada via SW');
+          console.log('[Notifications] Notificação do sistema mostrada via SW');
           return true;
         } else {
           // Fallback para Notification API direta
@@ -446,53 +567,68 @@
             notification.close();
           };
 
-          console.log('[Notifications] NotificaÃ§Ã£o do sistema mostrada diretamente');
+          console.log('[Notifications] Notificação do sistema mostrada diretamente');
           return true;
         }
       } catch (error) {
-        console.error('[Notifications] Erro ao mostrar notificaÃ§Ã£o do sistema:', error);
+        console.error('[Notifications] Erro ao mostrar notificação do sistema:', error);
         return false;
       }
     }
 
-    // Solicitar permissÃ£o automaticamente ao carregar a pÃ¡gina
+    // Solicitar permissão automaticamente ao carregar a página
     setTimeout(() => {
       if (supportsNotifications && notificationPermission === 'default') {
-        console.log('[Notifications] Solicitando permissÃ£o para notificaÃ§Ãµes do sistema...');
+        console.log('[Notifications] Solicitando permissão para notificações do sistema...');
         requestNotificationPermission().then(granted => {
           if (granted) {
-            console.log('[Notifications] PermissÃ£o concedida! NotificaÃ§Ãµes do Windows habilitadas.');
+            console.log('[Notifications] Permissão concedida! Notificações do Windows habilitadas.');
           } else {
-            console.log('[Notifications] PermissÃ£o negada. As notificaÃ§Ãµes ficarÃ£o apenas no navegador.');
+            console.log('[Notifications] Permissão negada. As notificações ficarão apenas no navegador.');
           }
         });
       }
     }, 2000);
 
-    function showNotificationToast(item) {
+    function showNotificationToast(item, options = {}) {
       if (!item) {
         return;
       }
+      const {
+        skipSystem = false,
+        persist = true,
+        instant = false,
+        bumpUnread = true,
+      } = options;
       const id = item.id != null ? String(item.id) : null;
+      if (id && dismissedToasts.has(id)) {
+        return;
+      }
       if (id) {
         rememberNotification(id);
         updateLastKnownId(id);
         knownNotificationIds.add(id);
+        if (persist && !item.is_read) {
+          persistToast(item);
+        }
+        if (!item.is_read && bumpUnread) {
+          setBadge(unreadCount + 1);
+        }
       }
 
-      // SEMPRE criar notificaÃ§Ã£o do sistema (desktop) se tivermos permissÃ£o
-      // Isso garante que apareÃ§a como pop-up nativo do Windows
-      if (notificationPermission === 'granted') {
+      // SEMPRE criar notifica??o do sistema (desktop) se tivermos permiss?o
+      // Isso garante que apare?a como pop-up nativo do Windows
+      if (!skipSystem && notificationPermission === 'granted') {
         showSystemNotification(item).then(success => {
           if (success) {
-            console.log('[Notifications] NotificaÃ§Ã£o do Windows exibida com sucesso!');
+            console.log('[Notifications] Notifica??o do Windows exibida com sucesso!');
           }
         }).catch(error => {
-          console.error('[Notifications] Falha ao criar notificaÃ§Ã£o do sistema:', error);
+          console.error('[Notifications] Falha ao criar notifica??o do sistema:', error);
         });
-      } else {
-        // Se nÃ£o temos permissÃ£o, tentar solicitar novamente
-        console.log('[Notifications] Tentando solicitar permissÃ£o novamente...');
+      } else if (!skipSystem) {
+        // Se n?o temos permiss?o, tentar solicitar novamente
+        console.log('[Notifications] Tentando solicitar permiss?o novamente...');
         requestNotificationPermission().then(granted => {
           if (granted) {
             showSystemNotification(item);
@@ -503,16 +639,22 @@
       if (!toastContainer) {
         return;
       }
-      const message = escapeHtml(item.message || 'Nova notificaÃ§Ã£o');
+      const message = escapeHtml(item.message || 'Nova notifica??o');
       const time = formatRelativeTime(item.created_at);
       const actionLabel = escapeHtml(item.action_label || 'Abrir');
       const toast = document.createElement('div');
       toast.className = 'notification-toast';
+      if (instant) {
+        toast.classList.add('no-animate', 'show');
+      }
       toast.innerHTML = `
         <span class="notification-toast__title">${message}</span>
         <div class="notification-toast__meta">
-          <span>${time || 'agora'}</span>
-          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notificaÃ§Ã£o">
+          <span class="notification-toast__time" data-created-at="${item.created_at || ''}">
+            <i class="bi bi-clock"></i>
+            <span class="notification-toast__time-text">${time || 'agora'}</span>
+          </span>
+          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notifica??o">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -525,9 +667,12 @@
         }
       `;
       toastContainer.appendChild(toast);
-      requestAnimationFrame(() => {
-        toast.classList.add('show');
-      });
+      if (!instant) {
+        requestAnimationFrame(() => {
+          toast.classList.add('show');
+        });
+      }
+      ensureToastTimeUpdater();
       playNotificationSound();
 
       const handleOpen = () => {
@@ -538,7 +683,14 @@
         markNotificationRead(item.id)
           .catch(() => {})
           .finally(() => {
+            if (id) {
+              removeStoredToast(id);
+              rememberDismissedToast(id);
+            }
             hideToast(toast);
+            if (!item.is_read) {
+              setBadge(Math.max(0, unreadCount - 1));
+            }
             window.location.href = item.url;
           });
       };
@@ -547,6 +699,10 @@
       if (dismissBtn) {
         dismissBtn.addEventListener('click', (event) => {
           event.stopPropagation();
+          if (id) {
+            removeStoredToast(id);
+            rememberDismissedToast(id);
+          }
           hideToast(toast);
         });
       }
@@ -562,7 +718,23 @@
         });
       }
 
-      // Mantém o toast até interação explícita (abrir ou fechar)
+      // Mant?m o toast at? intera??o expl?cita (abrir ou fechar)
+    }
+
+    function restoreStoredToasts() {
+      const stored = loadStoredToasts();
+      if (!Array.isArray(stored) || stored.length === 0) {
+        return;
+      }
+      stored.forEach((item) => {
+        if (!item || item.id == null || item.is_read) {
+          return;
+        }
+        const id = String(item.id);
+        rememberNotification(id);
+        knownNotificationIds.add(id);
+        showNotificationToast(item, { skipSystem: true, persist: false, instant: true });
+      });
     }
 
     function fetchNotifications(options = {}) {
@@ -583,7 +755,7 @@
       })
         .then((response) => {
           if (!response.ok) {
-            throw new Error('Erro ao carregar notificaÃ§Ãµes');
+            throw new Error('Erro ao carregar notificações');
           }
           return response.json();
         })
@@ -592,6 +764,7 @@
             ? data.notifications
             : [];
           const unread = data.unread || 0;
+          setBadge(unread);
 
           notifications.forEach((item) => {
             if (!item) {
@@ -608,8 +781,9 @@
           if (!initialFetchComplete) {
             notifications.forEach((item) => {
               const id = item && item.id != null ? String(item.id) : null;
-              if (id) {
+              if (id && !item.is_read && !dismissedToasts.has(id)) {
                 rememberNotification(id);
+                persistToast(item);
               }
             });
             initialFetchComplete = true;
@@ -619,14 +793,13 @@
                 return;
               }
               const id = item.id != null ? String(item.id) : null;
-              if (!id || displayedNotificationIds.has(id)) {
+              if (!id || displayedNotificationIds.has(id) || dismissedToasts.has(id)) {
                 return;
               }
               showNotificationToast(item);
             });
           }
 
-          setBadge(unread);
           renderNotifications(notifications);
         })
         .catch(() => {
@@ -783,19 +956,20 @@
           try {
             payload = JSON.parse(event.data);
           } catch (error) {
-            console.warn('Falha ao interpretar evento de notificaÃ§Ã£o.', error);
+            console.warn('Falha ao interpretar evento de notificação.', error);
             return;
           }
 
           const incoming = Array.isArray(payload.notifications)
             ? payload.notifications
             : [];
+          let newUnread = 0;
           incoming.forEach((item) => {
             if (!item) {
               return;
             }
             const id = item.id != null ? String(item.id) : null;
-            if (!id) {
+            if (!id || dismissedToasts.has(id)) {
               return;
             }
             updateLastKnownId(id);
@@ -803,10 +977,15 @@
               showNotificationToast(item);
             }
             knownNotificationIds.add(id);
+            if (!item.is_read) {
+              newUnread += 1;
+            }
           });
 
           if (typeof payload.unread === 'number') {
             setBadge(payload.unread);
+          } else if (newUnread > 0) {
+            setBadge(unreadCount + newUnread);
           }
 
           fetchNotifications({ suppressToasts: true });
@@ -822,6 +1001,8 @@
 
       establishConnection();
     }
+
+    restoreStoredToasts();
 
     fetchNotifications()
       .catch(() => {})
@@ -840,7 +1021,7 @@
       }
     });
 
-    // Expor funÃ§Ã£o globalmente para poder ser chamada pela UI
+    // Expor função globalmente para poder ser chamada pela UI
     window.jpNotifications = {
       requestPermission: requestNotificationPermission,
       hasPermission: () => notificationPermission === 'granted',
@@ -849,8 +1030,3 @@
     };
   });
 })();
-
-
-
-
-
