@@ -3202,11 +3202,14 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
 
     created_at = notification.created_at or utc3_now()
     if created_at.tzinfo is None:
-        created_at_iso = created_at.isoformat() + "Z"
-        display_dt = created_at.replace(tzinfo=timezone.utc).astimezone(SAO_PAULO_TZ)
+        # Notifications are stored in local (Sao Paulo) time as naive datetimes.
+        # Explicitly attach the timezone so the frontend receives the correct offset.
+        localized = created_at.replace(tzinfo=SAO_PAULO_TZ)
     else:
-        created_at_iso = created_at.isoformat()
-        display_dt = created_at.astimezone(SAO_PAULO_TZ)
+        localized = created_at.astimezone(SAO_PAULO_TZ)
+
+    created_at_iso = localized.isoformat()
+    display_dt = localized
 
     return {
         "id": notification.id,
@@ -10537,9 +10540,39 @@ def update_task_status(task_id):
     db.session.commit()
 
     # Broadcast status change
-    from app.services.realtime import broadcast_task_status_changed, get_broadcaster
+    from app.services.realtime import get_broadcaster, broadcast_task_status_changed
     task_data = _serialize_task(task)
-    if not task.is_private:
+    broadcaster = get_broadcaster()
+
+    if task.is_private:
+        # For private tasks, broadcast only to users with access.
+        recipients = {task.created_by}
+        if task.assigned_to:
+            recipients.add(task.assigned_to)
+        
+        # Add followers
+        followers = TaskFollower.query.filter_by(task_id=task.id).all()
+        for follower in followers:
+            recipients.add(follower.user_id)
+
+        for user_id in recipients:
+            # Don't send to the user who made the change
+            if user_id == current_user.id:
+                continue
+            
+            broadcaster.broadcast(
+                event_type="task:status_changed",
+                data={
+                    "id": task.id,
+                    "old_status": old_status.value,
+                    "new_status": new_status.value,
+                    "task": task_data,
+                },
+                user_id=user_id,
+                scope="tasks",
+            )
+    else:
+        # Public tasks are broadcast to everyone in the 'tasks' scope
         broadcast_task_status_changed(
             task.id,
             old_status.value,
