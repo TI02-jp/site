@@ -8,6 +8,202 @@
 .access-description-content {
     white-space: pre-line;
 }
+
+.access-hero {
+    background: linear-gradient(135deg, rgba(92, 124, 250, 0.08), rgba(232, 116, 41, 0.06));
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.access-board {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.access-shortcut .btn {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.access-shortcut .btn-outline-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="dark"] .access-shortcut .btn-outline-primary {
+    background: linear-gradient(135deg, #5c7cfa, #8091ff);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.access-shortcut .btn-outline-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.access-shortcut .btn.border-0 {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] .access-shortcut .btn.border-0 {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-color);
+}
+
+.access-shortcut .btn.border-0:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="dark"] .access-shortcut .btn.border-0:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.access-shortcut-link span {
+    color: #fff;
+}
+
+.access-description {
+    background: var(--muted-surface);
+    border: 1px solid var(--card-border-color);
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    color: var(--text-color);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(2px);
+}
+
+.access-empty {
+    border-radius: 14px;
+    background: var(--muted-surface);
+    border: 1px dashed var(--card-border-color);
+}
+
+.access-actions .dropdown-toggle {
+    border-radius: 12px;
+    border-color: var(--card-border-color);
+    color: var(--text-color);
+}
+
+.access-actions .dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+}
+
+.access-actions .dropdown-item i {
+    color: var(--accent);
+}
+
+/* Tema claro */
+:root:not([data-theme="dark"]) .access-hero {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+:root:not([data-theme="dark"]) .access-board {
+    background: #ffffff;
+    border: 1px solid #e7e9ef;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+:root:not([data-theme="dark"]) .access-shortcut .btn-outline-primary {
+    background: var(--accent);
+    color: #11275b;
+    border: none;
+    box-shadow: none;
+}
+
+:root:not([data-theme="dark"]) .access-shortcut .btn-outline-primary:hover {
+    background: #ff7a1f;
+    transform: none;
+    box-shadow: none;
+}
+
+:root:not([data-theme="dark"]) .access-shortcut .btn.border-0 {
+    background: var(--accent);
+    color: #11275b;
+    border: none;
+    box-shadow: none;
+}
+
+:root:not([data-theme="dark"]) .access-shortcut .btn.border-0:hover {
+    background: #ff7a1f;
+}
+
+:root:not([data-theme="dark"]) .access-shortcut-link span {
+    color: #11275b;
+}
+
+:root:not([data-theme="dark"]) .access-actions .dropdown-toggle {
+    border-color: #d5d7dd;
+    color: #11275b;
+}
+
+:root:not([data-theme="dark"]) .access-empty {
+    background: #f8f9fb;
+    border-color: #e7e9ef;
+}
+
+/* Tema escuro */
+:root[data-theme="dark"] .access-hero {
+    background: linear-gradient(135deg, rgba(92, 124, 250, 0.12), rgba(232, 116, 41, 0.1));
+    border: 1px solid var(--card-border-color);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.38);
+}
+
+:root[data-theme="dark"] .access-board {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .access-shortcut .btn-outline-primary {
+    background: linear-gradient(135deg, #5c7cfa, #8091ff);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .access-shortcut .btn.border-0 {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .access-shortcut .btn.border-0:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .access-shortcut-link span {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .access-actions .dropdown-toggle {
+    border-color: var(--card-border-color);
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .access-empty {
+    background: var(--muted-surface);
+    border-color: var(--card-border-color);
+}
+
 </style>
 {% endblock %}
 
@@ -17,17 +213,20 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-4">
-        <div>
-            <nav aria-label="breadcrumb" class="small text-muted mb-2">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-3 access-hero">
+        <div class="d-flex flex-column gap-1">
+            <nav aria-label="breadcrumb" class="small text-muted mb-1">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a class="text-decoration-none" href="{{ url_for('home') }}">Início</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Acessos</li>
                 </ol>
             </nav>
-            <h1 class="h3 mb-0">Central de Acessos</h1>
+            <div class="d-flex align-items-center gap-2">
+                <div class="badge rounded-pill text-bg-primary px-3 py-2">Central de Acessos</div>
+                {% if total_links %}<span class="text-muted small">{{ total_links }} atalhos</span>{% endif %}
+            </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 access-actions">
             {% if current_user.role == 'admin' %}
             <button
                 class="btn btn-primary btn-sm"
@@ -47,17 +246,15 @@
         </div>
     </div>
 
-
-
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            {% if total_links == 0 %}
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-search display-6 mb-3"></i>
-                <p class="mb-0">Nenhum atalho cadastrado.</p>
-            </div>
-            {% else %}
-            <div class="row row-cols-1 row-cols-lg-3 g-4" id="access-grid">
+    <div class="access-board">
+        {% if total_links == 0 %}
+        <div class="text-center text-muted py-5 access-empty">
+            <i class="bi bi-search display-6 mb-3"></i>
+            <p class="mb-1">Nenhum atalho cadastrado.</p>
+            <p class="small mb-0">Use o botão “Adicionar atalho” para começar.</p>
+        </div>
+        {% else %}
+        <div class="row row-cols-1 row-cols-lg-3 g-4" id="access-grid">
                 {% for column in link_columns if column %}
                 <div class="col">
                     <div class="d-flex flex-column gap-3">
@@ -130,7 +327,7 @@
                                 class="collapse access-description mt-2"
                                 id="access-description-{{ link.id }}"
                             >
-                                <div class="small text-muted access-description-content">
+                                <div class="small access-description-content">
                                     {{ link.description }}
                                 </div>
                             </div>

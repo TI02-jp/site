@@ -111,6 +111,13 @@
             background: #ffffff;
         }
 
+        :root[data-theme="dark"] .acordos-card {
+            background: #0f1625;
+            border-color: var(--card-border-color);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+            color: #e8ecf5;
+        }
+
         .acordos-card.acordos-card-form .card-header {
             padding: 0.875rem 1.15rem;
         }
@@ -155,6 +162,12 @@
             padding: 1rem 1.25rem;
         }
 
+        :root[data-theme="dark"] .acordos-card .card-header {
+            background: #0c121f;
+            border-color: var(--card-border-color);
+            color: #e8ecf5;
+        }
+
         .acordos-card .card-body {
             padding: 1.25rem;
         }
@@ -196,6 +209,10 @@
             position: relative;
         }
 
+        :root[data-theme="dark"] .acordos-users-card .card-body.acordos-users-list {
+            background: #0b1018;
+        }
+
         .acordo-user-option .form-check-input {
             position: absolute;
             inset: 0;
@@ -203,6 +220,7 @@
             cursor: pointer;
         }
 
+        /* Base (tema claro) */
         .acordo-user-option .form-check-label {
             position: relative;
             display: flex;
@@ -259,6 +277,37 @@
             background: var(--primary);
             border-color: var(--primary);
             box-shadow: 0 0.25rem 0.6rem rgba(11, 40, 139, 0.35);
+        }
+
+        /* Tema escuro */
+        :root[data-theme="dark"] .acordo-user-option .form-check-label {
+            border-color: rgba(255, 255, 255, 0.16);
+            background: #1a2437;
+            color: #e8ecf5;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+        }
+
+        :root[data-theme="dark"] .acordo-user-option .form-check-label::before {
+            border-color: rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        :root[data-theme="dark"] .acordo-user-option .form-check-label:hover {
+            background: #212d42;
+            border-color: rgba(255, 255, 255, 0.22);
+        }
+
+        :root[data-theme="dark"] .acordo-user-option .form-check-input:checked + .form-check-label {
+            background: linear-gradient(135deg, #5c7cfa, #7b8dff);
+            color: #ffffff;
+            box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.35);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        :root[data-theme="dark"] .acordo-user-option .form-check-input:checked + .form-check-label::before {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0.25rem 0.6rem rgba(0, 0, 0, 0.35);
         }
 
         .acordo-user-option .form-check-input:checked + .form-check-label::after {
@@ -346,6 +395,26 @@
         .acordo-item-description {
             margin-top: 0.75rem;
             color: #343a40;
+        }
+
+        /* Tema escuro - cards de acordos */
+        :root[data-theme="dark"] .acordo-item {
+            background: #0f1625;
+            border-color: var(--card-border-color);
+            color: #e8ecf5;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        :root[data-theme="dark"] .acordo-item-user {
+            color: #cfd5e2;
+        }
+
+        :root[data-theme="dark"] .acordo-item-meta {
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .acordo-item-description {
+            color: #e8ecf5;
         }
 
         .acordos-search-form {

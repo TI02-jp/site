@@ -299,14 +299,14 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle me-1"></i>Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-person-check me-1"></i>{{ form.submit.label.text }}
-          </button>
+          </div>
+          <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+              <i class="bi bi-x-circle me-1"></i>Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-person-check me-1"></i>{{ form.submit.label.text }}
+            </button>
         </div>
       </form>
     </div>
@@ -445,14 +445,14 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle me-1"></i>Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-circle me-1"></i>Salvar alterações
-          </button>
+          </div>
+          <div class="modal-footer border-0 pt-0 px-4 d-flex flex-wrap justify-content-between gap-2">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+              <i class="bi bi-x-circle me-1"></i>Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>Salvar alterações
+            </button>
         </div>
       </form>
     </div>
@@ -462,7 +462,7 @@
 <!-- Modal de Tags -->
 <div class="modal fade" id="tagsModal" tabindex="-1" aria-labelledby="tagsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
+    <div class="modal-content tags-modal">
       <div class="modal-header border-0 pb-0 px-4 pt-4 text-start">
         <div class="w-100 d-flex align-items-start justify-content-between">
           <h5 class="modal-title d-flex align-items-center gap-2" id="tagsModalLabel"><i class="bi bi-tags me-2"></i>Tags de Usuários</h5>
@@ -510,36 +510,36 @@
                 {{ tag_create_form.hidden_tag() }}
                 <input type="hidden" name="form_name" value="tag_create">
                 <div class="mb-3">
-                  {{ tag_create_form.nome.label(class="form-label") }}
-                  {{ tag_create_form.nome(class="form-control", placeholder="Nome da tag") }}
-                  {% for error in tag_create_form.nome.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                  {% endfor %}
-                </div>
-                <div class="d-flex justify-content-end gap-2">
-                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                  {{ tag_create_form.submit(class="btn btn-primary") }}
-                </div>
-              </form>
-              <hr class="text-muted">
-              <h6 class="text-uppercase text-muted small text-start">Editar tag</h6>
+                    {{ tag_create_form.nome.label(class="form-label") }}
+                    {{ tag_create_form.nome(class="form-control", placeholder="Nome da tag") }}
+                    {% for error in tag_create_form.nome.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancelar</button>
+                    {{ tag_create_form.submit(class="btn btn-primary") }}
+                  </div>
+                </form>
+                <hr class="text-muted">
+                <h6 class="text-uppercase text-muted small text-start">Editar tag</h6>
               {% if edit_tag %}
               <form method="POST" action="{{ url_for('list_users') }}" novalidate class="mt-2">
                 {{ tag_edit_form.hidden_tag() }}
                 <input type="hidden" name="form_name" value="tag_edit">
                 <input type="hidden" name="tag_id" value="{{ edit_tag.id }}">
-                <div class="mb-3">
-                  {{ tag_edit_form.nome.label(class="form-label") }}
-                  {{ tag_edit_form.nome(class="form-control", placeholder="Nome da tag") }}
-                  {% for error in tag_edit_form.nome.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                  {% endfor %}
-                </div>
-                <div class="d-flex justify-content-between gap-2">
-                  <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-outline-secondary btn-sm">Cancelar edição</a>
-                  {{ tag_edit_form.submit(class="btn btn-primary btn-sm") }}
-                </div>
-              </form>
+                  <div class="mb-3">
+                    {{ tag_edit_form.nome.label(class="form-label") }}
+                    {{ tag_edit_form.nome(class="form-control", placeholder="Nome da tag") }}
+                    {% for error in tag_edit_form.nome.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                  <div class="d-flex justify-content-between gap-2">
+                    <a href="{{ url_for('list_users', open_tag_modal='1') }}" class="btn btn-cancel btn-sm">Cancelar edição</a>
+                    {{ tag_edit_form.submit(class="btn btn-primary btn-sm") }}
+                  </div>
+                </form>
               {% else %}
               <p class="text-muted small mt-2 mb-0">Selecione uma tag na lista ao lado para editar.</p>
               {% endif %}

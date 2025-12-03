@@ -42,6 +42,37 @@
     border-radius: 0.2rem;
   }
 
+  .form-group-only-me .form-check-label,
+  .form-group-follow-up .form-check-label {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  :root[data-theme="dark"] .form-group-only-me .form-check-input,
+  :root[data-theme="dark"] .form-group-follow-up .form-check-input {
+    border-color: rgba(92, 124, 250, 0.7);
+    background: rgba(92, 124, 250, 0.08);
+    box-shadow: 0 4px 12px rgba(92, 124, 250, 0.22);
+  }
+
+  :root[data-theme="dark"] .form-group-only-me .form-check-input:checked,
+  :root[data-theme="dark"] .form-group-follow-up .form-check-input:checked {
+    background: #5c7cfa;
+    border-color: #5c7cfa;
+    box-shadow: 0 0 0 3px rgba(92, 124, 250, 0.28);
+  }
+
+  :root[data-theme="dark"] .form-group-only-me .form-check-input:focus,
+  :root[data-theme="dark"] .form-group-follow-up .form-check-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(92, 124, 250, 0.32);
+  }
+
+  :root[data-theme="dark"] .form-group-only-me .form-check-label,
+  :root[data-theme="dark"] .form-group-follow-up .form-check-label {
+    color: #e9eefc;
+  }
+
   .follow-up-select-wrapper {
     margin-top: 0.75rem;
     border: 1px solid #e2e8f0;

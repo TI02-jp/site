@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% macro totalizador_accordion(section_id, titulo, dados, pode_ver_pagamento, pagamento_choices, descricao="", filter_value_key="titulo") -%}
-<div class="card border-0 shadow-sm mb-3">
+<div class="card border-0 shadow-sm mb-3 totalizador-card">
     <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
         <div>
             <h2 class="h4 mb-0 text-primary">{{ titulo }}</h2>
@@ -13,11 +13,11 @@
     </div>
 </div>
 {% if dados %}
-<div class="accordion shadow-sm mb-5" id="{{ section_id }}">
+<div class="accordion shadow-sm mb-5 totalizador-accordion" id="{{ section_id }}">
     {% for grupo in dados %}
-    <div class="accordion-item"
-         data-totalizador-value="{{ grupo[filter_value_key]|default('') }}"
-         data-totalizador-registros="{{ grupo.qtd_registros }}">
+            <div class="accordion-item"
+                 data-totalizador-value="{{ grupo[filter_value_key]|default('') }}"
+                 data-totalizador-registros="{{ grupo.qtd_registros }}">
         <h2 class="accordion-header" id="{{ section_id }}Heading{{ loop.index }}">
             <button class="accordion-button collapsed d-flex flex-wrap gap-3" type="button"
                     data-bs-toggle="collapse"
@@ -25,11 +25,9 @@
                     aria-expanded="false"
                     aria-controls="{{ section_id }}Collapse{{ loop.index }}">
                 <span class="fw-semibold text-uppercase flex-grow-1">{{ grupo.titulo }}</span>
-                <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
-                    <span class="d-flex align-items-center gap-1">
-                        <span class="text-uppercase">Valor</span>
-                        <span class="fw-semibold text-dark">{{ grupo.valor_total_formatado }}</span>
-                    </span>
+                <div class="d-flex align-items-center gap-2 text-muted small totalizador-valor">
+                    <span class="text-uppercase">Valor</span>
+                    <span class="fw-semibold totalizador-valor-num">{{ grupo.valor_total_formatado }}</span>
                 </div>
             </button>
         </h2>
@@ -99,13 +97,167 @@
 
 {% block title %}Totalizador de Notas{% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<style>
+.totalizador-tabs .nav-link {
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+    color: var(--text-color);
+}
+
+.totalizador-tabs .nav-link.active {
+    background: var(--primary);
+    color: #fff !important;
+}
+
+.totalizador-filters {
+    background: linear-gradient(120deg, #0f1625, #0c121f);
+    border: 1px solid var(--card-border-color);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+:root:not([data-theme="dark"]) .totalizador-filters {
+    background: #f8f9ff;
+    border-color: #e4e7f0;
+    box-shadow: 0 16px 30px rgba(15, 34, 75, 0.12);
+}
+
+.totalizador-filters .btn {
+    border-radius: 10px;
+}
+
+.totalizador-card {
+    border-radius: 14px;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border-color);
+}
+
+.totalizador-card .card-body {
+    background: var(--card-bg);
+}
+
+:root[data-theme="dark"] .totalizador-card {
+    background: var(--card-bg);
+    border-color: var(--card-border-color);
+}
+
+.totalizador-accordion.accordion .accordion-item {
+    border: none;
+    margin-bottom: 0.4rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+}
+
+.totalizador-accordion .accordion-button {
+    background: #ffffff;
+    color: #101828;
+    border: none;
+    padding: 0.85rem 1rem;
+    gap: 1rem;
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+:root[data-theme="dark"] .totalizador-accordion .accordion-button {
+    background: linear-gradient(180deg, #0f1625, #0b1018);
+    color: #e8ecf5;
+}
+
+.totalizador-accordion .accordion-button.collapsed {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme="dark"] .totalizador-accordion .accordion-button.collapsed {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.totalizador-accordion .accordion-button:focus {
+    box-shadow: 0 0 0 0.15rem rgba(5, 88, 197, 0.25);
+}
+
+.totalizador-accordion .accordion-button:not(.collapsed) {
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.totalizador-accordion .accordion-body {
+    background: #ffffff;
+}
+
+:root[data-theme="dark"] .totalizador-accordion .accordion-body {
+    background: #0b1018;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.totalizador-accordion .table thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.totalizador-accordion .table-striped > tbody > tr:nth-of-type(odd) {
+    --bs-table-accent-bg: rgba(5, 88, 197, 0.04);
+}
+
+:root[data-theme="dark"] .totalizador-accordion .table thead th {
+    background: #111a2c;
+    color: #cfd5e2;
+}
+
+:root[data-theme="dark"] .totalizador-accordion .table tbody tr {
+    background: #0f1625;
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .totalizador-accordion .table-striped > tbody > tr:nth-of-type(odd) {
+    --bs-table-accent-bg: rgba(92, 124, 250, 0.08);
+}
+
+:root[data-theme="dark"] .totalizador-accordion .table-hover > tbody > tr:hover {
+    background-color: rgba(92, 124, 250, 0.12);
+}
+
+.totalizador-section .card-body label {
+    color: #9aa6b5;
+}
+
+.totalizador-section select.form-select {
+    border-radius: 10px;
+}
+
+.totalizador-valor {
+    color: #9aa6b5 !important;
+}
+
+.totalizador-valor-num {
+    color: var(--accent);
+}
+
+:root[data-theme="dark"] .totalizador-valor-num {
+    color: #ffb066;
+}
+
+.totalizador-accordion .accordion-button::after {
+    filter: none;
+}
+
+:root[data-theme="dark"] .totalizador-accordion .accordion-button::after {
+    filter: brightness(1.4);
+}
+</style>
+{% endblock %}
+
 {% block sidebar_nav %}
 {% include 'sidebar_home.html' %}
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1400px;">
-        <ul class="nav nav-tabs mb-4">
+        <ul class="nav nav-tabs mb-4 totalizador-tabs">
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('cadastro_notas') }}">Cadastros</a>
         </li>
@@ -118,7 +270,7 @@
     </ul>
 
     <div class="mb-4">
-            <div class="d-flex flex-column gap-3">
+            <div class="d-flex flex-column gap-3 totalizador-filters">
                 <div class="d-flex flex-column gap-3">
                 <div class="d-flex flex-column flex-xl-row gap-3 align-items-xl-center justify-content-between w-100">
                     <div class="d-flex flex-wrap gap-2">

@@ -206,6 +206,31 @@
     font-size: 0.85rem;
   }
 
+  :root[data-theme="dark"] .notification-actions .btn-outline-secondary {
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #e8ecf5;
+    background: #111827;
+  }
+
+  :root[data-theme="dark"] .notification-actions .btn-outline-secondary:hover,
+  :root[data-theme="dark"] .notification-actions .btn-outline-secondary:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  :root[data-theme="dark"] .notification-actions .btn-primary {
+    background: #5c7cfa;
+    border-color: #5c7cfa;
+    color: #ffffff;
+  }
+
+  :root[data-theme="dark"] .notification-actions .btn-primary:hover,
+  :root[data-theme="dark"] .notification-actions .btn-primary:focus {
+    background: #708dff;
+    border-color: #708dff;
+  }
+
   .notification-empty-state {
     padding: 4rem 2rem;
     background: #fff;
@@ -251,6 +276,161 @@
     gap: 0.4rem;
     align-itens: center;
   }
+
+  /* Tema escuro */
+  :root[data-theme="dark"] .notifications-header {
+    background: linear-gradient(120deg, #0f1625, #111b2c);
+    border-color: var(--card-border-color);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+  }
+
+  :root[data-theme="dark"] .notifications-header__text h1 {
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notifications-header__text p {
+    color: #9aa6b5;
+  }
+
+  :root[data-theme="dark"] .notification-summary__card {
+    background: #0f1625;
+    border-color: var(--card-border-color);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notification-summary__card p,
+  :root[data-theme="dark"] .notification-summary__card small {
+    color: #cfd5e2;
+  }
+
+  :root[data-theme="dark"] .notification-summary__icon {
+    background: rgba(92, 124, 250, 0.16);
+    color: #dce3ff;
+  }
+
+  :root[data-theme="dark"] .notification-summary__card.text-success .notification-summary__icon {
+    background: rgba(16, 185, 129, 0.18);
+  }
+
+  :root[data-theme="dark"] .notification-summary__card.text-warning .notification-summary__icon {
+    background: rgba(251, 191, 36, 0.2);
+  }
+
+  :root[data-theme="dark"] .notification-card .list-group-item {
+    background: #0f1625;
+    border-color: var(--card-border-color);
+    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.4);
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notification-card .list-group-item:hover {
+    border-color: rgba(92, 124, 250, 0.35);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  :root[data-theme="dark"] .notification-row-unread {
+    border-color: rgba(92, 124, 250, 0.35);
+    background: linear-gradient(180deg, rgba(92, 124, 250, 0.14), #0f1625);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  :root[data-theme="dark"] .notification-row-unread .notification-content__title {
+    color: #dce3ff;
+  }
+
+  :root[data-theme="dark"] .notification-pill--new {
+    background: rgba(92, 124, 250, 0.18);
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notification-pill--read {
+    background: rgba(108, 117, 125, 0.2);
+    color: #cfd5e2;
+  }
+
+  :root[data-theme="dark"] .notification-type-badge--announcement {
+    background: rgba(92, 124, 250, 0.18);
+    color: #e8ecf5;
+    border-color: rgba(92, 124, 250, 0.35);
+  }
+
+  :root[data-theme="dark"] .notification-type-badge--task {
+    background: rgba(14, 165, 233, 0.2);
+    color: #cceeff;
+    border-color: rgba(14, 165, 233, 0.35);
+  }
+
+  :root[data-theme="dark"] .notification-type-badge--task-response {
+    background: rgba(16, 185, 129, 0.2);
+    color: #d1ffe9;
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+
+  :root[data-theme="dark"] .notification-type-badge--task-status {
+    background: rgba(251, 191, 36, 0.22);
+    color: #ffe3a3;
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+
+  :root[data-theme="dark"] .notification-filters .btn {
+    background: #0f1625;
+    border-color: rgba(92, 124, 250, 0.35);
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notification-filters .btn.active {
+    background: rgba(92, 124, 250, 0.9);
+    border-color: rgba(92, 124, 250, 0.9);
+    color: #ffffff;
+  }
+
+  :root[data-theme="dark"] .notification-empty-state {
+    background: #0f1625;
+    border-color: rgba(92, 124, 250, 0.35);
+    color: #cfd5e2;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  }
+
+  :root[data-theme="dark"] .notification-search {
+    background: #0f1625;
+    border-color: var(--card-border-color);
+    color: #e8ecf5;
+  }
+
+  :root[data-theme="dark"] .notification-card .btn-outline-secondary {
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #e8ecf5;
+    background: #111827;
+  }
+
+  :root[data-theme="dark"] .notification-card .btn-outline-secondary:hover,
+  :root[data-theme="dark"] .notification-card .btn-outline-secondary:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Botão "Abrir tarefa" mais destacado no escuro */
+  :root[data-theme="dark"] .notification-card .open-notification-link {
+    border-color: rgba(92, 124, 250, 0.65);
+    color: #dce3ff;
+    background: rgba(92, 124, 250, 0.12);
+    font-weight: 700;
+  }
+
+  :root[data-theme="dark"] .notification-card .open-notification-link:hover,
+  :root[data-theme="dark"] .notification-card .open-notification-link:focus {
+    border-color: rgba(92, 124, 250, 0.9);
+    background: rgba(92, 124, 250, 0.22);
+    color: #ffffff;
+    box-shadow: 0 0 0 0.15rem rgba(92, 124, 250, 0.25);
+  }
+
+  :root[data-theme="dark"] .notification-search::placeholder {
+    color: #9aa6b5;
+  }
+
 </style>
 {% endblock %}
 

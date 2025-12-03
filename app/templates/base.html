@@ -27,6 +27,19 @@
     {% block extra_css %}{% endblock %}
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
+    <script>
+      (function bootstrapThemePreference() {
+        try {
+          const saved = localStorage.getItem('portal-theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+
     <style>
       :root {
         --accent: #e87429;
@@ -42,6 +55,10 @@
         --danger-color: #dc3545;
         --danger-hover: #c82333;
         --footer-bg: #333333;
+        --page-bg: #f8f9fa;
+        --page-text: #1f2933;
+        --surface: #ffffff;
+        --muted-surface: #f0f2f5;
         --sidebar-width: 220px;
         --font-base: 0.85rem; /* Reduz ~10% para que 100% pareça 90% */
         --font-sm: 0.84rem;
@@ -50,13 +67,60 @@
         --font-xl: 1.22rem;
         --font-2xl: 1.36rem;
         --font-display: 1.52rem;
+        --body-bg: #f8f9fa;
+        --text-color: #1f2933;
+        --card-bg: #ffffff;
+        --card-border-color: #dee2e6;
+        --input-bg: #ffffff;
+        --input-border-color: #ced4da;
+        --input-text-color: #495057;
+        --table-bg: #ffffff;
+        --table-striped-bg: #f8f9fa;
+        --table-hover-bg: #f1f3f5;
+        --table-border-color: #dee2e6;
+        --table-header-bg: #e9ecef;
+        --table-header-color: #495057;
+      }
+
+      :root[data-theme="dark"] {
+        --accent: #ff9b55;
+        --accent-hover: #ff7f2b;
+        --primary: #6b8cff;
+        --primary-hover: #5874d6;
+        --sidebar-bg: #0c121e;
+        --sidebar-text: #e6ebf7;
+        --sidebar-hover: #111a2b;
+        --sidebar-active: #121f34;
+        --border-color: #1f2b3f;
+        --text-muted: #9aa6b5;
+        --danger-color: #ff758b;
+        --danger-hover: #ff607b;
+        --footer-bg: #0b1018;
+        --page-bg: #0b1018;
+        --page-text: #e6ebf7;
+        --surface: #0f1625;
+        --muted-surface: #0d1629;
+        --body-bg: #0b1018;
+        --text-color: #e6ebf7;
+        --card-bg: #111d30;
+        --card-border-color: #1f2b3f;
+        --input-bg: #0f1625;
+        --input-border-color: #24344c;
+        --input-text-color: #e6ebf7;
+        --table-bg: #0f1725;
+        --table-striped-bg: #0d1421;
+        --table-hover-bg: #141f2e;
+        --table-border-color: rgba(255, 255, 255, 0.04);
+        --table-header-bg: #0f1a2c;
+        --table-header-color: #e6ebf7;
       }
 
       body, html {
         height: 100%;
         margin: 0;
-        background-color: #f8f9fa;
+        background-color: var(--body-bg);
         font-size: var(--font-base);
+        color: var(--text-color);
       }
 
       .wrapper {
@@ -79,7 +143,7 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
-        background-color: #f8f9fa;
+        background-color: var(--body-bg);
       }
 
       .topbar-notifications {
@@ -365,7 +429,7 @@
       /* Área de Conteúdo */
       .content-area {
         flex: 1 1 auto;
-        background-color: #f8f9fa;
+        background-color: var(--body-bg);
         position: relative;
         display: flex;
         flex-direction: column;
@@ -396,7 +460,7 @@
 
       /* Footer */
       footer {
-        background: white;
+        background: var(--surface);
         border-top: 1px solid var(--border-color);
         color: var(--text-muted);
         font-size: var(--font-base);
@@ -522,15 +586,59 @@
         border-width: 0.3rem;
       }
 
-      /* Tema escuro (opcional) */
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --sidebar-bg: #2c2c2c;
-          --sidebar-text: #e9ecef;
-          --sidebar-hover: #3c3c3c;
-          --sidebar-active: #4c4c4c;
-          --border-color: #495057;
-        }
+      /* Controles de tema */
+      .theme-toggle {
+        display: flex;
+        justify-content: center;
+        margin-top: 0.2rem;
+      }
+
+      .theme-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        color: var(--primary);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+        font-weight: 600;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+      }
+
+      .theme-toggle-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      :root[data-theme="light"] .theme-toggle-btn {
+        color: var(--primary);
+        background: rgba(255, 255, 255, 0.9);
+        border-color: rgba(11, 40, 139, 0.2);
+      }
+
+      :root[data-theme="light"] .theme-toggle-btn:hover {
+        background: rgba(255, 255, 255, 1);
+      }
+
+      :root[data-theme="dark"] .theme-toggle-btn {
+        color: #ff9b55;
+        background: #0d0d0f;
+        border-color: rgba(255, 155, 85, 0.55);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+      }
+
+      .theme-toggle-btn i {
+        font-size: 0.9rem;
+        line-height: 1;
+      }
+
+      .theme-toggle-btn span {
+        font-size: 0.78rem;
       }
 
       .cookie-banner {
@@ -560,7 +668,7 @@
       }
     </style>
 </head>
-<body class="bg-light text-dark" style="font-family: 'Inter', sans-serif;">
+<body style="font-family: 'Inter', sans-serif;">
 
     <!-- Overlay de carregamento global -->
     <div id="globalLoadingOverlay">
@@ -621,6 +729,12 @@
                         <i class="bi bi-power"></i>
                     </a>
                 </div>
+                <div class="theme-toggle">
+                    <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-pressed="false" title="Alternar tema">
+                        <i id="themeToggleIcon" class="bi bi-moon-stars"></i>
+                        <span id="themeToggleLabel">Tema escuro</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Navegação -->
@@ -661,7 +775,7 @@
         <div class="container">
             <div class="justify-content-between align-items-center">
                 <span>JP Contábil &copy; {{ now.year }}</span>
-                <span>Desenvolvido por TI JP Contábil</span>
+                <span>Desenvolvido por Cristiano Pirolli</span>
             </div>
     </footer>
 </div>
@@ -708,6 +822,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Tema claro/escuro
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeToggleIcon = document.getElementById('themeToggleIcon');
+    const themeToggleLabel = document.getElementById('themeToggleLabel');
+    const THEME_STORAGE_KEY = 'portal-theme';
+
+    const applyTheme = (theme) => {
+        const normalized = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', normalized);
+        if (themeToggleBtn) {
+            themeToggleBtn.setAttribute('aria-pressed', normalized === 'dark');
+        }
+        if (themeToggleIcon) {
+            themeToggleIcon.className = normalized === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+        }
+        if (themeToggleLabel) {
+            themeToggleLabel.textContent = normalized === 'dark' ? 'Tema claro' : 'Tema escuro';
+        }
+    };
+
+    const getStoredTheme = () => {
+        try {
+            return localStorage.getItem(THEME_STORAGE_KEY);
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const persistTheme = (theme) => {
+        try {
+            localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } catch (_) {
+            /* storage indisponivel */
+        }
+    };
+
+    const initialTheme = document.documentElement.getAttribute('data-theme') || getStoredTheme() || 'light';
+    applyTheme(initialTheme);
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const nextTheme = isDark ? 'light' : 'dark';
+            applyTheme(nextTheme);
+            persistTheme(nextTheme);
+        });
     }
 
     // Cookie consent
