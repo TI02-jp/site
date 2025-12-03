@@ -1,16 +1,61 @@
 /* -----------------------------
 Fonte personalizada moderna
 ----------------------------- */
+/* Botão "Cancelar" padrão com contraste para todos os modais/formulários */
+.btn-cancel {
+    background: #f4f6fb;
+    border: 1px solid #d4d9e2;
+    color: #0b1b2d;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="dark"] .btn-cancel {
+    background: #1c2536;
+    border: 1px solid #2f3b52;
+    color: #e8ecf5;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.btn-cancel:hover {
+    background: #e9eef6;
+    border-color: #c6cfdd;
+    color: #0b1b2d;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="dark"] .btn-cancel:hover {
+    background: #24324a;
+    border-color: #3b4963;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.btn-cancel:active {
+    background: #dde4f0;
+    border-color: #bcc7d8;
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .btn-cancel:active {
+    background: #1a2638;
+    border-color: #33415a;
+    box-shadow: none;
+}
+
 /* Color variables defined in base.html: --primary (blue) and --accent (orange) */
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: var(--body-bg);
+    color: var(--text-color);
     margin: 0;
     padding: 0;
     text-align: left;
     font-size: var(--font-base);
     line-height: 1.45;
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 body,
@@ -85,7 +130,7 @@ Navbar (fixa com sombra leve)
     position: sticky;
     top: 0;
     z-index: 1020;
-    background-color: #ffffff !important;
+    background-color: var(--surface) !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     padding: 0.35rem 1rem;
     font-size: var(--font-base);
@@ -124,20 +169,34 @@ Barra de navegação fixa na visualização da empresa
 }
 
 .btn-company-nav {
-    background-color: transparent;
-    border-color: transparent;
-    color: #fff;
+    background: #f4f4f4;
+    color: #0b1018;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 .btn-company-nav:hover,
 .btn-company-nav:focus {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+    filter: brightness(1.02);
+}
+
+.btn-company-nav i {
+    color: #0b1018;
 }
 
 .company-nav .btn.active {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: #ffb066;
+    color: #1a1a1a;
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+}
+
+.company-nav .btn.active i {
+    color: #1a1a1a;
 }
 
 .nav-tabs .nav-link {
@@ -183,7 +242,7 @@ Seção Introdução
 
 .intro p {
     font-size: var(--font-lg);
-    color: #555;
+    color: var(--text-muted);
 }
 
 /* -----------------------------
@@ -200,7 +259,7 @@ Botões e Ações
 .btn, .btn-custom, .submit-btn {
     padding: 12px 20px;
     font-size: var(--font-base);
-    color: white;
+    color: #fff;
     background-color: var(--accent);
     text-decoration: none;
     border-radius: 6px;
@@ -225,7 +284,22 @@ Botões e Ações
 }
 
 .btn:hover, .btn-custom:hover, .submit-btn:hover {
-    background-color: var(--primary);
+    background-color: var(--accent-hover);
+}
+
+/* Botões laranja com texto preto */
+:root[data-theme="dark"] .btn,
+:root[data-theme="dark"] .btn-custom,
+:root[data-theme="dark"] .submit-btn {
+    background-color: var(--accent);
+    color: #0b0b0b;
+}
+
+:root[data-theme="dark"] .btn:hover,
+:root[data-theme="dark"] .btn-custom:hover,
+:root[data-theme="dark"] .submit-btn:hover {
+    background-color: var(--accent-hover);
+    color: #0b0b0b;
 }
 
 .btn:focus, .btn-custom:focus, .submit-btn:focus {
@@ -309,8 +383,8 @@ Atalhos (Central de Acessos)
 }
 
 .access-description {
-    background-color: var(--bs-light);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    background-color: var(--muted-surface);
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 0.75rem;
     line-height: 1.4;
@@ -333,7 +407,7 @@ Tabelas (Empresas e Usuários)
 
 .user-table th, .user-table td,
 .table-empresas th, .table-empresas td {
-    border: 1px solid #ccc;
+    border: 1px solid var(--table-border-color);
     padding: 12px;
     text-align: left;
     vertical-align: middle;
@@ -341,11 +415,19 @@ Tabelas (Empresas e Usuários)
     word-wrap: break-word;
 }
 
+/* Separadores verticais mais suaves */
+.user-table th + th,
+.user-table td + td,
+.table-empresas th + th,
+.table-empresas td + td {
+    border-left: 1px solid var(--table-border-color);
+}
+
 /* -----------------------------
 Página de Cursos
 ----------------------------- */
 .courses-page {
-    color: #212529;
+    color: var(--text-color);
 }
 
 .courses-hero {
@@ -393,7 +475,7 @@ Página de Cursos
     flex: 0 1 220px;
     align-self: center;
     text-align: center;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--muted-surface);
     border-radius: 1.25rem;
     padding: 1.5rem;
     display: flex;
@@ -703,7 +785,7 @@ Página de Cursos
 .courses-table-actions__title {
     font-size: var(--font-lg);
     font-weight: 600;
-    color: #0b288b;
+    color: var(--primary);
 }
 
 .courses-table thead th {
@@ -730,6 +812,23 @@ Página de Cursos
 
 .courses-table-row:hover {
     background-color: #edf1ff;
+}
+
+/* Listagem de cursos - tema escuro */
+:root[data-theme="dark"] .courses-table {
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .courses-table tbody tr:nth-child(odd) {
+    background-color: #0f1625;
+}
+
+:root[data-theme="dark"] .courses-table tbody tr:nth-child(even) {
+    background-color: #0d141f;
+}
+
+:root[data-theme="dark"] .courses-table-row:hover {
+    background-color: rgba(92, 124, 250, 0.12);
 }
 
 .courses-table-row:focus-visible {
@@ -769,11 +868,130 @@ Página de Cursos
     color: #a3501b;
 }
 
+/* Modal de tags (usuários) */
+:root[data-theme="dark"] .tags-modal {
+    background: #0f1625;
+    color: #e8ecf5;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-theme="dark"] .tags-modal .modal-header,
+:root[data-theme="dark"] .tags-modal .modal-body {
+    background: transparent;
+}
+
+:root[data-theme="dark"] .tags-modal .list-group-item {
+    background: #101a2b;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .tags-modal .list-group-item + .list-group-item {
+    margin-top: 0.4rem;
+}
+
+:root[data-theme="dark"] .tags-modal .form-control {
+    background: #0f1625;
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .tags-modal .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(107, 140, 255, 0.3);
+}
+
+:root[data-theme="dark"] .tags-modal .btn-outline-primary {
+    background: #ff9b55;
+    border-color: #ff9b55;
+    color: #0b0b0b;
+}
+
+/* Ajustes gerais de tema escuro para cards e listas */
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .card-body,
+:root[data-theme="dark"] .list-group-item {
+    background: #0f1625;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .card-header {
+    background: #0f1a2c;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #d5ddf2;
+}
+
+:root[data-theme="dark"] .nav-pills .nav-link {
+    background: #101a2b;
+    color: #e8ecf5;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .nav-pills .nav-link.active {
+    background: #6b8cff;
+    color: #0b0b0b;
+    border-color: #6b8cff;
+}
+
+:root[data-theme="dark"] .badge.bg-secondary {
+    background: #1f2b3f !important;
+    color: #e8ecf5 !important;
+}
+
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .form-control:disabled,
+:root[data-theme="dark"] .form-select:disabled {
+    background: #0f1625;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(107, 140, 255, 0.3);
+}
+
+:root[data-theme="dark"] .border {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-theme="dark"] .tags-modal .bg-light-subtle {
+    background: #0f1625 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-theme="dark"] .tags-modal .border-bottom {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-theme="dark"] .tags-modal .text-body {
+    color: #e8ecf5 !important;
+}
+
 .courses-chip--tag {
     background: rgba(111, 66, 193, 0.18);
     color: #4b1d99;
     font-size: var(--font-xs);
     padding: 0.18rem 0.38rem;
+}
+
+/* Labels e status dos cursos (melhor legibilidade) */
+:root[data-theme="dark"] .courses-chip--tag {
+    background: linear-gradient(120deg, rgba(118, 90, 210, 0.3), rgba(118, 90, 210, 0.18));
+    color: #f6f1ff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .status-pill {
+    color: #ffffff;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
 .status-pill {
@@ -1300,6 +1518,36 @@ Home vibrante
     color: var(--accent);
 }
 
+/* Portal card text in hero */
+.portal-illustration__card {
+    color: #0b1018;
+}
+
+.portal-illustration__card h5,
+.portal-illustration__card h6,
+.portal-illustration__card p,
+.portal-illustration__card li,
+.portal-illustration__card .portal-illustration__badge {
+    color: #0b1018;
+}
+
+.portal-illustration__card .portal-illustration__badge {
+    background: rgba(11, 16, 24, 0.08);
+}
+
+:root[data-theme="dark"] .portal-illustration__card,
+:root[data-theme="dark"] .portal-illustration__card h5,
+:root[data-theme="dark"] .portal-illustration__card h6,
+:root[data-theme="dark"] .portal-illustration__card p,
+:root[data-theme="dark"] .portal-illustration__card li,
+:root[data-theme="dark"] .portal-illustration__card .portal-illustration__badge {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .portal-illustration__card .portal-illustration__badge {
+    background: rgba(255, 255, 255, 0.15);
+}
+
 @keyframes haloPulse {
     0%, 100% {
         transform: scale(0.95);
@@ -1508,6 +1756,13 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
     box-shadow: 0 0 0 0.2rem rgba(5, 88, 197, 0.25);
 }
 
+/* Evita sobreposição de label/placeholder em form-floating */
+.form-floating > .form-control::placeholder,
+.form-floating > .form-select::placeholder {
+    color: transparent;
+    opacity: 0;
+}
+
 /* Container de checkboxes */
 .bg-light {
     background-color: #f8f9fa !important;
@@ -1532,6 +1787,13 @@ FORMULÁRIOS DE DEPARTAMENTOS - ESTILOS ESPECÍFICOS
     border-right: 1px solid #dee2e6;
     border-bottom-left-radius: 0.375rem;
     border-bottom-right-radius: 0.375rem;
+    color: var(--text-color);
+    background: var(--muted-surface);
+    border-top: 1px solid #dee2e6;
+}
+
+.ql-editor {
+    color: var(--text-color);
 }
 
 /* Alerts informativos */
@@ -1763,8 +2025,8 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
-    background: #fff;
-    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
     border-radius: 0.5rem;
     padding: 1.5rem;
 }
@@ -1798,6 +2060,34 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
     font-size: var(--font-lg);
     color: #212529;
     line-height: 1.4;
+}
+
+/* Particularidades (rich text) */
+:root[data-theme="dark"] .editor-content {
+    background: #0f1625 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e8ecf5 !important;
+}
+
+:root[data-theme="dark"] .editor-content * {
+    color: #e8ecf5 !important;
+}
+
+:root[data-theme="dark"] .info-group {
+    background: #0f1625;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .info-group .info-label {
+    color: #cdd7eb;
+}
+
+:root[data-theme="dark"] .info-value {
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .info-group .border-bottom {
+    border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* Container para campos de senha */
@@ -1839,6 +2129,36 @@ PÁGINA DE DETALHES DA EMPRESA - ESTILOS ESPECÍFICOS
 .btn-outline-primary:hover {
     background-color: var(--primary);
     border-color: var(--primary);
+}
+
+:root[data-theme="dark"] .btn-outline-primary {
+    background: #ff9b55;
+    border-color: #ff9b55;
+    color: #0b0b0b;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .btn-outline-primary:hover {
+    background: #ff7f2b;
+    border-color: #ff7f2b;
+    color: #0b0b0b;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .user-table .btn-outline-primary,
+:root[data-theme="dark"] .table-empresas .btn-outline-primary {
+    background: #ff9b55 !important;
+    border-color: #ff9b55 !important;
+    color: #0b0b0b !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .user-table .btn-outline-primary:hover,
+:root[data-theme="dark"] .table-empresas .btn-outline-primary:hover {
+    background: #ff7f2b !important;
+    border-color: #ff7f2b !important;
+    color: #0b0b0b !important;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
 }
 
 .btn-outline-secondary {
@@ -1978,9 +2298,9 @@ Responsividade
 }
 
 .table-empresas tbody tr:hover {
-    background-color: rgba(5, 88, 197, 0.05);
+    background-color: rgba(92, 124, 250, 0.06);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 /* Ajuste para botões pequenos com apenas ícones */
@@ -2838,6 +3158,436 @@ Notification Toast Container - Estilo WhatsApp
     .upload-dropzone {
         padding: 1.25rem;
     }
+}
+
+/* -----------------------------
+Tema escuro
+----------------------------- */
+:root[data-theme="dark"] body {
+    background-color: var(--body-bg);
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .navbar {
+    background-color: var(--muted-surface) !important;
+    border-bottom: 1px solid var(--card-border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .navbar .nav-link,
+:root[data-theme="dark"] .navbar .navbar-brand {
+    color: var(--text-color) !important;
+}
+
+:root[data-theme="dark"] .main-column,
+:root[data-theme="dark"] .content-area,
+:root[data-theme="dark"] .content-wrapper {
+    background-color: var(--body-bg);
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .sidebar {
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .sidebar-header {
+    background: linear-gradient(180deg, #101a2c 0%, #0f1625 100%);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .bg-light,
+:root[data-theme="dark"] .card.bg-light,
+:root[data-theme="dark"] .card.bg-white,
+:root[data-theme="dark"] .courses-table-actions,
+:root[data-theme="dark"] .list-group-item,
+:root[data-theme="dark"] .dropdown-menu,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .toast,
+:root[data-theme="dark"] .offcanvas,
+:root[data-theme="dark"] .popover {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color);
+    border-color: var(--card-border-color);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .card-header {
+    border-color: var(--card-border-color);
+}
+
+:root[data-theme="dark"] .table {
+    color: var(--text-color);
+    background-color: var(--table-bg);
+}
+
+:root[data-theme="dark"] .table > :not(caption) > * > * {
+    background-color: transparent;
+    color: var(--text-color);
+    border-color: var(--table-border-color);
+}
+
+:root[data-theme="dark"] .table tbody tr {
+    background-color: var(--muted-surface);
+}
+
+:root[data-theme="dark"] .table tbody tr:nth-child(even) {
+    background-color: var(--card-bg);
+}
+
+:root[data-theme="dark"] .table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--table-header-color);
+    border-color: var(--table-border-color);
+}
+
+:root[data-theme="dark"] .table tbody td,
+:root[data-theme="dark"] .table tbody th {
+    border-color: var(--table-border-color);
+}
+
+:root[data-theme="dark"] .table-striped>tbody>tr:nth-of-type(odd) {
+    background-color: var(--table-striped-bg);
+}
+
+:root[data-theme="dark"] .table-hover>tbody>tr:hover {
+    background-color: var(--table-hover-bg);
+}
+
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .form-check-input,
+:root[data-theme="dark"] .input-group-text {
+    background-color: var(--input-bg);
+    color: var(--input-text-color);
+    border-color: #e8ecf5;
+    box-shadow: 0 0 0 1px rgba(232, 236, 245, 0.08);
+}
+
+:root[data-theme="dark"] .form-check-input {
+    border-color: #e8ecf5;
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .form-check-input:focus {
+    border-color: #e8ecf5;
+    box-shadow: 0 0 0 0.15rem rgba(232, 236, 245, 0.25);
+}
+
+:root[data-theme="dark"] .form-label,
+:root[data-theme="dark"] label {
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.15rem rgba(92, 124, 250, 0.35);
+}
+
+:root[data-theme="dark"] .form-control::placeholder {
+    color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .btn-light,
+:root[data-theme="dark"] .btn-outline-secondary {
+    background-color: var(--muted-surface);
+    color: var(--text-color);
+    border-color: var(--card-border-color);
+}
+
+:root[data-theme="dark"] a {
+    color: #9db8ff;
+}
+
+:root[data-theme="dark"] a:hover {
+    color: #c4d4ff;
+}
+
+:root[data-theme="dark"] .alert {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--card-border-color);
+}
+
+:root[data-theme="dark"] .badge.bg-light {
+    background-color: var(--muted-surface) !important;
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .text-secondary,
+:root[data-theme="dark"] .breadcrumb-item + .breadcrumb-item::before {
+    color: #e8ecf5 !important;
+}
+
+:root[data-theme="dark"] .ql-editor,
+:root[data-theme="dark"] .ql-editor p,
+:root[data-theme="dark"] .ql-editor span,
+:root[data-theme="dark"] .ql-editor li,
+:root[data-theme="dark"] .ql-editor div {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .ql-editor .ql-ui,
+:root[data-theme="dark"] .ql-editor .ql-formats {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] #editor,
+:root[data-theme="dark"] .ql-container {
+    background: var(--muted-surface);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .list-group-item,
+:root[data-theme="dark"] .dropdown-menu {
+    border-color: rgba(232, 236, 245, 0.35);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .ql-editor * {
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ql-editor a {
+    color: #cfd8ff !important;
+}
+
+:root[data-theme="dark"] .table-empresas tbody tr {
+    background-color: var(--muted-surface);
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .table-empresas tbody tr:nth-child(even) {
+    background-color: var(--card-bg);
+}
+
+:root[data-theme="dark"] .table-empresas tbody tr:hover {
+    background-color: rgba(92, 124, 250, 0.12);
+}
+
+:root[data-theme="dark"] .form-container,
+:root[data-theme="dark"] .login-card,
+:root[data-theme="dark"] .portal-illustration__card,
+:root[data-theme="dark"] .home-card,
+:root[data-theme="dark"] .home-sections,
+:root[data-theme="dark"] .home-journey,
+:root[data-theme="dark"] .home-journey__step,
+:root[data-theme="dark"] .home-journey__card,
+:root[data-theme="dark"] .home-journey__badge,
+:root[data-theme="dark"] .home-journey__cta,
+:root[data-theme="dark"] .online-users-card,
+:root[data-theme="dark"] .online-users-header,
+:root[data-theme="dark"] .online-users-body,
+:root[data-theme="dark"] .status-pill--planned,
+:root[data-theme="dark"] .upload-dropzone,
+:root[data-theme="dark"] .courses-checkbox-list,
+:root[data-theme="dark"] .courses-table-actions,
+:root[data-theme="dark"] .notification-toast,
+:root[data-theme="dark"] #editor,
+:root[data-theme="dark"] .ql-toolbar {
+    background: var(--card-bg) !important;
+    color: var(--text-color);
+    border-color: var(--card-border-color);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .home-journey {
+    background: var(--muted-surface);
+}
+
+:root[data-theme="dark"] .home-journey__step,
+:root[data-theme="dark"] .home-journey__badge,
+:root[data-theme="dark"] .home-journey__cta {
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .portal-illustration__card,
+:root[data-theme="dark"] .home-card,
+:root[data-theme="dark"] .home-journey__card {
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+:root[data-theme="dark"] .home-card__icon,
+:root[data-theme="dark"] .home-journey__icon,
+:root[data-theme="dark"] .home-journey__link-icon {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .home-sections,
+:root[data-theme="dark"] .home-journey {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05), transparent 40%), var(--muted-surface);
+}
+
+:root[data-theme="dark"] .home-journey__step {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .home-journey__link {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .home-journey__link:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .btn-portal {
+    background: var(--muted-surface);
+    color: var(--text-color);
+    border: 1px solid var(--card-border-color);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .btn-portal--secondary,
+:root[data-theme="dark"] .btn-portal--outline {
+    background: transparent;
+    color: var(--text-color);
+    border-color: var(--card-border-color);
+}
+
+:root[data-theme="dark"] .btn-primary,
+:root[data-theme="dark"] .btn-info {
+    background: #6b8cff;
+    border-color: #6b8cff;
+    color: #0b0b0b;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .btn-primary:hover,
+:root[data-theme="dark"] .btn-info:hover {
+    background: #5874d6;
+    border-color: #5874d6;
+    color: #0b0b0b;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .btn-outline-primary {
+    color: #cdd7ff;
+    border-color: #6b8cff;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .btn-outline-primary:hover {
+    background: #6b8cff;
+    color: #0b0b0b;
+    border-color: #6b8cff;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .table-empresas .btn-outline-primary {
+    background: #ff9b55;
+    border-color: #ff9b55;
+    color: #0b0b0b;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .table-empresas .btn-outline-primary:hover {
+    background: #ff7f2b;
+    border-color: #ff7f2b;
+    color: #0b0b0b;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .user-table .btn-outline-primary {
+    background: #ff9b55;
+    border-color: #ff9b55;
+    color: #0b0b0b;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .user-table .btn-outline-primary:hover {
+    background: #ff7f2b;
+    border-color: #ff7f2b;
+    color: #0b0b0b;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .table-empresas .btn,
+:root[data-theme="dark"] .user-table .btn {
+    background: #ff9b55;
+    border-color: #ff9b55;
+    color: #0b0b0b;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .table-empresas .btn i,
+:root[data-theme="dark"] .table-empresas .btn svg,
+:root[data-theme="dark"] .user-table .btn i,
+:root[data-theme="dark"] .user-table .btn svg {
+    color: #0b0b0b !important;
+    stroke: #0b0b0b !important;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+}
+
+:root[data-theme="dark"] .table-empresas .btn:hover,
+:root[data-theme="dark"] .user-table .btn:hover {
+    background: #ff7f2b;
+    border-color: #ff7f2b;
+    color: #0b0b0b;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .courses-table thead th {
+    background: var(--table-header-bg);
+    color: var(--table-header-color);
+}
+
+:root[data-theme="dark"] .courses-table tbody tr {
+    background: #0f1625;
+    color: #e8ecf5;
+    border-color: var(--card-border-color);
+}
+
+:root[data-theme="dark"] .courses-table tbody tr:nth-child(even) {
+    background: #0d141f;
+}
+
+:root[data-theme="dark"] .courses-table-row:hover {
+    background-color: rgba(92, 124, 250, 0.12);
+}
+
+:root[data-theme="dark"] .courses-table tbody td {
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .courses-table thead th,
+:root[data-theme="dark"] .courses-table,
+:root[data-theme="dark"] .courses-table tbody td,
+:root[data-theme="dark"] .courses-table tbody td span {
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .courses-chip {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .courses-chip--sector {
+    background: rgba(92, 124, 250, 0.2);
+    color: #cdd7ff;
+}
+
+:root[data-theme="dark"] .courses-chip--participant {
+    background: rgba(232, 116, 41, 0.18);
+    color: #ffd7bf;
+}
+
+:root[data-theme="dark"] .status-pill {
+    color: #e8ecf5;
+}
+
+:root[data-theme="dark"] .text-dark {
+    color: var(--text-color) !important;
 }
 
 /* -----------------------------

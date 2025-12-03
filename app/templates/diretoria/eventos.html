@@ -43,16 +43,33 @@
         }
 
         .eventos-form .event-category {
-            border-left: 2px solid transparent;
-            padding-left: 0.25rem;
+            border: 1px dashed rgba(13, 110, 253, 0.25);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .eventos-form .event-category.is-disabled {
-            border-color: transparent;
+            border-color: rgba(13, 110, 253, 0.2);
+            background: rgba(15, 23, 42, 0.03);
         }
 
         .eventos-form .event-category.is-active {
-            border-color: rgba(13, 110, 253, 0.35);
+            border-style: solid;
+            border-color: rgba(13, 110, 253, 0.55);
+            background: linear-gradient(180deg, rgba(13, 110, 253, 0.12), rgba(13, 110, 253, 0.04));
+            box-shadow: 0 10px 22px rgba(13, 110, 253, 0.15);
+            position: relative;
+        }
+
+        .eventos-form .event-category.is-active::after {
+            content: "";
+            position: absolute;
+            inset: 4px;
+            border: 1px solid rgba(13, 110, 253, 0.35);
+            border-radius: 0.55rem;
+            pointer-events: none;
         }
 
         .eventos-form .event-category .category-body {
@@ -357,6 +374,101 @@
             color: rgba(13, 110, 253, 0.6);
         }
 
+        /* Tema escuro */
+        :root[data-theme="dark"] .eventos-form {
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .eventos-form .form-label,
+        :root[data-theme="dark"] .eventos-form .section-heading {
+            color: #cfd5e2;
+        }
+
+        :root[data-theme="dark"] .eventos-form .form-control,
+        :root[data-theme="dark"] .eventos-form .form-select {
+            background: #0f1625;
+            border-color: var(--card-border-color);
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .eventos-form .form-control:focus,
+        :root[data-theme="dark"] .eventos-form .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.15rem rgba(92, 124, 250, 0.35);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category {
+            background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.9));
+            border-color: var(--card-border-color);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category.is-disabled {
+            background: rgba(17, 24, 39, 0.5);
+            border-style: dashed;
+            border-color: rgba(92, 124, 250, 0.25);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category.is-active {
+            background: linear-gradient(180deg, rgba(92, 124, 250, 0.16), rgba(17, 24, 39, 0.9));
+            border-color: rgba(92, 124, 250, 0.6);
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(92, 124, 250, 0.22);
+            position: relative;
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category.is-active::after {
+            content: "";
+            position: absolute;
+            inset: 6px;
+            border: 1px solid rgba(92, 124, 250, 0.35);
+            border-radius: 0.5rem;
+            pointer-events: none;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category .category-header {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category .category-title {
+            color: #dce3ff;
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category .toggle-wrapper .form-check-input {
+            background: #0f1625;
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        :root[data-theme="dark"] .eventos-form .event-category .toggle-wrapper .form-check-label {
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .eventos-form .category-item .form-label {
+            color: #cfd5e2;
+        }
+
+        :root[data-theme="dark"] .eventos-form .category-item [data-item-total] {
+            color: #ffb066;
+        }
+
+        :root[data-theme="dark"] .eventos-form .photos-section .event-photo-card {
+            background: #0f1625;
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.4);
+        }
+
+        :root[data-theme="dark"] .eventos-form .photos-section .event-photo-card:hover {
+            box-shadow: 0 1.25rem 2.25rem rgba(0, 0, 0, 0.5);
+        }
+
+        :root[data-theme="dark"] .eventos-form .photos-section .empty-state {
+            border-color: rgba(255, 255, 255, 0.18);
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .eventos-form .photos-section .empty-state .bi {
+            color: rgba(92, 124, 250, 0.6);
+        }
         @media (min-width: 992px) {
             .eventos-form .metadata .col-lg-3 {
                 flex: 0 0 auto;

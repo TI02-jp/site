@@ -66,6 +66,73 @@
             line-height: 1.6;
         }
 
+        /* Tema escuro */
+        :root[data-theme="dark"] .event-view {
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .event-view .event-card {
+            background: linear-gradient(170deg, rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.75));
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+        }
+
+        :root[data-theme="dark"] .event-view .event-meta dt {
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .event-view .event-meta dd {
+            color: #ffffff;
+        }
+
+        :root[data-theme="dark"] .event-view .event-description {
+            background: #0f1625;
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .event-view .section-heading {
+            color: #cfd5e2;
+        }
+
+        :root[data-theme="dark"] .event-view .category-card {
+            background: linear-gradient(180deg, rgba(15, 22, 35, 0.95), rgba(15, 22, 35, 0.9));
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        :root[data-theme="dark"] .event-view .category-card .card-header {
+            background: rgba(92, 124, 250, 0.08);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        :root[data-theme="dark"] .event-view .category-card .card-header .title {
+            color: #dce3ff;
+        }
+
+        :root[data-theme="dark"] .event-view .category-card thead th {
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .event-view .category-card .empty-state {
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .event-view .photos-wrapper {
+            background: linear-gradient(140deg, rgba(92, 124, 250, 0.1), rgba(92, 124, 250, 0.04));
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        :root[data-theme="dark"] .event-view .photo-card {
+            background: #0f1625;
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.45);
+        }
+
+        :root[data-theme="dark"] .event-view .photo-card:hover {
+            box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.5);
+        }
+
         .event-view .event-description.empty {
             color: #6c757d;
             font-style: italic;

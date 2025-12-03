@@ -40,6 +40,53 @@
         .eventos-list .totals-list span {
             color: #212529;
         }
+
+        /* Tema escuro */
+        :root[data-theme="dark"] .eventos-list .form-label {
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .eventos-list .table thead th {
+            color: #cfd5e2;
+        }
+
+        :root[data-theme="dark"] .eventos-list .table {
+            color: #e8ecf5;
+            border-color: var(--card-border-color);
+        }
+
+        :root[data-theme="dark"] .eventos-list .table tbody tr {
+            background: #0f1625;
+            border-color: var(--card-border-color);
+        }
+
+        :root[data-theme="dark"] .eventos-list .table tbody tr:nth-child(even) {
+            background: #0d141f;
+        }
+
+        :root[data-theme="dark"] .eventos-list .table tbody td .small {
+            color: #9aa6b5;
+        }
+
+        :root[data-theme="dark"] .eventos-list .totals-list span {
+            color: #ffb066;
+        }
+
+        :root[data-theme="dark"] .eventos-list .btn-outline-secondary,
+        :root[data-theme="dark"] .eventos-list .btn-outline-primary,
+        :root[data-theme="dark"] .eventos-list .btn-outline-danger {
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #e8ecf5;
+        }
+
+        :root[data-theme="dark"] .eventos-list .btn-outline-secondary:hover,
+        :root[data-theme="dark"] .eventos-list .btn-outline-primary:hover,
+        :root[data-theme="dark"] .eventos-list .btn-outline-danger:hover {
+            border-color: rgba(255, 255, 255, 0.45);
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
     </style>
 {% endblock %}
 
