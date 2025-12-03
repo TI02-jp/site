@@ -485,6 +485,18 @@ Página de Cursos
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
+:root[data-theme="light"] .courses-hero__graphic {
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+    color: #0b1018;
+}
+
+:root[data-theme="dark"] .courses-hero__graphic {
+    background: transparent;
+    color: #e8ecf5;
+    box-shadow: none;
+}
+
 .courses-hero__badge {
     width: 64px;
     height: 64px;
