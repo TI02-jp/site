@@ -418,6 +418,28 @@
     }
   }
 
+  /* Tema escuro: força o texto do mural a ficar legível (inclusive conteúdos antigos) */
+  [data-theme="dark"] .announcement-card,
+  [data-theme="dark"] .announcement-card h3,
+  [data-theme="dark"] .announcement-card .announcement-meta,
+  [data-theme="dark"] .announcement-card .announcement-meta div,
+  [data-theme="dark"] .announcement-card .announcement-date-badge,
+  [data-theme="dark"] .announcement-card .announcement-body,
+  [data-theme="dark"] .announcement-card .announcement-body *,
+  [data-theme="dark"] .announcement-view-modal .modal-content,
+  [data-theme="dark"] .announcement-view-modal .announcement-body,
+  [data-theme="dark"] .announcement-view-modal .announcement-body * {
+    color: #ffffff !important;
+    background-color: inherit;
+  }
+  [data-theme="dark"] .announcement-card {
+    background: #0f0f10;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  [data-theme="dark"] .announcement-card .card-body {
+    color: #ffffff;
+  }
+
   .richtext-editor {
     display: grid;
     gap: 0.5rem;

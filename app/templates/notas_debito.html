@@ -8,6 +8,51 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1400px;">
+    {% block extra_css %}
+    {{ super() }}
+    <style>
+        /* Tema escuro: melhora contraste e separação das linhas na listagem */
+        [data-theme="dark"] .notas-table thead th {
+            background: #11151c;
+            color: #f2f4f8;
+            border-color: #222836;
+        }
+        [data-theme="dark"] .notas-table tbody tr {
+            background: #0d1118;
+            color: #f2f4f8;
+            border-color: #1d2433;
+        }
+        [data-theme="dark"] .notas-table tbody tr:nth-child(odd) {
+            background: #131924;
+        }
+        [data-theme="dark"] .notas-table tbody tr:hover {
+            background: #1d2736;
+        }
+        [data-theme="dark"] .notas-table td,
+        [data-theme="dark"] .notas-table th {
+            color: #f2f4f8 !important;
+        }
+        [data-theme="dark"] .notas-table .badge,
+        [data-theme="dark"] .notas-table .form-select,
+        [data-theme="dark"] .notas-table .btn,
+        [data-theme="dark"] .notas-table .text-muted {
+            color: #f2f4f8 !important;
+        }
+        [data-theme="dark"] .notas-table .form-select {
+            background: #0d1118;
+            border-color: #2b3545;
+        }
+        [data-theme="dark"] .notas-table .btn-custom {
+            background: #1f6feb;
+            color: #ffffff;
+            border-color: transparent;
+        }
+        [data-theme="dark"] .notas-table .btn-danger {
+            background: #b3261e;
+            border-color: #b3261e;
+        }
+    </style>
+    {% endblock %}
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
             <a class="nav-link active" href="{{ url_for('notas_debito') }}">Notas para Débito</a>
@@ -37,7 +82,7 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped mb-0 text-nowrap text-start">
+                <table class="table table-striped mb-0 text-nowrap text-start notas-table">
                     <thead>
                         <tr>
                             <th class="text-start">Data Emissão</th>

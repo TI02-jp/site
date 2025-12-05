@@ -24,6 +24,7 @@ from app.extensions.cache import cache, get_cache_timeout
 from app.utils.security import sanitize_html
 from app.utils.mailer import send_email, EmailDeliveryError
 from app.utils.permissions import is_user_admin
+from itsdangerous import URLSafeSerializer, BadSignature
 from app.models.tables import (
     User,
     Empresa,
@@ -187,7 +188,7 @@ def ensure_diretoria_agreement_schema() -> None:
         }
         foreign_keys = inspector.get_foreign_keys("diretoria_agreements")
     except NoSuchTableError:
-        # Table is missing entirely – nothing to fix at runtime.
+        # Table is missing entirely nothing to fix at runtime.
         return
     except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
         db.session.rollback()
@@ -1255,6 +1256,50 @@ def admin_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+_id_serializers: dict[str, URLSafeSerializer] = {}
+
+
+def _get_id_serializer(namespace: str = "default") -> URLSafeSerializer:
+    """Return a cached serializer for signed IDs."""
+
+    secret = current_app.config.get("SECRET_KEY")
+    if not secret:
+        raise RuntimeError("SECRET_KEY is required to sign route identifiers.")
+
+    if namespace not in _id_serializers:
+        _id_serializers[namespace] = URLSafeSerializer(
+            secret,
+            salt=f"id-signer:{namespace}",
+        )
+    return _id_serializers[namespace]
+
+
+def encode_id(value: int, namespace: str = "default") -> str:
+    """Create a signed token for a numeric ID."""
+
+    return _get_id_serializer(namespace).dumps(int(value))
+
+
+def decode_id(token: str, namespace: str = "default", *, allow_plain_int: bool = True) -> int:
+    """Decode a signed token back to its numeric ID."""
+
+    cleaned = (token or "").strip()
+    if not cleaned:
+        abort(404)
+
+    if allow_plain_int and cleaned.isdigit():
+        return int(cleaned)
+
+    try:
+        value = _get_id_serializer(namespace).loads(cleaned)
+    except BadSignature:
+        abort(404)
+
+    if not isinstance(value, int):
+        abort(404)
+    return value
 
 
 def user_has_tag(tag_name: str) -> bool:
@@ -5582,22 +5627,24 @@ def nova_inclusao():
         consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
     )
 
-@app.route("/consultorias/inclusoes/<int:codigo>")
+@app.route("/consultorias/inclusoes/<codigo>")
 @login_required
-def visualizar_consultoria(codigo):
+def visualizar_consultoria(codigo: str):
     """Display details for a single consultoria."""
-    inclusao = Inclusao.query.get_or_404(codigo)
+    inclusao_id = decode_id(codigo, namespace="consultoria-inclusao")
+    inclusao = Inclusao.query.get_or_404(inclusao_id)
     return render_template(
         "visualizar_consultoria.html",
         inclusao=inclusao,
         data_formatada=inclusao.data_formatada,
     )
 
-@app.route("/consultorias/inclusoes/<int:codigo>/editar", methods=["GET", "POST"])
+@app.route("/consultorias/inclusoes/<codigo>/editar", methods=["GET", "POST"])
 @login_required
-def editar_consultoria(codigo):
+def editar_consultoria(codigo: str):
     """Render and handle editing of a consultoria."""
-    inclusao = Inclusao.query.get_or_404(codigo)
+    inclusao_id = decode_id(codigo, namespace="consultoria-inclusao")
+    inclusao = Inclusao.query.get_or_404(inclusao_id)
     users = User.query.order_by(User.name).all()
     if request.method == "POST":
         user_id = request.form.get("usuario")
@@ -6021,11 +6068,15 @@ def listar_empresas():
         show_inactive=show_inactive,
     )
 
+@app.route("/empresa/editar/<empresa_id>", methods=["GET", "POST"])
 @app.route("/empresa/editar/<int:id>", methods=["GET", "POST"])
 @login_required
-def editar_empresa(id):
+def editar_empresa(empresa_id: str | None = None, id: int | None = None):
     """Edit an existing company and its details."""
-    empresa = Empresa.query.get_or_404(id)
+    raw_empresa = empresa_id if empresa_id is not None else id
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    empresa_token = encode_id(empresa_id_int, namespace="empresa")
+    empresa = Empresa.query.get_or_404(empresa_id_int)
     empresa_form = EmpresaForm(request.form, obj=empresa)
 
     if request.method == "GET":
@@ -6052,7 +6103,7 @@ def editar_empresa(id):
             try:
                 db.session.commit()
                 flash("Dados do Cliente salvos com sucesso!", "success")
-                return redirect(url_for("visualizar_empresa", id=id) + "#dados-cliente")
+                return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#dados-cliente")
             except Exception as e:
                 db.session.rollback()
                 flash(f"Erro ao salvar: {str(e)}", "danger")
@@ -6067,13 +6118,17 @@ def editar_empresa(id):
         empresa_form=empresa_form,
     )
 
+@app.route("/empresa/visualizar/<empresa_id>")
 @app.route("/empresa/visualizar/<int:id>")
 @login_required
-def visualizar_empresa(id):
+def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     """Display a detailed view of a company."""
     from types import SimpleNamespace
 
-    empresa = Empresa.query.get_or_404(id)
+    raw_empresa = empresa_id if empresa_id is not None else id
+    resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
+    empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
+    empresa = Empresa.query.get_or_404(resolved_empresa_id)
 
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
@@ -6208,15 +6263,20 @@ def visualizar_empresa(id):
         reunioes_participantes_map=reunioes_participantes_map,
         can_access_financeiro=can_access_financeiro,
         responsaveis_map=responsaveis_map,
+        empresa_token=empresa_token,
     )
 
     ## Rota para gerenciar departamentos de uma empresa
 
-@app.route("/empresa/<int:empresa_id>/departamentos", methods=["GET", "POST"])
+@app.route("/empresa/<empresa_id>/departamentos", methods=["GET", "POST"])
+@app.route("/empresa/<int:id>/departamentos", methods=["GET", "POST"])
 @login_required
-def gerenciar_departamentos(empresa_id):
+def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None):
     """Create or update department data for a company."""
-    empresa = Empresa.query.get_or_404(empresa_id)
+    raw_empresa = empresa_id if empresa_id is not None else id
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    empresa_token = encode_id(empresa_id_int, namespace="empresa")
+    empresa = Empresa.query.get_or_404(empresa_id_int)
 
     can_access_financeiro = user_has_tag("financeiro")
     responsavel_value = (request.form.get("responsavel") or "").strip() if request.method == "POST" else None
@@ -6233,7 +6293,7 @@ def gerenciar_departamentos(empresa_id):
         dept_tipos.append("Departamento Financeiro")
 
     departamentos = Departamento.query.filter(
-        Departamento.empresa_id == empresa_id,
+        Departamento.empresa_id == empresa_id_int,
         Departamento.tipo.in_(dept_tipos)
     ).all()
 
@@ -6340,7 +6400,7 @@ def gerenciar_departamentos(empresa_id):
 
         if form_type == "fiscal" and fiscal_form.validate():
             if not fiscal:
-                fiscal = Departamento(empresa_id=empresa_id, tipo="Departamento Fiscal")
+                fiscal = Departamento(empresa_id=empresa_id_int, tipo="Departamento Fiscal")
                 db.session.add(fiscal)
 
             fiscal_form.populate_obj(fiscal)
@@ -6359,7 +6419,7 @@ def gerenciar_departamentos(empresa_id):
         elif form_type == "contabil" and contabil_form.validate():
             if not contabil:
                 contabil = Departamento(
-                    empresa_id=empresa_id, tipo="Departamento Contábil"
+                    empresa_id=empresa_id_int, tipo="Departamento Contábil"
                 )
                 db.session.add(contabil)
 
@@ -6381,7 +6441,7 @@ def gerenciar_departamentos(empresa_id):
         elif form_type == "pessoal" and pessoal_form.validate():
             if not pessoal:
                 pessoal = Departamento(
-                    empresa_id=empresa_id, tipo="Departamento Pessoal"
+                    empresa_id=empresa_id_int, tipo="Departamento Pessoal"
                 )
                 db.session.add(pessoal)
 
@@ -6393,7 +6453,7 @@ def gerenciar_departamentos(empresa_id):
         elif form_type == "administrativo" and administrativo_form.validate():
             if not administrativo:
                 administrativo = Departamento(
-                    empresa_id=empresa_id, tipo="Departamento Administrativo"
+                    empresa_id=empresa_id_int, tipo="Departamento Administrativo"
                 )
                 db.session.add(administrativo)
 
@@ -6407,7 +6467,7 @@ def gerenciar_departamentos(empresa_id):
             if financeiro_form and financeiro_form.validate():
                 if not financeiro:
                     financeiro = Departamento(
-                        empresa_id=empresa_id, tipo="Departamento Financeiro"
+                        empresa_id=empresa_id_int, tipo="Departamento Financeiro"
                     )
                     db.session.add(financeiro)
 
@@ -6419,7 +6479,7 @@ def gerenciar_departamentos(empresa_id):
         elif form_type == "notas_fiscais":
             if not notas_fiscais:
                 notas_fiscais = Departamento(
-                    empresa_id=empresa_id, tipo="Departamento Notas Fiscais"
+                    empresa_id=empresa_id_int, tipo="Departamento Notas Fiscais"
                 )
                 db.session.add(notas_fiscais)
 
@@ -6444,7 +6504,7 @@ def gerenciar_departamentos(empresa_id):
                 hash_ancora = hash_ancoras.get(form_type, "")
 
                 return redirect(
-                    url_for("visualizar_empresa", id=empresa_id) + f"#{hash_ancora}"
+                    url_for("visualizar_empresa", empresa_id=empresa_token) + f"#{hash_ancora}"
                 )
 
             except Exception as e:
@@ -6561,12 +6621,16 @@ def _resolve_reuniao_participantes(participante_ids: list[int]) -> list[tuple[in
     return [(pid, lookup.get(pid, f"Usuário {pid}")) for pid in ids]
 
 
-@app.route("/empresa/<int:empresa_id>/reunioes-cliente/nova", methods=["GET", "POST"])
+@app.route("/empresa/<empresa_id>/reunioes-cliente/nova", methods=["GET", "POST"])
+@app.route("/empresa/<int:id>/reunioes-cliente/nova", methods=["GET", "POST"])
 @login_required
-def nova_reuniao_cliente(empresa_id):
+def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
     """Render and process the creation form for client meetings."""
 
-    empresa = Empresa.query.get_or_404(empresa_id)
+    raw_empresa = empresa_id if empresa_id is not None else id
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    empresa_token = encode_id(empresa_id_int, namespace="empresa")
+    empresa = Empresa.query.get_or_404(empresa_id_int)
     form = ClienteReuniaoForm()
     _populate_cliente_reuniao_form(form)
 
@@ -6587,7 +6651,7 @@ def nova_reuniao_cliente(empresa_id):
         try:
             db.session.commit()
             flash("Reunião registrada com sucesso!", "success")
-            return redirect(url_for("visualizar_empresa", id=empresa.id) + "#reunioes-cliente")
+            return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
             current_app.logger.exception("Erro ao salvar reunião com cliente: %s", exc)
             db.session.rollback()
@@ -6605,13 +6669,21 @@ def nova_reuniao_cliente(empresa_id):
     )
 
 
-@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/editar", methods=["GET", "POST"])
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>/editar", methods=["GET", "POST"])
+@app.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>/editar", methods=["GET", "POST"])
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>/editar", methods=["GET", "POST"])
+@app.route("/empresa/<int:id>/reunioes-cliente/<int:rid>/editar", methods=["GET", "POST"])
 @login_required
-def editar_reuniao_cliente(empresa_id, reuniao_id):
+def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None = None, id: int | None = None, rid: int | None = None):
     """Allow updating an existing client meeting."""
 
+    raw_empresa = empresa_id if empresa_id is not None else id
+    raw_reuniao = reuniao_id if reuniao_id is not None else rid
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
+    empresa_token = encode_id(empresa_id_int, namespace="empresa")
     reuniao = (
-        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int)
         .options(joinedload(ClienteReuniao.setor))
         .first_or_404()
     )
@@ -6635,7 +6707,7 @@ def editar_reuniao_cliente(empresa_id, reuniao_id):
         try:
             db.session.commit()
             flash("Reunião atualizada com sucesso!", "success")
-            return redirect(url_for("visualizar_empresa", id=empresa_id) + "#reunioes-cliente")
+            return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
             current_app.logger.exception("Erro ao atualizar reunião com cliente: %s", exc)
             db.session.rollback()
@@ -6654,13 +6726,20 @@ def editar_reuniao_cliente(empresa_id, reuniao_id):
     )
 
 
-@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>")
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>")
+@app.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>")
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>")
+@app.route("/empresa/<int:id>/reunioes-cliente/<int:rid>")
 @login_required
-def visualizar_reuniao_cliente(empresa_id, reuniao_id):
+def visualizar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None = None, id: int | None = None, rid: int | None = None):
     """Display a single client meeting with all recorded details."""
 
+    raw_empresa = empresa_id if empresa_id is not None else id
+    raw_reuniao = reuniao_id if reuniao_id is not None else rid
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
     reuniao = (
-        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int)
         .options(joinedload(ClienteReuniao.setor))
         .first_or_404()
     )
@@ -6674,13 +6753,20 @@ def visualizar_reuniao_cliente(empresa_id, reuniao_id):
     )
 
 
-@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/detalhes")
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>/detalhes")
+@app.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>/detalhes")
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>/detalhes")
+@app.route("/empresa/<int:id>/reunioes-cliente/<int:rid>/detalhes")
 @login_required
-def reuniao_cliente_detalhes_modal(empresa_id, reuniao_id):
+def reuniao_cliente_detalhes_modal(empresa_id: str | None = None, reuniao_id: str | None = None, id: int | None = None, rid: int | None = None):
     """Return rendered HTML snippet for modal visualization."""
 
+    raw_empresa = empresa_id if empresa_id is not None else id
+    raw_reuniao = reuniao_id if reuniao_id is not None else rid
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
     reuniao = (
-        ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id)
+        ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int)
         .options(joinedload(ClienteReuniao.setor))
         .first_or_404()
     )
@@ -6700,12 +6786,20 @@ def reuniao_cliente_detalhes_modal(empresa_id, reuniao_id):
     )
 
 
-@app.route("/empresa/<int:empresa_id>/reunioes-cliente/<int:reuniao_id>/excluir", methods=["POST"])
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>/excluir", methods=["POST"])
+@app.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>/excluir", methods=["POST"])
+@app.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>/excluir", methods=["POST"])
+@app.route("/empresa/<int:id>/reunioes-cliente/<int:rid>/excluir", methods=["POST"])
 @login_required
-def excluir_reuniao_cliente(empresa_id, reuniao_id):
+def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None = None, id: int | None = None, rid: int | None = None):
     """Delete a client meeting from the log."""
 
-    reuniao = ClienteReuniao.query.filter_by(id=reuniao_id, empresa_id=empresa_id).first_or_404()
+    raw_empresa = empresa_id if empresa_id is not None else id
+    raw_reuniao = reuniao_id if reuniao_id is not None else rid
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
+    empresa_token = encode_id(empresa_id_int, namespace="empresa")
+    reuniao = ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int).first_or_404()
     db.session.delete(reuniao)
     try:
         db.session.commit()
@@ -6714,7 +6808,7 @@ def excluir_reuniao_cliente(empresa_id, reuniao_id):
         current_app.logger.exception("Erro ao excluir reunião com cliente: %s", exc)
         db.session.rollback()
         flash("Não foi possível excluir a reunião. Tente novamente.", "danger")
-    return redirect(url_for("visualizar_empresa", id=empresa_id) + "#reunioes-cliente")
+    return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 @app.route("/relatorios")
 @admin_required
