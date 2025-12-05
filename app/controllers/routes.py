@@ -101,8 +101,8 @@ import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from sqlalchemy import or_, cast, String, text, inspect
-from sqlalchemy.exc import IntegrityError, NoSuchTableError, SQLAlchemyError, OperationalError
+from sqlalchemy import or_, cast, String, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError, OperationalError
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload, aliased
 from google_auth_oauthlib.flow import Flow
@@ -163,174 +163,6 @@ GOOGLE_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/gmail.addons.current.message.action",
     "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
 ]
-
-
-def ensure_diretoria_agreement_schema() -> None:
-    """Ensure the Diretoria agreements table has the expected columns."""
-
-    cache_key = "_diretoria_agreement_schema_checked"
-    if app.config.get(cache_key):
-        return
-
-    bind = db.session.get_bind()
-    if bind is None:
-        return
-
-    try:
-        inspector = inspect(bind)
-        columns = {column["name"] for column in inspector.get_columns("diretoria_agreements")}
-        unique_constraints = {
-            constraint["name"]
-            for constraint in inspector.get_unique_constraints("diretoria_agreements")
-        }
-        indexes = {
-            index["name"]: index for index in inspector.get_indexes("diretoria_agreements")
-        }
-        foreign_keys = inspector.get_foreign_keys("diretoria_agreements")
-    except NoSuchTableError:
-        # Table is missing entirely nothing to fix at runtime.
-        return
-    except SQLAlchemyError as exc:  # pragma: no cover - defensive logging path
-        db.session.rollback()
-        current_app.logger.warning(
-            "Falha ao inspecionar a tabela diretoria_agreements: %s", exc
-        )
-        return
-
-    needs_column = "agreement_date" not in columns
-    needs_unique_drop = "uq_diretoria_agreements_user_id" in unique_constraints
-
-    if not needs_column and not needs_unique_drop:
-        app.config[cache_key] = True
-        return
-
-    dialect = bind.dialect.name
-
-    user_fk = next(
-        (
-            fk
-            for fk in foreign_keys
-            if fk.get("constrained_columns") == ["user_id"]
-        ),
-        None,
-    )
-
-    def quote_identifier(identifier: str) -> str:
-        if dialect == "mysql":
-            return f"`{identifier}`"
-        if dialect == "postgresql":
-            return f'"{identifier}"'
-        return identifier
-
-    has_nonunique_user_index = any(
-        index.get("column_names") == ["user_id"]
-        and not index.get("unique", False)
-        for index in indexes.values()
-        if index.get("name") != "uq_diretoria_agreements_user_id"
-    )
-
-    try:
-        with bind.begin() as connection:
-            if needs_unique_drop:
-                if dialect == "mysql":
-                    fk_name = (user_fk or {}).get("name")
-                    referred_table = (user_fk or {}).get("referred_table")
-                    referred_columns = (user_fk or {}).get("referred_columns") or []
-                    fk_options = (user_fk or {}).get("options") or {}
-
-                    if fk_name:
-                        connection.execute(
-                            text(
-                                "ALTER TABLE diretoria_agreements "
-                                f"DROP FOREIGN KEY {quote_identifier(fk_name)}"
-                            )
-                        )
-
-                    connection.execute(
-                        text(
-                            "ALTER TABLE diretoria_agreements "
-                            "DROP INDEX uq_diretoria_agreements_user_id"
-                        )
-                    )
-
-                    if not has_nonunique_user_index:
-                        try:
-                            connection.execute(
-                                text(
-                                    "ALTER TABLE diretoria_agreements "
-                                    "ADD INDEX ix_diretoria_agreements_user_id (user_id)"
-                                )
-                            )
-                        except OperationalError as add_index_exc:
-                            # Error code 1061 indicates the index already exists.
-                            if getattr(getattr(add_index_exc, "orig", None), "args", [None])[0] != 1061:
-                                raise
-
-                    if fk_name and referred_table and referred_columns:
-                        referenced_cols_sql = ", ".join(
-                            quote_identifier(column) for column in referred_columns
-                        )
-                        constraint_sql = (
-                            "ALTER TABLE diretoria_agreements "
-                            f"ADD CONSTRAINT {quote_identifier(fk_name)} "
-                            "FOREIGN KEY (user_id) "
-                            f"REFERENCES {quote_identifier(referred_table)} "
-                            f"({referenced_cols_sql})"
-                        )
-                        ondelete = fk_options.get("ondelete")
-                        if ondelete:
-                            constraint_sql += f" ON DELETE {ondelete.upper()}"
-                        onupdate = fk_options.get("onupdate")
-                        if onupdate:
-                            constraint_sql += f" ON UPDATE {onupdate.upper()}"
-
-                        connection.execute(text(constraint_sql))
-                else:
-                    connection.execute(
-                        text(
-                            "ALTER TABLE diretoria_agreements "
-                            "DROP CONSTRAINT uq_diretoria_agreements_user_id"
-                        )
-                    )
-
-            if needs_column:
-                connection.execute(
-                    text(
-                        "ALTER TABLE diretoria_agreements "
-                        "ADD COLUMN agreement_date DATE NULL"
-                    )
-                )
-                connection.execute(
-                    text(
-                        "UPDATE diretoria_agreements "
-                        "SET agreement_date = COALESCE(DATE(created_at), CURRENT_DATE)"
-                    )
-                )
-
-                if dialect == "mysql":
-                    connection.execute(
-                        text(
-                            "ALTER TABLE diretoria_agreements "
-                            "MODIFY agreement_date DATE NOT NULL"
-                        )
-                    )
-                else:
-                    connection.execute(
-                        text(
-                            "ALTER TABLE diretoria_agreements "
-                            "ALTER COLUMN agreement_date SET NOT NULL"
-                        )
-                    )
-    except (SQLAlchemyError, OperationalError) as exc:  # pragma: no cover - defensive logging path
-        db.session.rollback()
-        current_app.logger.error(
-            "Não foi possível ajustar a tabela diretoria_agreements automaticamente: %s",
-            exc,
-        )
-        return
-
-    db.session.expire_all()
-    app.config[cache_key] = True
 
 
 EXCLUDED_TASK_TAGS = ["Reunião"]
@@ -1858,8 +1690,6 @@ def diretoria_acordos():
 
     if current_user.role != "admin" and not user_has_tag("Diretoria"):
         abort(403)
-
-    ensure_diretoria_agreement_schema()
 
     users = (
         User.query.filter(User.ativo.is_(True))
@@ -10449,6 +10279,22 @@ def task_responses_mark_read(task_id: int):
     return jsonify({"success": True, "meta": {**meta, "can_post": True}})
 
 
+def _is_safe_referrer(referrer_url: str) -> bool:
+    """Return True when referrer belongs to the current host."""
+
+    parsed = urlparse(referrer_url)
+    if parsed.scheme and parsed.scheme not in {"http", "https"}:
+        return False
+
+    ref_host = (parsed.netloc or "").split(":", 1)[0].lower()
+    current_host = (request.host or "").split(":", 1)[0].lower()
+
+    if ref_host and ref_host != current_host:
+        return False
+
+    return True
+
+
 @app.route("/tasks/<int:task_id>")
 @login_required
 def tasks_view(task_id):
@@ -10497,7 +10343,11 @@ def tasks_view(task_id):
             cancel_url = url_for("tasks_history", assigned_by_me=1)
 
         # Usar referrer se disponível e seguro
-        if request.referrer and request.referrer != request.url:
+        if (
+            request.referrer
+            and request.referrer != request.url
+            and _is_safe_referrer(request.referrer)
+        ):
             cancel_url = request.referrer
 
     # Buscar histórico de alterações da tarefa
@@ -10549,6 +10399,9 @@ def update_task_status(task_id):
         new_status = TaskStatus(status_value)
     except Exception:
         abort(400)
+    # Avoid unnecessary writes and undefined variables when status is unchanged
+    if task.status == new_status:
+        return jsonify({"success": True, "task": _serialize_task(task)})
     if current_user.role != "admin":
         allowed = {
             TaskStatus.PENDING: {TaskStatus.IN_PROGRESS},

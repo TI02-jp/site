@@ -586,6 +586,17 @@
         border-width: 0.3rem;
       }
 
+      /* Micro transições para navegação htmx sem piscada */
+      #page-content.htmx-swapping {
+        opacity: 0.96;
+        transition: opacity 120ms ease;
+      }
+
+      #page-content.htmx-settling {
+        opacity: 1;
+        transition: opacity 120ms ease;
+      }
+
       /* Controles de tema */
       .theme-toggle {
         display: flex;
@@ -668,7 +679,15 @@
       }
     </style>
 </head>
-<body style="font-family: 'Inter', sans-serif;">
+<body
+  style="font-family: 'Inter', sans-serif;"
+  hx-boost="true"
+  hx-target="#page-content"
+  hx-select="#page-content"
+  hx-swap="innerHTML transition:true"
+  hx-push-url="true"
+  hx-indicator="#globalLoadingOverlay"
+>
 
     <!-- Overlay de carregamento global -->
     <div id="globalLoadingOverlay">
@@ -725,7 +744,7 @@
                         <i class="bi bi-people"></i>
                     </a>
                     {% endif %}
-                    <a href="{{ url_for('logout') }}" class="quick-action-btn quick-action-btn--logout" title="Sair" aria-label="Sair">
+                    <a href="{{ url_for('logout') }}" class="quick-action-btn quick-action-btn--logout" title="Sair" aria-label="Sair" hx-boost="false">
                         <i class="bi bi-power"></i>
                     </a>
                 </div>
@@ -763,7 +782,7 @@
             <!-- Área de Conteúdo -->
             <main class="content-area">
                 <!-- Conteúdo -->
-                <div class="content-wrapper">
+                <div class="content-wrapper" id="page-content">
                     {% block content %}{% endblock %}
                 </div>
             </main>
@@ -791,6 +810,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script src="{{ url_for('static', filename='javascript/mensagens.js') }}"></script>
 <script src="{{ url_for('static', filename='javascript/paste_images.js') }}"></script>
 <script>
@@ -904,8 +924,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Proteção contra double-click e loading state nos links
     const navigationInProgress = new Set();
     const lastClickTime = new Map();
-    const CLICK_DEBOUNCE_MS = 1000; // 1 segundo entre cliques no mesmo link
+    const CLICK_DEBOUNCE_MS = 200; // Reduz debounce para deixar navegação mais imediata
     const loadingOverlay = document.getElementById('globalLoadingOverlay');
+
+    // Integração com htmx para navegação fluida sem full reload
+    if (window.htmx) {
+        document.body.addEventListener('htmx:afterSwap', (evt) => {
+            if (evt.target && evt.target.id === 'page-content') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
 
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', function(e) {
@@ -934,19 +963,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Desabilitar pointer events temporariamente
                 this.style.pointerEvents = 'none';
 
-                // Mostrar overlay de carregamento
-                if (loadingOverlay) {
-                    loadingOverlay.classList.add('show');
-                }
-
-                // Limpar após timeout (caso navegação falhe)
+                // Limpar após timeout curto (caso navegação falhe)
                 setTimeout(() => {
                     navigationInProgress.delete(linkHref);
                     this.style.pointerEvents = '';
-                    if (loadingOverlay) {
-                        loadingOverlay.classList.remove('show');
-                    }
-                }, 3000);
+                }, 1200);
             }
         });
     });
