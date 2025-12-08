@@ -5473,12 +5473,39 @@ def listar_empresas():
     page = request.args.get("page", 1, type=int)
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
+    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    saved_filters = session.get("listar_empresas_filters", {})
+    sort_arg = request.args.get("sort")
+    order_arg = request.args.get("order")
+    clear_tributacao = request.args.get("clear_tributacao") == "1"
+    raw_tributacoes = request.args.getlist("tributacao")
+    if clear_tributacao:
+        tributacao_filters: list[str] = []
+    elif raw_tributacoes:
+        tributacao_filters = [t for t in raw_tributacoes if t in allowed_tributacoes]
+    else:
+        tributacao_filters = saved_filters.get("tributacao_filters", [])
+
+    sort = sort_arg or saved_filters.get("sort") or "nome"
+    if sort not in ("nome", "codigo"):
+        sort = "nome"
+
+    order = order_arg or saved_filters.get("order") or "asc"
+    if order not in ("asc", "desc"):
+        order = "asc"
+
+    session["listar_empresas_filters"] = {"sort": sort, "order": order}
 
     query = Empresa.query
 
-    # Filter inactive companies by default
-    if not show_inactive:
+    # Filter active by default; if "show inactive" is marked, show only inactive
+    if show_inactive:
+        query = query.filter_by(ativo=False)
+    else:
         query = query.filter_by(ativo=True)
+
+    if tributacao_filters:
+        query = query.filter(Empresa.tributacao.in_(tributacao_filters))
 
     if search:
         like_pattern = f"%{search}%"
@@ -5488,9 +5515,6 @@ def listar_empresas():
                 Empresa.codigo_empresa.ilike(like_pattern),
             )
         )
-
-    sort = request.args.get("sort", "nome")
-    order = request.args.get("order", "asc")
 
     if sort == "codigo":
         order_column = Empresa.codigo_empresa
@@ -5503,6 +5527,12 @@ def listar_empresas():
     else:
         query = query.order_by(Empresa.ativo.desc(), order_column.asc())
 
+    session["listar_empresas_filters"] = {
+        "sort": sort,
+        "order": order,
+        "tributacao_filters": tributacao_filters,
+    }
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     empresas = pagination.items
 
@@ -5514,6 +5544,8 @@ def listar_empresas():
         sort=sort,
         order=order,
         show_inactive=show_inactive,
+        tributacao_filters=tributacao_filters,
+        allowed_tributacoes=allowed_tributacoes,
     )
 
 @app.route("/empresa/editar/<empresa_id>", methods=["GET", "POST"])
@@ -5573,6 +5605,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     """Display a detailed view of a company."""
     from types import SimpleNamespace
 
+    embed_mode = request.args.get("embed") == "1"
     raw_empresa = empresa_id if empresa_id is not None else id
     resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
     empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
@@ -5712,6 +5745,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
         can_access_financeiro=can_access_financeiro,
         responsaveis_map=responsaveis_map,
         empresa_token=empresa_token,
+        embed_mode=embed_mode,
     )
 
     ## Rota para gerenciar departamentos de uma empresa
@@ -6269,6 +6303,7 @@ def relatorios():
 def relatorio_empresas():
     """Display aggregated company statistics."""
     empresas = Empresa.query.with_entities(
+        Empresa.id,
         Empresa.nome_empresa,
         Empresa.cnpj,
         Empresa.codigo_empresa,
@@ -6280,16 +6315,25 @@ def relatorio_empresas():
     grouped = {cat: [] for cat in categorias}
     grouped_sistemas = {}
 
-    for nome, cnpj, codigo, trib, sistema in empresas:
+    for eid, nome, cnpj, codigo, trib, sistema in empresas:
         label = trib if trib in categorias else "Outros"
         grouped.setdefault(label, []).append(
-            {"nome": nome, "cnpj": cnpj, "codigo": codigo}
+            {
+                "id": eid,
+                "token": encode_id(eid, namespace="empresa"),
+                "nome": nome,
+                "cnpj": cnpj,
+                "codigo": codigo,
+            }
         )
 
         sistema_label = sistema.strip() if sistema else "Não informado"
         grouped_sistemas.setdefault(sistema_label, []).append(
             {"nome": nome, "cnpj": cnpj, "codigo": codigo}
         )
+
+    for empresas_list in grouped.values():
+        empresas_list.sort(key=lambda item: (item.get("codigo") or "").strip())
 
     labels = list(grouped.keys())
     counts = [len(grouped[label]) for label in labels]
@@ -6321,6 +6365,7 @@ def relatorio_empresas():
         "admin/relatorio_empresas.html",
         tributacao_chart=tributacao_chart,
         sistema_chart=sistema_chart,
+        tributacao_companies=grouped,
     )
 
 @app.route("/relatorio_fiscal")

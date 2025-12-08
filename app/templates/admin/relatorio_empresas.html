@@ -13,6 +13,45 @@
     <div class="rounded border bg-white" style="height: 260px;">
         <canvas id="empresa-tributacao-chart" class="p-3"></canvas>
     </div>
+    <div id="tributacao-list" class="mt-3" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0" id="tributacao-list-title"></h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="tributacao-list-clear">
+                <i class="bi bi-x-circle me-1"></i>Fechar lista
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Código</th>
+                        <th>Nome</th>
+                        <th style="width: 170px;">CNPJ</th>
+                        <th style="width: 110px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tributacao-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para visualizar empresa -->
+<div class="modal fade" id="empresaViewModal" tabindex="-1" aria-labelledby="empresaViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-md-down modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="empresaViewModalLabel">Visualizar Empresa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="empresaViewBody">
+                <div class="text-center py-5" id="empresaViewLoading" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+                </div>
+                <div id="empresaViewContent"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="container mt-5">
@@ -49,13 +88,13 @@
         return colors;
     }
 
-    function createBarChart(canvasId, config) {
+    function createBarChart(canvasId, config, onClick) {
         const canvas = document.getElementById(canvasId);
         if (!canvas || !config) {
             return;
         }
         const colors = buildPalette(config.labels?.length || 0);
-        new Chart(canvas, {
+        const chart = new Chart(canvas, {
             type: config.type || 'bar',
             data: {
                 labels: config.labels || [],
@@ -101,9 +140,107 @@
                 },
             },
         });
+        if (onClick) {
+            canvas.onclick = (event) => {
+                const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                if (points.length) {
+                    const idx = points[0].index;
+                    const label = chart.data.labels[idx];
+                    onClick(label);
+                }
+            };
+        }
+        return chart;
     }
 
-    createBarChart('empresa-tributacao-chart', {{ tributacao_chart|tojson }});
+    const tributacaoCompanies = {{ tributacao_companies|tojson }};
+
+    function formatCNPJ(cnpj) {
+        if (!cnpj) return '';
+        const digits = cnpj.replace(/\D/g, '');
+        if (digits.length !== 14) return cnpj;
+        return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+
+    function renderTributacaoList(label) {
+        const container = document.getElementById('tributacao-list');
+        const title = document.getElementById('tributacao-list-title');
+        const body = document.getElementById('tributacao-list-body');
+        if (!container || !title || !body) return;
+
+        const companies = tributacaoCompanies[label] || [];
+        title.textContent = companies.length ? `Empresas em ${label} (${companies.length})` : `Sem empresas em ${label}`;
+        body.innerHTML = '';
+
+        companies.forEach((company) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="badge bg-primary-subtle text-primary fw-semibold">${company.codigo || ''}</span></td>
+                <td>${company.nome || ''}</td>
+                <td class="font-monospace">${formatCNPJ(company.cnpj || '')}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary company-view-btn" data-view-url="/empresa/visualizar/${company.token}?embed=1" title="Visualizar empresa">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
+
+        container.style.display = companies.length ? 'block' : 'none';
+    }
+
+    document.getElementById('tributacao-list-clear')?.addEventListener('click', function () {
+        const container = document.getElementById('tributacao-list');
+        const body = document.getElementById('tributacao-list-body');
+        const title = document.getElementById('tributacao-list-title');
+        if (body) body.innerHTML = '';
+        if (title) title.textContent = '';
+        if (container) container.style.display = 'none';
+    });
+
+    // Modal para visualizar empresa sem sair da página (fetch e injeta HTML)
+    const empresaViewModalEl = document.getElementById('empresaViewModal');
+    const empresaViewBody = document.getElementById('empresaViewBody');
+    const empresaViewContent = document.getElementById('empresaViewContent');
+    const empresaViewLoading = document.getElementById('empresaViewLoading');
+    const empresaViewModal = empresaViewModalEl ? new bootstrap.Modal(empresaViewModalEl) : null;
+
+    async function loadEmpresaIntoModal(url) {
+        if (!empresaViewModal || !empresaViewContent || !empresaViewLoading) return;
+        empresaViewContent.innerHTML = '';
+        empresaViewLoading.style.display = 'block';
+        empresaViewModal.show();
+        try {
+            const resp = await fetch(url, { credentials: 'same-origin' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const html = await resp.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const container = doc.querySelector('.container-fluid') || doc.body;
+            empresaViewContent.innerHTML = container.innerHTML;
+        } catch (err) {
+            empresaViewContent.innerHTML = `<div class="alert alert-danger mb-0">Não foi possível carregar a empresa (${err}).</div>`;
+        } finally {
+            empresaViewLoading.style.display = 'none';
+        }
+    }
+
+    document.getElementById('tributacao-list-body')?.addEventListener('click', function (event) {
+        const btn = event.target.closest('.company-view-btn');
+        if (!btn || !empresaViewModal) return;
+        const url = btn.getAttribute('data-view-url');
+        if (!url) return;
+        loadEmpresaIntoModal(url);
+    });
+
+    empresaViewModalEl?.addEventListener('hidden.bs.modal', function () {
+        if (empresaViewContent) {
+            empresaViewContent.innerHTML = '';
+        }
+    });
+
+    createBarChart('empresa-tributacao-chart', {{ tributacao_chart|tojson }}, renderTributacaoList);
     createBarChart('empresa-sistema-chart', {{ sistema_chart|tojson }});
 </script>
 {% endblock %}
