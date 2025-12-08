@@ -3665,3 +3665,13 @@ Breakpoints Intermediários para Responsividade
         min-width: 150px;
     }
 }
+
+/* Keep sidebar steady across page loads (avoid collapse flicker) */
+.sidebar .collapse,
+.sidebar .collapsing {
+    transition: none !important;
+}
+
+.sidebar .collapsing {
+    height: auto !important;
+}

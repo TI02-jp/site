@@ -81,6 +81,7 @@
         <li class="nav-item">
             <a class="nav-link{% if gestao_active %} active{% endif %}"
                data-bs-toggle="collapse"
+               data-sidebar-toggle="gestaoMenu"
                href="#gestaoMenu"
                role="button"
                aria-expanded="{{ 'true' if gestao_active else 'false' }}"
@@ -108,6 +109,7 @@
                     <li class="nav-item">
                         <a class="nav-link{% if acordos_active %} active{% endif %}"
                            data-bs-toggle="collapse"
+                           data-sidebar-toggle="diretoriaSubmenu"
                            href="#diretoriaSubmenu"
                            role="button"
                            aria-expanded="{{ 'true' if acordos_active else 'false' }}"
@@ -133,7 +135,13 @@
         {% endif %}
         <li class="nav-item">
             {% set tasks_menu_active = request.endpoint in ['tasks_overview', 'tasks_overview_mine', 'tasks_overview_personal'] %}
-            <a class="nav-link" data-bs-toggle="collapse" href="#tasksMenu" role="button" aria-expanded="{{ 'true' if tasks_menu_active else 'false' }}" aria-controls="tasksMenu">
+            <a class="nav-link"
+               data-bs-toggle="collapse"
+               data-sidebar-toggle="tasksMenu"
+               href="#tasksMenu"
+               role="button"
+               aria-expanded="{{ 'true' if tasks_menu_active else 'false' }}"
+               aria-controls="tasksMenu">
                 <i class="bi bi-list-task"></i>
                 TAREFAS
             </a>
@@ -172,3 +180,65 @@
 </div>
 {% endif %}
 {% endif %}
+
+<script>
+  (() => {
+    const storageKey = "sidebar:collapse-state";
+    let state = {};
+    try {
+      state = JSON.parse(localStorage.getItem(storageKey) || "{}") || {};
+    } catch {
+      state = {};
+    }
+
+    const applyStoredState = () => {
+      document.querySelectorAll("[data-sidebar-toggle]").forEach((toggle) => {
+        const targetId = toggle.getAttribute("data-sidebar-toggle");
+        if (!targetId) return;
+        const target = document.getElementById(targetId);
+        if (!target) return;
+
+        const shouldOpen =
+          state[targetId] === true ||
+          (state[targetId] === undefined && target.classList.contains("show"));
+
+        target.classList.toggle("show", shouldOpen);
+        toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+        if (shouldOpen) {
+          target.classList.remove("collapsing");
+          target.style.height = "auto";
+        }
+      });
+    };
+
+    const persistState = () => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      } catch {
+        /* ignore */
+      }
+    };
+
+    applyStoredState();
+
+    document.addEventListener("shown.bs.collapse", (event) => {
+      const target = event.target;
+      const toggle = document.querySelector(
+        `[data-sidebar-toggle="${target.id}"]`
+      );
+      if (!toggle) return;
+      state[target.id] = true;
+      persistState();
+    });
+
+    document.addEventListener("hidden.bs.collapse", (event) => {
+      const target = event.target;
+      const toggle = document.querySelector(
+        `[data-sidebar-toggle="${target.id}"]`
+      );
+      if (!toggle) return;
+      state[target.id] = false;
+      persistState();
+    });
+  })();
+</script>
