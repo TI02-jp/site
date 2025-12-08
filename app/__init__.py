@@ -689,7 +689,8 @@ with app.app_context():
 from app.utils.logging_config import setup_logging, log_request_info
 import time
 
-setup_logging(app)
+with app.app_context():
+    setup_logging(app, db.engine)
 
 def _register_diagnostics_routes(flask_app: Flask) -> None:
     diagnostics_enabled = os.getenv("ENABLE_DIAGNOSTICS", "0") == "1"

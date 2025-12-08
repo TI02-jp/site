@@ -3,8 +3,13 @@
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+from time import perf_counter
+from typing import Optional
+
+from sqlalchemy import event
 
 
 class MessageContainsFilter(logging.Filter):
@@ -41,7 +46,54 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def setup_logging(app):
+def _resolve_log_dir(app) -> str:
+    """Resolve a writable log directory, with fallback when the primary is unavailable."""
+    # Prefer explicit environment variable
+    log_dir = os.getenv("APP_LOG_DIR")
+    if not log_dir:
+        root_dir = os.path.abspath(os.path.join(app.root_path, ".."))
+        log_dir = os.path.join(root_dir, "logs")
+
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        test_path = os.path.join(log_dir, ".write-test")
+        with open(test_path, "w", encoding="utf-8") as test_file:
+            test_file.write("ok")
+        os.remove(test_path)
+        return log_dir
+    except OSError:
+        # Fall back to a temp location to keep the app running even if the primary path is not writable
+        fallback_dir = os.path.join(tempfile.gettempdir(), "app-logs")
+        os.makedirs(fallback_dir, exist_ok=True)
+        return fallback_dir
+
+
+def _register_slow_query_listener(engine, slow_query_logger: logging.Logger, threshold_ms: float) -> None:
+    """Attach SQLAlchemy event listeners to emit slow queries to the dedicated logger."""
+
+    @event.listens_for(engine, "before_cursor_execute")
+    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        context._query_start_time = perf_counter()
+
+    @event.listens_for(engine, "after_cursor_execute")
+    def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        start = getattr(context, "_query_start_time", None)
+        if start is None:
+            return
+        duration_ms = (perf_counter() - start) * 1000
+        if duration_ms < threshold_ms:
+            return
+        # Provide values expected by formatter
+        slow_query_logger.warning(
+            statement.replace("\n", " "),
+            extra={
+                "duration": duration_ms / 1000,  # formatter expects seconds
+                "statement": statement,
+            },
+        )
+
+
+def setup_logging(app, engine: Optional[object] = None):
     """Configure structured logging with rotation for production use.
 
     Creates logs in the 'logs' directory with:
@@ -54,12 +106,7 @@ def setup_logging(app):
     - user_actions.jsonl: User actions in JSON format (rotated daily, keeps 180 days)
     """
     # Create logs directory if it doesn't exist
-    log_dir = os.getenv("APP_LOG_DIR")
-    if not log_dir:
-        # Default directory inside the application
-        root_dir = os.path.abspath(os.path.join(app.root_path, ".."))
-        log_dir = os.path.join(root_dir, "logs")
-    os.makedirs(log_dir, exist_ok=True)
+    log_dir = _resolve_log_dir(app)
 
     # Clear default handlers to avoid duplicates
     app.logger.handlers.clear()
@@ -169,6 +216,11 @@ def setup_logging(app):
     slow_query_logger.setLevel(logging.WARNING)
     slow_query_logger.addHandler(slow_query_handler)
     slow_query_logger.propagate = False
+    slow_query_threshold_ms = float(
+        app.config.get("SLOW_QUERY_THRESHOLD_MS", os.getenv("SLOW_QUERY_THRESHOLD_MS", "1000"))
+    )
+    if engine is not None:
+        _register_slow_query_listener(engine, slow_query_logger, slow_query_threshold_ms)
 
     # 7. User actions log - Text format (rotated daily, keeps 180 days for compliance)
     user_actions_log_path = os.path.join(log_dir, 'user_actions.log')
