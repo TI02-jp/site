@@ -1100,17 +1100,38 @@ def admin_required(f):
     return decorated_function
 
 
-def report_access_required(f):
-    """Decorator that allows admin or tag 'Administrativo' to access reports."""
+def has_report_access(report_code: str | None = None) -> bool:
+    """
+    Return True if current user can access the given report.
 
-    @wraps(f)
-    @login_required
-    def decorated_function(*args, **kwargs):
-        if current_user.role == "admin" or user_has_tag("Administrativo"):
-            return f(*args, **kwargs)
-        abort(403)
+    Rules:
+    - admin users always allowed
+    - tag "Administrativo" grants all reports
+    - tag "Relatórios" grants all reports
+    - tag "Relatórios:<code>" grants the specific report
+    """
+    if current_user.role == "admin":
+        return True
+    allowed_tags = {"administrativo", "relatórios"}
+    if report_code:
+        allowed_tags.add(f"relatórios:{report_code}".lower())
+    return any(tag.nome.lower() in allowed_tags for tag in current_user.tags)
 
-    return decorated_function
+
+def report_access_required(report_code: str | None = None):
+    """Decorator that allows admin or tagged users to access reports."""
+
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            if has_report_access(report_code):
+                return f(*args, **kwargs)
+            abort(403)
+
+        return decorated_function
+
+    return decorator
 
 
 _id_serializers: dict[str, URLSafeSerializer] = {}
@@ -1289,7 +1310,12 @@ def _get_accessible_tag_ids(user: User | None = None) -> list[int]:
 @app.context_processor
 def inject_user_tag_helpers():
     """Expose user tag helper utilities to templates."""
-    return dict(user_has_tag=user_has_tag, can_access_controle_notas=can_access_controle_notas, is_meeting_only_user=is_meeting_only_user)
+    return dict(
+        user_has_tag=user_has_tag,
+        can_access_controle_notas=can_access_controle_notas,
+        is_meeting_only_user=is_meeting_only_user,
+        has_report_access=has_report_access,
+    )
 
 
 @app.context_processor
@@ -6311,13 +6337,13 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 @app.route("/relatorios")
-@report_access_required
+@report_access_required(report_code="index")
 def relatorios():
     """Render the reports landing page."""
     return render_template("admin/relatorios.html")
 
 @app.route("/relatorio_empresas")
-@report_access_required
+@report_access_required(report_code="empresas")
 def relatorio_empresas():
     """Display aggregated company statistics."""
     empresas = Empresa.query.with_entities(
@@ -6387,7 +6413,7 @@ def relatorio_empresas():
     )
 
 @app.route("/relatorio_fiscal")
-@report_access_required
+@report_access_required(report_code="fiscal")
 def relatorio_fiscal():
     """Show summary charts for the fiscal department."""
     departamentos = (
@@ -6468,7 +6494,7 @@ def relatorio_fiscal():
     )
 
 @app.route("/relatorio_contabil")
-@report_access_required
+@report_access_required(report_code="contabil")
 def relatorio_contabil():
     """Show summary charts for the accounting department."""
     departamentos = (
@@ -6576,7 +6602,7 @@ def relatorio_contabil():
     )
 
 @app.route("/relatorio_usuarios")
-@report_access_required
+@report_access_required(report_code="usuarios")
 def relatorio_usuarios():
     """Visualize user counts by role and status."""
     users = User.query.with_entities(
@@ -6610,7 +6636,7 @@ def relatorio_usuarios():
     )
 
 @app.route("/relatorio_cursos")
-@report_access_required
+@report_access_required(report_code="cursos")
 def relatorio_cursos():
     """Show aggregated metrics for the internal course catalog."""
     records = get_courses_overview()
@@ -6814,7 +6840,7 @@ def relatorio_cursos():
 
 
 @app.route("/relatorio_tarefas")
-@report_access_required
+@report_access_required(report_code="tarefas")
 def relatorio_tarefas():
     """Expose tactical dashboards about the global task workload."""
     today = date.today()
