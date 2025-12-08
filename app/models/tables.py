@@ -684,6 +684,53 @@ class Tag(db.Model):
         return f"<Tag {self.nome}>"
 
 
+class ReportPermission(db.Model):
+    """Stores which tags or users can access a given report."""
+
+    __tablename__ = "report_permissions"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    report_code = db.Column(db.String(50), nullable=False, index=True)
+    tag_id = db.Column(
+        db.Integer,
+        db.ForeignKey("tags.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    created_at = db.Column(
+        db.DateTime, default=sao_paulo_now_naive, nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
+        nullable=False,
+    )
+
+    tag = db.relationship("Tag")
+    user = db.relationship("User")
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "tag_id IS NOT NULL OR user_id IS NOT NULL",
+            name="ck_report_perm_target",
+        ),
+        db.UniqueConstraint(
+            "report_code", "tag_id", "user_id", name="uq_report_perm_target"
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ReportPermission code={self.report_code}"
+            f" tag={self.tag_id} user={self.user_id}>"
+        )
+
+
 class Setor(db.Model):
     """Represents a business sector."""
     __tablename__ = 'setores'

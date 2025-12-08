@@ -1,17 +1,31 @@
-{% set report_links = [
-    ("relatorio_empresas", "Empresas", "bi-building"),
-    ("relatorio_fiscal", "Fiscal", "bi-receipt-cutoff"),
-    ("relatorio_contabil", "Contábil", "bi-calculator"),
-    ("relatorio_tarefas", "Tarefas", "bi-list-check"),
-    ("relatorio_cursos", "Cursos", "bi-mortarboard"),
-    ("relatorio_usuarios", "Usuários", "bi-person-gear"),
-    ("relatorios_consultorias", "Consultorias", "bi-bar-chart")
+{% set raw_report_links = [
+    ("relatorio_empresas", "Empresas", "bi-building", "empresas"),
+    ("relatorio_fiscal", "Fiscal", "bi-receipt-cutoff", "fiscal"),
+    ("relatorio_contabil", "Contábil", "bi-calculator", "contabil"),
+    ("relatorio_tarefas", "Tarefas", "bi-list-check", "tarefas"),
+    ("relatorio_cursos", "Cursos", "bi-mortarboard", "cursos"),
+    ("relatorio_usuarios", "Usuários", "bi-person-gear", "usuarios"),
+    ("relatorios_consultorias", "Consultorias", "bi-bar-chart", "consultorias"),
 ] %}
+{% if current_user.is_master or current_user.role == 'admin' %}
+    {% set raw_report_links = [("report_permissions", "Permissões", "bi-shield-check", None)] + raw_report_links %}
+{% endif %}
+{% set ns = namespace(visible_links=[]) %}
+{% for endpoint, label, icon, code in raw_report_links %}
+    {% if code %}
+        {% set allowed = has_report_access(code) %}
+    {% else %}
+        {% set allowed = has_report_access() %}
+    {% endif %}
+    {% if allowed %}
+        {% set _ = ns.visible_links.append((endpoint, label, icon)) %}
+    {% endif %}
+{% endfor %}
 {% set active_endpoint = request.endpoint or "" %}
-{% set report_endpoints = report_links | map(attribute=0) | list %}
+{% set report_endpoints = ns.visible_links | map(attribute=0) | list %}
 {% set is_reports_section_active = active_endpoint in report_endpoints %}
 {% set collapse_target = collapse_id or "reportsMenu" %}
-{% set show_reports = has_report_access() %}
+{% set show_reports = ns.visible_links | length > 0 %}
 {% if show_reports %}
 <li class="nav-item nav-item--reports">
     <a
@@ -29,7 +43,7 @@
     </a>
     <div class="collapse nav-submenu-container{% if is_reports_section_active %} show{% endif %}" id="{{ collapse_target }}">
         <ul class="nav flex-column nav-submenu">
-            {% for endpoint, label, icon in report_links %}
+            {% for endpoint, label, icon in ns.visible_links %}
             <li class="nav-subitem">
                 <a
                     class="nav-sublink{% if active_endpoint == endpoint %} active{% endif %}"

@@ -55,6 +55,7 @@ from app.models.tables import (
     AccessLink,
     Course,
     CourseTag,
+    ReportPermission,
     DiretoriaEvent,
     DiretoriaAgreement,
     DiretoriaFeedback,
@@ -1100,22 +1101,74 @@ def admin_required(f):
     return decorated_function
 
 
+REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
+    "empresas": {"title": "Relatório de Empresas", "description": "Dados consolidados das empresas"},
+    "fiscal": {"title": "Relatório Fiscal", "description": "Indicadores e obrigações fiscais"},
+    "contabil": {"title": "Relatório Contábil", "description": "Visão contábil e controle de relatórios"},
+    "usuarios": {"title": "Relatório de Usuários", "description": "Gestão e estatísticas de usuários"},
+    "cursos": {"title": "Relatório de Cursos", "description": "Métricas do catálogo de treinamentos"},
+    "tarefas": {"title": "Relatório de Tarefas", "description": "Painel de tarefas e indicadores"},
+}
+
+
+def _get_report_permissions_for_code(report_code: str) -> list[ReportPermission]:
+    """Return stored permissions for a report code."""
+
+    return (
+        ReportPermission.query.filter(
+            ReportPermission.report_code == report_code
+        ).all()
+    )
+
+
 def has_report_access(report_code: str | None = None) -> bool:
     """
     Return True if current user can access the given report.
 
-    Rules:
-    - admin users always allowed
-    - tag "Administrativo" grants all reports
-    - tag "Relatórios" grants all reports
-    - tag "Relatórios:<code>" grants the specific report
+    Rules (in order):
+    - admin or master users always allowed
+    - if there are saved permissions for the report, only listed tags/users can acessar
+    - otherwise falls back to legacy tags (Administrativo, Relatórios, Relatórios:<code>)
     """
-    if current_user.role == "admin":
+    if current_user.role == "admin" or getattr(current_user, "is_master", False):
         return True
-    allowed_tags = {"administrativo", "relatórios"}
-    if report_code:
-        allowed_tags.add(f"relatórios:{report_code}".lower())
-    return any(tag.nome.lower() in allowed_tags for tag in current_user.tags)
+    if not current_user.is_authenticated:
+        return False
+    user_tag_ids = set(_get_accessible_tag_ids(current_user))
+
+    if report_code is None:
+        # Menu-level check: allow if user matches any stored permission across reports.
+        any_permissions = ReportPermission.query.all()
+        if any_permissions:
+            for permission in any_permissions:
+                if permission.user_id == current_user.id:
+                    return True
+                if permission.tag_id and permission.tag_id in user_tag_ids:
+                    return True
+            return False
+        # If no stored permissions exist anywhere, fall back to legacy tags for the menu.
+        return any(
+            (tag.nome or "").lower() in {"relatorios", "relatórios"}
+            for tag in current_user.tags
+        )
+
+    code = report_code or "index"
+    stored_permissions = _get_report_permissions_for_code(code)
+
+    if stored_permissions:
+        for permission in stored_permissions:
+            if permission.user_id == current_user.id:
+                return True
+            if permission.tag_id and permission.tag_id in user_tag_ids:
+                return True
+        return False
+
+    # Fallback legacy tags (removing o acesso global da tag Administrativo)
+    allowed_tags = {"relatorios", "relatórios"}
+    if code:
+        allowed_tags.add(f"relatórios:{code}".lower())
+        allowed_tags.add(f"relatorios:{code}".lower())
+    return any((tag.nome or "").lower() in allowed_tags for tag in current_user.tags)
 
 
 def report_access_required(report_code: str | None = None):
@@ -1135,6 +1188,68 @@ def report_access_required(report_code: str | None = None):
 
 
 _id_serializers: dict[str, URLSafeSerializer] = {}
+
+
+def _require_master_admin() -> None:
+    """Abort with 403 if current user is not admin or master."""
+
+    if current_user.role != "admin" and not getattr(current_user, "is_master", False):
+        abort(403)
+
+
+@app.route("/relatorios/permissoes", methods=["GET", "POST"])
+@login_required
+def report_permissions():
+    """Manage report access per tag for master/admin users."""
+
+    _require_master_admin()
+
+    tags = Tag.query.order_by(sa.func.lower(Tag.nome)).all()
+    existing_permissions = ReportPermission.query.filter(
+        ReportPermission.user_id.is_(None)
+    ).all()
+
+    permitted_by_report: dict[str, set[int]] = {
+        code: set() for code in REPORT_DEFINITIONS
+    }
+    for permission in existing_permissions:
+        if permission.tag_id is None:
+            continue
+        permitted_by_report.setdefault(permission.report_code, set()).add(
+            permission.tag_id
+        )
+
+    if request.method == "POST":
+        for code in REPORT_DEFINITIONS:
+            submitted_tag_ids: set[int] = set()
+            for raw in request.form.getlist(f"tags_{code}"):
+                try:
+                    submitted_tag_ids.add(int(raw))
+                except (TypeError, ValueError):
+                    continue
+
+            db.session.query(ReportPermission).filter(
+                ReportPermission.report_code == code,
+                ReportPermission.user_id.is_(None),
+            ).delete(synchronize_session=False)
+
+            for tag_id in submitted_tag_ids:
+                db.session.add(
+                    ReportPermission(report_code=code, tag_id=tag_id)
+                )
+
+            permitted_by_report[code] = submitted_tag_ids
+
+        db.session.commit()
+        flash("Permissões de relatórios atualizadas com sucesso.", "success")
+        return redirect(url_for("report_permissions"))
+
+    return render_template(
+        "admin/report_permissions.html",
+        tags=tags,
+        reports=REPORT_DEFINITIONS,
+        permitted_by_report=permitted_by_report,
+    )
 
 
 def _get_id_serializer(namespace: str = "default") -> URLSafeSerializer:
