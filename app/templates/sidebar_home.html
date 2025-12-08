@@ -169,7 +169,7 @@
         </li>
     </ul>
 </div>
-{% if current_user.role == 'admin' %}
+{% if current_user.role == 'admin' or has_report_access() %}
 <div class="nav-section">
     <div class="nav-section-title">RELATÓRIOS</div>
     <ul class="nav flex-column">

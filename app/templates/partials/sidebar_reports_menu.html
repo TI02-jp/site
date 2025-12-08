@@ -11,6 +11,8 @@
 {% set report_endpoints = report_links | map(attribute=0) | list %}
 {% set is_reports_section_active = active_endpoint in report_endpoints %}
 {% set collapse_target = collapse_id or "reportsMenu" %}
+{% set show_reports = has_report_access() %}
+{% if show_reports %}
 <li class="nav-item nav-item--reports">
     <a
         class="nav-link nav-link-toggle{% if is_reports_section_active %} active{% endif %}"
@@ -41,3 +43,4 @@
         </ul>
     </div>
 </li>
+{% endif %}
