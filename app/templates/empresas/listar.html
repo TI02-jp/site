@@ -28,20 +28,28 @@
 
     <!-- Barra de Pesquisa -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <form method="GET" class="d-flex">
-            <input type="text" name="q" class="form-control me-2" style="max-width: 300px;" placeholder="Buscar cliente" value="{{ search or '' }}">
+        <form method="GET" class="d-flex align-items-center flex-wrap gap-2">
+            <div class="input-group" style="max-width: 420px;">
+                <input type="text" name="q" class="form-control" placeholder="Buscar cliente" value="{{ search or '' }}">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            {% for trib in tributacao_filters %}
+            <input type="hidden" name="tributacao" value="{{ trib }}">
+            {% endfor %}
             <input type="hidden" name="sort" value="{{ sort }}">
             <input type="hidden" name="order" value="{{ order }}">
             <input type="hidden" name="show_inactive" value="{{ '1' if show_inactive else '0' }}">
-            <button class="btn btn-outline-secondary" type="submit">
-                <i class="bi bi-search"></i>
-            </button>
         </form>
 
         <form method="GET" class="d-flex align-items-center mb-0">
             <input type="hidden" name="q" value="{{ search or '' }}">
             <input type="hidden" name="sort" value="{{ sort }}">
             <input type="hidden" name="order" value="{{ order }}">
+            {% for trib in tributacao_filters %}
+            <input type="hidden" name="tributacao" value="{{ trib }}">
+            {% endfor %}
             <div class="form-check mb-0">
                 <input class="form-check-input" type="checkbox" id="showInactive"
                        name="show_inactive" value="1"
@@ -61,24 +69,64 @@
                         <tr>
                             <th class="codigo-col">
                                 Código
-                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='asc', show_inactive='1' if show_inactive else '0', page=pagination.page) }}" class="text-white ms-1" title="Código crescente">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='asc', show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.page) }}" class="text-white ms-1" title="Código crescente">
                                     <i class="bi bi-sort-numeric-down"></i>
                                 </a>
-                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='desc', show_inactive='1' if show_inactive else '0', page=pagination.page) }}" class="text-white" title="Código decrescente">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='codigo', order='desc', show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.page) }}" class="text-white" title="Código decrescente">
                                     <i class="bi bi-sort-numeric-up"></i>
                                 </a>
                             </th>
                             <th>
                                 Nome do Cliente
-                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc', show_inactive='1' if show_inactive else '0', page=pagination.page) }}" class="text-white ms-1" title="Nome A-Z">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='asc', show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.page) }}" class="text-white ms-1" title="Nome A-Z">
                                     <i class="bi bi-sort-alpha-down"></i>
                                 </a>
-                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='desc', show_inactive='1' if show_inactive else '0', page=pagination.page) }}" class="text-white" title="Nome Z-A">
+                                <a href="{{ url_for('listar_empresas', q=search, sort='nome', order='desc', show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.page) }}" class="text-white" title="Nome Z-A">
                                     <i class="bi bi-sort-alpha-up"></i>
                                 </a>
                             </th>
                             <th class="cnpj-col">CNPJ</th>
-                            <th class="tributacao-col">Tributação</th>
+                            <th class="tributacao-col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>Tributação</span>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button class="btn btn-icon-xs {% if tributacao_filters %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                type="button"
+                                                id="tributacaoFilterDropdown"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Filtrar por tributação">
+                                            <i class="bi {% if tributacao_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if tributacao_filters %}
+                                                <span class="badge bg-light text-dark ms-1">{{ tributacao_filters|length }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="tributacaoFilterDropdown" style="min-width: 240px;">
+                                            <form method="GET" class="tributacao-filter-form">
+                                                <input type="hidden" name="q" value="{{ search or '' }}">
+                                                <input type="hidden" name="sort" value="{{ sort }}">
+                                                <input type="hidden" name="order" value="{{ order }}">
+                                                {% if show_inactive %}
+                                                    <input type="hidden" name="show_inactive" value="1">
+                                                {% endif %}
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributação</p>
+                                                <div class="d-flex flex-column gap-1 mb-3" style="max-height: 220px; overflow-y: auto;">
+                                                    {% for trib in allowed_tributacoes %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="tributacao" id="tribFilter{{ loop.index }}" value="{{ trib }}" {% if trib in tributacao_filters %}checked{% endif %}>
+                                                        <label class="form-check-label" for="tribFilter{{ loop.index }}">{{ trib }}</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', clear_tributacao=1) }}">Limpar</a>
+                                                    <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
                             <th class="acao-col">Ações</th>
                         </tr>
                 </thead>
@@ -154,19 +202,19 @@
         <nav aria-label="Page navigation">
             <ul class="pagination mb-0">
                 <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', page=pagination.prev_num) }}">Anterior</a>
+                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.prev_num) }}">Anterior</a>
                 </li>
                 {% for p in pagination.iter_pages() %}
                     {% if p %}
                         <li class="page-item {% if p == pagination.page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', page=p) }}">{{ p }}</a>
+                            <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=p) }}">{{ p }}</a>
                         </li>
                     {% else %}
                         <li class="page-item disabled"><span class="page-link">…</span></li>
                     {% endif %}
                 {% endfor %}
                 <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', page=pagination.next_num) }}">Próximo</a>
+                    <a class="page-link" href="{{ url_for('listar_empresas', q=search, sort=sort, order=order, show_inactive='1' if show_inactive else '0', tributacao=tributacao_filters, page=pagination.next_num) }}">Próximo</a>
                 </li>
             </ul>
         </nav>
@@ -219,6 +267,35 @@ document.addEventListener("DOMContentLoaded", function () {
             element.textContent = formatCNPJ(cnpjText);
         }
     });
+
+    // Mantém dropdown de tributação aberto ao marcar checkboxes
+    const tribDropdownToggle = document.getElementById('tributacaoFilterDropdown');
+    if (tribDropdownToggle && bootstrap?.Dropdown) {
+        const tribDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(tribDropdownToggle, { autoClose: 'outside' });
+        const dropdownParent = tribDropdownToggle.closest('.dropdown');
+
+        if (dropdownParent) {
+            dropdownParent.addEventListener('hide.bs.dropdown', function (event) {
+                const clickTarget = event?.clickEvent?.target;
+                if (!clickTarget) return;
+
+                const insideForm = clickTarget.closest('.tributacao-filter-form');
+                const isApply = clickTarget.closest('.tributacao-filter-apply');
+                const isClear = clickTarget.closest('.tributacao-filter-clear');
+
+                if (insideForm && !isApply && !isClear) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // Evita propagação nos checkboxes para não fechar por engano
+        document.querySelectorAll('.tributacao-filter-form .form-check-input').forEach(function (input) {
+            input.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+            });
+        });
+    }
 });
 </script>
 {% endblock %}

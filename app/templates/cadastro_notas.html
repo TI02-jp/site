@@ -171,11 +171,11 @@
             </h1>
         </div>
         <form class="d-flex flex-wrap align-items-center gap-2 ms-auto" method="GET" action="{{ url_for('cadastro_notas') }}" style="min-width: 260px;">
-            <div class="input-group input-group-sm" style="min-width: 240px;">
+            <div class="input-group input-group-sm" style="min-width: 260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="text" class="form-control" name="q" placeholder="Pesquisar empresa" value="{{ search_term }}">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Buscar</button>
             </div>
-            <button class="btn btn-outline-primary btn-sm" type="submit">Buscar</button>
             {% if search_term %}
             <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('cadastro_notas') }}">Limpar</a>
             {% endif %}

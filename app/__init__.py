@@ -281,13 +281,17 @@ def _update_session_activity():
 @app.after_request
 def _set_security_headers(response):
     """Apply security-related HTTP headers to responses."""
+    allow_iframe_self = request.args.get("embed") == "1" and request.endpoint in {"visualizar_empresa"}
+    frame_ancestors = "'self'" if allow_iframe_self else "'none'"
+    x_frame_option = "SAMEORIGIN" if allow_iframe_self else "DENY"
+
     if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) == 'https':
         response.headers.setdefault(
             'Strict-Transport-Security',
             'max-age=31536000; includeSubDomains',
         )
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers['X-Frame-Options'] = x_frame_option
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
     response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
     response.headers.setdefault('X-XSS-Protection', '0')
@@ -303,12 +307,12 @@ def _set_security_headers(response):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.quilljs.com https://cdn.jsdelivr.net; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.quilljs.com https://cdn.plot.ly https://accounts.google.com https://apis.google.com; "
         "connect-src 'self' https://www.googleapis.com https://accounts.google.com; "
-        "frame-ancestors 'none'; "
+        f"frame-ancestors {frame_ancestors}; "
         "object-src 'none'; "
         "worker-src 'self' blob:; "
         "upgrade-insecure-requests"
     )
-    response.headers.setdefault('Content-Security-Policy', csp)
+    response.headers['Content-Security-Policy'] = csp
     return response
 
 # Importa rotas e modelos depois da criação do db
