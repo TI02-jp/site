@@ -19,6 +19,11 @@
                     <p class="text-muted mb-0">Visualize e exporte dados do sistema</p>
                 </div>
                 <div class="text-end">
+                    {% if current_user.is_master or current_user.role == 'admin' %}
+                    <a href="{{ url_for('report_permissions') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-shield-check me-2"></i>Permissões
+                    </a>
+                    {% endif %}
                     <small class="text-muted">
                         <i class="bi bi-calendar3 me-1"></i>
                         Última atualização: Hoje
@@ -31,6 +36,7 @@
     <!-- Cards de Relatórios -->
     <div class="row g-4 mb-5">
         <!-- Relatório de Empresas -->
+        {% if has_report_access('empresas') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header bg-primary text-white border-0">
@@ -61,8 +67,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Relatório Fiscal -->
+        {% if has_report_access('fiscal') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header bg-success text-white border-0">
@@ -93,8 +101,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Relatório Contábil -->
+        {% if has_report_access('contabil') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header bg-primary text-white border-0">
@@ -125,8 +135,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Relatório de Tarefas -->
+        {% if has_report_access('tarefas') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header bg-info text-white border-0">
@@ -157,8 +169,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Relatório de Cursos -->
+        {% if has_report_access('cursos') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header text-white border-0" style="background-color: #0f766e !important;">
@@ -189,6 +203,7 @@
                     </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Relatório de Departamento Pessoal -->
         <div class="col-lg-4 col-md-6">
@@ -223,6 +238,7 @@
         </div>
 
         <!-- Relatório de Usuários -->
+        {% if has_report_access('usuarios') %}
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">
                 <div class="card-header bg-primary text-white border-0">
@@ -253,6 +269,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Dashboards Gerenciais -->
         <div class="col-lg-4 col-md-6">

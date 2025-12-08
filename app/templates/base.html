@@ -242,6 +242,46 @@
         outline-offset: 2px;
       }
 
+      .session-user {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        width: 100%;
+        padding: 0;
+        margin-top: 0.2rem;
+        background: transparent;
+        color: #f5f7fa;
+      }
+
+      .session-user__avatar {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: inherit;
+        font-size: 0.75rem;
+      }
+
+      .session-user__details {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.35rem;
+        line-height: 1;
+      }
+
+      .session-user__label {
+        font-size: calc(var(--font-xs) - 0.08rem);
+        opacity: 0.72;
+      }
+
+      .session-user__name {
+        font-weight: 600;
+        font-size: calc(var(--font-sm) - 0.08rem);
+        word-break: break-word;
+      }
+
       .quick-action-btn--active {
         background: rgba(255, 255, 255, 0.12);
         box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
@@ -761,6 +801,17 @@
                         <i class="bi bi-power"></i>
                     </a>
                 </div>
+                {% if current_user.is_authenticated %}
+                <div class="session-user" title="Usuário da sessão">
+                    <div class="session-user__avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="session-user__details">
+                        <span class="session-user__label">Signed in as</span>
+                        <span class="session-user__name">{{ current_user.username or current_user.name }}</span>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="theme-toggle">
                     <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-pressed="false" title="Alternar tema">
                         <i id="themeToggleIcon" class="bi bi-moon-stars"></i>

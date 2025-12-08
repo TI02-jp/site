@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Permissões de Relatórios{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1 class="text-primary mb-1">
+                        <i class="bi bi-shield-lock me-2"></i>Permissões de Relatórios
+                    </h1>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('relatorios') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                    </a>
+                <button type="submit" form="report-permissions-form" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i>Salvar permissões
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form id="report-permissions-form" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+            {% for code, meta in reports.items() %}
+            <div class="col-xl-6 col-lg-6 col-md-12">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">{{ meta.title }}</h5>
+                            {% if meta.description %}
+                                <small class="text-muted">{{ meta.description }}</small>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary text-uppercase">{{ code }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if tags %}
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for tag in tags %}
+                                    {% set checkbox_id = "tag_" ~ code ~ "_" ~ tag.id %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="tags_{{ code }}" id="{{ checkbox_id }}" value="{{ tag.id }}"
+                                            {% if tag.id in permitted_by_report.get(code, []) %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ checkbox_id }}">{{ tag.nome }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Nenhuma tag cadastrada para vincular.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+{% endblock %}
