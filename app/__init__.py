@@ -116,6 +116,8 @@ app.config['NOTIFICATION_COUNT_CACHE_TIMEOUT'] = int(os.getenv('NOTIFICATION_COU
 app.config['SLOW_REQUEST_THRESHOLD_MS'] = float(os.getenv('SLOW_REQUEST_THRESHOLD_MS', '750'))
 app.config['MEETING_CALENDAR_PAST_DAYS'] = int(os.getenv('MEETING_CALENDAR_PAST_DAYS', '60'))
 app.config['MEETING_CALENDAR_FUTURE_DAYS'] = int(os.getenv('MEETING_CALENDAR_FUTURE_DAYS', str(365 * 3)))
+app.config['APP_VERSION'] = os.getenv('APP_VERSION')
+app.config['PWA_VERSION'] = os.getenv('PWA_VERSION')
 
 if not app.config['ENFORCE_HTTPS']:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -312,6 +314,7 @@ def _set_security_headers(response):
 # Importa rotas e modelos depois da criação do db
 from app.models import tables
 from app.controllers import routes, health
+routes.register_blueprints(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -323,6 +326,15 @@ def load_user(user_id):
 def inject_now():
     """Inject current UTC time into templates as ``now()``."""
     return {'now': lambda: datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)}
+
+
+@app.context_processor
+def inject_versions():
+    """Expose portal and PWA version identifiers to templates."""
+    return {
+        "app_version": app.config.get("APP_VERSION", "local"),
+        "pwa_version": app.config.get("PWA_VERSION", "local"),
+    }
 
 
 @app.template_filter('time_since')

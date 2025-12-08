@@ -14,6 +14,8 @@ from flask import (
     g,
     Response,
     stream_with_context,
+    Flask,
+    send_from_directory,
 )
 from functools import wraps
 from collections import Counter, deque, defaultdict
@@ -21,6 +23,7 @@ import unicodedata
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db, csrf, limiter
 from app.extensions.cache import cache, get_cache_timeout
+from app.extensions.task_queue import submit_io_task
 from app.utils.security import sanitize_html
 from app.utils.mailer import send_email, EmailDeliveryError
 from app.utils.permissions import is_user_admin
@@ -59,8 +62,6 @@ from app.models.tables import (
     NotaDebito,
     CadastroNota,
     NotaRecorrente,
-    Announcement,
-    AnnouncementAttachment,
     OperationalProcedure,
 )
 from app.forms import (
@@ -86,7 +87,6 @@ from app.forms import (
     AccessLinkForm,
     CourseForm,
     CourseTagForm,
-    AnnouncementForm,
     DiretoriaAcordoForm,
     DiretoriaFeedbackForm,
     OperationalProcedureForm,
@@ -170,7 +170,6 @@ EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
 PERSONAL_TAG_PREFIX = "__personal__"
 
 
-ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
 TASKS_UPLOAD_SUBDIR = os.path.join("uploads", "tasks")
 
 
@@ -211,6 +210,34 @@ EVENT_CATEGORY_LABELS = {
     "lanche": "Lanche",
     "outros": "Outros serviços",
 }
+
+
+def register_blueprints(flask_app: Flask) -> None:
+    """Register domain blueprints."""
+
+    from app.controllers.routes.announcements import announcements_bp
+
+    flask_app.register_blueprint(announcements_bp)
+
+    # Add legacy endpoint aliases without blueprint prefix to keep templates working.
+    for rule in list(flask_app.url_map.iter_rules()):
+        if not rule.endpoint.startswith("announcements."):
+            continue
+        legacy_endpoint = rule.endpoint.split(".", 1)[1]
+        if legacy_endpoint in flask_app.view_functions:
+            continue
+        view_func = flask_app.view_functions[rule.endpoint]
+        flask_app.add_url_rule(
+            rule.rule,
+            endpoint=legacy_endpoint,
+            view_func=view_func,
+            defaults=rule.defaults,
+            methods=rule.methods,
+            provide_automatic_options=False,
+        )
+
+
+
 
 
 def _normalize_photo_entry(value: str) -> str | None:
@@ -288,76 +315,6 @@ def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
         return None
 
     return os.path.join(current_app.root_path, safe_relative)
-
-
-def _remove_announcement_attachment(attachment_path: str | None) -> None:
-    """Delete an announcement attachment from disk if it exists."""
-
-    if not attachment_path or not has_request_context():
-        return
-
-    static_root = os.path.join(current_app.root_path, "static")
-    file_path = os.path.join(static_root, attachment_path)
-
-    try:
-        os.remove(file_path)
-    except FileNotFoundError:
-        return
-
-
-def _remove_announcement_attachments(paths: Iterable[str | None]) -> None:
-    """Remove multiple stored announcement attachments from disk."""
-
-    seen: set[str] = set()
-    for path in paths:
-        if not path:
-            continue
-        normalized = path.replace("\\", "/")
-        if normalized in seen:
-            continue
-        seen.add(normalized)
-        _remove_announcement_attachment(normalized)
-
-
-def _save_announcement_file(uploaded_file) -> dict[str, str | None]:
-    """Persist an uploaded file and return its storage metadata."""
-
-    original_name = secure_filename(uploaded_file.filename or "")
-    extension = os.path.splitext(original_name)[1].lower()
-    unique_name = f"{uuid4().hex}{extension}"
-
-    upload_directory = os.path.join(
-        current_app.root_path, "static", ANNOUNCEMENTS_UPLOAD_SUBDIR
-    )
-    os.makedirs(upload_directory, exist_ok=True)
-
-    stored_path = os.path.join(upload_directory, unique_name)
-    uploaded_file.save(stored_path)
-
-    relative_path = os.path.join(ANNOUNCEMENTS_UPLOAD_SUBDIR, unique_name).replace(
-        "\\", "/"
-    )
-    mime_type = uploaded_file.mimetype or guess_type(original_name)[0]
-
-    return {
-        "path": relative_path,
-        "name": original_name or None,
-        "mime_type": mime_type,
-    }
-
-
-def _normalize_announcement_content(raw_content: str | None) -> str:
-    """Sanitize announcement bodies and preserve line breaks for plain text."""
-
-    cleaned = sanitize_html(raw_content or "")
-    if not cleaned:
-        return ""
-
-    if not re.search(r"<[a-zA-Z/][^>]*>", cleaned):
-        normalized = cleaned.replace("\r\n", "\n").replace("\r", "\n")
-        return normalized.replace("\n", "<br>")
-
-    return cleaned
 
 
 def _save_task_file(uploaded_file) -> dict[str, str | None]:
@@ -676,6 +633,41 @@ _STATS_CACHE_KEY_PREFIX = "portal:stats:"
 _NOTIFICATION_COUNT_KEY_PREFIX = "portal:notifications:unread:"
 _NOTIFICATION_VERSION_KEY = "portal:notifications:version"
 
+@cache.memoize(timeout=get_cache_timeout("SETORES_CACHE_TIMEOUT", 300))
+def _get_setores_catalog() -> list[Setor]:
+    """Cached catalog of setores ordered by name."""
+    return Setor.query.order_by(Setor.nome).all()
+
+
+def _invalidate_setores_cache() -> None:
+    """Clear cached setores catalog."""
+    cache.delete_memoized(_get_setores_catalog)
+
+
+
+@cache.memoize(timeout=get_cache_timeout("COURSETAGS_CACHE_TIMEOUT", 600))
+def _get_course_tags_catalog() -> list[CourseTag]:
+    """Cached catalog of course tags ordered by name."""
+    return CourseTag.query.order_by(CourseTag.name.asc()).all()
+
+
+def _invalidate_course_tags_cache() -> None:
+    """Clear cached course tags catalog."""
+    cache.delete_memoized(_get_course_tags_catalog)
+
+
+@cache.memoize(timeout=get_cache_timeout("CONSULTORIAS_CACHE_TIMEOUT", 300))
+def _get_consultorias_catalog() -> list[Consultoria]:
+    """Cached catalog of consultorias ordered by name."""
+    return Consultoria.query.order_by(Consultoria.nome).all()
+
+
+def _invalidate_consultorias_cache() -> None:
+    """Clear cached consultorias catalog."""
+    cache.delete_memoized(_get_consultorias_catalog)
+
+
+
 
 
 def _get_stats_cache_timeout() -> int:
@@ -722,29 +714,47 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
     return stats
 
 
+@cache.memoize(timeout=get_cache_timeout("CONSULTORIAS_CACHE_TIMEOUT", 300))
+def _get_consultorias_catalog() -> list[Consultoria]:
+    """Cached catalog of consultorias ordered by name."""
+    return Consultoria.query.order_by(Consultoria.nome).all()
+
+
+def _invalidate_consultorias_cache() -> None:
+    """Clear cached consultorias catalog."""
+    cache.delete_memoized(_get_consultorias_catalog)
+
+
 def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
     """Retrieve unread notification count with centralized cache support."""
-    cache_key = _notification_cache_key(user_id)
     if allow_cache:
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return int(cached)
+        return _memoized_unread_notifications(user_id)
 
     unread = TaskNotification.query.filter(
         TaskNotification.user_id == user_id,
         TaskNotification.read_at.is_(None),
     ).count()
+    return int(unread)
 
-    cache.set(cache_key, int(unread), timeout=_get_notification_cache_timeout())
-    return unread
+
+
+@cache.memoize(timeout=get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60))
+def _memoized_unread_notifications(user_id: int) -> int:
+    """Memoized unread notification counter (keyed per user)."""
+    return int(
+        TaskNotification.query.filter(
+            TaskNotification.user_id == user_id,
+            TaskNotification.read_at.is_(None),
+        ).count()
+    )
 
 
 def _invalidate_notification_cache(user_id: Optional[int] = None) -> None:
     """Drop cached unread counts for a specific user or everyone."""
     if user_id is None:
-        _set_notification_version(_get_notification_version() + 1)
+        cache.delete_memoized(_memoized_unread_notifications)
         return
-    cache.delete(_notification_cache_key(user_id))
+    cache.delete_memoized(_memoized_unread_notifications, user_id)
 
 
 @app.context_processor
@@ -1320,368 +1330,6 @@ def home():
     with track_custom_span("template", "render_home"):
         return render_template("home.html")
 
-@app.route("/announcements", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def announcements():
-    """List internal announcements and allow admins to create new ones."""
-
-    form = AnnouncementForm()
-
-    search_term = (request.args.get("q") or "").strip()
-
-    base_query = Announcement.query
-
-    if search_term:
-        ilike_pattern = f"%{search_term}%"
-        base_query = base_query.filter(
-            or_(
-                Announcement.subject.ilike(ilike_pattern),
-                Announcement.content.ilike(ilike_pattern),
-            )
-        )
-
-    total_announcements = base_query.count()
-
-    announcements_query = (
-        base_query.options(
-            joinedload(Announcement.created_by),
-            joinedload(Announcement.attachments),
-        )
-        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
-    )
-
-    if search_term:
-        announcement_items = announcements_query.all()
-    else:
-        announcement_items = announcements_query.limit(6).all()
-
-    display_count = len(announcement_items)
-    history_count = max(total_announcements - 6, 0)
-    has_history = not search_term and history_count > 0
-
-    if request.method == "POST":
-        if current_user.role != "admin":
-            abort(403)
-
-        if form.validate_on_submit():
-            cleaned_content = _normalize_announcement_content(form.content.data)
-            announcement = Announcement(
-                date=form.date.data,
-                subject=form.subject.data,
-                content=cleaned_content,
-                created_by=current_user,
-            )
-
-            db.session.add(announcement)
-            db.session.flush()
-
-            uploaded_files = [
-                storage
-                for storage in (form.attachments.data or [])
-                if storage and storage.filename
-            ]
-
-            for uploaded_file in uploaded_files:
-                saved = _save_announcement_file(uploaded_file)
-                db.session.add(
-                    AnnouncementAttachment(
-                        announcement=announcement,
-                        file_path=saved["path"],
-                        original_name=saved["name"],
-                        mime_type=saved["mime_type"],
-                    )
-                )
-
-            db.session.flush()
-            announcement.sync_legacy_attachment_fields()
-
-            _broadcast_announcement_notification(announcement)
-            db.session.commit()
-
-            flash("Comunicado criado com sucesso.", "success")
-            return redirect(url_for("announcements"))
-
-        flash(
-            "Não foi possível criar o comunicado. Verifique os dados informados.",
-            "danger",
-        )
-
-    announcement_reads: dict[int, bool] = {}
-    read_rows = (
-        TaskNotification.query.with_entities(
-            TaskNotification.announcement_id, TaskNotification.read_at
-        )
-        .filter(
-            TaskNotification.user_id == current_user.id,
-            TaskNotification.announcement_id.isnot(None),
-        )
-        .all()
-    )
-
-    for announcement_id, read_at in read_rows:
-        if announcement_id is None:
-            continue
-        if read_at:
-            announcement_reads[announcement_id] = True
-        elif announcement_id not in announcement_reads:
-            announcement_reads[announcement_id] = False
-
-    edit_forms: dict[int, AnnouncementForm] = {}
-    if current_user.role == "admin":
-        for item in announcement_items:
-            edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
-            edit_form.date.data = item.date
-            edit_form.subject.data = item.subject
-            edit_form.content.data = item.content
-            edit_forms[item.id] = edit_form
-
-    return render_template(
-        "announcements.html",
-        form=form,
-        announcements=announcement_items,
-        edit_forms=edit_forms,
-        announcement_reads=announcement_reads,
-        search_term=search_term,
-        total_announcements=total_announcements,
-        display_count=display_count,
-        history_mode=False,
-        history_count=history_count,
-        has_history=has_history,
-        search_action_url=url_for("announcements"),
-        history_link_url=url_for("announcement_history"),
-        history_back_url=None,
-    )
-
-@app.route("/announcements/history", methods=["GET"])
-@login_required
-def announcement_history():
-    """Display the backlog of announcements that fall outside the main mural."""
-
-    search_term = (request.args.get("q") or "").strip()
-
-    recent_id_rows = (
-        Announcement.query.with_entities(Announcement.id)
-        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
-        .limit(6)
-        .all()
-    )
-    recent_ids = [row[0] for row in recent_id_rows]
-
-    base_query = Announcement.query
-
-    if recent_ids:
-        base_query = base_query.filter(Announcement.id.notin_(recent_ids))
-
-    if search_term:
-        ilike_pattern = f"%{search_term}%"
-        base_query = base_query.filter(
-            or_(
-                Announcement.subject.ilike(ilike_pattern),
-                Announcement.content.ilike(ilike_pattern),
-            )
-        )
-
-    total_history = base_query.count()
-
-    # Add pagination to limit memory usage with concurrent users
-    page = request.args.get("page", 1, type=int)
-    per_page = 50  # Show 50 announcements per page
-
-    announcements_query = (
-        base_query.options(
-            joinedload(Announcement.created_by),
-            joinedload(Announcement.attachments),
-        )
-        .order_by(Announcement.date.desc(), Announcement.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-    )
-
-    announcement_items = announcements_query.all()
-    display_count = len(announcement_items)
-    total_pages = (total_history + per_page - 1) // per_page  # ceiling division
-
-    announcement_reads: dict[int, bool] = {}
-    read_rows = (
-        TaskNotification.query.with_entities(
-            TaskNotification.announcement_id, TaskNotification.read_at
-        )
-        .filter(
-            TaskNotification.user_id == current_user.id,
-            TaskNotification.announcement_id.isnot(None),
-        )
-        .all()
-    )
-
-    for announcement_id, read_at in read_rows:
-        if announcement_id is None:
-            continue
-        if read_at:
-            announcement_reads[announcement_id] = True
-        elif announcement_id not in announcement_reads:
-            announcement_reads[announcement_id] = False
-
-    edit_forms: dict[int, AnnouncementForm] = {}
-    if current_user.role == "admin":
-        for item in announcement_items:
-            edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
-            edit_form.date.data = item.date
-            edit_form.subject.data = item.subject
-            edit_form.content.data = item.content
-            edit_forms[item.id] = edit_form
-
-    return render_template(
-        "announcements.html",
-        form=None,
-        announcements=announcement_items,
-        edit_forms=edit_forms,
-        announcement_reads=announcement_reads,
-        search_term=search_term,
-        total_announcements=total_history,
-        display_count=display_count,
-        history_mode=True,
-        history_count=total_history,
-        has_history=False,
-        search_action_url=url_for("announcement_history"),
-        history_link_url=None,
-        history_back_url=url_for("announcements"),
-        # Pagination variables
-        page=page,
-        per_page=per_page,
-        total_pages=total_pages,
-    )
-
-@app.route("/announcements/<int:announcement_id>/update", methods=["POST"])
-@login_required
-def update_announcement(announcement_id: int):
-    """Update an announcement's content and manage its attachments."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    announcement = (
-        Announcement.query.options(joinedload(Announcement.attachments))
-        .get_or_404(announcement_id)
-    )
-
-    form = AnnouncementForm(prefix=f"edit-{announcement_id}")
-
-    if form.validate_on_submit():
-        announcement.date = form.date.data
-        announcement.subject = form.subject.data
-        announcement.content = _normalize_announcement_content(form.content.data)
-
-        attachments_modified = False
-        remove_ids = {
-            int(attachment_id)
-            for attachment_id in request.form.getlist("remove_attachment_ids")
-            if attachment_id.isdigit()
-        }
-
-        if remove_ids:
-            attachments_to_remove = [
-                attachment
-                for attachment in announcement.attachments
-                if attachment.id in remove_ids
-            ]
-            for attachment in attachments_to_remove:
-                _remove_announcement_attachment(attachment.file_path)
-                db.session.delete(attachment)
-            attachments_modified = True
-
-        new_files = [
-            storage
-            for storage in (form.attachments.data or [])
-            if storage and storage.filename
-        ]
-
-        for uploaded_file in new_files:
-            saved = _save_announcement_file(uploaded_file)
-            db.session.add(
-                AnnouncementAttachment(
-                    announcement=announcement,
-                    file_path=saved["path"],
-                    original_name=saved["name"],
-                    mime_type=saved["mime_type"],
-                )
-            )
-        if new_files:
-            attachments_modified = True
-
-        if attachments_modified:
-            db.session.flush()
-            announcement.sync_legacy_attachment_fields()
-
-        db.session.commit()
-        flash("Comunicado atualizado com sucesso.", "success")
-        return redirect(url_for("announcements"))
-
-    flash(
-        "Não foi possível atualizar o comunicado. Verifique os dados informados.",
-        "danger",
-    )
-    return redirect(url_for("announcements"))
-
-@app.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
-@login_required
-def delete_announcement(announcement_id: int):
-    """Remove an existing announcement and its attachments."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    announcement = (
-        Announcement.query.options(joinedload(Announcement.attachments))
-        .get_or_404(announcement_id)
-    )
-
-    attachment_paths = [
-        attachment.file_path for attachment in announcement.attachments if attachment.file_path
-    ]
-    if announcement.attachment_path:
-        attachment_paths.append(announcement.attachment_path)
-
-    TaskNotification.query.filter_by(
-        announcement_id=announcement.id
-    ).delete(synchronize_session=False)
-    db.session.delete(announcement)
-    db.session.commit()
-
-    _remove_announcement_attachments(attachment_paths)
-
-    flash("Comunicado removido com sucesso.", "success")
-    return redirect(url_for("announcements"))
-
-@app.route("/announcements/<int:announcement_id>/read", methods=["POST"])
-@login_required
-def mark_announcement_read(announcement_id: int):
-    """Mark the current user's notification for an announcement as read."""
-
-    announcement = Announcement.query.get_or_404(announcement_id)
-
-    notifications = TaskNotification.query.filter(
-        TaskNotification.announcement_id == announcement.id,
-        TaskNotification.user_id == current_user.id,
-    ).all()
-
-    now = utc3_now()
-    updated = 0
-    already_read = False
-
-    for notification in notifications:
-        if notification.read_at:
-            already_read = True
-            continue
-        notification.read_at = now
-        updated += 1
-
-    db.session.commit()
-
-    read = bool(updated or already_read or not notifications)
-
-    return jsonify({"status": "ok", "read": read})
-
 @app.route("/diretoria/acordos", methods=["GET", "POST"])
 @login_required
 @meeting_only_access_check
@@ -1860,13 +1508,14 @@ def diretoria_acordos():
                             editor=current_user,
                             action_label=action_label,
                         )
-                        send_email(
+                        submit_io_task(
+                            send_email,
                             subject=f"[Diretoria JP] Acordo {active_agreement.title}",
                             html_body=email_html,
                             recipients=[recipient_email],
                         )
                         flash(
-                            f"{feedback_message} Notificação enviada por e-mail.",
+                            f"{feedback_message} Notificação enfileirada para envio por e-mail.",
                             "success",
                         )
                     except EmailDeliveryError as exc:
@@ -2099,13 +1748,14 @@ def diretoria_feedbacks():
                             editor=current_user,
                             action_label=action_label,
                         )
-                        send_email(
+                        submit_io_task(
+                            send_email,
                             subject=f"[Diretoria JP] Feedback {active_feedback.title}",
                             html_body=email_html,
                             recipients=[recipient_email],
                         )
                         flash(
-                            f"{feedback_message} Notificação enviada por e-mail.",
+                            f"{feedback_message} Notificação enfileirada para envio por e-mail.",
                             "success",
                         )
                     except EmailDeliveryError as exc:
@@ -2422,9 +2072,11 @@ def cursos():
     can_manage_courses = current_user.role == "admin"
 
     # Usar Tags de usuários no campo "Setores Participantes"
+    from app.services.cache_service import get_all_tags_cached
+
     sector_choices = [
         (tag.id, tag.nome)
-        for tag in Tag.query.order_by(Tag.nome.asc()).all()
+        for tag in get_all_tags_cached()
     ]
     participant_choices = [
         (user.id, user.name)
@@ -2432,7 +2084,7 @@ def cursos():
     ]
     form.sectors.choices = sector_choices
     form.participants.choices = participant_choices
-    course_tags = CourseTag.query.order_by(CourseTag.name.asc()).all()
+    course_tags = _get_course_tags_catalog()
     tag_choices = [(tag.id, tag.name) for tag in course_tags]
     form.tags.choices = tag_choices
 
@@ -2467,6 +2119,7 @@ def cursos():
                 new_tag = CourseTag(name=tag_name)
                 db.session.add(new_tag)
                 db.session.commit()
+                _invalidate_course_tags_cache()
                 flash("Tag de curso criada com sucesso!", "success")
                 return redirect(url_for("cursos"))
         else:
@@ -3145,55 +2798,6 @@ def _get_user_notification_items(limit: int | None = 20):
     return items, unread_total
 
 
-def _broadcast_announcement_notification(announcement: Announcement) -> None:
-    """Emit a notification about ``announcement`` for every active user."""
-
-    active_user_rows = (
-        User.query.with_entities(User.id)
-        .filter(User.ativo.is_(True))
-        .all()
-    )
-    if not active_user_rows:
-        return
-
-    now = utc3_now()
-    subject = (announcement.subject or "").strip()
-    if subject:
-        base_message = f"Novo comunicado: {subject}"
-    else:
-        base_message = "Novo comunicado publicado."
-    truncated_message = base_message[:255]
-
-    notifications = [
-        TaskNotification(
-            user_id=user_id,
-            announcement_id=announcement.id,
-            task_id=None,
-            type=NotificationType.ANNOUNCEMENT.value,
-            message=truncated_message,
-            created_at=now,
-        )
-        for (user_id,) in active_user_rows
-    ]
-
-    db.session.bulk_save_objects(notifications)
-    _invalidate_notification_cache()
-
-    # Broadcast notification to all affected users' SSE streams
-    from app.services.realtime import get_broadcaster
-    try:
-        broadcaster = get_broadcaster()
-        for user_id, in active_user_rows:
-            broadcaster.broadcast(
-                event_type="notification:created",
-                data={"user_id": user_id, "announcement_id": announcement.id},
-                user_id=user_id,
-                scope="notifications",
-            )
-    except Exception:
-        # Don't fail if broadcast fails
-        pass
-
 @app.route("/notifications", methods=["GET"])
 @login_required
 def list_notifications():
@@ -3516,7 +3120,7 @@ def consultorias():
     """List registered consultorias and handle modal-based creation and edition."""
 
     consultoria_form = _configure_consultoria_form(ConsultoriaForm(prefix="consultoria"))
-    consultorias = Consultoria.query.order_by(Consultoria.nome).all()
+    consultorias = _get_consultorias_catalog()
     open_consultoria_modal = request.args.get("open_consultoria_modal") in ("1", "true", "True")
     editing_consultoria: Consultoria | None = None
 
@@ -3564,6 +3168,7 @@ def consultorias():
                     consultoria = Consultoria(nome=nome, usuario=usuario, senha=senha)
                     db.session.add(consultoria)
                     db.session.commit()
+                    _invalidate_consultorias_cache()
                     flash("Consultoria registrada com sucesso.", "success")
                     return redirect(url_for("consultorias"))
         elif form_name == "consultoria_update":
@@ -3601,6 +3206,7 @@ def consultorias():
                     editing_consultoria.usuario = usuario
                     editing_consultoria.senha = senha
                     db.session.commit()
+                    _invalidate_consultorias_cache()
                     flash("Consultoria atualizada com sucesso.", "success")
                     return redirect(url_for("consultorias"))
 
@@ -4196,6 +3802,7 @@ def cadastro_consultoria():
             )
             db.session.add(consultoria)
             db.session.commit()
+            _invalidate_consultorias_cache()
             flash("Consultoria registrada com sucesso.", "success")
             return redirect(url_for("consultorias"))
         for errors in form.errors.values():
@@ -4230,6 +3837,7 @@ def editar_consultoria_cadastro(id):
                 consultoria.usuario = usuario
                 consultoria.senha = senha
                 db.session.commit()
+                _invalidate_consultorias_cache()
                 flash("Consultoria atualizada com sucesso.", "success")
                 return redirect(url_for("consultorias"))
         for errors in form.errors.values():
@@ -4250,7 +3858,7 @@ def setores():
 
     setor_form = SetorForm(prefix="setor")
     setor_form.submit.label.text = "Salvar"
-    setores = Setor.query.order_by(Setor.nome).all()
+    setores = _get_setores_catalog()
     open_setor_modal = request.args.get("open_setor_modal") in ("1", "true", "True")
     editing_setor: Setor | None = None
 
@@ -4289,6 +3897,7 @@ def setores():
                     setor = Setor(nome=nome)
                     db.session.add(setor)
                     db.session.commit()
+                    _invalidate_setores_cache()
                     flash("Setor registrado com sucesso.", "success")
                     return redirect(url_for("setores"))
         elif form_name == "setor_update":
@@ -4318,6 +3927,7 @@ def setores():
                 else:
                     editing_setor.nome = nome
                     db.session.commit()
+                    _invalidate_setores_cache()
                     flash("Setor atualizado com sucesso.", "success")
                     return redirect(url_for("setores"))
 
@@ -5277,7 +4887,9 @@ def notas_totalizador():
 @login_required
 def tags():
     """List registered tags."""
-    tags = Tag.query.all()
+    from app.services.cache_service import get_all_tags_cached
+
+    tags = get_all_tags_cached()
     return render_template("tags.html", tags=tags)
 
 @app.route("/tags/cadastro", methods=["GET", "POST"])
@@ -5289,6 +4901,9 @@ def cadastro_tag():
         tag = Tag(nome=form.nome.data)
         db.session.add(tag)
         db.session.commit()
+        from app.services.cache_service import invalidate_tag_cache
+
+        invalidate_tag_cache()
         flash("Tag registrada com sucesso.", "success")
         return redirect(url_for("tags"))
     return render_template("cadastro_tag.html", form=form)
@@ -5311,6 +4926,9 @@ def editar_tag(id):
                 else:
                     tag.nome = new_name
                     db.session.commit()
+                    from app.services.cache_service import invalidate_tag_cache
+
+                    invalidate_tag_cache()
                     flash("Tag atualizada com sucesso!", "success")
             else:
                 flash("Informe um nome válido para a tag.", "warning")
@@ -5453,8 +5071,8 @@ def nova_inclusao():
     return render_template(
         "nova_inclusao.html",
         users=users,
-        setores=Setor.query.order_by(Setor.nome).all(),
-        consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+        setores=_get_setores_catalog(),
+        consultorias=_get_consultorias_catalog(),
     )
 
 @app.route("/consultorias/inclusoes/<codigo>")
@@ -5498,8 +5116,8 @@ def editar_consultoria(codigo: str):
     return render_template(
         "nova_inclusao.html",
         users=users,
-        setores=Setor.query.order_by(Setor.nome).all(),
-        consultorias=Consultoria.query.order_by(Consultoria.nome).all(),
+        setores=_get_setores_catalog(),
+        consultorias=_get_consultorias_catalog(),
         inclusao=inclusao,
     )
 
@@ -10588,8 +10206,29 @@ def delete_task(task_id):
     return jsonify({"success": True})
 
 
+## ============================================================================
+## PWA SUPPORT
+## ============================================================================
+
+@app.route("/offline")
+def offline_page():
+    """Lightweight offline fallback page for the PWA."""
+    response = render_template("offline.html")
+    return response, 200, {"Cache-Control": "no-store"}
+
+
+@app.route("/sw.js")
+@csrf.exempt
+def service_worker():
+    """Serve the service worker with root scope so it can control the whole app."""
+    response = send_from_directory(app.static_folder, "sw.js")
+    response.headers["Content-Type"] = "application/javascript"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
 
 ## ============================================================================
 ## HEALTH CHECK ENDPOINTS - For monitoring and load balancers
 ## ============================================================================
-

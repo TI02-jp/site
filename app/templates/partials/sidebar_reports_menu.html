@@ -15,6 +15,7 @@
     <a
         class="nav-link nav-link-toggle{% if is_reports_section_active %} active{% endif %}"
         data-bs-toggle="collapse"
+        data-sidebar-toggle="{{ collapse_target }}"
         href="#{{ collapse_target }}"
         role="button"
         aria-expanded="{{ 'true' if is_reports_section_active else 'false' }}"
