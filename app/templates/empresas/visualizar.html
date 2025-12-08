@@ -2,40 +2,6 @@
 
 {% block title %}{{ empresa.nome_empresa|upper }} - DETALHES COMPLETOS{% endblock %}
 
-{% if embed_mode %}
-{% block extra_css %}
-<style>
-body, html {
-    background: #ffffff;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-.wrapper,
-.main-content {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-.sidebar,
-.sidebar-toggle,
-.sidebar-overlay,
-header,
-footer,
-.breadcrumb,
-.flash-container,
-.notification-toast-container,
-.navbar {
-    display: none !important;
-}
-.container-fluid {
-    padding-top: 1rem;
-}
-.embed-hide {
-    display: none !important;
-}
-</style>
-{% endblock %}
-{% endif %}
-
 {% block sidebar_nav %}
 {% include 'sidebar_home.html' %}
 {% endblock %}
@@ -48,15 +14,6 @@ footer,
 {% endblock %}
 
 {% block content %}
-{% if embed_mode %}
-<div class="text-end mb-2">
-    <span class="badge bg-light text-muted">Visualização embutida</span>
-    <a href="{{ url_for('visualizar_empresa', empresa_id=empresa_token) }}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">
-        Abrir em nova aba
-    </a>
-    <hr class="my-2">
-</div>
-{% endif %}
 {% macro render_responsavel_badge(value) %}
     {% set value_str = (value or '') | string %}
     {% set nome_resp = responsaveis_map.get(value_str) if responsaveis_map else None %}
@@ -115,18 +72,16 @@ footer,
                     </h1>
                     <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
                 </div>
-                {% if not embed_mode %}
                 <div class="text-end">
                     <div class="badge bg-dept-blue-subtle px-3 py-2 mb-2">
                         Código: {{ empresa.codigo_empresa or 'N/A' }}
                     </div>
                     <div class="d-block">
-                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom btn-sm">
+                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom btn-sm embed-hide">
                             <i class="bi bi-pencil me-1"></i>Editar
                         </a>
                     </div>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -942,8 +897,7 @@ footer,
     </div>
     {% endif %}
 
-    {% if not embed_mode %}
-    <div class="row my-5">
+    <div class="row my-5 embed-hide">
         <div class="col-12">
             <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <a href="{{ url_for('listar_empresas') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Voltar para Lista</a>
@@ -952,7 +906,6 @@ footer,
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
 
 <!-- Modal para exibição ampliada de imagens -->

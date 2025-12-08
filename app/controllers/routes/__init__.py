@@ -1100,6 +1100,19 @@ def admin_required(f):
     return decorated_function
 
 
+def report_access_required(f):
+    """Decorator that allows admin or tag 'Administrativo' to access reports."""
+
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role == "admin" or user_has_tag("Administrativo"):
+            return f(*args, **kwargs)
+        abort(403)
+
+    return decorated_function
+
+
 _id_serializers: dict[str, URLSafeSerializer] = {}
 
 
@@ -5600,16 +5613,21 @@ def editar_empresa(empresa_id: str | None = None, id: int | None = None):
 
 @app.route("/empresa/visualizar/<empresa_id>")
 @app.route("/empresa/visualizar/<int:id>")
+@app.route("/empresa/visualizar_embed/<empresa_id>")
+@app.route("/empresa/visualizar_embed/<int:id>")
 @login_required
 def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     """Display a detailed view of a company."""
     from types import SimpleNamespace
 
-    embed_mode = request.args.get("embed") == "1"
+    embed_mode = request.args.get("hide_actions") == "1"
     raw_empresa = empresa_id if empresa_id is not None else id
     resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
     empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
     empresa = Empresa.query.get_or_404(resolved_empresa_id)
+
+    if request.endpoint == "visualizar_empresa_embed" and not embed_mode:
+        return redirect(url_for("visualizar_empresa", empresa_id=empresa_token))
 
     # display para regime de lançamento
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
@@ -6293,13 +6311,13 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     return redirect(url_for("visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 @app.route("/relatorios")
-@admin_required
+@report_access_required
 def relatorios():
     """Render the reports landing page."""
     return render_template("admin/relatorios.html")
 
 @app.route("/relatorio_empresas")
-@admin_required
+@report_access_required
 def relatorio_empresas():
     """Display aggregated company statistics."""
     empresas = Empresa.query.with_entities(
@@ -6369,7 +6387,7 @@ def relatorio_empresas():
     )
 
 @app.route("/relatorio_fiscal")
-@admin_required
+@report_access_required
 def relatorio_fiscal():
     """Show summary charts for the fiscal department."""
     departamentos = (
@@ -6450,7 +6468,7 @@ def relatorio_fiscal():
     )
 
 @app.route("/relatorio_contabil")
-@admin_required
+@report_access_required
 def relatorio_contabil():
     """Show summary charts for the accounting department."""
     departamentos = (
@@ -6558,7 +6576,7 @@ def relatorio_contabil():
     )
 
 @app.route("/relatorio_usuarios")
-@admin_required
+@report_access_required
 def relatorio_usuarios():
     """Visualize user counts by role and status."""
     users = User.query.with_entities(
@@ -6592,7 +6610,7 @@ def relatorio_usuarios():
     )
 
 @app.route("/relatorio_cursos")
-@admin_required
+@report_access_required
 def relatorio_cursos():
     """Show aggregated metrics for the internal course catalog."""
     records = get_courses_overview()
@@ -6796,7 +6814,7 @@ def relatorio_cursos():
 
 
 @app.route("/relatorio_tarefas")
-@admin_required
+@report_access_required
 def relatorio_tarefas():
     """Expose tactical dashboards about the global task workload."""
     today = date.today()
