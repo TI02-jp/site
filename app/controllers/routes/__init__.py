@@ -1,4 +1,40 @@
-﻿"""Flask route handlers for the web application."""
+﻿"""
+Handlers de rotas Flask para a aplicacao web JP Contabil Portal.
+
+Este modulo contem as rotas principais da aplicacao. Durante a refatoracao,
+as rotas estao sendo migradas para blueprints separados em:
+    app/controllers/routes/blueprints/
+
+ROTAS JA MIGRADAS (em blueprints/):
+    - /ping, /offline, /sw.js -> blueprints/health.py
+    - /upload_image, /upload_file -> blueprints/uploads.py
+    - /tags/* -> blueprints/tags.py
+    - /procedimentos/* -> blueprints/procedimentos.py
+    - /acessos/* -> blueprints/acessos.py
+
+ROTAS PENDENTES DE MIGRACAO:
+    - Autenticacao: /login, /logout, OAuth
+    - Cursos: /cursos
+    - Consultorias: /consultorias/*, /setores/*
+    - Calendario: /calendario-colaboradores
+    - Diretoria: /diretoria/*
+    - Notificacoes: /notifications/*
+    - Notas: /notas-debito/*
+    - Reunioes: /sala-reunioes/*
+    - Relatorios: /relatorios/*
+    - Usuarios: /users/*
+    - Tarefas: /tarefas/*
+    - Empresas: /empresas/*
+
+ARQUIVOS AUXILIARES CRIADOS:
+    - _base.py: Helpers e constantes compartilhados
+    - _decorators.py: Decorators de autorizacao
+    - _error_handlers.py: Tratamento centralizado de erros
+    - _validators.py: Validacoes de upload
+
+Autor: Refatoracao automatizada
+Data: 2024
+"""
 
 from flask import (
     render_template,
@@ -214,13 +250,38 @@ EVENT_CATEGORY_LABELS = {
 
 
 def register_blueprints(flask_app: Flask) -> None:
-    """Register domain blueprints."""
+    """
+    Registra todos os blueprints da aplicacao.
 
+    Esta funcao e chamada durante a inicializacao da aplicacao e registra:
+    - Blueprints existentes (announcements, api)
+    - Novos blueprints refatorados (health, uploads, tags, procedimentos, acessos)
+
+    Os blueprints novos sao registrados sem url_prefix para manter
+    compatibilidade com templates existentes.
+
+    Args:
+        flask_app: Instancia da aplicacao Flask.
+    """
+    # =========================================================================
+    # BLUEPRINTS EXISTENTES
+    # =========================================================================
     from app.controllers.routes.announcements import announcements_bp
+    from app.controllers.routes.api import api_bp
 
     flask_app.register_blueprint(announcements_bp)
+    flask_app.register_blueprint(api_bp)
 
-    # Add legacy endpoint aliases without blueprint prefix to keep templates working.
+    # =========================================================================
+    # NOVOS BLUEPRINTS REFATORADOS
+    # =========================================================================
+    from app.controllers.routes.blueprints import register_all_blueprints
+    register_all_blueprints(flask_app)
+
+    # =========================================================================
+    # ALIASES LEGADOS PARA COMPATIBILIDADE
+    # =========================================================================
+    # Adiciona endpoints sem prefixo de blueprint para manter templates funcionando
     for rule in list(flask_app.url_map.iter_rules()):
         if not rule.endpoint.startswith("announcements."):
             continue
@@ -646,15 +707,12 @@ def _invalidate_setores_cache() -> None:
 
 
 
-@cache.memoize(timeout=get_cache_timeout("COURSETAGS_CACHE_TIMEOUT", 600))
-def _get_course_tags_catalog() -> list[CourseTag]:
-    """Cached catalog of course tags ordered by name."""
-    return CourseTag.query.order_by(CourseTag.name.asc()).all()
-
-
-def _invalidate_course_tags_cache() -> None:
-    """Clear cached course tags catalog."""
-    cache.delete_memoized(_get_course_tags_catalog)
+# =============================================================================
+# FUNCOES MIGRADAS PARA blueprints/cursos.py (2024-12)
+# =============================================================================
+# _get_course_tags_catalog() - Migrado para blueprints/cursos.py
+# _invalidate_course_tags_cache() - Migrado para blueprints/cursos.py
+# =============================================================================
 
 
 @cache.memoize(timeout=get_cache_timeout("CONSULTORIAS_CACHE_TIMEOUT", 300))
@@ -713,17 +771,6 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
 
     cache.set(cache_key, dict(stats), timeout=_get_stats_cache_timeout())
     return stats
-
-
-@cache.memoize(timeout=get_cache_timeout("CONSULTORIAS_CACHE_TIMEOUT", 300))
-def _get_consultorias_catalog() -> list[Consultoria]:
-    """Cached catalog of consultorias ordered by name."""
-    return Consultoria.query.order_by(Consultoria.nome).all()
-
-
-def _invalidate_consultorias_cache() -> None:
-    """Clear cached consultorias catalog."""
-    cache.delete_memoized(_get_consultorias_catalog)
 
 
 def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
@@ -969,123 +1016,20 @@ def normalize_contatos(contatos):
         contato["meios"].append({"tipo": tipo, "endereco": endereco})
     return list(grouped.values())
 
-@app.route("/upload_image", methods=["POST"])
-@login_required
-def upload_image():
-    """Handle image uploads from the WYSIWYG editor."""
-    from app.utils.audit import log_user_action, ActionType, ResourceType
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/uploads.py
+# =============================================================================
+# @app.route("/upload_image", methods=["POST"])
+# @login_required
+# def upload_image():
+#     """Migrado para blueprints/uploads.py"""
+#     pass
 
-    if "image" not in request.files:
-        return jsonify({"error": "Nenhuma imagem enviada"}), 400
-
-    file = request.files["image"]
-    if not file.filename:
-        return jsonify({"error": "Nome de arquivo vazio"}), 400
-
-    if not allowed_file(file.filename) or not is_safe_image_upload(file):
-        return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
-
-    filename = secure_filename(file.filename)
-    file_size = _get_file_size_bytes(file)
-    soft_limit_mb = current_app.config.get("WYSIWYG_UPLOAD_SOFT_LIMIT_MB")
-    if soft_limit_mb and file_size > soft_limit_mb * 1024 * 1024:
-        current_app.logger.warning(
-            "Upload de imagem excedeu limite orientativo: %s (%.2f MB)",
-            filename,
-            file_size / (1024 * 1024),
-        )
-    unique_name = f"{uuid4().hex}_{filename}"
-    upload_folder = os.path.join(current_app.root_path, "static", "uploads")
-    file_path = os.path.join(upload_folder, unique_name)
-
-    try:
-        os.makedirs(upload_folder, exist_ok=True)
-        file.save(file_path)
-        file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
-
-        # Log file upload
-        log_user_action(
-            action_type=ActionType.UPLOAD,
-            resource_type=ResourceType.FILE,
-            action_description=f'Fez upload de imagem {filename}',
-            new_values={
-                'original_filename': filename,
-                'saved_filename': unique_name,
-                'file_size_bytes': file_size,
-                'file_type': 'image',
-                'file_url': file_url,
-            }
-        )
-
-        return jsonify({"image_url": file_url})
-    except Exception as exc:
-        current_app.logger.exception("Falha ao salvar upload de imagem", exc_info=exc)
-        return jsonify({"error": "Erro no servidor ao salvar arquivo"}), 500
-
-@app.route("/upload_file", methods=["POST"])
-@login_required
-def upload_file():
-    """Handle file uploads (images + PDFs) from the WYSIWYG editor."""
-    from app.utils.audit import log_user_action, ActionType, ResourceType
-
-    if "file" not in request.files:
-        return jsonify({"error": "Nenhum arquivo enviado"}), 400
-
-    file = request.files["file"]
-    if not file.filename:
-        return jsonify({"error": "Nome de arquivo vazio"}), 400
-
-    if not allowed_file_with_pdf(file.filename):
-        return jsonify({"error": "Extensao de arquivo nao permitida"}), 400
-
-    is_pdf = file.filename.lower().endswith(".pdf")
-    if is_pdf:
-        if not is_safe_pdf_upload(file):
-            return jsonify({"error": "PDF invalido ou corrompido"}), 400
-    else:
-        if not is_safe_image_upload(file):
-            return jsonify({"error": "Imagem invalida ou nao permitida"}), 400
-
-    filename = secure_filename(file.filename)
-    file_size = _get_file_size_bytes(file)
-    soft_limit_mb = current_app.config.get("WYSIWYG_UPLOAD_SOFT_LIMIT_MB")
-    if soft_limit_mb and file_size > soft_limit_mb * 1024 * 1024:
-        current_app.logger.warning(
-            "Upload de arquivo excedeu limite orientativo: %s (%.2f MB)",
-            filename,
-            file_size / (1024 * 1024),
-        )
-    unique_name = f"{uuid4().hex}_{filename}"
-    upload_folder = os.path.join(current_app.root_path, "static", "uploads")
-    file_path = os.path.join(upload_folder, unique_name)
-
-    try:
-        os.makedirs(upload_folder, exist_ok=True)
-        file.save(file_path)
-        file_url = url_for("static", filename=f"uploads/{unique_name}", _external=True)
-
-        # Log file upload
-        log_user_action(
-            action_type=ActionType.UPLOAD,
-            resource_type=ResourceType.FILE,
-            action_description=f'Fez upload de arquivo {filename}',
-            new_values={
-                'original_filename': filename,
-                'saved_filename': unique_name,
-                'file_size_bytes': file_size,
-                'file_type': 'pdf' if is_pdf else 'image',
-                'file_url': file_url,
-            }
-        )
-
-        return jsonify({
-            "file_url": file_url,
-            "is_pdf": is_pdf,
-            "filename": filename,
-        })
-    except Exception as exc:
-        current_app.logger.exception("Falha ao salvar upload de arquivo", exc_info=exc)
-        return jsonify({"error": "Erro no servidor ao salvar arquivo"}), 500
+# @app.route("/upload_file", methods=["POST"])
+# @login_required
+# def upload_file():
+#     """Migrado para blueprints/uploads.py"""
+#     pass
 
 
 def admin_required(f):
@@ -2215,602 +2159,53 @@ def diretoria_eventos_excluir(event_id: int):
 
     return redirect(url_for("diretoria_eventos_lista"))
 
-@app.route("/cursos", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def cursos():
-    """Display the curated catalog of internal courses."""
-
-    form = CourseForm()
-    tag_form = CourseTagForm(prefix="tag")
-    can_manage_courses = current_user.role == "admin"
-
-    # Usar Tags de usuários no campo "Setores Participantes"
-    from app.services.cache_service import get_all_tags_cached
-
-    sector_choices = [
-        (tag.id, tag.nome)
-        for tag in get_all_tags_cached()
-    ]
-    participant_choices = [
-        (user.id, user.name)
-        for user in User.query.filter_by(ativo=True).order_by(User.name.asc()).all()
-    ]
-    form.sectors.choices = sector_choices
-    form.participants.choices = participant_choices
-    course_tags = _get_course_tags_catalog()
-    tag_choices = [(tag.id, tag.name) for tag in course_tags]
-    form.tags.choices = tag_choices
-
-    sector_lookup = {value: label for value, label in sector_choices}
-    participant_lookup = {value: label for value, label in participant_choices}
-    tag_lookup = {tag.id: tag for tag in course_tags}
-
-    # Criar mapeamento de usuários para suas tags (IDs)
-    users_with_tags = User.query.filter_by(ativo=True).options(db.joinedload(User.tags)).all()
-    user_tags_map = {
-        user.id: [tag.id for tag in user.tags]
-        for user in users_with_tags
-    }
-
-    course_id_raw = (form.course_id.data or "").strip()
-    is_tag_submission = request.method == "POST" and "tag-submit" in request.form
-
-    if is_tag_submission:
-        if not can_manage_courses:
-            flash("Apenas administradores podem gerenciar as tags de cursos.", "danger")
-            return redirect(url_for("cursos"))
-
-        if tag_form.validate_on_submit():
-            tag_name = tag_form.name.data or ""
-            existing_tag = db.session.execute(
-                sa.select(CourseTag).where(sa.func.lower(CourseTag.name) == sa.func.lower(tag_name))
-            ).scalar_one_or_none()
-            if existing_tag:
-                tag_form.name.errors.append("Já existe uma tag de curso com esse nome.")
-                flash("Já existe uma tag de curso com esse nome.", "warning")
-            else:
-                new_tag = CourseTag(name=tag_name)
-                db.session.add(new_tag)
-                db.session.commit()
-                _invalidate_course_tags_cache()
-                flash("Tag de curso criada com sucesso!", "success")
-                return redirect(url_for("cursos"))
-        else:
-            flash(
-                "Não foi possível adicionar a tag. Verifique o nome informado e tente novamente.",
-                "danger",
-            )
-
-    if not is_tag_submission:
-        if request.method == "POST" and not can_manage_courses:
-            flash("Apenas administradores podem cadastrar ou editar cursos.", "danger")
-            return redirect(url_for("cursos"))
-
-        if request.method == "POST" and form.submit_delete.data:
-            if not course_id_raw:
-                flash("Selecione um curso para excluir.", "danger")
-                return redirect(url_for("cursos"))
-
-            try:
-                course_id = int(course_id_raw)
-            except ValueError:
-                flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
-                return redirect(url_for("cursos"))
-
-            existing_course_id = db.session.execute(
-                sa.select(Course.id).where(Course.id == course_id)
-            ).scalar_one_or_none()
-
-            if existing_course_id is None:
-                flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
-                return redirect(url_for("cursos"))
-
-            linked_meetings = Reuniao.query.filter_by(course_id=course_id).all()
-            for meeting in linked_meetings:
-                if not delete_meeting(meeting):
-                    flash(
-                        "Não foi possível remover a reunião vinculada no calendário. Tente novamente em alguns instantes.",
-                        "danger",
-                    )
-                    return redirect(url_for("cursos"))
-
-            db.session.execute(sa.delete(Course).where(Course.id == course_id))
-            db.session.commit()
-            if linked_meetings:
-                flash(
-                    "Curso e reuniões associadas excluídos com sucesso!",
-                    "success",
-                )
-            else:
-                flash("Curso excluído com sucesso!", "success")
-            return redirect(url_for("cursos"))
-
-        if form.validate_on_submit():
-            course_id: int | None = None
-            if course_id_raw:
-                try:
-                    course_id = int(course_id_raw)
-                except ValueError:
-                    course_id = None
-
-            selected_sector_names = [
-                sector_lookup[sector_id]
-                for sector_id in form.sectors.data
-                if sector_id in sector_lookup
-            ]
-            selected_participant_names = [
-                participant_lookup[user_id]
-                for user_id in form.participants.data
-                if user_id in participant_lookup
-            ]
-            selected_tags = [
-                tag_lookup[tag_id]
-                for tag_id in form.tags.data
-                if tag_id in tag_lookup
-            ]
-
-            # Validação: verificar se setores e participantes não estão vazios
-            if not selected_sector_names:
-                flash("Selecione ao menos um setor válido para o curso.", "danger")
-                return redirect(url_for("cursos"))
-
-            if not selected_participant_names:
-                flash("Selecione ao menos um participante válido para o curso.", "danger")
-                return redirect(url_for("cursos"))
-
-            should_add_to_calendar = bool(form.submit_add_to_calendar.data)
-            meeting_query_params: dict[str, Any] = {}
-            if should_add_to_calendar:
-                meeting_query_params = {"course_calendar": "1"}
-                name_value = (form.name.data or "").strip()
-                if name_value:
-                    meeting_query_params["subject"] = name_value
-                observation_value = (form.observation.data or "").strip()
-                if observation_value:
-                    meeting_query_params["description"] = observation_value
-                if form.start_date.data:
-                    meeting_query_params["date"] = form.start_date.data.isoformat()
-                if form.schedule_start.data:
-                    meeting_query_params["start"] = form.schedule_start.data.strftime("%H:%M")
-                if form.schedule_end.data:
-                    meeting_query_params["end"] = form.schedule_end.data.strftime("%H:%M")
-                participant_ids = [str(user_id) for user_id in form.participants.data]
-                if participant_ids:
-                    meeting_query_params["participants"] = participant_ids
-
-            success_message = ""
-            if course_id is not None:
-                course_obj = db.session.get(Course, course_id)
-
-                if course_obj is None:
-                    flash("O curso selecionado não foi encontrado. Tente novamente.", "danger")
-                    return redirect(url_for("cursos"))
-
-                course_obj.name = form.name.data.strip()
-                course_obj.instructor = form.instructor.data.strip()
-                course_obj.sectors = ", ".join(selected_sector_names)
-                course_obj.participants = ", ".join(selected_participant_names)
-                course_obj.workload = form.workload.data
-                course_obj.start_date = form.start_date.data
-                course_obj.schedule_start = form.schedule_start.data
-                course_obj.schedule_end = form.schedule_end.data
-                course_obj.completion_date = form.completion_date.data
-                course_obj.status = form.status.data
-                course_obj.observation = (form.observation.data or "").strip() or None
-                course_obj.tags = selected_tags
-                db.session.commit()
-                success_message = "Curso atualizado com sucesso!"
-            else:
-                course = Course(
-                    name=form.name.data.strip(),
-                    instructor=form.instructor.data.strip(),
-                    sectors=", ".join(selected_sector_names),
-                    participants=", ".join(selected_participant_names),
-                    workload=form.workload.data,
-                    start_date=form.start_date.data,
-                    schedule_start=form.schedule_start.data,
-                    schedule_end=form.schedule_end.data,
-                    completion_date=form.completion_date.data,
-                    status=form.status.data,
-                    observation=(form.observation.data or "").strip() or None,
-                    tags=selected_tags,
-                )
-                db.session.add(course)
-                db.session.commit()
-                course_id = course.id
-                success_message = "Curso cadastrado com sucesso!"
-            if success_message:
-                flash(success_message, "success")
-            if (
-                should_add_to_calendar
-                and meeting_query_params.get("subject")
-                and meeting_query_params.get("date")
-            ):
-                if course_id is not None:
-                    meeting_query_params["course_id"] = str(course_id)
-                return redirect(url_for("sala_reunioes", **meeting_query_params))
-            return redirect(url_for("cursos"))
-
-        elif request.method == "POST":
-            flash(
-                "Não foi possível salvar o curso. Verifique os campos destacados e tente novamente.",
-                "danger",
-            )
-
-    courses = get_courses_overview()
-    status_counts = Counter(course.status for course in courses)
-    status_classes = {
-        CourseStatus.COMPLETED: "status-pill--completed",
-        CourseStatus.PLANNED: "status-pill--planned",
-        CourseStatus.DELAYED: "status-pill--delayed",
-        CourseStatus.POSTPONED: "status-pill--postponed",
-        CourseStatus.CANCELLED: "status-pill--cancelled",
-    }
-    return render_template(
-        "cursos.html",
-        courses=courses,
-        status_counts=status_counts,
-        status_classes=status_classes,
-        CourseStatus=CourseStatus,
-        form=form,
-        tag_form=tag_form,
-        course_tags=course_tags,
-        editing_course_id=course_id_raw,
-        can_manage_courses=can_manage_courses,
-        user_tags_map=user_tags_map,
-    )
-
-
-def _build_acessos_context(
-    form: "AccessLinkForm | None" = None,
-    *,
-    open_modal: bool = False,
-    page: int = 1,
-):
-    """Return template data for the access hub with alphabetical pagination."""
-
-    per_page = 30
-    columns_count = 3
-    column_capacity = per_page // columns_count
-
-    base_query = AccessLink.query.order_by(
-        sa.func.lower(AccessLink.label), AccessLink.label
-    )
-    total_links = base_query.count()
-
-    if total_links:
-        total_pages = ceil(total_links / per_page)
-        page = max(1, min(page, total_pages))
-        paginated_links = (
-            base_query.offset((page - 1) * per_page).limit(per_page).all()
-        )
-    else:
-        total_pages = 1
-        page = 1
-        paginated_links = []
-
-    columns = [
-        paginated_links[i * column_capacity : (i + 1) * column_capacity]
-        for i in range(columns_count)
-    ]
-    while len(columns) < columns_count:
-        columns.append([])
-
-    pagination = {
-        "current_page": page,
-        "total_pages": total_pages,
-        "has_previous": page > 1,
-        "has_next": page < total_pages,
-        "pages": list(range(1, total_pages + 1)),
-        "per_page": per_page,
-        "total_items": total_links,
-    }
-
-    return {
-        "form": form,
-        "open_modal": open_modal,
-        "link_columns": columns,
-        "pagination": pagination,
-        "total_links": total_links,
-        "per_page": per_page,
-    }
-
-@app.route("/acessos")
-@login_required
-@meeting_only_access_check
-def acessos():
-    """Display the hub with the available access categories and saved shortcuts."""
-
-    modal_type = request.args.get("modal")
-    open_modal = modal_type in ("novo", "editar")
-    preselected_category = request.args.get("category")
-    editing_link_id = request.args.get("link_id", type=int)
-
-    try:
-        page = int(request.args.get("page", 1))
-    except (TypeError, ValueError):
-        page = 1
-    if page < 1:
-        page = 1
-
-    form: AccessLinkForm | None = None
-    editing_link = None
-
-    if current_user.role == "admin":
-        form = AccessLinkForm()
-        form.category.choices = _access_category_choices()
-
-        # Se está editando, preenche o formulário com os dados existentes
-        if modal_type == "editar" and editing_link_id:
-            editing_link = AccessLink.query.get_or_404(editing_link_id)
-            form.category.data = editing_link.category
-            form.label.data = editing_link.label
-            form.url.data = editing_link.url
-            form.description.data = editing_link.description
-        # Se está criando novo e tem categoria pré-selecionada
-        elif (
-            preselected_category
-            and preselected_category in ACESSOS_CATEGORIES
-            and not form.category.data
-        ):
-            form.category.data = preselected_category
-
-    context = _build_acessos_context(form=form, open_modal=open_modal, page=page)
-    context["editing_link"] = editing_link
-    context["modal_type"] = modal_type
-    return render_template("acessos.html", **context)
-
-
-def _access_category_choices() -> list[tuple[str, str]]:
-    """Return available categories formatted for WTForms choice fields."""
-
-    return [
-        (slug, data["title"])
-        for slug, data in ACESSOS_CATEGORIES.items()
-    ]
-
-
-def _handle_access_shortcut_submission(form: "AccessLinkForm"):
-    """Persist a shortcut when valid or re-render the listing with errors."""
-
-    if form.validate_on_submit():
-        novo_link = AccessLink(
-            category=form.category.data,
-            label=form.label.data.strip(),
-            url=form.url.data.strip(),
-            description=(form.description.data or "").strip() or None,
-            created_by=current_user,
-        )
-        db.session.add(novo_link)
-        db.session.commit()
-        flash("Novo atalho criado com sucesso!", "success")
-        return redirect(url_for("acessos"))
-
-    context = _build_acessos_context(form=form, open_modal=True)
-    return render_template("acessos.html", **context)
-
-@app.route("/acessos/novo", methods=["GET", "POST"])
-@login_required
-def acessos_novo():
-    """Display and process the form to create a new shortcut for any category."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    if request.method == "GET":
-        return redirect(url_for("acessos", modal="novo"))
-
-    form = AccessLinkForm()
-    form.category.choices = _access_category_choices()
-    return _handle_access_shortcut_submission(form)
-
-@app.route("/acessos/<categoria_slug>")
-@login_required
-def acessos_categoria(categoria_slug: str):
-    """Legacy endpoint kept for compatibility; redirects to the main listing."""
-
-    if categoria_slug.lower() not in ACESSOS_CATEGORIES:
-        abort(404)
-
-    return redirect(url_for("acessos"))
-
-@app.route("/acessos/<categoria_slug>/novo", methods=["GET", "POST"])
-@login_required
-def acessos_categoria_novo(categoria_slug: str):
-    """Display and process the form to create a new shortcut within a category."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    categoria_slug = categoria_slug.lower()
-    categoria = ACESSOS_CATEGORIES.get(categoria_slug)
-    if not categoria:
-        abort(404)
-
-    if request.method == "GET":
-        return redirect(
-            url_for("acessos", modal="novo", category=categoria_slug)
-        )
-
-    form = AccessLinkForm()
-    form.category.choices = _access_category_choices()
-    if not form.category.data:
-        form.category.data = categoria_slug
-    return _handle_access_shortcut_submission(form)
-
-@app.route("/acessos/<int:link_id>/editar", methods=["GET", "POST"])
-@login_required
-def acessos_editar(link_id: int):
-    """Edit an existing access shortcut."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    link = AccessLink.query.get_or_404(link_id)
-
-    if request.method == "GET":
-        return redirect(url_for("acessos", modal="editar", link_id=link_id))
-
-    form = AccessLinkForm()
-    form.category.choices = _access_category_choices()
-
-    if form.validate_on_submit():
-        link.category = form.category.data
-        link.label = form.label.data.strip()
-        link.url = form.url.data.strip()
-        link.description = (form.description.data or "").strip() or None
-        db.session.commit()
-        flash("Atalho atualizado com sucesso!", "success")
-        return redirect(url_for("acessos"))
-
-    context = _build_acessos_context(form=form, open_modal=True)
-    context["editing_link"] = link
-    return render_template("acessos.html", **context)
-
-@app.route("/acessos/<int:link_id>/excluir", methods=["POST"])
-@login_required
-@csrf.exempt
-def acessos_excluir(link_id: int):
-    """Delete an existing access shortcut."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    link = AccessLink.query.get_or_404(link_id)
-    label = link.label
-    db.session.delete(link)
-    db.session.commit()
-    flash(f'Atalho "{label}" excluído com sucesso!', "success")
-    return redirect(url_for("acessos"))
-
-@app.route("/procedimentos", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def procedimentos_operacionais():
-    """Lista e permite criação de procedimentos operacionais."""
-
-    form = OperationalProcedureForm()
-    search_term = (request.args.get("q") or "").strip()
-
-    query = OperationalProcedure.query
-    if search_term:
-        pattern = f"%{search_term}%"
-        query = query.filter(
-            sa.or_(
-                OperationalProcedure.title.ilike(pattern),
-                OperationalProcedure.descricao.ilike(pattern),
-            )
-        )
-
-    procedures = query.order_by(OperationalProcedure.updated_at.desc()).all()
-
-    if request.method == "POST":
-        if form.validate_on_submit():
-            proc = OperationalProcedure(
-                title=form.title.data,
-                descricao=sanitize_html(form.descricao.data or "") or None,
-                created_by_id=current_user.id,
-            )
-            db.session.add(proc)
-            db.session.commit()
-            flash("Procedimento criado com sucesso.", "success")
-            return redirect(url_for("procedimentos_operacionais"))
-        flash("Não foi possível criar o procedimento. Corrija os erros do formulário.", "danger")
-
-    return render_template(
-        "procedimentos.html",
-        form=form,
-        procedures=procedures,
-        search_term=search_term,
-    )
-
-@app.route("/procedimentos/<int:proc_id>")
-@login_required
-def procedimentos_operacionais_redirect(proc_id: int):
-    """Compatibilidade: redireciona para a visualização dedicada."""
-    return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc_id))
-
-@app.route("/procedimentos/<int:proc_id>/visualizar")
-@login_required
-def procedimentos_operacionais_ver(proc_id: int):
-    """Exibe somente a visualização do procedimento."""
-    proc = OperationalProcedure.query.get_or_404(proc_id)
-    return render_template("procedimento_view.html", procedure=proc)
-
-@app.route("/procedimentos/<int:proc_id>/json")
-@login_required
-def procedimentos_operacionais_json(proc_id: int):
-    """Retorna dados do procedimento em JSON para modal."""
-    proc = OperationalProcedure.query.get_or_404(proc_id)
-    return jsonify({
-        "id": proc.id,
-        "title": proc.title,
-        "descricao": proc.descricao or "",
-        "updated_at": proc.updated_at.strftime('%d/%m/%Y às %H:%M') if proc.updated_at else None
-    })
-
-@app.route("/procedimentos/<int:proc_id>/editar", methods=["GET", "POST"])
-@login_required
-def procedimentos_operacionais_editar(proc_id: int):
-    """Página de edição do procedimento (apenas admin)."""
-    if current_user.role != "admin":
-        abort(403)
-
-    proc = OperationalProcedure.query.get_or_404(proc_id)
-    form = OperationalProcedureForm()
-    if request.method == "GET":
-        form.title.data = proc.title
-        form.descricao.data = proc.descricao or ""
-        return render_template("procedimento_edit.html", procedure=proc, form=form)
-
-    if form.validate_on_submit():
-        proc.title = form.title.data
-        proc.descricao = sanitize_html(form.descricao.data or "") or None
-        db.session.commit()
-        flash("Procedimento atualizado com sucesso.", "success")
-        return redirect(url_for("procedimentos_operacionais_ver", proc_id=proc.id))
-
-    flash("Não foi possível atualizar. Verifique os campos.", "danger")
-    return redirect(url_for("procedimentos_operacionais_editar", proc_id=proc.id))
-
-@app.route("/procedimentos/<int:proc_id>/excluir", methods=["POST"])
-@login_required
-def procedimentos_operacionais_excluir(proc_id: int):
-    """Remove um procedimento (apenas admin)."""
-
-    if current_user.role != "admin":
-        abort(403)
-
-    proc = OperationalProcedure.query.get_or_404(proc_id)
-    db.session.delete(proc)
-    db.session.commit()
-    flash("Procedimento excluído com sucesso.", "success")
-    return redirect(url_for("procedimentos_operacionais"))
-
-@app.route("/procedimentos/search")
-@login_required
-def procedimentos_search():
-    """Retorna procedimentos por título para menções (JSON)."""
-    q = (request.args.get("q") or "").strip()
-    query = OperationalProcedure.query
-    if q:
-        pattern = f"%{q}%"
-        query = query.filter(OperationalProcedure.title.ilike(pattern))
-    results = query.order_by(OperationalProcedure.updated_at.desc()).limit(10).all()
-    return jsonify([
-        {"id": p.id, "title": p.title, "url": url_for("procedimentos_operacionais_ver", proc_id=p.id)}
-        for p in results
-    ])
-
-@app.route("/ping")
-@limiter.exempt  # Health check endpoint - don't rate limit to avoid false positive errors
-def ping():
-    """Lightweight endpoint to keep the session active without hitting the ORM."""
-    if "_user_id" not in session:
-        return ("", 401)
-    session.modified = True
-    return ("", 204)
+# =============================================================================
+# ROTA MIGRADA PARA blueprints/cursos.py (2024-12)
+# =============================================================================
+# @app.route("/cursos") - Migrado para blueprints/cursos.py
+# =============================================================================
+
+
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/acessos.py (2024-12)
+# =============================================================================
+# def _build_acessos_context(form, *, open_modal=False, page=1):
+#     """Migrado para blueprints/acessos.py"""
+#
+# def _access_category_choices():
+#     """Migrado para blueprints/acessos.py"""
+#
+# def _handle_access_shortcut_submission(form):
+#     """Migrado para blueprints/acessos.py"""
+#
+# @app.route("/acessos") - Migrado para blueprints/acessos.py
+# @app.route("/acessos/novo") - Migrado para blueprints/acessos.py
+# @app.route("/acessos/<categoria_slug>") - Migrado para blueprints/acessos.py
+# @app.route("/acessos/<categoria_slug>/novo") - Migrado para blueprints/acessos.py
+# @app.route("/acessos/<int:link_id>/editar") - Migrado para blueprints/acessos.py
+# @app.route("/acessos/<int:link_id>/excluir") - Migrado para blueprints/acessos.py
+# =============================================================================
+
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/procedimentos.py (2024-12)
+# =============================================================================
+# @app.route("/procedimentos") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/<int:proc_id>") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/<int:proc_id>/visualizar") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/<int:proc_id>/json") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/<int:proc_id>/editar") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/<int:proc_id>/excluir") - Migrado para blueprints/procedimentos.py
+# @app.route("/procedimentos/search") - Migrado para blueprints/procedimentos.py
+# =============================================================================
+
+# =============================================================================
+# ROTA MIGRADA PARA blueprints/health.py
+# =============================================================================
+# @app.route("/ping")
+# @limiter.exempt
+# def ping():
+#     """Migrado para blueprints/health.py"""
+#     pass
 
 
 def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
@@ -3267,110 +2662,11 @@ def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
     form.senha.render_kw = render_kw
     return form
 
-@app.route("/consultorias", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def consultorias():
-    """List registered consultorias and handle modal-based creation and edition."""
-
-    consultoria_form = _configure_consultoria_form(ConsultoriaForm(prefix="consultoria"))
-    consultorias = _get_consultorias_catalog()
-    open_consultoria_modal = request.args.get("open_consultoria_modal") in ("1", "true", "True")
-    editing_consultoria: Consultoria | None = None
-
-    if request.method == "GET":
-        edit_id_raw = request.args.get("edit_consultoria_id")
-        if edit_id_raw:
-            try:
-                edit_id = int(edit_id_raw)
-            except (TypeError, ValueError):
-                abort(404)
-            editing_consultoria = Consultoria.query.get_or_404(edit_id)
-            if current_user.role != "admin":
-                abort(403)
-            consultoria_form = _configure_consultoria_form(
-                ConsultoriaForm(prefix="consultoria", obj=editing_consultoria)
-            )
-            open_consultoria_modal = True
-
-    if request.method == "POST":
-        form_name = request.form.get("form_name")
-        if form_name == "consultoria_create":
-            open_consultoria_modal = True
-            if current_user.role != "admin":
-                abort(403)
-            if consultoria_form.validate_on_submit():
-                nome = (consultoria_form.nome.data or "").strip()
-                usuario = (consultoria_form.usuario.data or "").strip()
-                senha = (consultoria_form.senha.data or "").strip()
-                consultoria_form.nome.data = nome
-                consultoria_form.usuario.data = usuario
-                consultoria_form.senha.data = senha
-                duplicate = (
-                    Consultoria.query.filter(
-                        db.func.lower(Consultoria.nome) == nome.lower()
-                    ).first()
-                    if nome
-                    else None
-                )
-                if duplicate:
-                    consultoria_form.nome.errors.append(
-                        "Já existe uma consultoria com esse nome."
-                    )
-                    flash("Já existe uma consultoria com esse nome.", "warning")
-                else:
-                    consultoria = Consultoria(nome=nome, usuario=usuario, senha=senha)
-                    db.session.add(consultoria)
-                    db.session.commit()
-                    _invalidate_consultorias_cache()
-                    flash("Consultoria registrada com sucesso.", "success")
-                    return redirect(url_for("consultorias"))
-        elif form_name == "consultoria_update":
-            open_consultoria_modal = True
-            if current_user.role != "admin":
-                abort(403)
-            consultoria_id_raw = request.form.get("consultoria_id")
-            try:
-                consultoria_id = int(consultoria_id_raw)
-            except (TypeError, ValueError):
-                abort(400)
-            editing_consultoria = Consultoria.query.get_or_404(consultoria_id)
-            if consultoria_form.validate_on_submit():
-                nome = (consultoria_form.nome.data or "").strip()
-                usuario = (consultoria_form.usuario.data or "").strip()
-                senha = (consultoria_form.senha.data or "").strip()
-                consultoria_form.nome.data = nome
-                consultoria_form.usuario.data = usuario
-                consultoria_form.senha.data = senha
-                duplicate = (
-                    Consultoria.query.filter(
-                        db.func.lower(Consultoria.nome) == nome.lower(),
-                        Consultoria.id != editing_consultoria.id,
-                    ).first()
-                    if nome
-                    else None
-                )
-                if duplicate:
-                    consultoria_form.nome.errors.append(
-                        "Já existe uma consultoria com esse nome."
-                    )
-                    flash("Já existe uma consultoria com esse nome.", "warning")
-                else:
-                    editing_consultoria.nome = nome
-                    editing_consultoria.usuario = usuario
-                    editing_consultoria.senha = senha
-                    db.session.commit()
-                    _invalidate_consultorias_cache()
-                    flash("Consultoria atualizada com sucesso.", "success")
-                    return redirect(url_for("consultorias"))
-
-    return render_template(
-        "consultorias.html",
-        consultorias=consultorias,
-        consultoria_form=consultoria_form,
-        open_consultoria_modal=open_consultoria_modal,
-        editing_consultoria=editing_consultoria,
-    )
+# =============================================================================
+# ROTA MIGRADA PARA blueprints/consultorias.py (2024-12)
+# =============================================================================
+# @app.route("/consultorias") - Migrado para blueprints/consultorias.py
+# =============================================================================
 
 @app.route("/calendario-colaboradores", methods=["GET", "POST"])
 @login_required
@@ -3941,220 +3237,15 @@ def delete_reuniao(meeting_id):
         flash("Não foi possível remover o evento do Google Calendar.", "danger")
     return redirect(url_for("sala_reunioes"))
 
-@app.route("/consultorias/cadastro", methods=["GET", "POST"])
-@admin_required
-def cadastro_consultoria():
-    """Preserve legacy route by redirecting to the modal experience."""
-
-    if request.method == "POST":
-        form = ConsultoriaForm()
-        if form.validate_on_submit():
-            consultoria = Consultoria(
-                nome=(form.nome.data or "").strip(),
-                usuario=(form.usuario.data or "").strip(),
-                senha=(form.senha.data or "").strip(),
-            )
-            db.session.add(consultoria)
-            db.session.commit()
-            _invalidate_consultorias_cache()
-            flash("Consultoria registrada com sucesso.", "success")
-            return redirect(url_for("consultorias"))
-        for errors in form.errors.values():
-            for error in errors:
-                flash(error, "warning")
-    return redirect(url_for("consultorias", open_consultoria_modal="1"))
-
-@app.route("/consultorias/editar/<int:id>", methods=["GET", "POST"])
-@admin_required
-def editar_consultoria_cadastro(id):
-    """Maintain legacy edit endpoint by redirecting into the modal flow."""
-
-    consultoria = Consultoria.query.get_or_404(id)
-    if request.method == "POST":
-        form = ConsultoriaForm()
-        if form.validate_on_submit():
-            nome = (form.nome.data or "").strip()
-            usuario = (form.usuario.data or "").strip()
-            senha = (form.senha.data or "").strip()
-            duplicate = (
-                Consultoria.query.filter(
-                    db.func.lower(Consultoria.nome) == nome.lower(),
-                    Consultoria.id != consultoria.id,
-                ).first()
-                if nome
-                else None
-            )
-            if duplicate:
-                flash("Já existe uma consultoria com esse nome.", "warning")
-            else:
-                consultoria.nome = nome
-                consultoria.usuario = usuario
-                consultoria.senha = senha
-                db.session.commit()
-                _invalidate_consultorias_cache()
-                flash("Consultoria atualizada com sucesso.", "success")
-                return redirect(url_for("consultorias"))
-        for errors in form.errors.values():
-            for error in errors:
-                flash(error, "warning")
-    return redirect(
-        url_for(
-            "consultorias",
-            open_consultoria_modal="1",
-            edit_consultoria_id=str(consultoria.id),
-        )
-    )
-
-@app.route("/consultorias/setores", methods=["GET", "POST"])
-@login_required
-def setores():
-    """List registered setores and handle modal-based creation and edition."""
-
-    setor_form = SetorForm(prefix="setor")
-    setor_form.submit.label.text = "Salvar"
-    setores = _get_setores_catalog()
-    open_setor_modal = request.args.get("open_setor_modal") in ("1", "true", "True")
-    editing_setor: Setor | None = None
-
-    if request.method == "GET":
-        edit_id_raw = request.args.get("edit_setor_id")
-        if edit_id_raw:
-            try:
-                edit_id = int(edit_id_raw)
-            except (TypeError, ValueError):
-                abort(404)
-            editing_setor = Setor.query.get_or_404(edit_id)
-            if current_user.role != "admin":
-                abort(403)
-            setor_form = SetorForm(prefix="setor", obj=editing_setor)
-            setor_form.submit.label.text = "Salvar"
-            open_setor_modal = True
-
-    if request.method == "POST":
-        form_name = request.form.get("form_name")
-        if form_name == "setor_create":
-            open_setor_modal = True
-            if current_user.role != "admin":
-                abort(403)
-            if setor_form.validate_on_submit():
-                nome = (setor_form.nome.data or "").strip()
-                setor_form.nome.data = nome
-                duplicate = (
-                    Setor.query.filter(db.func.lower(Setor.nome) == nome.lower()).first()
-                    if nome
-                    else None
-                )
-                if duplicate:
-                    setor_form.nome.errors.append("Já existe um setor com esse nome.")
-                    flash("Já existe um setor com esse nome.", "warning")
-                else:
-                    setor = Setor(nome=nome)
-                    db.session.add(setor)
-                    db.session.commit()
-                    _invalidate_setores_cache()
-                    flash("Setor registrado com sucesso.", "success")
-                    return redirect(url_for("setores"))
-        elif form_name == "setor_update":
-            open_setor_modal = True
-            if current_user.role != "admin":
-                abort(403)
-            setor_id_raw = request.form.get("setor_id")
-            try:
-                setor_id = int(setor_id_raw)
-            except (TypeError, ValueError):
-                abort(400)
-            editing_setor = Setor.query.get_or_404(setor_id)
-            if setor_form.validate_on_submit():
-                nome = (setor_form.nome.data or "").strip()
-                setor_form.nome.data = nome
-                duplicate = (
-                    Setor.query.filter(
-                        db.func.lower(Setor.nome) == nome.lower(),
-                        Setor.id != editing_setor.id,
-                    ).first()
-                    if nome
-                    else None
-                )
-                if duplicate:
-                    setor_form.nome.errors.append("Já existe um setor com esse nome.")
-                    flash("Já existe um setor com esse nome.", "warning")
-                else:
-                    editing_setor.nome = nome
-                    db.session.commit()
-                    _invalidate_setores_cache()
-                    flash("Setor atualizado com sucesso.", "success")
-                    return redirect(url_for("setores"))
-
-    return render_template(
-        "setores.html",
-        setores=setores,
-        setor_form=setor_form,
-        open_setor_modal=open_setor_modal,
-        editing_setor=editing_setor,
-    )
-
-@app.route("/consultorias/setores/cadastro", methods=["GET", "POST"])
-@admin_required
-def cadastro_setor():
-    """Maintain legacy setor creation route by redirecting to the modal UI."""
-
-    if request.method == "POST":
-        form = SetorForm()
-        if form.validate_on_submit():
-            nome = (form.nome.data or "").strip()
-            duplicate = (
-                Setor.query.filter(db.func.lower(Setor.nome) == nome.lower()).first()
-                if nome
-                else None
-            )
-            if duplicate:
-                flash("Já existe um setor com esse nome.", "warning")
-            else:
-                setor = Setor(nome=nome)
-                db.session.add(setor)
-                db.session.commit()
-                flash("Setor registrado com sucesso.", "success")
-                return redirect(url_for("setores"))
-        for errors in form.errors.values():
-            for error in errors:
-                flash(error, "warning")
-    return redirect(url_for("setores", open_setor_modal="1"))
-
-@app.route("/consultorias/setores/editar/<int:id>", methods=["GET", "POST"])
-@admin_required
-def editar_setor(id):
-    """Keep legacy setor edit endpoint by redirecting into the modal flow."""
-
-    setor = Setor.query.get_or_404(id)
-    if request.method == "POST":
-        form = SetorForm()
-        if form.validate_on_submit():
-            nome = (form.nome.data or "").strip()
-            duplicate = (
-                Setor.query.filter(
-                    db.func.lower(Setor.nome) == nome.lower(),
-                    Setor.id != setor.id,
-                ).first()
-                if nome
-                else None
-            )
-            if duplicate:
-                flash("Já existe um setor com esse nome.", "warning")
-            else:
-                setor.nome = nome
-                db.session.commit()
-                flash("Setor atualizado com sucesso.", "success")
-                return redirect(url_for("setores"))
-        for errors in form.errors.values():
-            for error in errors:
-                flash(error, "warning")
-    return redirect(
-        url_for(
-            "setores",
-            open_setor_modal="1",
-            edit_setor_id=str(setor.id),
-        )
-    )
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/consultorias.py (2024-12)
+# =============================================================================
+# @app.route("/consultorias/cadastro") - Migrado
+# @app.route("/consultorias/editar/<int:id>") - Migrado
+# @app.route("/consultorias/setores") - Migrado
+# @app.route("/consultorias/setores/cadastro") - Migrado
+# @app.route("/consultorias/setores/editar/<int:id>") - Migrado
+# =============================================================================
 
 
 # =============================================
@@ -5037,480 +4128,48 @@ def notas_totalizador():
     )
 
 
-@app.route("/tags")
-@login_required
-def tags():
-    """List registered tags."""
-    from app.services.cache_service import get_all_tags_cached
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/tags.py
+# =============================================================================
+# @app.route("/tags")
+# @login_required
+# def tags():
+#     """Migrado para blueprints/tags.py"""
+#     pass
 
-    tags = get_all_tags_cached()
-    return render_template("tags.html", tags=tags)
+# @app.route("/tags/cadastro", methods=["GET", "POST"])
+# @admin_required
+# def cadastro_tag():
+#     """Migrado para blueprints/tags.py"""
+#     pass
 
-@app.route("/tags/cadastro", methods=["GET", "POST"])
-@admin_required
-def cadastro_tag():
-    """Render and handle the Cadastro de Tag page."""
-    form = TagForm()
-    if form.validate_on_submit():
-        tag = Tag(nome=form.nome.data)
-        db.session.add(tag)
-        db.session.commit()
-        from app.services.cache_service import invalidate_tag_cache
+# @app.route("/tags/editar/<int:id>", methods=["GET", "POST"])
+# @admin_required
+# def editar_tag(id):
+#     """Migrado para blueprints/tags.py"""
+#     pass
 
-        invalidate_tag_cache()
-        flash("Tag registrada com sucesso.", "success")
-        return redirect(url_for("tags"))
-    return render_template("cadastro_tag.html", form=form)
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/consultorias.py (2024-12)
+# =============================================================================
+# @app.route("/consultorias/relatorios") - Migrado
+# @app.route("/consultorias/inclusoes") - Migrado
+# @app.route("/consultorias/inclusoes/nova") - Migrado
+# @app.route("/consultorias/inclusoes/<codigo>") - Migrado
+# @app.route("/consultorias/inclusoes/<codigo>/editar") - Migrado
+# =============================================================================
 
-@app.route("/tags/editar/<int:id>", methods=["GET", "POST"])
-@admin_required
-def editar_tag(id):
-    """Redirect tag editing to the suspended user list modal."""
-    tag = Tag.query.get_or_404(id)
-    if request.method == "POST":
-        form = TagForm()
-        if form.validate_on_submit():
-            new_name = (form.nome.data or "").strip()
-            if new_name:
-                duplicate = (
-                    Tag.query.filter(db.func.lower(Tag.nome) == new_name.lower(), Tag.id != tag.id).first()
-                )
-                if duplicate:
-                    flash("Já existe uma tag com esse nome.", "warning")
-                else:
-                    tag.nome = new_name
-                    db.session.commit()
-                    from app.services.cache_service import invalidate_tag_cache
-
-                    invalidate_tag_cache()
-                    flash("Tag atualizada com sucesso!", "success")
-            else:
-                flash("Informe um nome válido para a tag.", "warning")
-    return redirect(url_for("list_users", open_tag_modal="1", edit_tag_id=tag.id))
-
-@app.route("/consultorias/relatorios")
-@admin_required
-def relatorios_consultorias():
-    """Display reports of inclusões grouped by consultoria, user, and date."""
-    inicio_raw = request.args.get("inicio")
-    fim_raw = request.args.get("fim")
-    query = Inclusao.query
-
-    inicio = None
-    if inicio_raw:
-        try:
-            inicio = datetime.strptime(inicio_raw, "%Y-%m-%d").date()
-            query = query.filter(Inclusao.data >= inicio)
-        except ValueError:
-            inicio = None
-
-    fim = None
-    if fim_raw:
-        try:
-            fim = datetime.strptime(fim_raw, "%Y-%m-%d").date()
-            query = query.filter(Inclusao.data <= fim)
-        except ValueError:
-            fim = None
-
-    por_consultoria = (
-        query.with_entities(Inclusao.consultoria, db.func.count(Inclusao.id))
-        .group_by(Inclusao.consultoria)
-        .order_by(db.func.count(Inclusao.id).desc())
-        .all()
-    )
-
-    por_usuario = (
-        query.with_entities(Inclusao.usuario, db.func.count(Inclusao.id))
-        .group_by(Inclusao.usuario)
-        .order_by(db.func.count(Inclusao.id).desc())
-        .all()
-    )
-
-    labels_consultoria = [c or "N/D" for c, _ in por_consultoria]
-    counts_consultoria = [total for _, total in por_consultoria]
-    chart_consultoria = {
-        "type": "bar",
-        "title": "Consultas por consultoria",
-        "datasetLabel": "Total de consultas",
-        "labels": labels_consultoria,
-        "values": counts_consultoria,
-        "xTitle": "Consultoria",
-        "yTitle": "Total",
-        "total": sum(counts_consultoria),
-    }
-
-    labels_usuario = [u or "N/D" for u, _ in por_usuario]
-    counts_usuario = [total for _, total in por_usuario]
-    chart_usuario = {
-        "type": "bar",
-        "title": "Consultas por usuário",
-        "datasetLabel": "Total de consultas",
-        "labels": labels_usuario,
-        "values": counts_usuario,
-        "xTitle": "Usuário",
-        "yTitle": "Total",
-        "total": sum(counts_usuario),
-    }
-
-    inclusoes = query.all()
-    por_data = []
-    if inicio or fim:
-        por_data = (
-            query.filter(Inclusao.data.isnot(None))
-            .with_entities(Inclusao.data, db.func.count(Inclusao.id))
-            .group_by(Inclusao.data)
-            .order_by(Inclusao.data)
-            .all()
-        )
-
-    return render_template(
-        "relatorios_consultorias.html",
-        chart_consultoria=chart_consultoria,
-        chart_usuario=chart_usuario,
-        por_data=por_data,
-        inicio=inicio.strftime("%Y-%m-%d") if inicio else "",
-        fim=fim.strftime("%Y-%m-%d") if fim else "",
-    )
-
-@app.route("/consultorias/inclusoes")
-@login_required
-def inclusoes():
-    """List and search Consultorias."""
-    search_raw = request.args.get("q", "")
-    page = request.args.get("page", 1, type=int)
-    query = Inclusao.query
-
-    if search_raw:
-        like = f"%{search_raw}%"
-        query = query.filter(
-            or_(
-                cast(Inclusao.data, String).ilike(like),
-                Inclusao.usuario.ilike(like),
-                Inclusao.assunto.ilike(like),
-            )
-        )
-
-    pagination = query.order_by(Inclusao.data.desc()).paginate(page=page, per_page=50)
-
-    return render_template(
-        "inclusoes.html",
-        inclusoes=pagination.items,
-        pagination=pagination,
-        search=search_raw,
-    )
-
-@app.route("/consultorias/inclusoes/nova", methods=["GET", "POST"])
-@login_required
-def nova_inclusao():
-    """Render and handle Consultoria form."""
-    users = User.query.order_by(User.name).all()
-    if request.method == "POST":
-        user_id = request.form.get("usuario")
-        user = User.query.get(int(user_id)) if user_id else None
-        data_str = request.form.get("data")
-        data = datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else None
-        inclusao = Inclusao(
-            data=data,
-            usuario=user.name if user else "",
-            setor=request.form.get("setor"),
-            consultoria=request.form.get("consultoria"),
-            assunto=(request.form.get("assunto") or "").upper(),
-            pergunta=sanitize_html(request.form.get("pergunta")),
-            resposta=sanitize_html(request.form.get("resposta")),
-        )
-        db.session.add(inclusao)
-        db.session.commit()
-        flash("Consultoria registrada com sucesso.", "success")
-        return redirect(url_for("inclusoes"))
-    return render_template(
-        "nova_inclusao.html",
-        users=users,
-        setores=_get_setores_catalog(),
-        consultorias=_get_consultorias_catalog(),
-    )
-
-@app.route("/consultorias/inclusoes/<codigo>")
-@login_required
-def visualizar_consultoria(codigo: str):
-    """Display details for a single consultoria."""
-    inclusao_id = decode_id(codigo, namespace="consultoria-inclusao")
-    inclusao = Inclusao.query.get_or_404(inclusao_id)
-    return render_template(
-        "visualizar_consultoria.html",
-        inclusao=inclusao,
-        data_formatada=inclusao.data_formatada,
-    )
-
-@app.route("/consultorias/inclusoes/<codigo>/editar", methods=["GET", "POST"])
-@login_required
-def editar_consultoria(codigo: str):
-    """Render and handle editing of a consultoria."""
-    inclusao_id = decode_id(codigo, namespace="consultoria-inclusao")
-    inclusao = Inclusao.query.get_or_404(inclusao_id)
-    users = User.query.order_by(User.name).all()
-    if request.method == "POST":
-        user_id = request.form.get("usuario")
-        user = User.query.get(int(user_id)) if user_id else None
-        data_str = request.form.get("data")
-        inclusao.data = (
-            datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else None
-        )
-        inclusao.usuario = user.name if user else ""
-        inclusao.setor = request.form.get("setor")
-        inclusao.consultoria = request.form.get("consultoria")
-        inclusao.assunto = (request.form.get("assunto") or "").upper()
-        inclusao.pergunta = sanitize_html(request.form.get("pergunta"))
-        inclusao.resposta = sanitize_html(request.form.get("resposta"))
-        db.session.commit()
-        flash("Consultoria atualizada com sucesso.", "success")
-        next_url = request.form.get("next") or request.args.get("next")
-        if next_url:
-            return redirect(next_url)
-        return redirect(url_for("inclusoes"))
-    return render_template(
-        "nova_inclusao.html",
-        users=users,
-        setores=_get_setores_catalog(),
-        consultorias=_get_consultorias_catalog(),
-        inclusao=inclusao,
-    )
-
-@app.route("/cookies")
-def cookies():
-    """Render the cookie policy page."""
-    return render_template("cookie_policy.html")
-
-@app.route("/cookies/revoke")
-def revoke_cookies():
-    """Revoke cookie consent and redirect to index."""
-    resp = redirect(url_for("index"))
-    resp.delete_cookie("cookie_consent")
-    flash("Consentimento de cookies revogado.", "info")
-    return resp
-
-@app.route("/login/google")
-def google_login():
-    """Start OAuth login with Google."""
-    flow = build_google_flow()
-    authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true", prompt="consent"
-    )
-    session["oauth_state"] = state
-    # ``google-auth`` only attaches the PKCE verifier to the flow instance, so we
-    # persist it explicitly to reuse on the callback.
-    code_verifier = getattr(flow, "code_verifier", None)
-    if isinstance(code_verifier, bytes):
-        code_verifier = code_verifier.decode()
-    if code_verifier:
-        session["oauth_code_verifier"] = code_verifier
-    else:
-        session.pop("oauth_code_verifier", None)
-    return redirect(authorization_url)
-
-
-def normalize_scopes(scopes):
-    """Converte escopos curtos do Google para equivalentes longos."""
-    fixed = []
-    for s in scopes:
-        if s == "email":
-            fixed.append("https://www.googleapis.com/auth/userinfo.email")
-        elif s == "profile":
-            fixed.append("https://www.googleapis.com/auth/userinfo.profile")
-        else:
-            fixed.append(s)
-    return fixed
-
-
-def _determine_post_login_redirect(user: User) -> str:
-    """Return the appropriate dashboard URL after authentication."""
-
-    if user.role == "admin":
-        return url_for("tasks_overview")
-
-    # Check if user has ONLY the "reunião" tag (meeting-only access)
-    tags = getattr(user, "tags", None) or []
-    if len(tags) == 1 and tags[0].nome.lower() == 'reunião':
-        return url_for("sala_reunioes")
-
-    first_tag = tags[0] if tags else None
-    if first_tag:
-        return url_for("tasks_sector", tag_id=first_tag.id)
-
-    return url_for("home")
-
-@app.route("/oauth2callback")
-def google_callback():
-    error = request.args.get("error")
-    if error:
-        session.pop("oauth_state", None)
-        session.pop("oauth_code_verifier", None)
-        flash("O Google não autorizou o login solicitado.", "danger")
-        return redirect(url_for("login"))
-
-    state = session.get("oauth_state")
-    code_verifier = session.get("oauth_code_verifier")
-    if state is None or state != request.args.get("state"):
-        session.pop("oauth_state", None)
-        session.pop("oauth_code_verifier", None)
-        flash("Falha ao validar resposta do Google. Tente novamente.", "danger")
-        return redirect(url_for("login"))
-
-    flow = build_google_flow(state=state)
-
-    try:
-        authorization_response = flow.redirect_uri or request.url
-        if request.query_string:
-            query_string = request.query_string.decode()
-            separator = "&" if "?" in authorization_response else "?"
-            authorization_response = f"{authorization_response}{separator}{query_string}"
-
-        callback_scope = request.args.get("scope")
-        fetch_kwargs = {"authorization_response": authorization_response}
-
-        if callback_scope:
-            normalized = normalize_scopes(callback_scope.split())
-            fetch_kwargs["scope"] = normalized
-
-        if code_verifier:
-            fetch_kwargs["code_verifier"] = code_verifier
-
-        flow.fetch_token(**fetch_kwargs)
-
-    except Exception as exc:
-        current_app.logger.exception(f"Falha no fetch_token: {exc}")
-        flash("Não foi possível completar a autenticação com o Google.", "danger")
-        return redirect(url_for("login"))
-    finally:
-        session.pop("oauth_state", None)
-        session.pop("oauth_code_verifier", None)
-    credentials = flow.credentials
-    request_session = requests.Session()
-    token_request = Request(session=request_session)
-    try:
-        id_info = id_token.verify_oauth2_token(
-            credentials.id_token, token_request, current_app.config["GOOGLE_CLIENT_ID"]
-        )
-    except ValueError:
-        current_app.logger.exception("ID token do Google inválido durante login")
-        flash("Não foi possível validar a resposta do Google.", "danger")
-        return redirect(url_for("login"))
-    google_id = id_info.get("sub")
-    email = id_info.get("email")
-    name = id_info.get("name", email)
-    user = User.query.filter(
-        (User.google_id == google_id) | (User.email == email)
-    ).first()
-    if not user:
-        base_username = email.split("@")[0]
-        username = base_username
-        counter = 1
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-        user = User(username=username, email=email, name=name, google_id=google_id)
-        random_password = secrets.token_hex(16)
-        user.set_password(random_password)
-        db.session.add(user)
-        db.session.commit()
-    if credentials.refresh_token:
-        user.google_refresh_token = credentials.refresh_token
-        db.session.commit()
-    login_user(user, remember=True, duration=timedelta(days=30))
-    session.permanent = True
-    sid = uuid4().hex
-    session["sid"] = sid
-    session["credentials"] = credentials_to_dict(credentials)
-    db.session.add(
-        Session(
-            session_id=sid,
-            user_id=user.id,
-            session_data=dict(session),
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get("User-Agent"),
-            last_activity=datetime.now(SAO_PAULO_TZ),
-        )
-    )
-    db.session.commit()
-    flash("Login com Google bem-sucedido!", "success")
-    return redirect(_determine_post_login_redirect(user))
-
-@app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute", methods=["POST"])  # Brute-force protection
-def login():
-    """Render the login page and handle authentication."""
-    from app.utils.audit import log_user_action, ActionType, ResourceType
-
-    form = LoginForm()
-    google_enabled = bool(
-        current_app.config.get("GOOGLE_CLIENT_ID")
-        and current_app.config.get("GOOGLE_CLIENT_SECRET")
-    )
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            if not user.ativo:
-                flash("Seu usuário está inativo. Contate o administrador.", "danger")
-                # Log failed login attempt (inactive user)
-                import logging
-                user_actions_logger = logging.getLogger('user_actions')
-                user_actions_logger.warning(
-                    f"[{form.username.data}] FAILED_LOGIN session - Usuario inativo - IP: {request.remote_addr}",
-                    extra={
-                        'username': form.username.data,
-                        'action_type': 'failed_login',
-                        'resource_type': 'session',
-                        'ip_address': request.remote_addr,
-                        'reason': 'inactive_user',
-                    }
-                )
-                return redirect(url_for("login"))
-            login_user(
-                user,
-                remember=form.remember_me.data,
-                duration=timedelta(days=30),
-            )
-            session.permanent = form.remember_me.data
-            sid = uuid4().hex
-            session["sid"] = sid
-            db.session.add(
-                Session(
-                    session_id=sid,
-                    user_id=user.id,
-                    session_data=dict(session),
-                    ip_address=request.remote_addr,
-                    user_agent=request.headers.get("User-Agent"),
-                    last_activity=datetime.now(SAO_PAULO_TZ),
-                )
-            )
-            db.session.commit()
-
-            # Log successful login
-            log_user_action(
-                action_type=ActionType.LOGIN,
-                resource_type=ResourceType.SESSION,
-                action_description=f'Usuario {user.username} fez login com sucesso',
-                resource_id=user.id,
-                new_values={'remember_me': form.remember_me.data}
-            )
-
-            flash("Login bem-sucedido!", "success")
-            return redirect(_determine_post_login_redirect(user))
-        else:
-            # Log failed login attempt
-            import logging
-            user_actions_logger = logging.getLogger('user_actions')
-            user_actions_logger.warning(
-                f"[{form.username.data}] FAILED_LOGIN session - Credenciais invalidas - IP: {request.remote_addr}",
-                extra={
-                    'username': form.username.data,
-                    'action_type': 'failed_login',
-                    'resource_type': 'session',
-                    'ip_address': request.remote_addr,
-                    'reason': 'invalid_credentials',
-                }
-            )
-            flash("Credenciais inválidas", "danger")
-    return render_template("login.html", form=form, google_enabled=google_enabled)
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/auth.py (2024-12)
+# =============================================================================
+# @app.route("/cookies") - Migrado para blueprints/auth.py
+# @app.route("/cookies/revoke") - Migrado para blueprints/auth.py
+# @app.route("/login/google") - Migrado para blueprints/auth.py
+# @app.route("/oauth2callback") - Migrado para blueprints/auth.py
+# @app.route("/login") - Migrado para blueprints/auth.py
+# normalize_scopes() - Migrado para blueprints/auth.py
+# _determine_post_login_redirect() - Migrado para blueprints/auth.py
+# =============================================================================
 
 @app.route("/api/cnpj/<cnpj>")
 @login_required
@@ -7585,27 +6244,9 @@ def relatorio_tarefas():
     )
 
 
-@app.route("/logout", methods=["GET"])
-@login_required
-def logout():
-    """Log out the current user."""
-    from app.utils.audit import log_user_action, ActionType, ResourceType
-
-    # Log logout before actually logging out
-    log_user_action(
-        action_type=ActionType.LOGOUT,
-        resource_type=ResourceType.SESSION,
-        action_description=f'Usuario {current_user.username} fez logout',
-        resource_id=current_user.id,
-    )
-
-    sid = session.get("sid")
-    if sid:
-        Session.query.filter_by(session_id=sid).delete()
-        db.session.commit()
-        session.pop("sid", None)
-    logout_user()
-    return redirect(url_for("index"))
+# =============================================================================
+# @app.route("/logout") - Migrado para blueprints/auth.py (2024-12)
+# =============================================================================
 
 @app.route("/users/active", methods=["GET"], endpoint="list_active_users")
 @app.route("/users", methods=["GET", "POST"])
@@ -10414,22 +9055,19 @@ def delete_task(task_id):
 ## PWA SUPPORT
 ## ============================================================================
 
-@app.route("/offline")
-def offline_page():
-    """Lightweight offline fallback page for the PWA."""
-    response = render_template("offline.html")
-    return response, 200, {"Cache-Control": "no-store"}
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/health.py
+# =============================================================================
+# @app.route("/offline")
+# def offline_page():
+#     """Migrado para blueprints/health.py"""
+#     pass
 
-
-@app.route("/sw.js")
-@csrf.exempt
-def service_worker():
-    """Serve the service worker with root scope so it can control the whole app."""
-    response = send_from_directory(app.static_folder, "sw.js")
-    response.headers["Content-Type"] = "application/javascript"
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Service-Worker-Allowed"] = "/"
-    return response
+# @app.route("/sw.js")
+# @csrf.exempt
+# def service_worker():
+#     """Migrado para blueprints/health.py"""
+#     pass
 
 
 
