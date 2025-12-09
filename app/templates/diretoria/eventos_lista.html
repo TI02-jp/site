@@ -122,7 +122,7 @@
     </form>
 
     <div class="table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-sm align-middle eventos-table">
             <thead>
                 <tr>
                     <th scope="col">Nome do evento</th>
@@ -143,21 +143,21 @@
                         {% set lanche_total = services.get('lanche', {}).get('total', 0) %}
                         {% set outros_total = services.get('outros', {}).get('total', 0) %}
                         <tr>
-                            <td>
+                            <td data-label="Nome do evento">
                                 <div class="fw-semibold">{{ event.name }}</div>
                                 <div class="small">{{ event_type_labels.get(event.event_type, event.event_type) }}</div>
                             </td>
-                            <td>{{ event.event_date.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ audience_labels.get(event.audience, event.audience) }}</td>
-                            <td>{{ event.participants }}</td>
-                            <td class="totals-list">
+                            <td data-label="Data">{{ event.event_date.strftime('%d/%m/%Y') }}</td>
+                            <td data-label="Público">{{ audience_labels.get(event.audience, event.audience) }}</td>
+                            <td data-label="Participantes">{{ event.participants }}</td>
+                            <td class="totals-list" data-label="Totais por serviço">
                                 <div class="small">{{ category_labels['cafe'] }}: <span class="fw-semibold">{{ format_currency(cafe_total) }}</span></div>
                                 <div class="small">{{ category_labels['almoco'] }}: <span class="fw-semibold">{{ format_currency(almoco_total) }}</span></div>
                                 <div class="small">{{ category_labels['lanche'] }}: <span class="fw-semibold">{{ format_currency(lanche_total) }}</span></div>
                                 <div class="small">{{ category_labels['outros'] }}: <span class="fw-semibold">{{ format_currency(outros_total) }}</span></div>
                             </td>
-                            <td class="fw-semibold">{{ format_currency(event.total_cost) }}</td>
-                            <td class="text-nowrap">
+                            <td class="fw-semibold" data-label="Total estimado">{{ format_currency(event.total_cost) }}</td>
+                            <td class="text-nowrap" data-label="Ações">
                                 <a class="btn btn-outline-secondary btn-sm me-1"
                                    href="{{ url_for('diretoria_eventos_visualizar', event_id=event.id) }}"
                                    title="Visualizar evento">

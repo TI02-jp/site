@@ -44,7 +44,7 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0 text-start">
+                <table class="table table-bordered table-hover mb-0 text-start users-table">
                     <thead class="table-primary">
                         <tr>
                             <th class="text-start">Nome</th>
@@ -99,7 +99,7 @@
                     <tbody>
                         {% for user in users %}
                         <tr>
-                            <td class="text-start">
+                            <td class="text-start" data-label="Nome">
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-person-circle me-2 text-muted"></i>
                                     <div class="fw-semibold">{{ user.name }}</div>
@@ -111,13 +111,13 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td class="text-start">
-                                <span class="text-muted" style="white-space: nowrap;">{{ user.email }}</span>
+                            <td class="text-start" data-label="Email">
+                                <span class="text-muted">{{ user.email }}</span>
                             </td>
-                            <td class="text-start">
+                            <td class="text-start" data-label="Usuário">
                                 <span class="font-monospace">{{ user.username }}</span>
                             </td>
-                            <td class="text-start">
+                            <td class="text-start" data-label="Perfil">
                                 {% if user.role == 'admin' %}
                                     <span class="badge bg-success">Administrador</span>
                                 {% elif user.role == 'user' %}
@@ -126,7 +126,7 @@
                                     <span class="badge bg-secondary">{{ user.role }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-start">
+                            <td class="text-start" data-label="Tags">
                                 {% if user.tags %}
                                     {% for tag in user.tags %}
                                         <span class="badge bg-secondary">{{ tag.nome }}</span>
@@ -135,7 +135,7 @@
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td class="text-start">
+                            <td class="text-start" data-label="Ações">
                                 {% if not user.is_master or current_user.id == user.id %}
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary"
