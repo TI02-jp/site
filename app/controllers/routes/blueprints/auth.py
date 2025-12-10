@@ -37,7 +37,7 @@ from flask import (
 )
 from flask_login import current_user, login_required, login_user, logout_user
 import requests
-from requests import Request
+from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token
 
 from app import db, limiter
@@ -88,10 +88,20 @@ def build_google_flow(state=None):
         scopes=scopes,
         state=state,
     )
-    # Usa URL de redirect configurada (ideal para domÇ­nios publicados) e
+    # Usa URL de redirect configurada (ideal para domínios publicados) e
     # recai para URL externa inferida pelo Flask em ambientes locais.
     configured_redirect = current_app.config.get("GOOGLE_REDIRECT_URI")
-    flow.redirect_uri = configured_redirect or url_for("auth.google_callback", _external=True)
+    if not configured_redirect:
+        current_app.logger.warning(
+            "GOOGLE_REDIRECT_URI não configurado. Usando fallback para URL gerada dinamicamente. "
+            "Certifique-se de que a URL gerada esteja autorizada no Google Cloud."
+        )
+        redirect_uri = url_for("auth.google_callback", _external=True)
+    else:
+        redirect_uri = configured_redirect
+
+    flow.redirect_uri = redirect_uri
+    current_app.logger.info(f"Google OAuth flow usando redirect_uri: {redirect_uri}")
 
     return flow
 
@@ -365,8 +375,9 @@ def google_callback():
         if callback_scope:
             normalized = normalize_scopes(callback_scope.split())
             # Atualiza o fluxo para aceitar o conjunto de escopos retornado pelo Google,
-            # evitando erro de "Scope has changed" quando o provedor expande o escopo.
+            # evitando erro de "Scope has changed" quando o provedor expande ou reaproveita escopos.
             flow.scopes = normalized
+            flow.oauth2session.scope = normalized
             fetch_kwargs["scope"] = normalized
 
         if code_verifier:
@@ -384,7 +395,7 @@ def google_callback():
 
     credentials = flow.credentials
     request_session = requests.Session()
-    token_request = Request(session=request_session)
+    token_request = GoogleRequest(session=request_session)
 
     try:
         id_info = id_token.verify_oauth2_token(
@@ -464,3 +475,11 @@ def google_callback():
 
 # Nota: Os endpoints sao registrados com nomes do blueprint (auth.login, etc.)
 # Para compatibilidade com templates antigos, registrar aliases no __init__.py
+
+
+@auth_bp.route("/oauth2callback")
+def google_callback_legacy():
+    """
+    Alias legacy para callbacks configurados como /oauth2callback em projetos antigos.
+    """
+    return google_callback()
