@@ -103,26 +103,35 @@ def register_all_blueprints(app: Flask) -> None:
     app.register_blueprint(notifications_bp)
 
     # Notas - notas de debito
-    # from app.controllers.routes.blueprints.notas import notas_bp
-    # app.register_blueprint(notas_bp)
+    from app.controllers.routes.blueprints.notas import notas_bp
+    app.register_blueprint(notas_bp)
 
-    # Reunioes - sala de reunioes
-    # from app.controllers.routes.blueprints.reunioes import reunioes_bp
-    # app.register_blueprint(reunioes_bp)
+    # Users - gestao de usuarios (MIGRADO - 2024-12)
+    from app.controllers.routes.blueprints.users import users_bp
+    app.register_blueprint(users_bp)
 
-    # Relatorios - relatorios administrativos
-    # from app.controllers.routes.blueprints.relatorios import relatorios_bp
-    # app.register_blueprint(relatorios_bp)
+    # Reunioes - sala de reunioes (MIGRADO - 2024-12)
+    from app.controllers.routes.blueprints.reunioes import reunioes_bp
+    app.register_blueprint(reunioes_bp)
 
-    # Users - gestao de usuarios
-    # from app.controllers.routes.blueprints.users import users_bp
-    # app.register_blueprint(users_bp)
+    # Relatorios - relatorios administrativos (MIGRADO - 2024-12)
+    # NOTA: As rotas de relatorios necessitam do decorator @report_access_required
+    # que deve ser aplicado apos o registro do blueprint no __init__.py principal
+    from app.controllers.routes.blueprints.relatorios import relatorios_bp
+    app.register_blueprint(relatorios_bp)
+
+    # ==========================================================================
+    # BLUEPRINTS PENDENTES DE MIGRACAO
+    # As rotas ainda estao no __init__.py e precisam ser migradas gradualmente
+    # ==========================================================================
 
     # Tasks - gestao de tarefas
+    # TODO: Migrar rotas do __init__.py para este blueprint (COMPLEXO - muitas rotas)
     # from app.controllers.routes.blueprints.tasks import tasks_bp
     # app.register_blueprint(tasks_bp)
 
     # Empresas - gestao de empresas
+    # TODO: Migrar rotas do __init__.py para este blueprint
     # from app.controllers.routes.blueprints.empresas import empresas_bp
     # app.register_blueprint(empresas_bp)
 
