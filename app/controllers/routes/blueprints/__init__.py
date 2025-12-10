@@ -73,7 +73,7 @@ def register_all_blueprints(app: Flask) -> None:
     from app.controllers.routes.blueprints.acessos import acessos_bp
     app.register_blueprint(acessos_bp)
 
-    # Auth - login, logout, OAuth (/login, /logout, /oauth2callback, /cookies)
+    # Auth - login, logout, OAuth (/login, /logout, /google/callback, /cookies)
     from app.controllers.routes.blueprints.auth import auth_bp
     app.register_blueprint(auth_bp)
 
@@ -85,22 +85,22 @@ def register_all_blueprints(app: Flask) -> None:
     from app.controllers.routes.blueprints.consultorias import consultorias_bp
     app.register_blueprint(consultorias_bp)
 
+    # Calendario - calendario de colaboradores
+    from app.controllers.routes.blueprints.calendario import calendario_bp
+    app.register_blueprint(calendario_bp)
+
+    # Diretoria - acordos, feedbacks, eventos da diretoria
+    from app.controllers.routes.blueprints.diretoria import diretoria_bp
+    app.register_blueprint(diretoria_bp)
+
     # =========================================================================
     # BLUEPRINTS PLACEHOLDER (rotas ainda em __init__.py)
     # Descomentar conforme as rotas forem migradas para cada blueprint
     # =========================================================================
 
-    # Calendario - calendario de colaboradores
-    # from app.controllers.routes.blueprints.calendario import calendario_bp
-    # app.register_blueprint(calendario_bp)
-
-    # Diretoria - acordos, feedbacks, eventos
-    # from app.controllers.routes.blueprints.diretoria import diretoria_bp
-    # app.register_blueprint(diretoria_bp)
-
     # Notifications - notificacoes e SSE
-    # from app.controllers.routes.blueprints.notifications import notifications_bp
-    # app.register_blueprint(notifications_bp)
+    from app.controllers.routes.blueprints.notifications import notifications_bp
+    app.register_blueprint(notifications_bp)
 
     # Notas - notas de debito
     # from app.controllers.routes.blueprints.notas import notas_bp

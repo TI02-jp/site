@@ -7,7 +7,7 @@ Rotas:
     - GET/POST /login: Login com usuario/senha
     - GET /logout: Logout do usuario
     - GET /login/google: Inicia OAuth com Google
-    - GET /oauth2callback: Callback do OAuth Google
+    - GET /google/callback: Callback do OAuth Google
     - GET /cookies: Politica de cookies
     - GET /cookies/revoke: Revoga consentimento de cookies
 
@@ -88,7 +88,10 @@ def build_google_flow(state=None):
         scopes=scopes,
         state=state,
     )
-    flow.redirect_uri = url_for("auth.google_callback", _external=True)
+    # Usa URL de redirect configurada (ideal para domÇ­nios publicados) e
+    # recai para URL externa inferida pelo Flask em ambientes locais.
+    configured_redirect = current_app.config.get("GOOGLE_REDIRECT_URI")
+    flow.redirect_uri = configured_redirect or url_for("auth.google_callback", _external=True)
 
     return flow
 
@@ -324,7 +327,7 @@ def google_login():
     return redirect(authorization_url)
 
 
-@auth_bp.route("/oauth2callback")
+@auth_bp.route("/google/callback")
 def google_callback():
     """
     Processa o callback do OAuth do Google.
@@ -361,6 +364,9 @@ def google_callback():
 
         if callback_scope:
             normalized = normalize_scopes(callback_scope.split())
+            # Atualiza o fluxo para aceitar o conjunto de escopos retornado pelo Google,
+            # evitando erro de "Scope has changed" quando o provedor expande o escopo.
+            flow.scopes = normalized
             fetch_kwargs["scope"] = normalized
 
         if code_verifier:
@@ -386,9 +392,18 @@ def google_callback():
             token_request,
             current_app.config["GOOGLE_CLIENT_ID"]
         )
-    except ValueError:
-        current_app.logger.exception("ID token do Google inválido durante login")
-        flash("Não foi possível validar a resposta do Google.", "danger")
+    except ValueError as exc:
+        current_app.logger.exception(
+            "ID token do Google inválido durante login (aud esperado=%s, client_id_token=%s, scopes=%s): %s",
+            current_app.config.get("GOOGLE_CLIENT_ID"),
+            getattr(credentials, "client_id", None),
+            getattr(credentials, "scopes", None),
+            exc,
+        )
+        flash(
+            "Não foi possível validar a resposta do Google. Verifique se o client_id e a URL de callback configurados pertencem ao mesmo projeto do OAuth.",
+            "danger",
+        )
         return redirect(url_for("auth.login"))
 
     google_id = id_info.get("sub")
