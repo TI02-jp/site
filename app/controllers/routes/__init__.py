@@ -229,24 +229,13 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
 }
 
 
-EVENT_TYPE_LABELS = {
-    "treinamento": "Treinamento",
-    "data_comemorativa": "Data comemorativa",
-    "evento": "Evento",
-}
-
-EVENT_AUDIENCE_LABELS = {
-    "interno": "Interno",
-    "externo": "Externo",
-    "ambos": "Ambos",
-}
-
-EVENT_CATEGORY_LABELS = {
-    "cafe": "Café da manhã",
-    "almoco": "Almoço",
-    "lanche": "Lanche",
-    "outros": "Outros serviços",
-}
+# =============================================================================
+# CONSTANTES MIGRADAS PARA blueprints/diretoria.py (2024-12)
+# =============================================================================
+# EVENT_TYPE_LABELS = {...}
+# EVENT_AUDIENCE_LABELS = {...}
+# EVENT_CATEGORY_LABELS = {...}
+# =============================================================================
 
 
 def register_blueprints(flask_app: Flask) -> None:
@@ -301,82 +290,14 @@ def register_blueprints(flask_app: Flask) -> None:
 
 
 
-
-def _normalize_photo_entry(value: str) -> str | None:
-    """Return a sanitized photo reference or ``None`` when invalid."""
-
-    if not isinstance(value, str):
-        return None
-
-    trimmed = value.strip()
-    if not trimmed:
-        return None
-
-    parsed = urlparse(trimmed)
-    scheme = parsed.scheme.lower()
-    netloc = parsed.netloc
-
-    if scheme == "https" and netloc:
-        return parsed.geturl()
-
-    if scheme == "http" and netloc:
-        static_path = parsed.path or ""
-        if not static_path.startswith("/static/"):
-            return None
-
-        # Accept insecure scheme only when targeting this application host.
-        allowed_hosts: set[str] = set()
-        if has_request_context():
-            host = (request.host or "").lower()
-            if host:
-                allowed_hosts.add(host)
-        server_name = (current_app.config.get("SERVER_NAME") or "").lower()
-        if server_name:
-            allowed_hosts.add(server_name)
-
-        normalized_netloc = netloc.lower()
-        if not allowed_hosts:
-            return static_path if static_path.startswith("/static/uploads/") else None
-
-        netloc_base = normalized_netloc.split(":", 1)[0]
-        for allowed in allowed_hosts:
-            if not allowed:
-                continue
-            allowed_base = allowed.split(":", 1)[0]
-            if normalized_netloc == allowed or netloc_base == allowed_base:
-                return static_path
-
-        return None
-
-    if scheme and scheme not in {"http", "https"}:
-        return None
-
-    if not parsed.scheme and not parsed.netloc:
-        if trimmed.startswith("/"):
-            return "/" + trimmed.lstrip("/")
-        if trimmed.lower().startswith("static/"):
-            return "/" + trimmed.lstrip("/")
-
-    return None
-
-
-def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
-    """Return the filesystem path for a stored upload inside ``/static``."""
-
-    parsed = urlparse(normalized_photo_url)
-    path = parsed.path if parsed.scheme else normalized_photo_url
-    if not path:
-        return None
-
-    relative_path = path.lstrip("/")
-    if not relative_path.startswith("static/uploads/"):
-        return None
-
-    safe_relative = os.path.normpath(relative_path)
-    if not safe_relative.startswith("static/uploads/"):
-        return None
-
-    return os.path.join(current_app.root_path, safe_relative)
+# =============================================================================
+# FUNCOES AUXILIARES MIGRADAS PARA blueprints/diretoria.py (2024-12)
+# =============================================================================
+# def _normalize_photo_entry(value: str) -> str | None:
+#     """Migrado para blueprints/diretoria.py"""
+#
+# def _resolve_local_photo_path(normalized_photo_url: str) -> str | None:
+#     """Migrado para blueprints/diretoria.py"""
 
 
 def _save_task_file(uploaded_file) -> dict[str, str | None]:
@@ -406,277 +327,102 @@ def _save_task_file(uploaded_file) -> dict[str, str | None]:
     }
 
 
-def _format_event_timestamp(raw_dt: datetime | None) -> str:
-    """Return a São Paulo formatted timestamp for Diretoria JP views."""
-
-    if raw_dt is None:
-        return "—"
-
-    timestamp = raw_dt
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
-
-    localized = timestamp.astimezone(SAO_PAULO_TZ)
-    return localized.strftime("%d/%m/%Y %H:%M")
-
-
-def _cleanup_diretoria_photo_uploads(
-    photo_urls: Iterable[str], *, exclude_event_id: int | None = None
-) -> None:
-    """Delete unused Diretoria event photo files from the ``uploads`` folder."""
-
-    normalized_to_path: dict[str, str] = {}
-    for photo_url in photo_urls:
-        normalized = _normalize_photo_entry(photo_url)
-        if not normalized:
-            continue
-
-        file_path = _resolve_local_photo_path(normalized)
-        if not file_path:
-            continue
-
-        normalized_to_path[normalized] = file_path
-
-    if not normalized_to_path:
-        return
-
-    query = DiretoriaEvent.query
-    if exclude_event_id is not None:
-        query = query.filter(DiretoriaEvent.id != exclude_event_id)
-
-    still_in_use: set[str] = set()
-    for _, other_photos in query.with_entities(
-        DiretoriaEvent.id, DiretoriaEvent.photos
-    ):
-        if not isinstance(other_photos, list):
-            continue
-
-        for other_photo in other_photos:
-            normalized_other = _normalize_photo_entry(other_photo)
-            if normalized_other in normalized_to_path:
-                still_in_use.add(normalized_other)
-
-        if len(still_in_use) == len(normalized_to_path):
-            break
-
-    for normalized, file_path in normalized_to_path.items():
-        if normalized in still_in_use:
-            continue
-
-        if not os.path.exists(file_path):
-            continue
-
-        try:
-            os.remove(file_path)
-        except OSError:
-            current_app.logger.warning(
-                "Não foi possível remover o arquivo de foto não utilizado: %s",
-                file_path,
-                exc_info=True,
-            )
+# =============================================================================
+# FUNCOES AUXILIARES MIGRADAS PARA blueprints/diretoria.py (2024-12)
+# =============================================================================
+# def _format_event_timestamp(raw_dt: datetime | None) -> str:
+#     """Migrado para blueprints/diretoria.py"""
+#
+# def _cleanup_diretoria_photo_uploads(...):
+#     """Migrado para blueprints/diretoria.py"""
+#
+# def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+#     """Migrado para blueprints/diretoria.py"""
+# =============================================================================
 
 
-def parse_diretoria_event_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Validate and normalize Diretoria JP event data sent from the form."""
-
-    name = (payload.get("name") or "").strip()
-    event_type = payload.get("type")
-    date_raw = payload.get("date")
-    description = (payload.get("description") or "").strip()
-    audience = payload.get("audience")
-    participants_raw = payload.get("participants")
-    categories_payload = payload.get("categories") or {}
-    photos_payload = payload.get("photos")
-
-    errors: list[str] = []
-
-    if not name:
-        errors.append("Informe o nome do evento.")
-
-    if event_type not in EVENT_TYPE_LABELS:
-        errors.append("Selecione um tipo de evento válido.")
-
-    try:
-        event_date = datetime.strptime(str(date_raw), "%Y-%m-%d").date()
-    except (TypeError, ValueError):
-        errors.append("Informe uma data válida para o evento.")
-        event_date = None
-
-    if audience not in EVENT_AUDIENCE_LABELS:
-        errors.append("Selecione o público participante do evento.")
-
-    try:
-        participants = int(participants_raw)
-        if participants < 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        errors.append("Informe o número de participantes do evento.")
-        participants = 0
-
-    services_payload: dict[str, dict[str, object]] = {}
-    total_event = Decimal("0.00")
-    photos: list[str] = []
-
-    if photos_payload is None:
-        photos = []
-    elif isinstance(photos_payload, list):
-        seen_photos: set[str] = set()
-        for entry in photos_payload:
-            normalized_url = _normalize_photo_entry(entry)
-            if not normalized_url or normalized_url in seen_photos:
-                continue
-
-            seen_photos.add(normalized_url)
-            photos.append(normalized_url)
-    else:
-        errors.append("Formato inválido ao enviar as fotos do evento.")
-
-    for key in EVENT_CATEGORY_LABELS:
-        category_data = (
-            categories_payload.get(key, {})
-            if isinstance(categories_payload, dict)
-            else {}
-        )
-        items_data = []
-        if isinstance(category_data, dict):
-            items_data = category_data.get("items", []) or []
-
-        processed_items: list[dict[str, object]] = []
-        category_total = Decimal("0.00")
-
-        if isinstance(items_data, list):
-            for item in items_data:
-                if not isinstance(item, dict):
-                    continue
-
-                item_name = (item.get("name") or "").strip()
-                if not item_name:
-                    continue
-
-                try:
-                    quantity = Decimal(str(item.get("quantity", "0")))
-                    unit_value = Decimal(str(item.get("unit_value", "0")))
-                except (InvalidOperation, TypeError):
-                    continue
-
-                if quantity < 0 or unit_value < 0:
-                    continue
-
-                line_total = (quantity * unit_value).quantize(Decimal("0.01"))
-
-                processed_items.append(
-                    {
-                        "name": item_name,
-                        "quantity": float(quantity),
-                        "unit_value": float(unit_value),
-                        "total": float(line_total),
-                    }
-                )
-
-                category_total += line_total
-
-        category_total = category_total.quantize(Decimal("0.01"))
-        services_payload[key] = {
-            "items": processed_items,
-            "total": float(category_total),
-        }
-        total_event += category_total
-
-    total_event = total_event.quantize(Decimal("0.01"))
-
-    normalized = {
-        "name": name,
-        "event_type": event_type,
-        "event_date": event_date,
-        "description": description or None,
-        "audience": audience,
-        "participants": participants,
-        "services": services_payload,
-        "total_cost": total_event,
-        "photos": photos,
-    }
-
-    return normalized, errors
-
-
-def build_google_flow(state: str | None = None) -> Flow:
-    """Return a configured Google OAuth ``Flow`` instance."""
-    client_id = current_app.config.get("GOOGLE_CLIENT_ID")
-    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET")
-    if not (client_id and client_secret):
-        abort(404)
-
-    redirect_uri = get_google_redirect_uri()
-
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [redirect_uri],
-            }
-        },
-        scopes=GOOGLE_OAUTH_SCOPES,
-        state=state,
-    )
-    flow.redirect_uri = redirect_uri
-    return flow
-
-
-def get_google_redirect_uri() -> str:
-    """Return the redirect URI registered with Google."""
-
-    configured_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
-    if configured_uri:
-        return configured_uri
-
-    callback_path = url_for("google_callback", _external=False)
-
-    if has_request_context():
-        scheme = request.scheme or "http"
-        host = request.host
-
-        forwarded = request.headers.get("Forwarded")
-        if forwarded:
-            forwarded = forwarded.split(",", 1)[0]
-            forwarded_parts = {}
-            for part in forwarded.split(";"):
-                if "=" not in part:
-                    continue
-                key, value = part.split("=", 1)
-                forwarded_parts[key.strip().lower()] = value.strip().strip('"')
-            scheme = forwarded_parts.get("proto", scheme) or scheme
-            host = forwarded_parts.get("host", host) or host
-
-        forwarded_proto = request.headers.get("X-Forwarded-Proto")
-        if forwarded_proto:
-            scheme = forwarded_proto.split(",", 1)[0].strip() or scheme
-
-        forwarded_host = request.headers.get("X-Forwarded-Host")
-        if forwarded_host:
-            host = forwarded_host.split(",", 1)[0].strip() or host
-
-        forwarded_port = request.headers.get("X-Forwarded-Port")
-        if forwarded_port:
-            port = forwarded_port.split(",", 1)[0].strip()
-            if port:
-                default_port = "443" if scheme == "https" else "80"
-                if ":" not in host and port != default_port:
-                    host = f"{host}:{port}"
-
-        scheme = scheme or current_app.config.get("PREFERRED_URL_SCHEME", "http")
-        host = host or request.host
-
-        return urlunsplit((scheme, host, callback_path, "", ""))
-
-    scheme = current_app.config.get("PREFERRED_URL_SCHEME", "http")
-    server_name = current_app.config.get("SERVER_NAME")
-    if server_name:
-        return urlunsplit((scheme, server_name, callback_path, "", ""))
-
-    return url_for("google_callback", _external=True, _scheme=scheme)
+# =============================================================================
+# FUNÇÕES MIGRADAS PARA blueprints/auth.py (2024-12)
+# =============================================================================
+# def build_google_flow(state: str | None = None) -> Flow:
+#     """Return a configured Google OAuth ``Flow`` instance."""
+#     client_id = current_app.config.get("GOOGLE_CLIENT_ID")
+#     client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET")
+#     if not (client_id and client_secret):
+#         abort(404)
+#
+#     redirect_uri = get_google_redirect_uri()
+#
+#     flow = Flow.from_client_config(
+#         {
+#             "web": {
+#                 "client_id": client_id,
+#                 "client_secret": client_secret,
+#                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+#                 "token_uri": "https://oauth2.googleapis.com/token",
+#                 "redirect_uris": [redirect_uri],
+#             }
+#         },
+#         scopes=GOOGLE_OAUTH_SCOPES,
+#         state=state,
+#     )
+#     flow.redirect_uri = redirect_uri
+#     return flow
+#
+#
+# def get_google_redirect_uri() -> str:
+#     """Return the redirect URI registered with Google."""
+#
+#     configured_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
+#     if configured_uri:
+#         return configured_uri
+#
+#     callback_path = url_for("google_callback", _external=False)
+#
+#     if has_request_context():
+#         scheme = request.scheme or "http"
+#         host = request.host
+#
+#         forwarded = request.headers.get("Forwarded")
+#         if forwarded:
+#             forwarded = forwarded.split(",", 1)[0]
+#             forwarded_parts = {}
+#             for part in forwarded.split(";"):
+#                 if "=" not in part:
+#                     continue
+#                 key, value = part.split("=", 1)
+#                 forwarded_parts[key.strip().lower()] = value.strip().strip('"')
+#             scheme = forwarded_parts.get("proto", scheme) or scheme
+#             host = forwarded_parts.get("host", host) or host
+#
+#         forwarded_proto = request.headers.get("X-Forwarded-Proto")
+#         if forwarded_proto:
+#             scheme = forwarded_proto.split(",", 1)[0].strip() or scheme
+#
+#         forwarded_host = request.headers.get("X-Forwarded-Host")
+#         if forwarded_host:
+#             host = forwarded_host.split(",", 1)[0].strip() or host
+#
+#         forwarded_port = request.headers.get("X-Forwarded-Port")
+#         if forwarded_port:
+#             port = forwarded_port.split(",", 1)[0].strip()
+#             if port:
+#                 default_port = "443" if scheme == "https" else "80"
+#                 if ":" not in host and port != default_port:
+#                     host = f"{host}:{port}"
+#
+#         scheme = scheme or current_app.config.get("PREFERRED_URL_SCHEME", "http")
+#         host = host or request.host
+#
+#         return urlunsplit((scheme, host, callback_path, "", ""))
+#
+#     scheme = current_app.config.get("PREFERRED_URL_SCHEME", "http")
+#     server_name = current_app.config.get("SERVER_NAME")
+#     if server_name:
+#         return urlunsplit((scheme, server_name, callback_path, "", ""))
+#
+#     return url_for("google_callback", _external=True, _scheme=scheme)
+# =============================================================================
 
 
 def credentials_to_dict(credentials):
@@ -733,25 +479,29 @@ def _get_stats_cache_timeout() -> int:
     return get_cache_timeout("PORTAL_STATS_CACHE_TIMEOUT", 300)
 
 
-def _get_notification_cache_timeout() -> int:
-    return get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60)
-
-
-def _get_notification_version() -> int:
-    version = cache.get(_NOTIFICATION_VERSION_KEY)
-    if version is None:
-        version = int(time.time())
-        _set_notification_version(int(version))
-    return int(version)
-
-
-def _set_notification_version(version: int) -> None:
-    ttl = max(_get_notification_cache_timeout(), 300)
-    cache.set(_NOTIFICATION_VERSION_KEY, int(version), timeout=ttl)
-
-
-def _notification_cache_key(user_id: int) -> str:
-    return f"{_NOTIFICATION_COUNT_KEY_PREFIX}{_get_notification_version()}:{user_id}"
+# =============================================================================
+# FUNÇÕES MIGRADAS PARA blueprints/notifications.py (2024-12)
+# =============================================================================
+# def _get_notification_cache_timeout() -> int:
+#     return get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60)
+#
+#
+# def _get_notification_version() -> int:
+#     version = cache.get(_NOTIFICATION_VERSION_KEY)
+#     if version is None:
+#         version = int(time.time())
+#         _set_notification_version(int(version))
+#     return int(version)
+#
+#
+# def _set_notification_version(version: int) -> None:
+#     ttl = max(_get_notification_cache_timeout(), 300)
+#     cache.set(_NOTIFICATION_VERSION_KEY, int(version), timeout=ttl)
+#
+#
+# def _notification_cache_key(user_id: int) -> str:
+#     return f"{_NOTIFICATION_COUNT_KEY_PREFIX}{_get_notification_version()}:{user_id}"
+# =============================================================================
 
 
 def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
@@ -773,36 +523,40 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
     return stats
 
 
-def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
-    """Retrieve unread notification count with centralized cache support."""
-    if allow_cache:
-        return _memoized_unread_notifications(user_id)
-
-    unread = TaskNotification.query.filter(
-        TaskNotification.user_id == user_id,
-        TaskNotification.read_at.is_(None),
-    ).count()
-    return int(unread)
-
-
-
-@cache.memoize(timeout=get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60))
-def _memoized_unread_notifications(user_id: int) -> int:
-    """Memoized unread notification counter (keyed per user)."""
-    return int(
-        TaskNotification.query.filter(
-            TaskNotification.user_id == user_id,
-            TaskNotification.read_at.is_(None),
-        ).count()
-    )
-
-
-def _invalidate_notification_cache(user_id: Optional[int] = None) -> None:
-    """Drop cached unread counts for a specific user or everyone."""
-    if user_id is None:
-        cache.delete_memoized(_memoized_unread_notifications)
-        return
-    cache.delete_memoized(_memoized_unread_notifications, user_id)
+# =============================================================================
+# FUNÇÕES MIGRADAS PARA blueprints/notifications.py (2024-12)
+# =============================================================================
+# def _get_unread_notifications_count(user_id: int, allow_cache: bool = True) -> int:
+#     """Retrieve unread notification count with centralized cache support."""
+#     if allow_cache:
+#         return _memoized_unread_notifications(user_id)
+#
+#     unread = TaskNotification.query.filter(
+#         TaskNotification.user_id == user_id,
+#         TaskNotification.read_at.is_(None),
+#     ).count()
+#     return int(unread)
+#
+#
+#
+# @cache.memoize(timeout=get_cache_timeout("NOTIFICATION_COUNT_CACHE_TIMEOUT", 60))
+# def _memoized_unread_notifications(user_id: int) -> int:
+#     """Memoized unread notification counter (keyed per user)."""
+#     return int(
+#         TaskNotification.query.filter(
+#             TaskNotification.user_id == user_id,
+#             TaskNotification.read_at.is_(None),
+#         ).count()
+#     )
+#
+#
+# def _invalidate_notification_cache(user_id: Optional[int] = None) -> None:
+#     """Drop cached unread counts for a specific user or everyone."""
+#     if user_id is None:
+#         cache.delete_memoized(_memoized_unread_notifications)
+#         return
+#     cache.delete_memoized(_memoized_unread_notifications, user_id)
+# =============================================================================
 
 
 @app.context_processor
@@ -1394,19 +1148,23 @@ def inject_task_tags():
     return {"tasks_tags": tags}
 
 
-@app.context_processor
-def inject_notification_counts():
-    """Expose the number of unread task notifications to templates."""
-
-    if not current_user.is_authenticated:
-        return {"unread_notifications_count": 0}
-    cached = getattr(g, "_cached_unread_notifications", None)
-    if cached is not None:
-        return {"unread_notifications_count": cached}
-    with track_custom_span("sidebar", "load_unread_notifications"):
-        unread = _get_unread_notifications_count(current_user.id)
-    g._cached_unread_notifications = unread
-    return {"unread_notifications_count": unread}
+# =============================================================================
+# CONTEXT PROCESSOR MIGRADO PARA blueprints/notifications.py (2024-12)
+# =============================================================================
+# @app.context_processor
+# def inject_notification_counts():
+#     """Expose the number of unread task notifications to templates."""
+#
+#     if not current_user.is_authenticated:
+#         return {"unread_notifications_count": 0}
+#     cached = getattr(g, "_cached_unread_notifications", None)
+#     if cached is not None:
+#         return {"unread_notifications_count": cached}
+#     with track_custom_span("sidebar", "load_unread_notifications"):
+#         unread = _get_unread_notifications_count(current_user.id)
+#     g._cached_unread_notifications = unread
+#     return {"unread_notifications_count": unread}
+# =============================================================================
 
 @app.route("/")
 def index():
@@ -1428,736 +1186,19 @@ def home():
     with track_custom_span("template", "render_home"):
         return render_template("home.html")
 
-@app.route("/diretoria/acordos", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def diretoria_acordos():
-    """Render and manage Diretoria JP agreements linked to portal users."""
-
-    if current_user.role != "admin" and not user_has_tag("Diretoria"):
-        abort(403)
-
-    users = (
-        User.query.filter(User.ativo.is_(True))
-        .order_by(sa.func.lower(User.name))
-        .all()
-    )
-
-    form = DiretoriaAcordoForm()
-
-    search_query = (request.args.get("q", default="", type=str) or "").strip()
-
-    if request.method == "POST":
-        selected_user_id = request.form.get("user_id", type=int)
-    else:
-        selected_user_id = request.args.get("user_id", type=int)
-
-    selected_user = None
-    agreements: list[DiretoriaAgreement] = []
-    active_agreement: DiretoriaAgreement | None = None
-    search_results: list[DiretoriaAgreement] = []
-
-    if selected_user_id:
-        selected_user = (
-            User.query.filter(
-                User.id == selected_user_id,
-                User.ativo.is_(True),
-            ).first()
-        )
-        if not selected_user:
-            message = "Usuário selecionado não foi encontrado ou está inativo."
-            if request.method == "GET":
-                flash(message, "warning")
-                return redirect(url_for("diretoria_acordos"))
-            flash(message, "danger")
-        else:
-            agreements = (
-                DiretoriaAgreement.query.filter_by(user_id=selected_user.id)
-                .order_by(
-                    DiretoriaAgreement.agreement_date.desc(),
-                    DiretoriaAgreement.created_at.desc(),
-                )
-                .all()
-            )
-    agreement_entries: list[dict[str, Any]] = [
-        {"record": agreement_item}
-        for agreement_item in agreements
-    ]
-
-    search_entries: list[dict[str, Any]] = []
-    if search_query:
-        search_term = f"%{search_query}%"
-        search_results = (
-            DiretoriaAgreement.query.options(joinedload(DiretoriaAgreement.user))
-            .join(User)
-            .filter(
-                User.ativo.is_(True),
-                sa.or_(
-                    DiretoriaAgreement.title.ilike(search_term),
-                    DiretoriaAgreement.description.ilike(search_term),
-                ),
-            )
-            .order_by(
-                DiretoriaAgreement.agreement_date.desc(),
-                DiretoriaAgreement.created_at.desc(),
-            )
-            .all()
-        )
-
-    for agreement_item in search_results:
-        search_entries.append(
-            {
-                "record": agreement_item,
-                "user": agreement_item.user,
-            }
-        )
-
-    if request.method == "POST":
-        form_mode = request.form.get("form_mode") or "new"
-        if form_mode not in {"new", "edit"}:
-            form_mode = "new"
-        agreement_id = request.form.get("agreement_id", type=int)
-    else:
-        form_mode = request.args.get("action")
-        if form_mode not in {"new", "edit"}:
-            form_mode = None
-        agreement_id = request.args.get("agreement_id", type=int)
-
-    if request.method == "GET" and selected_user:
-        if form_mode == "edit" and agreement_id:
-            active_agreement = next(
-                (item for item in agreements if item.id == agreement_id), None
-            )
-            if not active_agreement:
-                active_agreement = DiretoriaAgreement.query.filter_by(
-                    id=agreement_id,
-                    user_id=selected_user.id,
-                ).first()
-            if not active_agreement:
-                flash("O acordo selecionado não foi encontrado.", "warning")
-                return redirect(
-                    url_for("diretoria_acordos", user_id=selected_user.id)
-                )
-            form.title.data = active_agreement.title
-            form.agreement_date.data = active_agreement.agreement_date
-            form.description.data = active_agreement.description
-            form.notify_user.data = False
-            form.notification_destination.data = "user"
-            form.notification_email.data = ""
-        elif form_mode == "new" and not form.agreement_date.data:
-            form.agreement_date.data = date.today()
-            form.notify_user.data = False
-            form.notification_destination.data = "user"
-            form.notification_email.data = ""
-
-    if request.method == "POST":
-        if not selected_user:
-            if not selected_user_id:
-                flash("Selecione um usuário para salvar o acordo.", "danger")
-        else:
-            if form_mode == "edit" and agreement_id:
-                active_agreement = DiretoriaAgreement.query.filter_by(
-                    id=agreement_id,
-                    user_id=selected_user.id,
-                ).first()
-                if not active_agreement:
-                    flash("O acordo selecionado não foi encontrado.", "warning")
-                    return redirect(
-                        url_for("diretoria_acordos", user_id=selected_user.id)
-                    )
-
-            if form.validate_on_submit():
-                cleaned_description = sanitize_html(form.description.data or "")
-
-                if form_mode == "edit" and active_agreement:
-                    active_agreement.title = form.title.data
-                    active_agreement.agreement_date = form.agreement_date.data
-                    active_agreement.description = cleaned_description
-                    feedback_message = "Acordo atualizado com sucesso."
-                else:
-                    active_agreement = DiretoriaAgreement(
-                        user=selected_user,
-                        title=form.title.data,
-                        agreement_date=form.agreement_date.data,
-                        description=cleaned_description,
-                    )
-                    db.session.add(active_agreement)
-                    feedback_message = "Acordo criado com sucesso."
-
-                db.session.commit()
-
-                recipient_email = None
-                destination_value = form.notification_destination.data or "user"
-                if form.notify_user.data:
-                    if destination_value == "custom":
-                        recipient_email = form.notification_email.data
-                    else:
-                        recipient_email = selected_user.email
-
-                if form.notify_user.data and recipient_email:
-                    try:
-                        action_label = (
-                            "atualizado" if form_mode == "edit" else "registrado"
-                        )
-                        email_html = render_template(
-                            "emails/diretoria_acordo.html",
-                            agreement=active_agreement,
-                            destinatario=selected_user,
-                            editor=current_user,
-                            action_label=action_label,
-                        )
-                        submit_io_task(
-                            send_email,
-                            subject=f"[Diretoria JP] Acordo {active_agreement.title}",
-                            html_body=email_html,
-                            recipients=[recipient_email],
-                        )
-                        flash(
-                            f"{feedback_message} Notificação enfileirada para envio por e-mail.",
-                            "success",
-                        )
-                    except EmailDeliveryError as exc:
-                        current_app.logger.error(
-                            "Falha ao enviar e-mail do acordo %s para %s: %s",
-                            active_agreement.id,
-                            recipient_email,
-                            exc,
-                        )
-                        flash(
-                            f"{feedback_message} Porém, não foi possível enviar o e-mail de notificação.",
-                            "warning",
-                        )
-                else:
-                    flash(feedback_message, "success")
-
-                return redirect(url_for("diretoria_acordos", user_id=selected_user.id))
-
-            flash("Por favor, corrija os erros do formulário.", "danger")
-
-    return render_template(
-        "diretoria/acordos.html",
-        users=users,
-        form=form,
-        selected_user=selected_user,
-        agreements=agreements,
-        form_mode=form_mode,
-        active_agreement=active_agreement,
-        agreement_entries=agreement_entries,
-        search_query=search_query,
-        search_entries=search_entries,
-    )
-
-@app.route("/diretoria/acordos/<int:agreement_id>/excluir", methods=["POST"])
-@login_required
-def diretoria_acordos_excluir(agreement_id: int):
-    """Remove an agreement linked to a Diretoria JP user."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") and user_has_tag("Diretoria")):
-        abort(403)
-
-    agreement = DiretoriaAgreement.query.get_or_404(agreement_id)
-
-    redirect_user_id = request.form.get("user_id", type=int) or agreement.user_id
-    if redirect_user_id != agreement.user_id:
-        redirect_user_id = agreement.user_id
-
-    db.session.delete(agreement)
-    db.session.commit()
-
-    flash("Acordo removido com sucesso.", "success")
-
-    return redirect(url_for("diretoria_acordos", user_id=redirect_user_id))
-
-@app.route("/diretoria/feedbacks", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def diretoria_feedbacks():
-    """Render and manage Diretoria JP feedbacks linked to portal users."""
-
-    if current_user.role != "admin" and not user_has_tag("Diretoria"):
-        abort(403)
-
-    users = (
-        User.query.filter(User.ativo.is_(True))
-        .order_by(sa.func.lower(User.name))
-        .all()
-    )
-
-    form = DiretoriaFeedbackForm()
-
-    search_query = (request.args.get("q", default="", type=str) or "").strip()
-
-    if request.method == "POST":
-        selected_user_id = request.form.get("user_id", type=int)
-    else:
-        selected_user_id = request.args.get("user_id", type=int)
-
-    selected_user = None
-    feedbacks: list[DiretoriaFeedback] = []
-    active_feedback: DiretoriaFeedback | None = None
-    search_results: list[DiretoriaFeedback] = []
-
-    if selected_user_id:
-        selected_user = (
-            User.query.filter(
-                User.id == selected_user_id,
-                User.ativo.is_(True),
-            ).first()
-        )
-        if not selected_user:
-            message = "Usuário selecionado não foi encontrado ou está inativo."
-            if request.method == "GET":
-                flash(message, "warning")
-                return redirect(url_for("diretoria_feedbacks"))
-            flash(message, "danger")
-        else:
-            feedbacks = (
-                DiretoriaFeedback.query.filter_by(user_id=selected_user.id)
-                .order_by(
-                    DiretoriaFeedback.feedback_date.desc(),
-                    DiretoriaFeedback.created_at.desc(),
-                )
-                .all()
-            )
-    feedback_entries: list[dict[str, Any]] = [
-        {"record": feedback_item}
-        for feedback_item in feedbacks
-    ]
-
-    search_entries: list[dict[str, Any]] = []
-    if search_query:
-        search_term = f"%{search_query}%"
-        search_results = (
-            DiretoriaFeedback.query.options(joinedload(DiretoriaFeedback.user))
-            .join(User)
-            .filter(
-                User.ativo.is_(True),
-                sa.or_(
-                    DiretoriaFeedback.title.ilike(search_term),
-                    DiretoriaFeedback.description.ilike(search_term),
-                ),
-            )
-            .order_by(
-                DiretoriaFeedback.feedback_date.desc(),
-                DiretoriaFeedback.created_at.desc(),
-            )
-            .all()
-        )
-
-    for feedback_item in search_results:
-        search_entries.append(
-            {
-                "record": feedback_item,
-                "user": feedback_item.user,
-            }
-        )
-
-    if request.method == "POST":
-        form_mode = request.form.get("form_mode") or "new"
-        if form_mode not in {"new", "edit"}:
-            form_mode = "new"
-        feedback_id = request.form.get("feedback_id", type=int)
-    else:
-        form_mode = request.args.get("action")
-        if form_mode not in {"new", "edit"}:
-            form_mode = None
-        feedback_id = request.args.get("feedback_id", type=int)
-
-    if request.method == "GET" and selected_user:
-        if form_mode == "edit" and feedback_id:
-            active_feedback = next(
-                (item for item in feedbacks if item.id == feedback_id), None
-            )
-            if not active_feedback:
-                active_feedback = DiretoriaFeedback.query.filter_by(
-                    id=feedback_id,
-                    user_id=selected_user.id,
-                ).first()
-            if not active_feedback:
-                flash("O feedback selecionado não foi encontrado.", "warning")
-                return redirect(
-                    url_for("diretoria_feedbacks", user_id=selected_user.id)
-                )
-            form.title.data = active_feedback.title
-            form.feedback_date.data = active_feedback.feedback_date
-            form.description.data = active_feedback.description
-            form.notify_user.data = False
-            form.notification_destination.data = "user"
-            form.notification_email.data = ""
-        elif form_mode == "new" and not form.feedback_date.data:
-            form.feedback_date.data = date.today()
-            form.notify_user.data = False
-            form.notification_destination.data = "user"
-            form.notification_email.data = ""
-
-    if request.method == "POST":
-        if not selected_user:
-            if not selected_user_id:
-                flash("Selecione um usuário para salvar o feedback.", "danger")
-        else:
-            if form_mode == "edit" and feedback_id:
-                active_feedback = DiretoriaFeedback.query.filter_by(
-                    id=feedback_id,
-                    user_id=selected_user.id,
-                ).first()
-                if not active_feedback:
-                    flash("O feedback selecionado não foi encontrado.", "warning")
-                    return redirect(
-                        url_for("diretoria_feedbacks", user_id=selected_user.id)
-                    )
-
-            if form.validate_on_submit():
-                cleaned_description = sanitize_html(form.description.data or "")
-
-                if form_mode == "edit" and active_feedback:
-                    active_feedback.title = form.title.data
-                    active_feedback.feedback_date = form.feedback_date.data
-                    active_feedback.description = cleaned_description
-                    feedback_message = "Feedback atualizado com sucesso."
-                else:
-                    active_feedback = DiretoriaFeedback(
-                        user=selected_user,
-                        title=form.title.data,
-                        feedback_date=form.feedback_date.data,
-                        description=cleaned_description,
-                    )
-                    db.session.add(active_feedback)
-                    feedback_message = "Feedback criado com sucesso."
-
-                db.session.commit()
-
-                recipient_email = None
-                destination_value = form.notification_destination.data or "user"
-                if form.notify_user.data:
-                    if destination_value == "custom":
-                        recipient_email = form.notification_email.data
-                    else:
-                        recipient_email = selected_user.email
-
-                if form.notify_user.data and recipient_email:
-                    try:
-                        action_label = (
-                            "atualizado" if form_mode == "edit" else "registrado"
-                        )
-                        email_html = render_template(
-                            "emails/diretoria_feedback.html",
-                            feedback=active_feedback,
-                            destinatario=selected_user,
-                            editor=current_user,
-                            action_label=action_label,
-                        )
-                        submit_io_task(
-                            send_email,
-                            subject=f"[Diretoria JP] Feedback {active_feedback.title}",
-                            html_body=email_html,
-                            recipients=[recipient_email],
-                        )
-                        flash(
-                            f"{feedback_message} Notificação enfileirada para envio por e-mail.",
-                            "success",
-                        )
-                    except EmailDeliveryError as exc:
-                        current_app.logger.error(
-                            "Falha ao enviar e-mail do feedback %s para %s: %s",
-                            active_feedback.id,
-                            recipient_email,
-                            exc,
-                        )
-                        flash(
-                            f"{feedback_message} Porém, não foi possível enviar o e-mail de notificação.",
-                            "warning",
-                        )
-                else:
-                    flash(feedback_message, "success")
-
-                return redirect(url_for("diretoria_feedbacks", user_id=selected_user.id))
-
-            flash("Por favor, corrija os erros do formulário.", "danger")
-
-    return render_template(
-        "diretoria/feedbacks.html",
-        users=users,
-        form=form,
-        selected_user=selected_user,
-        feedbacks=feedbacks,
-        form_mode=form_mode,
-        active_feedback=active_feedback,
-        feedback_entries=feedback_entries,
-        search_query=search_query,
-        search_entries=search_entries,
-    )
-
-@app.route("/diretoria/feedbacks/<int:feedback_id>/excluir", methods=["POST"])
-@login_required
-def diretoria_feedbacks_excluir(feedback_id: int):
-    """Remove a feedback linked to a Diretoria JP user."""
-
-    if current_user.role != "admin" and not user_has_tag("Diretoria"):
-        abort(403)
-
-    feedback = DiretoriaFeedback.query.get_or_404(feedback_id)
-
-    redirect_user_id = request.form.get("user_id", type=int) or feedback.user_id
-    if redirect_user_id != feedback.user_id:
-        redirect_user_id = feedback.user_id
-
-    db.session.delete(feedback)
-    db.session.commit()
-
-    flash("Feedback removido com sucesso.", "success")
-
-    return redirect(url_for("diretoria_feedbacks", user_id=redirect_user_id))
-
-@app.route("/diretoria/eventos", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def diretoria_eventos():
-    """Render or persist Diretoria JP event planning data."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
-        abort(403)
-
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or {}
-        normalized, errors = parse_diretoria_event_payload(payload)
-
-        if errors:
-            return jsonify({"errors": errors}), 400
-
-        diretoria_event = DiretoriaEvent(
-            **normalized,
-            created_by=current_user,
-        )
-
-        db.session.add(diretoria_event)
-        db.session.commit()
-
-        session["diretoria_event_feedback"] = {
-            "message": f'Evento "{diretoria_event.name}" salvo com sucesso.',
-            "category": "success",
-        }
-
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "redirect_url": url_for("diretoria_eventos_lista"),
-                }
-            ),
-            201,
-        )
-
-    return render_template("diretoria/eventos.html")
-
-@app.route("/diretoria/eventos/<int:event_id>/editar", methods=["GET", "POST"])
-@login_required
-def diretoria_eventos_editar(event_id: int):
-    """Edit an existing Diretoria JP event."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
-        abort(403)
-
-    event = DiretoriaEvent.query.get_or_404(event_id)
-
-    if request.method == "POST":
-        previous_photos: list[str] = []
-        if isinstance(event.photos, list):
-            for photo in event.photos:
-                normalized_prev = _normalize_photo_entry(photo)
-                if normalized_prev:
-                    previous_photos.append(normalized_prev)
-
-        payload = request.get_json(silent=True) or {}
-        normalized, errors = parse_diretoria_event_payload(payload)
-
-        if errors:
-            return jsonify({"errors": errors}), 400
-
-        if not normalized.get("event_date"):
-            return jsonify({"errors": ["Informe uma data válida para o evento."]}), 400
-
-        event.name = normalized["name"]
-        event.event_type = normalized["event_type"]
-        event.event_date = normalized["event_date"]
-        event.description = normalized["description"]
-        event.audience = normalized["audience"]
-        event.participants = normalized["participants"]
-        event.services = normalized["services"]
-        event.total_cost = normalized["total_cost"]
-        event.photos = normalized["photos"]
-
-        db.session.commit()
-
-        removed_photos = [
-            photo for photo in previous_photos if photo not in event.photos
-        ]
-        _cleanup_diretoria_photo_uploads(removed_photos, exclude_event_id=event.id)
-
-        session["diretoria_event_feedback"] = {
-            "message": f'Evento "{event.name}" atualizado com sucesso.',
-            "category": "success",
-        }
-
-        return jsonify(
-            {
-                "success": True,
-                "redirect_url": url_for("diretoria_eventos_lista"),
-            }
-        )
-
-    sanitized_photos = []
-    if isinstance(event.photos, list):
-        for photo in event.photos:
-            normalized = _normalize_photo_entry(photo)
-            if normalized:
-                sanitized_photos.append(normalized)
-
-    event_payload = {
-        "id": event.id,
-        "name": event.name,
-        "type": event.event_type,
-        "date": event.event_date.strftime("%Y-%m-%d"),
-        "description": event.description or "",
-        "audience": event.audience,
-        "participants": event.participants,
-        "categories": event.services or {},
-        "photos": sanitized_photos,
-        "submit_url": url_for("diretoria_eventos_editar", event_id=event.id),
-    }
-
-    return render_template("diretoria/eventos.html", event_data=event_payload)
-
-@app.route("/diretoria/eventos/<int:event_id>/visualizar")
-@login_required
-def diretoria_eventos_visualizar(event_id: int):
-    """Display the details of a Diretoria JP event without editing it."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
-        abort(403)
-
-    event = DiretoriaEvent.query.options(joinedload(DiretoriaEvent.created_by)).get_or_404(
-        event_id
-    )
-
-    services = event.services if isinstance(event.services, dict) else {}
-
-    def to_decimal(value: Any) -> Decimal | None:
-        try:
-            return Decimal(str(value))
-        except (InvalidOperation, TypeError):
-            return None
-
-    categories: list[dict[str, Any]] = []
-    for key, label in EVENT_CATEGORY_LABELS.items():
-        raw_category = services.get(key, {}) if isinstance(services, dict) else {}
-        raw_items = raw_category.get("items", []) if isinstance(raw_category, dict) else []
-        category_total = to_decimal(raw_category.get("total") if isinstance(raw_category, dict) else None)
-
-        processed_items: list[dict[str, Any]] = []
-        if isinstance(raw_items, list):
-            for item in raw_items:
-                if not isinstance(item, dict):
-                    continue
-
-                item_name = (item.get("name") or "").strip()
-                if not item_name:
-                    continue
-
-                processed_items.append(
-                    {
-                        "name": item_name,
-                        "quantity": to_decimal(item.get("quantity")),
-                        "unit_value": to_decimal(item.get("unit_value")),
-                        "total": to_decimal(item.get("total")),
-                    }
-                )
-
-        categories.append(
-            {
-                "key": key,
-                "label": label,
-                "entries": processed_items,
-                "total": category_total or Decimal("0.00"),
-            }
-        )
-
-    photo_urls = []
-    if isinstance(event.photos, list):
-        for photo in event.photos:
-            normalized = _normalize_photo_entry(photo)
-            if normalized:
-                photo_urls.append(normalized)
-
-    return render_template(
-        "diretoria/evento_visualizar.html",
-        event=event,
-        categories=categories,
-        photos=photo_urls,
-        event_type_labels=EVENT_TYPE_LABELS,
-        audience_labels=EVENT_AUDIENCE_LABELS,
-        updated_at_display=_format_event_timestamp(event.updated_at),
-    )
-
-@app.route("/diretoria/eventos/lista")
-@login_required
-def diretoria_eventos_lista():
-    """Display saved Diretoria JP events with search support."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
-        abort(403)
-
-    search_query = (request.args.get("q") or "").strip()
-
-    events_query = DiretoriaEvent.query
-    if search_query:
-        events_query = events_query.filter(
-            DiretoriaEvent.name.ilike(f"%{search_query}%")
-        )
-
-    events = (
-        events_query.order_by(
-            DiretoriaEvent.event_date.desc(), DiretoriaEvent.created_at.desc()
-        ).all()
-    )
-
-    feedback = session.pop("diretoria_event_feedback", None)
-    if isinstance(feedback, dict) and feedback.get("message"):
-        flash(feedback["message"], feedback.get("category", "success"))
-
-    return render_template(
-        "diretoria/eventos_lista.html",
-        events=events,
-        search_query=search_query,
-        event_type_labels=EVENT_TYPE_LABELS,
-        audience_labels=EVENT_AUDIENCE_LABELS,
-        category_labels=EVENT_CATEGORY_LABELS,
-    )
-
-@app.route("/diretoria/eventos/<int:event_id>/excluir", methods=["POST"])
-@login_required
-def diretoria_eventos_excluir(event_id: int):
-    """Remove a Diretoria JP event."""
-
-    if current_user.role != "admin" and not (user_has_tag("Gestão") or user_has_tag("Diretoria")):
-        abort(403)
-
-    event = DiretoriaEvent.query.get_or_404(event_id)
-    event_name = event.name
-    event_photos: list[str] = []
-    if isinstance(event.photos, list):
-        for photo in event.photos:
-            normalized_photo = _normalize_photo_entry(photo)
-            if normalized_photo:
-                event_photos.append(normalized_photo)
-
-    db.session.delete(event)
-    db.session.commit()
-
-    _cleanup_diretoria_photo_uploads(event_photos)
-
-    flash(f'Evento "{event_name}" removido com sucesso.', "success")
-
-    return redirect(url_for("diretoria_eventos_lista"))
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/diretoria.py (2024-12)
+# =============================================================================
+# @app.route("/diretoria/acordos", methods=["GET", "POST"])
+# @app.route("/diretoria/acordos/<int:agreement_id>/excluir", methods=["POST"])
+# @app.route("/diretoria/feedbacks", methods=["GET", "POST"])
+# @app.route("/diretoria/feedbacks/<int:feedback_id>/excluir", methods=["POST"])
+# @app.route("/diretoria/eventos", methods=["GET", "POST"])
+# @app.route("/diretoria/eventos/<int:event_id>/editar", methods=["GET", "POST"])
+# @app.route("/diretoria/eventos/<int:event_id>/visualizar")
+# @app.route("/diretoria/eventos/lista")
+# @app.route("/diretoria/eventos/<int:event_id>/excluir", methods=["POST"])
+# =============================================================================
 
 # =============================================================================
 # ROTA MIGRADA PARA blueprints/cursos.py (2024-12)
@@ -2208,445 +1249,454 @@ def diretoria_eventos_excluir(event_id: int):
 #     pass
 
 
-def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
-    """Serialize a :class:`TaskNotification` into a JSON-friendly dict."""
-
-    raw_type = notification.type or NotificationType.TASK.value
-    try:
-        notification_type = NotificationType(raw_type)
-    except ValueError:
-        notification_type = NotificationType.TASK
-
-    message = (notification.message or "").strip() or None
-    action_label = None
-    target_url = None
-
-    if notification_type is NotificationType.ANNOUNCEMENT:
-        announcement = notification.announcement
-        if announcement:
-            if not message:
-                subject = (announcement.subject or "").strip()
-                if subject:
-                    message = f"Novo comunicado: {subject}"
-                else:
-                    message = "Novo comunicado publicado."
-            target_url = url_for("announcements") + f"#announcement-{announcement.id}"
-        else:
-            if not message:
-                message = "Comunicado removido."
-        action_label = "Abrir comunicado" if target_url else None
-    elif notification_type is NotificationType.RECURRING_INVOICE:
-        if not message:
-            message = "Emitir nota fiscal recorrente."
-        target_url = url_for("notas_recorrentes")
-        action_label = "Abrir notas recorrentes"
-    else:
-        task = notification.task
-        if task:
-            task_title = (task.title or "").strip()
-            query_params: dict[str, object] = {"highlight_task": task.id}
-            if notification_type is NotificationType.TASK_RESPONSE:
-                query_params["open_responses"] = "1"
-            if task.is_private:
-                if current_user.is_authenticated and _user_can_access_task(task, current_user):
-                    overview_endpoint = (
-                        "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
-                    )
-                    target_url = url_for(overview_endpoint, **query_params) + f"#task-{task.id}"
-            else:
-                target_url = url_for("tasks_sector", tag_id=task.tag_id, **query_params) + f"#task-{task.id}"
-            if not message:
-                prefix = (
-                    "Tarefa atualizada"
-                    if notification_type is NotificationType.TASK
-                    else "Notificação"
-                )
-                if task_title:
-                    message = f"{prefix}: {task_title}"
-                else:
-                    message = f"{prefix} atribuída a você."
-        else:
-            if not message:
-                message = "Tarefa removida."
-        if not action_label:
-            if notification_type is NotificationType.TASK_RESPONSE:
-                action_label = "Ver resposta" if target_url else None
-            else:
-                action_label = "Abrir tarefa" if target_url else None
-
-    if not message:
-        message = "Atualização disponível."
-
-    created_at = notification.created_at or utc3_now()
-    if created_at.tzinfo is None:
-        # Notifications are stored in local (Sao Paulo) time as naive datetimes.
-        # Explicitly attach the timezone so the frontend receives the correct offset.
-        localized = created_at.replace(tzinfo=SAO_PAULO_TZ)
-    else:
-        localized = created_at.astimezone(SAO_PAULO_TZ)
-
-    created_at_iso = localized.isoformat()
-    display_dt = localized
-
-    return {
-        "id": notification.id,
-        "type": notification_type.value,
-        "message": message,
-        "created_at": created_at_iso,
-        "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
-        "is_read": notification.is_read,
-        "url": target_url,
-        "action_label": action_label,
-    }
-
-
-def _prune_old_notifications(retention_days: int = 60) -> int:
-    """Remove notifications older than the retention window."""
-
-    threshold = utc3_now() - timedelta(days=retention_days)
-    deleted = (
-        TaskNotification.query.filter(TaskNotification.created_at < threshold)
-        .delete(synchronize_session=False)
-    )
-    if deleted:
-        db.session.commit()
-    return deleted
-
-
-def _get_user_notification_items(limit: int | None = 20):
-    """Return serialized notifications and unread totals for the current user."""
-
-    _prune_old_notifications()
-    notifications_query = (
-        TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
-        .options(
-            joinedload(TaskNotification.task).joinedload(Task.tag),
-            joinedload(TaskNotification.announcement),
-        )
-        .order_by(TaskNotification.created_at.desc())
-    )
-    if limit is not None:
-        notifications_query = notifications_query.limit(limit)
-    notifications = notifications_query.all()
-    unread_total = _get_unread_notifications_count(current_user.id)
-
-    items = []
-    for notification in notifications:
-        raw_type = notification.type or NotificationType.TASK.value
-        try:
-            notification_type = NotificationType(raw_type)
-        except ValueError:
-            notification_type = NotificationType.TASK
-
-        message = (notification.message or "").strip() or None
-        action_label = None
-        target_url = None
-
-        items.append(_serialize_notification(notification))
-
-    return items, unread_total
-
-
-@app.route("/notifications", methods=["GET"])
-@login_required
-def list_notifications():
-    """Return the most recent notifications for the user."""
-
-    items, unread_total = _get_user_notification_items(limit=20)
-    return jsonify({"notifications": items, "unread": unread_total})
-
-@app.route("/notifications/stream")
-@login_required
-@limiter.exempt  # SSE connections remain open; exempt from standard rate limiting
-def notifications_stream():
-    """Server-Sent Events stream delivering real-time notifications."""
-    from app.services.realtime import get_broadcaster
-
-    since_id = request.args.get("since", type=int) or 0
-    batch_limit = current_app.config.get("NOTIFICATIONS_STREAM_BATCH", 50)
-    user_id = current_user.id
-
-    # Query DB once to get the initial last_sent_id, then release connection
-    if not since_id:
-        last_existing = (
-            TaskNotification.query.filter(TaskNotification.user_id == user_id)
-            .order_by(TaskNotification.id.desc())
-            .with_entities(TaskNotification.id)
-            .limit(1)
-            .scalar()
-        )
-        since_id = last_existing or 0
-
-    # CRITICAL: Release database connection before entering streaming loop
-    # This prevents connection pool exhaustion from long-running SSE connections
-    db.session.remove()
-
-    broadcaster = get_broadcaster()
-    client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
-    # Reduced heartbeat to 15s to prevent worker exhaustion (was 45s)
-    heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 15)
-
-    def event_stream() -> Any:
-        last_sent_id = since_id
-
-        try:
-            while True:
-                # Check for new notifications in the database
-                # We create a new session for each check to avoid holding connections
-                new_notifications = (
-                    TaskNotification.query.filter(
-                        TaskNotification.user_id == user_id,
-                        TaskNotification.id > last_sent_id,
-                    )
-                    .options(
-                        joinedload(TaskNotification.task).joinedload(Task.tag),
-                        joinedload(TaskNotification.announcement),
-                    )
-                    .order_by(TaskNotification.id.asc())
-                    .limit(batch_limit)
-                    .all()
-                )
-
-                if new_notifications:
-                    serialized = [
-                        _serialize_notification(notification)
-                        for notification in new_notifications
-                    ]
-                    last_sent_id = max(notification.id for notification in new_notifications)
-                    # Use cache for unread count to reduce database queries
-                    unread_total = _get_unread_notifications_count(user_id, allow_cache=True)
-                    payload = json.dumps(
-                        {
-                            "notifications": serialized,
-                            "unread": unread_total,
-                            "last_id": last_sent_id,
-                        }
-                    )
-                    # Release DB connection immediately after query
-                    db.session.remove()
-                    yield f"data: {payload}\n\n"
-                else:
-                    # No new notifications - release connection and send keep-alive
-                    db.session.remove()
-                    yield ": keep-alive\n\n"
-
-                # Wait for broadcaster events or timeout
-                # This doesn't hold a DB connection
-                triggered = broadcaster.wait_for_events(
-                    user_id,
-                    client_id,
-                    timeout=heartbeat_interval,
-                )
-
-                # Small sleep to avoid busy-looping even after broadcast
-                if triggered:
-                    time.sleep(0.5)  # Brief delay to batch notifications
-
-        except GeneratorExit:
-            broadcaster.unregister_client(user_id, client_id)
-            db.session.remove()
-            return
-        finally:
-            broadcaster.unregister_client(user_id, client_id)
-            db.session.remove()
-
-    response = Response(
-        stream_with_context(event_stream()),
-        mimetype="text/event-stream",
-    )
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
-    return response
-
-@app.route("/realtime/stream")
-@login_required
-@limiter.exempt  # SSE connections remain open; rate limiting causa reconexões agressivas
-def realtime_stream():
-    """Server-Sent Events stream for real-time system updates."""
-    from app.services.realtime import get_broadcaster
-
-    # Get subscribed scopes from query params (comma-separated)
-    scopes_param = request.args.get("scopes", "all")
-    subscribed_scopes = set(s.strip() for s in scopes_param.split(",") if s.strip())
-
-    user_id = current_user.id
-
-    # CRITICAL: Release database connection before entering streaming loop
-    # This prevents connection pool exhaustion from long-running SSE connections
-    db.session.remove()
-
-    broadcaster = get_broadcaster()
-    client_id = broadcaster.register_client(user_id, subscribed_scopes)
-    # Reduced heartbeat to 10s to prevent worker exhaustion (was 30s)
-    heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 10)
-
-    def event_stream() -> Any:
-        try:
-            last_event_id = 0
-            while True:
-                events = broadcaster.get_events(user_id, client_id, since_id=last_event_id)
-
-                if events:
-                    for event in events:
-                        yield event.to_sse()
-                        last_event_id = max(last_event_id, event.id)
-                    continue
-
-                triggered = broadcaster.wait_for_events(
-                    user_id,
-                    client_id,
-                    timeout=heartbeat_interval,
-                )
-                if not triggered:
-                    yield ": keep-alive\n\n"
-        except GeneratorExit:
-            broadcaster.unregister_client(user_id, client_id)
-            db.session.remove()
-            return
-        finally:
-            broadcaster.unregister_client(user_id, client_id)
-            db.session.remove()
-
-    response = Response(
-        stream_with_context(event_stream()),
-        mimetype="text/event-stream",
-    )
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
-    return response
-
-@app.route("/notificacoes")
-@login_required
-@meeting_only_access_check
-def notifications_center():
-    """Render the notification center page."""
-
-    items, unread_total = _get_user_notification_items(limit=50)
-    return render_template(
-        "notifications.html",
-        notifications=items,
-        unread_total=unread_total,
-    )
-
-@app.route("/notifications/<int:notification_id>/read", methods=["POST"])
-@login_required
-def mark_notification_read(notification_id):
-    """Mark a single notification as read."""
-
-    notification = TaskNotification.query.filter(
-        TaskNotification.id == notification_id,
-        TaskNotification.user_id == current_user.id,
-    ).first_or_404()
-    if not notification.read_at:
-        notification.read_at = utc3_now()
-        db.session.commit()
-        _invalidate_notification_cache(current_user.id)
-    return jsonify({"success": True})
-
-@app.route("/notifications/read-all", methods=["POST"])
-@login_required
-def mark_all_notifications_read():
-    """Mark all unread notifications for the current user as read."""
-
-    updated = (
-        TaskNotification.query.filter(
-            TaskNotification.user_id == current_user.id,
-            TaskNotification.read_at.is_(None),
-        ).update(
-            {TaskNotification.read_at: utc3_now()},
-            synchronize_session=False,
-        )
-    )
-    db.session.commit()
-    if updated:
-        _invalidate_notification_cache(current_user.id)
-    return jsonify({"success": True, "updated": updated or 0})
-
-
-@app.route("/notifications/subscribe", methods=["POST"])
-@login_required
-def subscribe_push_notifications():
-    """Subscribe to Web Push notifications."""
-    from app.models.tables import PushSubscription
-
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Dados inválidos"}), 400
-
-    endpoint = data.get("endpoint")
-    keys = data.get("keys", {})
-    p256dh = keys.get("p256dh")
-    auth = keys.get("auth")
-
-    if not endpoint or not p256dh or not auth:
-        return jsonify({"error": "Dados de subscrição incompletos"}), 400
-
-    # Verificar se já existe uma subscrição para este endpoint
-    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
-
-    if existing:
-        # Atualizar usuário se mudou e timestamp
-        existing.user_id = current_user.id
-        existing.p256dh_key = p256dh
-        existing.auth_key = auth
-        existing.user_agent = request.headers.get("User-Agent", "")[:500]
-        existing.last_used_at = utc3_now()
-    else:
-        # Criar nova subscrição
-        subscription = PushSubscription(
-            user_id=current_user.id,
-            endpoint=endpoint,
-            p256dh_key=p256dh,
-            auth_key=auth,
-            user_agent=request.headers.get("User-Agent", "")[:500],
-        )
-        db.session.add(subscription)
-
-    try:
-        db.session.commit()
-        return jsonify({"success": True})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/notifications/unsubscribe", methods=["POST"])
-@login_required
-def unsubscribe_push_notifications():
-    """Unsubscribe from Web Push notifications."""
-    from app.models.tables import PushSubscription
-
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Dados inválidos"}), 400
-
-    endpoint = data.get("endpoint")
-    if not endpoint:
-        return jsonify({"error": "Endpoint não fornecido"}), 400
-
-    # Remover subscrição
-    PushSubscription.query.filter_by(
-        endpoint=endpoint,
-        user_id=current_user.id,
-    ).delete()
-
-    db.session.commit()
-    return jsonify({"success": True})
-
-
-@app.route("/notifications/vapid-public-key", methods=["GET"])
-def get_vapid_public_key():
-    """Return the VAPID public key for push subscription."""
-    public_key = os.getenv("VAPID_PUBLIC_KEY", "")
-    if not public_key:
-        return jsonify({"error": "VAPID não configurado"}), 500
-    return jsonify({"publicKey": public_key})
-
-
-@app.route("/notifications/test-push", methods=["POST"])
-@login_required
-def test_push_notification():
-    """Send a test push notification to the current user."""
+# =============================================================================
+# FUNÇÕES MIGRADAS PARA blueprints/notifications.py (2024-12)
+# =============================================================================
+# def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
+#     """Serialize a :class:`TaskNotification` into a JSON-friendly dict."""
+
+#     raw_type = notification.type or NotificationType.TASK.value
+#     try:
+#         notification_type = NotificationType(raw_type)
+#     except ValueError:
+#         notification_type = NotificationType.TASK
+
+#     message = (notification.message or "").strip() or None
+#     action_label = None
+#     target_url = None
+
+#     if notification_type is NotificationType.ANNOUNCEMENT:
+#         announcement = notification.announcement
+#         if announcement:
+#             if not message:
+#                 subject = (announcement.subject or "").strip()
+#                 if subject:
+#                     message = f"Novo comunicado: {subject}"
+#                 else:
+#                     message = "Novo comunicado publicado."
+#             target_url = url_for("announcements") + f"#announcement-{announcement.id}"
+#         else:
+#             if not message:
+#                 message = "Comunicado removido."
+#         action_label = "Abrir comunicado" if target_url else None
+#     elif notification_type is NotificationType.RECURRING_INVOICE:
+#         if not message:
+#             message = "Emitir nota fiscal recorrente."
+#         target_url = url_for("notas_recorrentes")
+#         action_label = "Abrir notas recorrentes"
+#     else:
+#         task = notification.task
+#         if task:
+#             task_title = (task.title or "").strip()
+#             query_params: dict[str, object] = {"highlight_task": task.id}
+#             if notification_type is NotificationType.TASK_RESPONSE:
+#                 query_params["open_responses"] = "1"
+#             if task.is_private:
+#                 if current_user.is_authenticated and _user_can_access_task(task, current_user):
+#                     overview_endpoint = (
+#                         "tasks_overview" if current_user.role == "admin" else "tasks_overview_mine"
+#                     )
+#                     target_url = url_for(overview_endpoint, **query_params) + f"#task-{task.id}"
+#             else:
+#                 target_url = url_for("tasks_sector", tag_id=task.tag_id, **query_params) + f"#task-{task.id}"
+#             if not message:
+#                 prefix = (
+#                     "Tarefa atualizada"
+#                     if notification_type is NotificationType.TASK
+#                     else "Notificação"
+#                 )
+#                 if task_title:
+#                     message = f"{prefix}: {task_title}"
+#                 else:
+#                     message = f"{prefix} atribuída a você."
+#         else:
+#             if not message:
+#                 message = "Tarefa removida."
+#         if not action_label:
+#             if notification_type is NotificationType.TASK_RESPONSE:
+#                 action_label = "Ver resposta" if target_url else None
+#             else:
+#                 action_label = "Abrir tarefa" if target_url else None
+
+#     if not message:
+#         message = "Atualização disponível."
+
+#     created_at = notification.created_at or utc3_now()
+#     if created_at.tzinfo is None:
+#         # Notifications are stored in local (Sao Paulo) time as naive datetimes.
+#         # Explicitly attach the timezone so the frontend receives the correct offset.
+#         localized = created_at.replace(tzinfo=SAO_PAULO_TZ)
+#     else:
+#         localized = created_at.astimezone(SAO_PAULO_TZ)
+
+#     created_at_iso = localized.isoformat()
+#     display_dt = localized
+
+#     return {
+#         "id": notification.id,
+#         "type": notification_type.value,
+#         "message": message,
+#         "created_at": created_at_iso,
+#         "created_at_display": display_dt.strftime("%d/%m/%Y %H:%M"),
+#         "is_read": notification.is_read,
+#         "url": target_url,
+#         "action_label": action_label,
+#     }
+
+
+# def _prune_old_notifications(retention_days: int = 60) -> int:
+#     """Remove notifications older than the retention window."""
+
+#     threshold = utc3_now() - timedelta(days=retention_days)
+#     deleted = (
+#         TaskNotification.query.filter(TaskNotification.created_at < threshold)
+#         .delete(synchronize_session=False)
+#     )
+#     if deleted:
+#         db.session.commit()
+#     return deleted
+
+
+# def _get_user_notification_items(limit: int | None = 20):
+#     """Return serialized notifications and unread totals for the current user."""
+
+#     _prune_old_notifications()
+#     notifications_query = (
+#         TaskNotification.query.filter(TaskNotification.user_id == current_user.id)
+#         .options(
+#             joinedload(TaskNotification.task).joinedload(Task.tag),
+#             joinedload(TaskNotification.announcement),
+#         )
+#         .order_by(TaskNotification.created_at.desc())
+#     )
+#     if limit is not None:
+#         notifications_query = notifications_query.limit(limit)
+#     notifications = notifications_query.all()
+#     unread_total = _get_unread_notifications_count(current_user.id)
+
+#     items = []
+#     for notification in notifications:
+#         raw_type = notification.type or NotificationType.TASK.value
+#         try:
+#             notification_type = NotificationType(raw_type)
+#         except ValueError:
+#             notification_type = NotificationType.TASK
+
+#         message = (notification.message or "").strip() or None
+#         action_label = None
+#         target_url = None
+
+#         items.append(_serialize_notification(notification))
+
+#     return items, unread_total
+
+# =============================================================================
+
+
+
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/notifications.py (2024-12)
+# =============================================================================
+# @app.route("/notifications", methods=["GET"])
+# @login_required
+# def list_notifications():
+#     """Return the most recent notifications for the user."""
+
+#     items, unread_total = _get_user_notification_items(limit=20)
+#     return jsonify({"notifications": items, "unread": unread_total})
+
+# @app.route("/notifications/stream")
+# @login_required
+# @limiter.exempt  # SSE connections remain open; exempt from standard rate limiting
+# def notifications_stream():
+#     """Server-Sent Events stream delivering real-time notifications."""
+#     from app.services.realtime import get_broadcaster
+
+#     since_id = request.args.get("since", type=int) or 0
+#     batch_limit = current_app.config.get("NOTIFICATIONS_STREAM_BATCH", 50)
+#     user_id = current_user.id
+
+#     # Query DB once to get the initial last_sent_id, then release connection
+#     if not since_id:
+#         last_existing = (
+#             TaskNotification.query.filter(TaskNotification.user_id == user_id)
+#             .order_by(TaskNotification.id.desc())
+#             .with_entities(TaskNotification.id)
+#             .limit(1)
+#             .scalar()
+#         )
+#         since_id = last_existing or 0
+
+#     # CRITICAL: Release database connection before entering streaming loop
+#     # This prevents connection pool exhaustion from long-running SSE connections
+#     db.session.remove()
+
+#     broadcaster = get_broadcaster()
+#     client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
+#     # Reduced heartbeat to 15s to prevent worker exhaustion (was 45s)
+#     heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 15)
+
+#     def event_stream() -> Any:
+#         last_sent_id = since_id
+
+#         try:
+#             while True:
+#                 # Check for new notifications in the database
+#                 # We create a new session for each check to avoid holding connections
+#                 new_notifications = (
+#                     TaskNotification.query.filter(
+#                         TaskNotification.user_id == user_id,
+#                         TaskNotification.id > last_sent_id,
+#                     )
+#                     .options(
+#                         joinedload(TaskNotification.task).joinedload(Task.tag),
+#                         joinedload(TaskNotification.announcement),
+#                     )
+#                     .order_by(TaskNotification.id.asc())
+#                     .limit(batch_limit)
+#                     .all()
+#                 )
+
+#                 if new_notifications:
+#                     serialized = [
+#                         _serialize_notification(notification)
+#                         for notification in new_notifications
+#                     ]
+#                     last_sent_id = max(notification.id for notification in new_notifications)
+#                     # Use cache for unread count to reduce database queries
+#                     unread_total = _get_unread_notifications_count(user_id, allow_cache=True)
+#                     payload = json.dumps(
+#                         {
+#                             "notifications": serialized,
+#                             "unread": unread_total,
+#                             "last_id": last_sent_id,
+#                         }
+#                     )
+#                     # Release DB connection immediately after query
+#                     db.session.remove()
+#                     yield f"data: {payload}\n\n"
+#                 else:
+#                     # No new notifications - release connection and send keep-alive
+#                     db.session.remove()
+#                     yield ": keep-alive\n\n"
+
+#                 # Wait for broadcaster events or timeout
+#                 # This doesn't hold a DB connection
+#                 triggered = broadcaster.wait_for_events(
+#                     user_id,
+#                     client_id,
+#                     timeout=heartbeat_interval,
+#                 )
+
+#                 # Small sleep to avoid busy-looping even after broadcast
+#                 if triggered:
+#                     time.sleep(0.5)  # Brief delay to batch notifications
+
+#         except GeneratorExit:
+#             broadcaster.unregister_client(user_id, client_id)
+#             db.session.remove()
+#             return
+#         finally:
+#             broadcaster.unregister_client(user_id, client_id)
+#             db.session.remove()
+
+#     response = Response(
+#         stream_with_context(event_stream()),
+#         mimetype="text/event-stream",
+#     )
+#     response.headers["Cache-Control"] = "no-cache"
+#     response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
+#     return response
+
+# @app.route("/realtime/stream")
+# @login_required
+# @limiter.exempt  # SSE connections remain open; rate limiting causa reconexões agressivas
+# def realtime_stream():
+#     """Server-Sent Events stream for real-time system updates."""
+#     from app.services.realtime import get_broadcaster
+
+#     # Get subscribed scopes from query params (comma-separated)
+#     scopes_param = request.args.get("scopes", "all")
+#     subscribed_scopes = set(s.strip() for s in scopes_param.split(",") if s.strip())
+
+#     user_id = current_user.id
+
+#     # CRITICAL: Release database connection before entering streaming loop
+#     # This prevents connection pool exhaustion from long-running SSE connections
+#     db.session.remove()
+
+#     broadcaster = get_broadcaster()
+#     client_id = broadcaster.register_client(user_id, subscribed_scopes)
+#     # Reduced heartbeat to 10s to prevent worker exhaustion (was 30s)
+#     heartbeat_interval = current_app.config.get("REALTIME_HEARTBEAT_INTERVAL", 10)
+
+#     def event_stream() -> Any:
+#         try:
+#             last_event_id = 0
+#             while True:
+#                 events = broadcaster.get_events(user_id, client_id, since_id=last_event_id)
+
+#                 if events:
+#                     for event in events:
+#                         yield event.to_sse()
+#                         last_event_id = max(last_event_id, event.id)
+#                     continue
+
+#                 triggered = broadcaster.wait_for_events(
+#                     user_id,
+#                     client_id,
+#                     timeout=heartbeat_interval,
+#                 )
+#                 if not triggered:
+#                     yield ": keep-alive\n\n"
+#         except GeneratorExit:
+#             broadcaster.unregister_client(user_id, client_id)
+#             db.session.remove()
+#             return
+#         finally:
+#             broadcaster.unregister_client(user_id, client_id)
+#             db.session.remove()
+
+#     response = Response(
+#         stream_with_context(event_stream()),
+#         mimetype="text/event-stream",
+#     )
+#     response.headers["Cache-Control"] = "no-cache"
+#     response.headers["X-Accel-Buffering"] = "no"  # Disable nginx buffering
+#     return response
+
+# @app.route("/notificacoes")
+# @login_required
+# @meeting_only_access_check
+# def notifications_center():
+#     """Render the notification center page."""
+
+#     items, unread_total = _get_user_notification_items(limit=50)
+#     return render_template(
+#         "notifications.html",
+#         notifications=items,
+#         unread_total=unread_total,
+#     )
+
+# @app.route("/notifications/<int:notification_id>/read", methods=["POST"])
+# @login_required
+# def mark_notification_read(notification_id):
+#     """Mark a single notification as read."""
+
+#     notification = TaskNotification.query.filter(
+#         TaskNotification.id == notification_id,
+#         TaskNotification.user_id == current_user.id,
+#     ).first_or_404()
+#     if not notification.read_at:
+#         notification.read_at = utc3_now()
+#         db.session.commit()
+#         _invalidate_notification_cache(current_user.id)
+#     return jsonify({"success": True})
+
+# @app.route("/notifications/read-all", methods=["POST"])
+# @login_required
+# def mark_all_notifications_read():
+#     """Mark all unread notifications for the current user as read."""
+
+#     updated = (
+#         TaskNotification.query.filter(
+#             TaskNotification.user_id == current_user.id,
+#             TaskNotification.read_at.is_(None),
+#         ).update(
+#             {TaskNotification.read_at: utc3_now()},
+#             synchronize_session=False,
+#         )
+#     )
+#     db.session.commit()
+#     if updated:
+#         _invalidate_notification_cache(current_user.id)
+#     return jsonify({"success": True, "updated": updated or 0})
+
+
+# @app.route("/notifications/subscribe", methods=["POST"])
+# @login_required
+# def subscribe_push_notifications():
+#     """Subscribe to Web Push notifications."""
+#     from app.models.tables import PushSubscription
+
+#     data = request.get_json()
+#     if not data:
+#         return jsonify({"error": "Dados inválidos"}), 400
+
+#     endpoint = data.get("endpoint")
+#     keys = data.get("keys", {})
+#     p256dh = keys.get("p256dh")
+#     auth = keys.get("auth")
+
+#     if not endpoint or not p256dh or not auth:
+#         return jsonify({"error": "Dados de subscrição incompletos"}), 400
+
+#     # Verificar se já existe uma subscrição para este endpoint
+#     existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+
+#     if existing:
+#         # Atualizar usuário se mudou e timestamp
+#         existing.user_id = current_user.id
+#         existing.p256dh_key = p256dh
+#         existing.auth_key = auth
+#         existing.user_agent = request.headers.get("User-Agent", "")[:500]
+#         existing.last_used_at = utc3_now()
+#     else:
+#         # Criar nova subscrição
+#         subscription = PushSubscription(
+#             user_id=current_user.id,
+#             endpoint=endpoint,
+#             p256dh_key=p256dh,
+#             auth_key=auth,
+#             user_agent=request.headers.get("User-Agent", "")[:500],
+#         )
+#         db.session.add(subscription)
+
+#     try:
+#         db.session.commit()
+#         return jsonify({"success": True})
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify({"error": str(e)}), 500
+
+
+# @app.route("/notifications/unsubscribe", methods=["POST"])
+# @login_required
+# def unsubscribe_push_notifications():
+#     """Unsubscribe from Web Push notifications."""
+#     from app.models.tables import PushSubscription
+
+#     data = request.get_json()
+#     if not data:
+#         return jsonify({"error": "Dados inválidos"}), 400
+
+#     endpoint = data.get("endpoint")
+#     if not endpoint:
+#         return jsonify({"error": "Endpoint não fornecido"}), 400
+
+#     # Remover subscrição
+#     PushSubscription.query.filter_by(
+#         endpoint=endpoint,
+#         user_id=current_user.id,
+#     ).delete()
+
+#     db.session.commit()
+#     return jsonify({"success": True})
+
+
+# @app.route("/notifications/vapid-public-key", methods=["GET"])
+# def get_vapid_public_key():
+#     """Return the VAPID public key for push subscription."""
+#     public_key = os.getenv("VAPID_PUBLIC_KEY", "")
+#     if not public_key:
+#         return jsonify({"error": "VAPID não configurado"}), 500
+#     return jsonify({"publicKey": public_key})
+
+
+# @app.route("/notifications/test-push", methods=["POST"])
+# @login_required
+# def test_push_notification():
+#     """Send a test push notification to the current user."""
     from app.services.push_notifications import test_push_notification as send_test
 
     result = send_test(current_user.id)
@@ -2668,64 +1718,12 @@ def _configure_consultoria_form(form: ConsultoriaForm) -> ConsultoriaForm:
 # @app.route("/consultorias") - Migrado para blueprints/consultorias.py
 # =============================================================================
 
-@app.route("/calendario-colaboradores", methods=["GET", "POST"])
-@login_required
-@meeting_only_access_check
-def calendario_colaboradores():
-    """Display and manage the internal collaborators calendar."""
-
-    form = GeneralCalendarEventForm()
-    populate_general_event_participants(form)
-    can_manage = (
-        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
-    )
-    show_modal = False
-    if form.validate_on_submit():
-        if not can_manage:
-            abort(403)
-        event_id_raw = form.event_id.data
-        if event_id_raw:
-            try:
-                event_id = int(event_id_raw)
-            except (TypeError, ValueError):
-                abort(400)
-            event = GeneralCalendarEvent.query.get_or_404(event_id)
-            if current_user.role != "admin" and event.created_by_id != current_user.id:
-                flash("Você só pode editar eventos que você criou.", "danger")
-                return redirect(url_for("calendario_colaboradores"))
-            update_calendar_event_from_form(event, form)
-        else:
-            create_calendar_event_from_form(form, current_user.id)
-        return redirect(url_for("calendario_colaboradores"))
-    elif request.method == "POST":
-        show_modal = True
-
-    calendar_tz = get_calendar_timezone()
-    return render_template(
-        "calendario_colaboradores.html",
-        form=form,
-        can_manage=can_manage,
-        show_modal=show_modal,
-        calendar_timezone=calendar_tz.key,
-    )
-
-@app.route("/calendario-eventos/<int:event_id>/delete", methods=["POST"])
-@login_required
-def delete_calendario_evento(event_id):
-    """Delete an event from the collaborators calendar."""
-
-    event = GeneralCalendarEvent.query.get_or_404(event_id)
-    can_manage = (
-        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
-    )
-    if not can_manage:
-        abort(403)
-    if not is_user_admin(current_user) and event.created_by_id != current_user.id:
-        flash("Você só pode excluir eventos que você criou.", "danger")
-        return redirect(url_for("calendario_colaboradores"))
-    delete_calendar_event(event)
-    flash("Evento removido com sucesso!", "success")
-    return redirect(url_for("calendario_colaboradores"))
+# =============================================================================
+# ROTAS MIGRADAS PARA blueprints/calendario.py (2024-12)
+# =============================================================================
+# @app.route("/calendario-colaboradores") - Migrado para blueprints/calendario.py
+# @app.route("/calendario-eventos/<int:event_id>/delete") - Migrado para blueprints/calendario.py
+# =============================================================================
 
 
 def _meeting_host_candidates(meeting: Reuniao) -> tuple[list[dict[str, Any]], str]:
@@ -4165,7 +3163,7 @@ def notas_totalizador():
 # @app.route("/cookies") - Migrado para blueprints/auth.py
 # @app.route("/cookies/revoke") - Migrado para blueprints/auth.py
 # @app.route("/login/google") - Migrado para blueprints/auth.py
-# @app.route("/oauth2callback") - Migrado para blueprints/auth.py
+# @app.route("/google/callback") - Migrado para blueprints/auth.py (anteriormente /oauth2callback)
 # @app.route("/login") - Migrado para blueprints/auth.py
 # normalize_scopes() - Migrado para blueprints/auth.py
 # _determine_post_login_redirect() - Migrado para blueprints/auth.py

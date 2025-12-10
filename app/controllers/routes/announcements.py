@@ -27,10 +27,10 @@ from werkzeug.utils import secure_filename
 
 from app import db
 from app.controllers.routes import (
-    _invalidate_notification_cache,
     meeting_only_access_check,
     utc3_now,
 )
+from app.controllers.routes.blueprints.notifications import _invalidate_notification_cache
 from app.forms import AnnouncementForm
 from app.models.tables import (
     Announcement,
