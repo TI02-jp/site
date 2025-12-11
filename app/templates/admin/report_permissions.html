@@ -8,17 +8,18 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-        <div class="row mb-4">
-            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h1 class="text-primary mb-1">
-                        <i class="bi bi-shield-lock me-2"></i>Permissões de Relatórios
-                    </h1>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('relatorios') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Voltar
-                    </a>
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="text-primary mb-1">
+                    <i class="bi bi-shield-lock me-2"></i>Permissões do portal
+                </h1>
+                <p class="text-muted mb-0">Defina quem pode acessar relatórios e ações específicas do portal por tag ou usuário.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('relatorios') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </a>
                 <button type="submit" form="report-permissions-form" class="btn btn-primary">
                     <i class="bi bi-check-circle me-1"></i>Salvar permissões
                 </button>
@@ -29,8 +30,12 @@
     <form id="report-permissions-form" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+        {% for section_title, definitions in permission_sections %}
+        <div class="d-flex align-items-center justify-content-between mb-2 mt-4">
+            <h4 class="mb-0">{{ section_title }}</h4>
+        </div>
         <div class="row g-3">
-            {% for code, meta in reports.items() %}
+            {% for code, meta in definitions.items() %}
             <div class="col-xl-6 col-lg-6 col-md-12">
                 <div class="card shadow-sm h-100">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -43,25 +48,90 @@
                         <span class="badge bg-primary-subtle text-primary text-uppercase">{{ code }}</span>
                     </div>
                     <div class="card-body">
-                        {% if tags %}
-                            <div class="d-flex flex-wrap gap-3">
-                                {% for tag in tags %}
-                                    {% set checkbox_id = "tag_" ~ code ~ "_" ~ tag.id %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="tags_{{ code }}" id="{{ checkbox_id }}" value="{{ tag.id }}"
-                                            {% if tag.id in permitted_by_report.get(code, []) %}checked{% endif %}>
-                                        <label class="form-check-label" for="{{ checkbox_id }}">{{ tag.nome }}</label>
-                                    </div>
-                                {% endfor %}
+                        <div class="d-flex gap-3 flex-wrap mb-3">
+                            {% set has_tag = permitted_tags.get(code, [])|length > 0 %}
+                            {% set has_user = permitted_users.get(code, [])|length > 0 %}
+                            <div class="form-check form-switch">
+                                <input class="form-check-input perm-toggle" type="checkbox" id="toggle-tags-{{ code }}" data-target="#section-tags-{{ code }}" {% if has_tag %}checked{% endif %}>
+                                <label class="form-check-label" for="toggle-tags-{{ code }}">Adicionar setor</label>
                             </div>
-                        {% else %}
-                            <p class="text-muted mb-0">Nenhuma tag cadastrada para vincular.</p>
-                        {% endif %}
+                            <div class="form-check form-switch">
+                                <input class="form-check-input perm-toggle" type="checkbox" id="toggle-users-{{ code }}" data-target="#section-users-{{ code }}" {% if has_user %}checked{% endif %}>
+                                <label class="form-check-label" for="toggle-users-{{ code }}">Adicionar usuário</label>
+                            </div>
+                        </div>
+
+                        <div id="section-tags-{{ code }}" class="mb-3 {% if not has_tag %}d-none{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-muted small text-uppercase">Tags</span>
+                            </div>
+                            {% if tags %}
+                                <div class="d-flex flex-wrap gap-3">
+                                    {% for tag in tags %}
+                                        {% set checkbox_id = "tag_" ~ code ~ "_" ~ tag.id %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="tags_{{ code }}" id="{{ checkbox_id }}" value="{{ tag.id }}"
+                                                {% if tag.id in permitted_tags.get(code, []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="{{ checkbox_id }}">{{ tag.nome }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">Nenhuma tag cadastrada para vincular.</p>
+                            {% endif %}
+                        </div>
+
+                        <div id="section-users-{{ code }}" class="border-top pt-3 {% if not has_user %}d-none{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-muted small text-uppercase">Usuários</span>
+                                <small class="text-muted">Selecione pessoas específicas</small>
+                            </div>
+                            {% if users %}
+                                <div class="d-flex flex-wrap gap-3">
+                                    {% for user in users %}
+                                        {% set user_checkbox_id = "user_" ~ code ~ "_" ~ user.id %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="users_{{ code }}" id="{{ user_checkbox_id }}" value="{{ user.id }}"
+                                                {% if user.id in permitted_users.get(code, []) %}checked{% endif %}>
+                                            <label class="form-check-label" for="{{ user_checkbox_id }}">{{ user.name or user.username }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">Nenhum usuário ativo encontrado.</p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
+        {% endfor %}
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggles = document.querySelectorAll('.perm-toggle');
+    toggles.forEach((toggle) => {
+      const targetSel = toggle.getAttribute('data-target');
+      const target = targetSel ? document.querySelector(targetSel) : null;
+      const syncVisibility = () => {
+        if (!target) return;
+        const isOn = toggle.checked;
+        target.classList.toggle('d-none', !isOn);
+        if (!isOn) {
+          // desmarca tudo ao esconder para limpar permissões
+          target.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = false;
+          });
+        }
+      };
+      toggle.addEventListener('change', syncVisibility);
+      syncVisibility();
+    });
+  });
+</script>
 {% endblock %}

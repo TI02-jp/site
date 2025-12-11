@@ -28,7 +28,7 @@ from flask_login import current_user, login_required
 
 from app import csrf, db
 from app.controllers.routes._base import ACESSOS_CATEGORIES
-from app.controllers.routes._decorators import meeting_only_access_check
+from app.controllers.routes._decorators import meeting_only_access_check, has_portal_permission
 from app.forms import AccessLinkForm
 from app.models.tables import AccessLink
 
@@ -117,6 +117,11 @@ def _build_acessos_context(
         "total_items": total_links,
     }
 
+    can_manage_acessos = (
+        current_user.is_authenticated
+        and (current_user.role == "admin" or has_portal_permission("acessos_manage"))
+    )
+
     return {
         "form": form,
         "open_modal": open_modal,
@@ -124,6 +129,7 @@ def _build_acessos_context(
         "pagination": pagination,
         "total_links": total_links,
         "per_page": per_page,
+        "can_manage_acessos": can_manage_acessos,
     }
 
 
@@ -190,8 +196,8 @@ def acessos():
     form: AccessLinkForm | None = None
     editing_link = None
 
-    # Configura formulario para admins
-    if current_user.role == "admin":
+    # Configura formulario para quem pode gerenciar
+    if current_user.role == "admin" or has_portal_permission("acessos_manage"):
         form = AccessLinkForm()
         form.category.choices = _access_category_choices()
 
@@ -230,7 +236,7 @@ def acessos_novo():
         200: Formulario com erros (POST falha)
         403: Acesso negado se nao for admin
     """
-    if current_user.role != "admin":
+    if not has_portal_permission("acessos_manage"):
         abort(403)
 
     if request.method == "GET":
@@ -278,7 +284,7 @@ def acessos_categoria_novo(categoria_slug: str):
         403: Acesso negado se nao for admin
         404: Categoria nao encontrada
     """
-    if current_user.role != "admin":
+    if not has_portal_permission("acessos_manage"):
         abort(403)
 
     categoria_slug = categoria_slug.lower()
@@ -316,7 +322,7 @@ def acessos_editar(link_id: int):
         403: Acesso negado se nao for admin
         404: Atalho nao encontrado
     """
-    if current_user.role != "admin":
+    if not has_portal_permission("acessos_manage"):
         abort(403)
 
     link = AccessLink.query.get_or_404(link_id)
@@ -356,7 +362,7 @@ def acessos_excluir(link_id: int):
         403: Acesso negado se nao for admin
         404: Atalho nao encontrado
     """
-    if current_user.role != "admin":
+    if not has_portal_permission("acessos_manage"):
         abort(403)
 
     link = AccessLink.query.get_or_404(link_id)

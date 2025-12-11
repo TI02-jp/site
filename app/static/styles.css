@@ -2595,6 +2595,7 @@ Responsividade
 .editor-content {
     text-align: left;
     white-space: pre-line;
+    text-transform: none; /* preserve original casing */
 }
 
 /* Ensure images inside particularidades are responsive and clickable */
@@ -2602,6 +2603,9 @@ Responsividade
     max-width: 100%;
     height: auto;
     cursor: pointer;
+}
+.editor-content * {
+    text-transform: none;
 }
 
 

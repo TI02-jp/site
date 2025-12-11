@@ -36,6 +36,7 @@ from app.services.calendar_cache import calendar_cache
 from app.services.background import submit_background_job
 from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
+from sqlalchemy.orm import selectinload
 
 # Lazy-load calendar timezone to avoid API call at module import
 _CALENDAR_TZ = None
@@ -412,8 +413,9 @@ def fetch_raw_events():
         stale_events = calendar_cache.get("raw_calendar_events_stale")
         calendar_tz = CALENDAR_TZ
         now = datetime.now(calendar_tz)
+        # Reduzimos o horizonte padrÇœo para diminuir payload e latÇõncia do Google API
         future_window_days = max(
-            int(current_app.config.get("MEETING_CALENDAR_FUTURE_DAYS", 365 * 3)),
+            int(current_app.config.get("MEETING_CALENDAR_FUTURE_DAYS", 365)),
             0,
         )
         time_max = now + timedelta(days=future_window_days)
@@ -489,6 +491,25 @@ def invalidate_calendar_cache(force_refresh: bool = False):
     with _combined_cache_version_lock:
         _combined_cache_version += 1
         current_app.logger.debug(f"Invalidated combined cache, new version: {_combined_cache_version}")
+
+
+def try_get_cached_combined_events(current_user_id: int, is_admin: bool):
+    """Return cached combined events tuple (events, version, key) or (None, version, key)."""
+    cache_key = f"combined_events:{current_user_id}:{is_admin}"
+    cached_data = calendar_cache.get(cache_key)
+    with _combined_cache_version_lock:
+        current_version = _combined_cache_version
+
+    if cached_data is None:
+        return None, current_version, cache_key
+
+    cached_version = cached_data.get("version") if isinstance(cached_data, dict) else None
+    cached_events = cached_data.get("events") if isinstance(cached_data, dict) else cached_data
+
+    if cached_version == current_version and cached_events is not None:
+        return cached_events, current_version, cache_key
+
+    return None, current_version, cache_key
 
 
 def _next_available(
@@ -1011,14 +1032,15 @@ def create_meeting_and_event(form, raw_events, now, user_id: int):
 
     invalidate_calendar_cache()
 
-    for meeting_id, reason in meetings_to_sync:
-        _queue_meet_preferences_sync(meeting_id, reason=reason)
+    # Commented out: Google Meet API not enabled
+    # for meeting_id, reason in meetings_to_sync:
+    #     _queue_meet_preferences_sync(meeting_id, reason=reason)
 
-    if form.create_meet.data and meetings_to_sync:
-        flash(
-            "Configuracoes do Google Meet serao aplicadas em segundo plano.",
-            "info",
-        )
+    # if form.create_meet.data and meetings_to_sync:
+    #     flash(
+    #         "Configuracoes do Google Meet serao aplicadas em segundo plano.",
+    #         "info",
+    #     )
 
     return True, MeetingOperationResult(meeting.id, meet_link or additional_meet_link)
 def update_meeting(form, raw_events, now, meeting: Reuniao):
@@ -1203,9 +1225,10 @@ def update_meeting(form, raw_events, now, meeting: Reuniao):
         # Commit das alterações no banco
         db.session.commit()
 
+        # Commented out: Google Meet API not enabled
         # Sincronizar preferências do Meet se necessário
-        if meeting.meet_link:
-            _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
+        # if meeting.meet_link:
+        #     _queue_meet_preferences_sync(meeting.id, reason="update_meeting")
 
         # Invalidar cache após atualizar reunião
         invalidate_calendar_cache()
@@ -1252,11 +1275,13 @@ def update_meeting_configuration(
     else:
         meeting.meet_host_id = None
     db.session.commit()
-    if meeting.meet_link:
-        _queue_meet_preferences_sync(meeting.id, reason="update_meeting_configuration")
-        sync_result = None
-    else:
-        sync_result = True
+    # Commented out: Google Meet API not enabled
+    # if meeting.meet_link:
+    #     _queue_meet_preferences_sync(meeting.id, reason="update_meeting_configuration")
+    #     sync_result = None
+    # else:
+    #     sync_result = True
+    sync_result = True
     return normalized_settings, host, sync_result
 
 
@@ -1414,25 +1439,11 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     ``is_admin`` indicates if the requester has admin privileges, allowing
     them to delete meetings regardless of status.
     """
-    # Cache de resultados processados para evitar reprocessamento
-    # Cache separado por usuário e role (admin vs normal)
-    cache_key = f"combined_events:{current_user_id}:{is_admin}"
-    cached_data = calendar_cache.get(cache_key)
-
-    # Verify cache version to ensure data is still valid after invalidation
-    global _combined_cache_version
-    with _combined_cache_version_lock:
-        current_version = _combined_cache_version
-
-    if cached_data is not None:
-        # Check if cached data includes version and if it matches current version
-        cached_version = cached_data.get("version") if isinstance(cached_data, dict) else None
-        cached_events = cached_data.get("events") if isinstance(cached_data, dict) else cached_data
-
-        # If version matches, return cached events
-        if cached_version == current_version and cached_events is not None:
-            return cached_events
-        # Otherwise, cache is stale, proceed to regenerate
+    cached_events, current_version, cache_key = try_get_cached_combined_events(
+        current_user_id, is_admin
+    )
+    if cached_events is not None:
+        return cached_events
 
     events: list[dict] = []
     seen_keys: set[tuple[str, str, str]] = set()
@@ -1445,16 +1456,12 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     two_months_ago = now - timedelta(days=past_window_days)
     three_months_ahead = now + timedelta(days=future_window_days)
 
-    # Use subqueryload para reduzir queries N+1 sem criar JOINs gigantes
-    # subqueryload é mais eficiente que joinedload para relacionamentos 1:N
-    from sqlalchemy.orm import subqueryload
-
     meetings = (
         Reuniao.query
         .options(
-            subqueryload(Reuniao.participantes).subqueryload(ReuniaoParticipante.usuario),
-            subqueryload(Reuniao.criador),
-            subqueryload(Reuniao.meet_host)
+            selectinload(Reuniao.participantes).selectinload(ReuniaoParticipante.usuario),
+            selectinload(Reuniao.criador),
+            selectinload(Reuniao.meet_host)
         )
         .filter(
             Reuniao.inicio >= two_months_ago,
@@ -1587,5 +1594,3 @@ def combine_events(raw_events, now, current_user_id: int, is_admin: bool):
     calendar_cache.set(cache_key, cached_data_with_version, ttl=90)
 
     return events
-
-
