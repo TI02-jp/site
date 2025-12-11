@@ -118,12 +118,16 @@
     min-width: 48px;
     border-radius: 14px;
     background: linear-gradient(145deg, #0b288b, #1237b7);
-    display: inline-flex;
+    display: none;
     align-itens: center;
     justify-content: center;
     color: #fff;
     font-size: 1.2rem;
     box-shadow: 0 12px 22px rgba(11, 40, 139, 0.22);
+  }
+
+  .notification-row-unread .notification-icon {
+    display: inline-flex;
   }
 
   .notification-content__title {
@@ -820,4 +824,3 @@
   });
 </script>
 {% endblock %}
-

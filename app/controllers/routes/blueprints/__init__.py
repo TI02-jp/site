@@ -119,16 +119,23 @@ def register_all_blueprints(app: Flask) -> None:
     # que deve ser aplicado apos o registro do blueprint no __init__.py principal
     from app.controllers.routes.blueprints.relatorios import relatorios_bp
     app.register_blueprint(relatorios_bp)
+    
+    # Core - rotas principais (home/index)
+    from app.controllers.routes.blueprints.core import core_bp
+    app.register_blueprint(core_bp)
+
+    # Empresas - gestao de empresas (migrado)
+    from app.controllers.routes.blueprints.empresas import empresas_bp
+    app.register_blueprint(empresas_bp)
 
     # ==========================================================================
     # BLUEPRINTS PENDENTES DE MIGRACAO
     # As rotas ainda estao no __init__.py e precisam ser migradas gradualmente
     # ==========================================================================
 
-    # Tasks - gestao de tarefas
-    # TODO: Migrar rotas do __init__.py para este blueprint (COMPLEXO - muitas rotas)
-    # from app.controllers.routes.blueprints.tasks import tasks_bp
-    # app.register_blueprint(tasks_bp)
+    # Tasks - gestao de tarefas - MIGRADO
+    from app.controllers.routes.blueprints.tasks import tasks_bp
+    app.register_blueprint(tasks_bp)
 
     # Empresas - gestao de empresas
     # TODO: Migrar rotas do __init__.py para este blueprint
@@ -155,7 +162,7 @@ def _add_legacy_endpoint_aliases(app: Flask) -> None:
         'auth.', 'cursos.', 'consultorias.', 'calendario.',
         'diretoria.', 'notifications.', 'notas.',
         'reunioes.', 'relatorios.', 'users.',
-        'tasks.', 'empresas.'
+        'tasks.', 'empresas.', 'core.'
     ]
 
     for rule in list(app.url_map.iter_rules()):
@@ -172,12 +179,14 @@ def _add_legacy_endpoint_aliases(app: Flask) -> None:
         # Extrai nome do endpoint sem prefixo do blueprint
         legacy_endpoint = rule.endpoint.split(".", 1)[1]
 
-        # Pula se endpoint legado ja existe
-        if legacy_endpoint in app.view_functions:
+        view_func = app.view_functions[rule.endpoint]
+        existing_view = app.view_functions.get(legacy_endpoint)
+
+        # Permite adicionar multiplas regras para o mesmo endpoint legado
+        # desde que todas apontem para a mesma view function.
+        if existing_view and existing_view is not view_func:
             continue
 
-        # Adiciona alias para compatibilidade
-        view_func = app.view_functions[rule.endpoint]
         app.add_url_rule(
             rule.rule,
             endpoint=legacy_endpoint,

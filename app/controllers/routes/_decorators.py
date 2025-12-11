@@ -34,7 +34,7 @@ from app.controllers.routes._base import PERSONAL_TAG_PREFIX, get_ti_tag
 
 def _get_report_permissions_for_code(report_code: str) -> list[ReportPermission]:
     """
-    Retorna permissoes armazenadas para um codigo de relatorio.
+    Retorna permissoes armazenadas para um codigo de relatorio/portal.
 
     Args:
         report_code: Codigo identificador do relatorio.
@@ -141,6 +141,32 @@ def has_report_access(report_code: str | None = None) -> bool:
         allowed_tags.add(f"relatórios:{code}".lower())
         allowed_tags.add(f"relatorios:{code}".lower())
     return any((tag.nome or "").lower() in allowed_tags for tag in current_user.tags)
+
+
+def has_portal_permission(permission_code: str) -> bool:
+    """
+    Verifica se o usuario tem permissao explicita para uma acao do portal.
+
+    - Admin/master: sempre permitido
+    - Caso exista alguma permissao cadastrada para o codigo, verifica tags/usuarios
+    - Se nao houver permissoes salvas, nega (opt-in)
+    """
+    if current_user.role == "admin" or getattr(current_user, "is_master", False):
+        return True
+    if not current_user.is_authenticated:
+        return False
+
+    user_tag_ids = set(get_accessible_tag_ids(current_user))
+    stored_permissions = _get_report_permissions_for_code(permission_code)
+    if not stored_permissions:
+        return False
+
+    for permission in stored_permissions:
+        if permission.user_id == current_user.id:
+            return True
+        if permission.tag_id and permission.tag_id in user_tag_ids:
+            return True
+    return False
 
 
 def is_meeting_only_user() -> bool:

@@ -179,11 +179,24 @@ def _user_can_access_task(task: Task, user) -> bool:
     Returns:
         bool: True se o usuario pode acessar a tarefa
     """
-    if user.role == "admin":
+    if not task or not user:
+        return False
+    if getattr(user, "role", None) == "admin":
         return True
-    if task.assigned_to_id == user.id or task.created_by_id == user.id:
+    # Tarefas pÇ§blicas podem ser visualizadas pelo usuÇ½rio autenticado
+    if not getattr(task, "is_private", False):
         return True
-    return False
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        return False
+    if (
+        getattr(task, "assigned_to", None) == user_id
+        or getattr(task, "created_by", None) == user_id
+        or getattr(task, "completed_by", None) == user_id
+    ):
+        return True
+    followers = getattr(task, "follow_up_assignments", None) or []
+    return any(getattr(f, "user_id", None) == user_id for f in followers)
 
 
 def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:

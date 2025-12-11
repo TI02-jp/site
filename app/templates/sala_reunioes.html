@@ -460,40 +460,10 @@
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-camera-video"></i></span>
                                         <input type="text" class="form-control" id="meetConfigLink" readonly>
-                                        <button type="button" class="btn btn-outline-secondary" id="copyMeetConfigLink"><i class="bi bi-clipboard"></i></button>
+                                        <button type="button" class="btn btn-outline-secondary" id="copyMeetConfigLink" title="Copiar convite formatado"><i class="bi bi-envelope"></i></button>
                                         <a class="btn btn-success" id="openMeetConfigLink" href="#" target="_blank" rel="noopener">
                                             <i class="bi bi-camera-video-fill me-1"></i>Abrir Meet
                                         </a>
-                                    </div>
-                                </div>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            {{ meet_config_form.quick_access_enabled(class="form-check-input", id='quick_access_enabled') }}
-                                            <label class="form-check-label" for="quick_access_enabled">{{ meet_config_form.quick_access_enabled.label.text }}</label>
-                                            <div class="form-text">Permite que os convidados entrem sem solicitar acesso.</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            {{ meet_config_form.mute_on_join(class="form-check-input", id='mute_on_join') }}
-                                            <label class="form-check-label" for="mute_on_join">{{ meet_config_form.mute_on_join.label.text }}</label>
-                                            <div class="form-text">Os participantes entram com o microfone desligado.</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            {{ meet_config_form.allow_chat(class="form-check-input", id='allow_chat') }}
-                                            <label class="form-check-label" for="allow_chat">{{ meet_config_form.allow_chat.label.text }}</label>
-                                            <div class="form-text">Define se o chat da reunião fica disponível.</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            {{ meet_config_form.allow_screen_share(class="form-check-input", id='allow_screen_share') }}
-                                            <label class="form-check-label" for="allow_screen_share">{{ meet_config_form.allow_screen_share.label.text }}</label>
-                                            <div class="form-text">Controla se convidados podem compartilhar a tela.</div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -779,23 +749,24 @@
             }
             meetConfigHostSelect.disabled = config.can_configure === false;
         }
-        var settings = config.meet_settings || {};
-        if (meetConfigForm.quick_access_enabled) {
-            meetConfigForm.quick_access_enabled.checked = !!settings.quick_access_enabled;
-            meetConfigForm.quick_access_enabled.disabled = config.can_configure === false;
-        }
-        if (meetConfigForm.mute_on_join) {
-            meetConfigForm.mute_on_join.checked = !!settings.mute_on_join;
-            meetConfigForm.mute_on_join.disabled = config.can_configure === false;
-        }
-        if (meetConfigForm.allow_chat) {
-            meetConfigForm.allow_chat.checked = !!settings.allow_chat;
-            meetConfigForm.allow_chat.disabled = config.can_configure === false;
-        }
-        if (meetConfigForm.allow_screen_share) {
-            meetConfigForm.allow_screen_share.checked = !!settings.allow_screen_share;
-            meetConfigForm.allow_screen_share.disabled = config.can_configure === false;
-        }
+        // Commented out: Google Meet API not enabled
+        // var settings = config.meet_settings || {};
+        // if (meetConfigForm.quick_access_enabled) {
+        //     meetConfigForm.quick_access_enabled.checked = !!settings.quick_access_enabled;
+        //     meetConfigForm.quick_access_enabled.disabled = config.can_configure === false;
+        // }
+        // if (meetConfigForm.mute_on_join) {
+        //     meetConfigForm.mute_on_join.checked = !!settings.mute_on_join;
+        //     meetConfigForm.mute_on_join.disabled = config.can_configure === false;
+        // }
+        // if (meetConfigForm.allow_chat) {
+        //     meetConfigForm.allow_chat.checked = !!settings.allow_chat;
+        //     meetConfigForm.allow_chat.disabled = config.can_configure === false;
+        // }
+        // if (meetConfigForm.allow_screen_share) {
+        //     meetConfigForm.allow_screen_share.checked = !!settings.allow_screen_share;
+        //     meetConfigForm.allow_screen_share.disabled = config.can_configure === false;
+        // }
         if (meetConfigLinkInput) {
             meetConfigLinkInput.value = config.meet_link || '';
         }
@@ -813,7 +784,7 @@
         }
     }
 
-    function openMeetConfiguration(config) {
+    function openMeetConfiguration(config, autoCopyInvite) {
         if (!config) {
             return;
         }
@@ -821,6 +792,15 @@
         var modalInstance = getMeetConfigModal();
         if (modalInstance) {
             modalInstance.show();
+
+            // Auto-copy invite if requested (e.g., after creating a new meeting)
+            if (autoCopyInvite) {
+                setTimeout(function() {
+                    if (meetConfigCopyBtn) {
+                        meetConfigCopyBtn.click();
+                    }
+                }, 300);
+            }
         }
     }
 
@@ -1428,6 +1408,9 @@
                 creator_name: event.extendedProps.creator,
                 subject: event.title,
                 can_configure: true,
+                startStr: event.startStr,
+                endStr: event.endStr,
+                description: event.extendedProps.description
             };
             configureMeetBtn.dataset.config = JSON.stringify(configPayload);
         } else {
@@ -1489,8 +1472,66 @@
             if (!meetConfigLinkInput.value) {
                 return;
             }
-            navigator.clipboard.writeText(meetConfigLinkInput.value).then(function() {
-                showFlashMessage('Link copiado!', 'success');
+
+            // Use currentEvent first (has all info), fallback to currentMeetConfig
+            var eventSource = currentEvent || currentMeetConfig;
+
+            // Create a formatted invitation message
+            var title = 'Reunião';
+            var link = meetConfigLinkInput.value;
+            var dateFormatted = '';
+            var startTime = '';
+            var endTime = '';
+            var timeRange = '';
+            var description = '';
+
+            if (eventSource) {
+                // Get title
+                if (eventSource.title) {
+                    title = eventSource.title;
+                } else if (eventSource.subject) {
+                    title = eventSource.subject;
+                }
+
+                // Get start/end strings
+                var startStr = eventSource.startStr;
+                var endStr = eventSource.endStr;
+
+                // Format date
+                if (startStr && startStr.length >= 10) {
+                    var dateParts = startStr.slice(0, 10).split('-');
+                    dateFormatted = dateParts.reverse().join('/');
+                }
+
+                // Format time
+                startTime = startStr && startStr.length >= 16 ? startStr.slice(11, 16) : '';
+                endTime = endStr && endStr.length >= 16 ? endStr.slice(11, 16) : '';
+                timeRange = startTime && endTime ? startTime + ' às ' + endTime : startTime;
+
+                // Get description
+                if (eventSource.extendedProps && eventSource.extendedProps.description) {
+                    description = eventSource.extendedProps.description;
+                } else if (eventSource.description) {
+                    description = eventSource.description;
+                }
+            }
+
+            // Build the formatted message
+            var formattedMessage = 'JP Contábil\n\n';
+            formattedMessage += 'Título: ' + title + '\n';
+            if (dateFormatted) {
+                formattedMessage += 'Data: ' + dateFormatted + '\n';
+            }
+            if (timeRange) {
+                formattedMessage += 'Horário: ' + timeRange + '\n';
+            }
+            if (description) {
+                formattedMessage += '\nDescrição: ' + description + '\n';
+            }
+            formattedMessage += '\nLink do Google Meet: ' + link;
+
+            navigator.clipboard.writeText(formattedMessage).then(function() {
+                showFlashMessage('Convite copiado!', 'success');
             });
         });
     }
@@ -1725,7 +1766,7 @@
     }
 
     if (meetPopupData) {
-        openMeetConfiguration(meetPopupData);
+        openMeetConfiguration(meetPopupData, true);  // Auto-copy invite when opening after creation
     }
 
     function renumberAdditionalDates() {

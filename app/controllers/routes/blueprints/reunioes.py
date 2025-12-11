@@ -246,6 +246,9 @@ def sala_reunioes():
                     "meet_settings": settings_dict,
                     "creator_name": creator_name,
                     "can_configure": can_configure,
+                    "startStr": meeting.inicio.isoformat() if meeting.inicio else None,
+                    "endStr": meeting.fim.isoformat() if meeting.fim else None,
+                    "description": meeting.descricao or "",
                 }
     status_options = [
         {
@@ -304,11 +307,18 @@ def configure_meet_call(meeting_id: int):
                 form.host_id.errors.append("Selecione um proprietário válido para o Meet.")
             else:
                 host_id = selected_host_raw
+                # Commented out: Google Meet API not enabled
+                # settings_payload = {
+                #     "quick_access_enabled": form.quick_access_enabled.data,
+                #     "mute_on_join": form.mute_on_join.data,
+                #     "allow_chat": form.allow_chat.data,
+                #     "allow_screen_share": form.allow_screen_share.data,
+                # }
                 settings_payload = {
-                    "quick_access_enabled": form.quick_access_enabled.data,
-                    "mute_on_join": form.mute_on_join.data,
-                    "allow_chat": form.allow_chat.data,
-                    "allow_screen_share": form.allow_screen_share.data,
+                    "quick_access_enabled": True,
+                    "mute_on_join": False,
+                    "allow_chat": True,
+                    "allow_screen_share": True,
                 }
                 try:
                     (

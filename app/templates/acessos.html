@@ -227,7 +227,7 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 access-actions">
-            {% if current_user.role == 'admin' %}
+            {% if can_manage_acessos %}
             <button
                 class="btn btn-primary btn-sm"
                 type="button"
@@ -289,7 +289,7 @@
                                         </button>
                                         {% endif %}
                                     </div>
-                                    {% if current_user.role == 'admin' %}
+                                    {% if can_manage_acessos %}
                                     <div class="dropdown">
                                         <button
                                             class="btn btn-sm btn-outline-secondary"
@@ -334,7 +334,7 @@
                             {% endif %}
                         </div>
 
-                        {% if current_user.role == 'admin' %}
+                        {% if can_manage_acessos %}
                         <!-- Modal de confirmação de exclusão -->
                         <div class="modal fade" id="deleteModal{{ link.id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
@@ -402,7 +402,7 @@
         </div>
     </div>
 
-{% if current_user.role == 'admin' and form %}
+{% if can_manage_acessos and form %}
 <!-- Modal de criação de novo atalho -->
 <div
     class="modal fade"
@@ -566,7 +566,7 @@
 
 {% block scripts %}
 {{ super() }}
-{% if current_user.role == 'admin' and form and open_modal %}
+{% if can_manage_acessos and form and open_modal %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var modalType = '{{ modal_type }}';

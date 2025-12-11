@@ -698,10 +698,11 @@ class MeetConfigurationForm(FlaskForm):
         validators=[InputRequired()],
         default=None,
     )
-    quick_access_enabled = BooleanField("Acesso rápido habilitado", default=True)
-    mute_on_join = BooleanField("Silenciar participantes ao entrar")
-    allow_chat = BooleanField("Permitir chat durante a reunião", default=True)
-    allow_screen_share = BooleanField("Permitir compartilhamento de tela", default=True)
+    # Commented out: Google Meet API not enabled
+    # quick_access_enabled = BooleanField("Acesso rápido habilitado", default=True)
+    # mute_on_join = BooleanField("Silenciar participantes ao entrar")
+    # allow_chat = BooleanField("Permitir chat durante a reunião", default=True)
+    # allow_screen_share = BooleanField("Permitir compartilhamento de tela", default=True)
     submit = SubmitField("Salvar configurações")
 
 

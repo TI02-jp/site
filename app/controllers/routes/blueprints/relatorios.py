@@ -68,6 +68,18 @@ REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
     "tarefas": {"title": "Relatório de Tarefas", "description": "Painel de tarefas e indicadores"},
 }
 
+PORTAL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
+    "acessos_manage": {
+        "title": "Central de Acessos - Atalhos",
+        "description": "Criar, editar e excluir atalhos na central de acessos",
+    },
+}
+
+ALL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
+    **REPORT_DEFINITIONS,
+    **PORTAL_PERMISSION_DEFINITIONS,
+}
+
 EXCLUDED_TASK_TAGS = ["Reunião"]
 
 
@@ -1229,22 +1241,26 @@ def report_permissions():
     _require_master_admin()
 
     tags = Tag.query.order_by(sa.func.lower(Tag.nome)).all()
-    existing_permissions = ReportPermission.query.filter(
-        ReportPermission.user_id.is_(None)
-    ).all()
+    users = (
+        User.query.filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+    existing_permissions = ReportPermission.query.all()
 
-    permitted_by_report: dict[str, set[int]] = {
-        code: set() for code in REPORT_DEFINITIONS
-    }
+    permitted_tags: dict[str, set[int]] = {code: set() for code in ALL_PERMISSION_DEFINITIONS}
+    permitted_users: dict[str, set[int]] = {code: set() for code in ALL_PERMISSION_DEFINITIONS}
     for permission in existing_permissions:
-        if permission.tag_id is None:
+        code = permission.report_code
+        if code not in ALL_PERMISSION_DEFINITIONS:
             continue
-        permitted_by_report.setdefault(permission.report_code, set()).add(
-            permission.tag_id
-        )
+        if permission.tag_id:
+            permitted_tags[code].add(permission.tag_id)
+        if permission.user_id:
+            permitted_users[code].add(permission.user_id)
 
     if request.method == "POST":
-        for code in REPORT_DEFINITIONS:
+        for code in ALL_PERMISSION_DEFINITIONS:
             submitted_tag_ids: set[int] = set()
             for raw in request.form.getlist(f"tags_{code}"):
                 try:
@@ -1252,25 +1268,39 @@ def report_permissions():
                 except (TypeError, ValueError):
                     continue
 
+            submitted_user_ids: set[int] = set()
+            for raw in request.form.getlist(f"users_{code}"):
+                try:
+                    submitted_user_ids.add(int(raw))
+                except (TypeError, ValueError):
+                    continue
+
             db.session.query(ReportPermission).filter(
                 ReportPermission.report_code == code,
-                ReportPermission.user_id.is_(None),
             ).delete(synchronize_session=False)
 
             for tag_id in submitted_tag_ids:
-                db.session.add(
-                    ReportPermission(report_code=code, tag_id=tag_id)
-                )
+                db.session.add(ReportPermission(report_code=code, tag_id=tag_id))
+            for user_id in submitted_user_ids:
+                db.session.add(ReportPermission(report_code=code, user_id=user_id))
 
-            permitted_by_report[code] = submitted_tag_ids
+            permitted_tags[code] = submitted_tag_ids
+            permitted_users[code] = submitted_user_ids
 
         db.session.commit()
-        flash("Permissões de relatórios atualizadas com sucesso.", "success")
+        flash("Permissões atualizadas com sucesso.", "success")
         return redirect(url_for("relatorios.report_permissions"))
+
+    permission_sections = [
+        ("Relatórios", REPORT_DEFINITIONS),
+        ("Portal", PORTAL_PERMISSION_DEFINITIONS),
+    ]
 
     return render_template(
         "admin/report_permissions.html",
         tags=tags,
-        reports=REPORT_DEFINITIONS,
-        permitted_by_report=permitted_by_report,
+        users=users,
+        permission_sections=permission_sections,
+        permitted_tags=permitted_tags,
+        permitted_users=permitted_users,
     )

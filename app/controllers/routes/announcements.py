@@ -26,10 +26,8 @@ from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from app import db
-from app.controllers.routes import (
-    meeting_only_access_check,
-    utc3_now,
-)
+from app.controllers.routes import utc3_now
+from app.controllers.routes._decorators import meeting_only_access_check
 from app.controllers.routes.blueprints.notifications import _invalidate_notification_cache
 from app.forms import AnnouncementForm
 from app.models.tables import (
