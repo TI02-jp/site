@@ -306,6 +306,18 @@
                             </button>
                         </div>
                     </form>
+                    <form id="totalizadorExportForm" class="d-flex flex-wrap gap-2 align-items-end" method="get" action="{{ url_for('notas.notas_totalizador_export') }}">
+                        <input type="hidden" name="data_inicial" id="exportDataInicial">
+                        <input type="hidden" name="data_final" id="exportDataFinal">
+                        <div class="btn-group" role="group" aria-label="Exportar">
+                            <button type="submit" name="formato" value="xlsx" class="btn btn-outline-success">
+                                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel
+                            </button>
+                            <button type="submit" name="formato" value="pdf" class="btn btn-outline-danger">
+                                <i class="bi bi-filetype-pdf me-1"></i>PDF
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -405,6 +417,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     const dataInicialInput = document.getElementById('dataInicial');
     const dataFinalInput = document.getElementById('dataFinal');
+    const exportForm = document.getElementById('totalizadorExportForm');
+    const exportDataInicial = document.getElementById('exportDataInicial');
+    const exportDataFinal = document.getElementById('exportDataFinal');
 
     const storageAvailable = (() => {
         try {
@@ -630,6 +645,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     restoreDateFilter(dataInicialInput, STORAGE_KEYS.dataInicial);
     restoreDateFilter(dataFinalInput, STORAGE_KEYS.dataFinal);
+
+    function syncExportDates() {
+        if (!exportDataInicial || !exportDataFinal) {
+            return;
+        }
+        exportDataInicial.value = dataInicialInput ? dataInicialInput.value : '';
+        exportDataFinal.value = dataFinalInput ? dataFinalInput.value : '';
+    }
+
+    if (exportForm) {
+        syncExportDates();
+        exportForm.addEventListener('submit', function() {
+            syncExportDates();
+        });
+    }
 
     updateAllCounters();
 });

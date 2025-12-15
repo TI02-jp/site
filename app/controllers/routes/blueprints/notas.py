@@ -26,9 +26,12 @@ import unicodedata
 from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from io import BytesIO
 from typing import Any
 
 import sqlalchemy as sa
+import pandas as pd
+from fpdf import FPDF
 from flask import (
     Blueprint,
     abort,
@@ -38,6 +41,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     url_for,
 )
 from flask_login import current_user, login_required
@@ -181,6 +185,59 @@ def _format_decimal_input(value: Decimal | float | None) -> str:
         .replace(".", ",")
         .replace("_", ".")
     )
+
+
+def _format_currency_br(value: Decimal | float | int | None) -> str:
+    """Formata valor monetario em estilo brasileiro."""
+    number = Decimal(value or 0)
+    return (
+        f"R$ {number:,.2f}"
+        .replace(",", "_")
+        .replace(".", ",")
+        .replace("_", ".")
+    )
+
+
+def _parse_date_str(value: str | None) -> date | None:
+    """Parseia string no formato ISO (YYYY-MM-DD) em date segura."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _wrap_text(text: str, pdf_obj: FPDF, max_width: float) -> list[str]:
+    """Quebra texto em linhas respeitando a largura informada."""
+    if text is None:
+        return [""]
+    text = str(text)
+    if not text:
+        return [""]
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if pdf_obj.get_string_width(candidate) <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            # Se palavra sozinha estoura, quebra por caracteres
+            chunk = ""
+            for ch in word:
+                if pdf_obj.get_string_width(chunk + ch) <= max_width:
+                    chunk += ch
+                else:
+                    if chunk:
+                        lines.append(chunk)
+                    chunk = ch
+            current = chunk
+    if current:
+        lines.append(current)
+    return lines or [""]
 
 
 # =============================================================================
@@ -910,16 +967,8 @@ def notas_totalizador():
     data_inicial_raw = (request.args.get("data_inicial") or "").strip()
     data_final_raw = (request.args.get("data_final") or "").strip()
 
-    def _parse_date(value: str) -> date | None:
-        if not value:
-            return None
-        try:
-            return datetime.strptime(value, "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            return None
-
-    data_inicial = _parse_date(data_inicial_raw) or default_start
-    data_final = _parse_date(data_final_raw) or default_end
+    data_inicial = _parse_date_str(data_inicial_raw) or default_start
+    data_final = _parse_date_str(data_final_raw) or default_end
 
     if data_inicial > data_final:
         flash("A data inicial não pode ser maior que a data final.", "warning")
@@ -1102,7 +1151,7 @@ def notas_totalizador():
     from app.controllers.routes import user_has_tag
     pode_ver_forma_pagamento = (
         is_user_admin(current_user)
-        or user_has_tag("Gestão")
+        or user_has_tag("GestÇœo")
         or user_has_tag("Financeiro")
     )
 
@@ -1119,4 +1168,161 @@ def notas_totalizador():
         tipos_empresa=tipos_empresa,
         tipos_acordo=tipos_acordo,
         tipos_pagamento=tipos_pagamento,
+    )
+
+
+@notas_bp.route("/controle-notas/totalizador/export", methods=["GET"])
+@login_required
+@meeting_only_access_check
+def notas_totalizador_export():
+    """
+    Exporta notas filtradas por periodo para Excel ou PDF, sem observacao.
+    """
+    if not can_access_controle_notas():
+        abort(403)
+
+    if not can_access_notas_totalizador():
+        abort(403)
+
+    today = date.today()
+    default_start = today.replace(day=1)
+    default_end = today
+
+    data_inicial_raw = (request.args.get("data_inicial") or "").strip()
+    data_final_raw = (request.args.get("data_final") or "").strip()
+    formato = (request.args.get("formato") or "xlsx").lower()
+
+    data_inicial = _parse_date_str(data_inicial_raw) or default_start
+    data_final = _parse_date_str(data_final_raw) or default_end
+    if data_inicial > data_final:
+        data_inicial, data_final = data_final, data_inicial
+
+    base_query = NotaDebito.query.filter(
+        NotaDebito.data_emissao >= data_inicial,
+        NotaDebito.data_emissao <= data_final,
+    ).order_by(
+        NotaDebito.data_emissao.asc(),
+        sa.func.lower(NotaDebito.empresa),
+        NotaDebito.id.asc(),
+    )
+    notas_list = base_query.all()
+
+    pagamento_label_map = {(choice or "").upper(): label for choice, label in PAGAMENTO_CHOICES}
+
+    from app.controllers.routes import user_has_tag
+    pode_ver_forma_pagamento = (
+        is_user_admin(current_user)
+        or user_has_tag("Gestão")
+        or user_has_tag("Financeiro")
+    )
+
+    registros: list[dict[str, object]] = []
+    for nota in notas_list:
+        forma_pagamento_raw = (nota.forma_pagamento or "").strip()
+        forma_pagamento_label = pagamento_label_map.get(
+            forma_pagamento_raw.upper(), forma_pagamento_raw
+        )
+        registros.append(
+            {
+                "Data Emissao": nota.data_emissao.strftime("%d/%m/%Y") if nota.data_emissao else "",
+                "Empresa": (nota.empresa or "").upper(),
+                "Notas": nota.notas,
+                "Itens": nota.qtde_itens,
+                "Valor UN": float(nota.valor_un or 0),
+                "Valor Total": float(nota.total or 0),
+                "Acordo": (nota.acordo or "").upper() if nota.acordo else "",
+                "Pagamento": forma_pagamento_label if pode_ver_forma_pagamento else "",
+            }
+        )
+
+    if formato == "pdf":
+        class NotasPDF(FPDF):
+            pass
+
+        pdf = NotasPDF(orientation="L")
+        pdf.set_auto_page_break(auto=True, margin=12)
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 10, "Notas do período", ln=True, align="L")
+        pdf.set_font("Helvetica", size=9)
+        pdf.cell(0, 8, f"Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}", ln=True)
+
+        colunas = [
+            {"key": "Data Emissao", "label": "Data Emissão", "width": 24, "align": "C"},
+            {"key": "Empresa", "label": "Empresa", "width": 70, "align": "L"},
+            {"key": "Notas", "label": "Notas", "width": 16, "align": "C"},
+            {"key": "Itens", "label": "Itens", "width": 16, "align": "C"},
+            {"key": "Valor UN", "label": "Valor UN", "width": 24, "align": "R"},
+            {"key": "Valor Total", "label": "Valor Total", "width": 26, "align": "R"},
+            {"key": "Acordo", "label": "Acordo", "width": 42, "align": "L"},
+        ]
+        if pode_ver_forma_pagamento:
+            colunas.append({"key": "Pagamento", "label": "Pagamento", "width": 32, "align": "L"})
+
+        line_height = 6.0
+
+        def draw_header() -> None:
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_fill_color(240, 240, 240)
+            for col in colunas:
+                pdf.cell(col["width"], line_height + 1, col["label"], border=1, align="C", fill=True)
+            pdf.ln()
+            pdf.set_font("Helvetica", size=8)
+            pdf.set_fill_color(255, 255, 255)
+
+        draw_header()
+
+        for registro in registros:
+            col_lines: list[tuple[dict, list[str]]] = []
+            max_lines = 1
+            for col in colunas:
+                valor = registro.get(col["key"], "")
+                if col["key"] in {"Valor UN", "Valor Total"}:
+                    valor = _format_currency_br(valor)
+                lines = _wrap_text(str(valor), pdf, col["width"] - 2)
+                max_lines = max(max_lines, len(lines))
+                col_lines.append((col, lines))
+
+            row_height = max_lines * line_height
+            if pdf.will_page_break(row_height):
+                pdf.add_page()
+                pdf.set_font("Helvetica", "B", 12)
+                pdf.cell(0, 10, "Notas do período", ln=True, align="L")
+                pdf.set_font("Helvetica", size=9)
+                pdf.cell(0, 8, f"Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}", ln=True)
+                draw_header()
+
+            y_start = pdf.get_y()
+            for col, lines in col_lines:
+                x_start = pdf.get_x()
+                text_block = "\n".join(lines + [""] * (max_lines - len(lines)))
+                align = col.get("align", "L")
+                pdf.multi_cell(col["width"], line_height, text_block, border=1, align=align)
+                pdf.set_xy(x_start + col["width"], y_start)
+            pdf.set_y(y_start + row_height)
+
+        pdf_raw = pdf.output(dest="S")
+        pdf_bytes = pdf_raw.encode("latin-1") if isinstance(pdf_raw, str) else pdf_raw
+        buffer = BytesIO(pdf_bytes)
+        filename = f"notas_{data_inicial.isoformat()}_{data_final.isoformat()}.pdf"
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/pdf",
+        )
+
+    # Default Excel export
+    df = pd.DataFrame(registros)
+    if not pode_ver_forma_pagamento and "Pagamento" in df.columns:
+        df = df.drop(columns=["Pagamento"])
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False)
+    buffer.seek(0)
+    filename = f"notas_{data_inicial.isoformat()}_{data_final.isoformat()}.xlsx"
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
