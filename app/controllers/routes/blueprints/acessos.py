@@ -6,11 +6,11 @@ organizada por categorias (fiscal, contabil, pessoal).
 
 Rotas:
     - GET /acessos: Hub principal com listagem e modais
-    - POST /acessos/novo: Cria novo atalho (admin)
+    - POST /acessos/novo: Cria novo atalho (usuarios logados)
     - GET /acessos/<categoria>: Redirect para hub (compatibilidade)
-    - POST /acessos/<categoria>/novo: Cria atalho em categoria (admin)
-    - GET/POST /acessos/<id>/editar: Edita atalho (admin)
-    - POST /acessos/<id>/excluir: Exclui atalho (admin)
+    - POST /acessos/<categoria>/novo: Cria atalho em categoria (usuarios logados)
+    - GET/POST /acessos/<id>/editar: Edita atalho (usuarios logados)
+    - POST /acessos/<id>/excluir: Exclui atalho (usuarios logados)
 
 Dependencias:
     - models: AccessLink
@@ -28,7 +28,7 @@ from flask_login import current_user, login_required
 
 from app import csrf, db
 from app.controllers.routes._base import ACESSOS_CATEGORIES
-from app.controllers.routes._decorators import meeting_only_access_check, has_portal_permission
+from app.controllers.routes._decorators import meeting_only_access_check
 from app.forms import AccessLinkForm
 from app.models.tables import AccessLink
 
@@ -117,10 +117,7 @@ def _build_acessos_context(
         "total_items": total_links,
     }
 
-    can_manage_acessos = (
-        current_user.is_authenticated
-        and (current_user.role == "admin" or has_portal_permission("acessos_manage"))
-    )
+    can_manage_acessos = current_user.is_authenticated
 
     return {
         "form": form,
@@ -193,28 +190,24 @@ def acessos():
     if page < 1:
         page = 1
 
-    form: AccessLinkForm | None = None
+    form: AccessLinkForm | None = AccessLinkForm()
+    form.category.choices = _access_category_choices()
     editing_link = None
 
-    # Configura formulario para quem pode gerenciar
-    if current_user.role == "admin" or has_portal_permission("acessos_manage"):
-        form = AccessLinkForm()
-        form.category.choices = _access_category_choices()
-
-        # Se esta editando, preenche formulario
-        if modal_type == "editar" and editing_link_id:
-            editing_link = AccessLink.query.get_or_404(editing_link_id)
-            form.category.data = editing_link.category
-            form.label.data = editing_link.label
-            form.url.data = editing_link.url
-            form.description.data = editing_link.description
-        # Se esta criando novo com categoria pre-selecionada
-        elif (
-            preselected_category
-            and preselected_category in ACESSOS_CATEGORIES
-            and not form.category.data
-        ):
-            form.category.data = preselected_category
+    # Se esta editando, preenche formulario
+    if modal_type == "editar" and editing_link_id:
+        editing_link = AccessLink.query.get_or_404(editing_link_id)
+        form.category.data = editing_link.category
+        form.label.data = editing_link.label
+        form.url.data = editing_link.url
+        form.description.data = editing_link.description
+    # Se esta criando novo com categoria pre-selecionada
+    elif (
+        preselected_category
+        and preselected_category in ACESSOS_CATEGORIES
+        and not form.category.data
+    ):
+        form.category.data = preselected_category
 
     context = _build_acessos_context(form=form, open_modal=open_modal, page=page)
     context["editing_link"] = editing_link
@@ -234,11 +227,7 @@ def acessos_novo():
     Returns:
         302: Redirect para hub (GET ou sucesso)
         200: Formulario com erros (POST falha)
-        403: Acesso negado se nao for admin
     """
-    if not has_portal_permission("acessos_manage"):
-        abort(403)
-
     if request.method == "GET":
         return redirect(url_for("acessos.acessos", modal="novo"))
 
@@ -281,12 +270,8 @@ def acessos_categoria_novo(categoria_slug: str):
     Returns:
         302: Redirect para hub (GET ou sucesso)
         200: Formulario com erros (POST falha)
-        403: Acesso negado se nao for admin
         404: Categoria nao encontrada
     """
-    if not has_portal_permission("acessos_manage"):
-        abort(403)
-
     categoria_slug = categoria_slug.lower()
     categoria = ACESSOS_CATEGORIES.get(categoria_slug)
     if not categoria:
@@ -319,12 +304,8 @@ def acessos_editar(link_id: int):
     Returns:
         302: Redirect para hub (GET ou sucesso)
         200: Formulario com erros (POST falha)
-        403: Acesso negado se nao for admin
         404: Atalho nao encontrado
     """
-    if not has_portal_permission("acessos_manage"):
-        abort(403)
-
     link = AccessLink.query.get_or_404(link_id)
 
     if request.method == "GET":
@@ -359,12 +340,8 @@ def acessos_excluir(link_id: int):
 
     Returns:
         302: Redirect para hub apos exclusao
-        403: Acesso negado se nao for admin
         404: Atalho nao encontrado
     """
-    if not has_portal_permission("acessos_manage"):
-        abort(403)
-
     link = AccessLink.query.get_or_404(link_id)
     label = link.label
     db.session.delete(link)

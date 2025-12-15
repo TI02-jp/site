@@ -121,8 +121,6 @@ def consultorias():
             except (TypeError, ValueError):
                 abort(404)
             editing_consultoria = Consultoria.query.get_or_404(edit_id)
-            if current_user.role != "admin":
-                abort(403)
             consultoria_form = _configure_consultoria_form(
                 ConsultoriaForm(prefix="consultoria", obj=editing_consultoria)
             )
@@ -134,8 +132,6 @@ def consultorias():
 
         if form_name == "consultoria_create":
             open_consultoria_modal = True
-            if current_user.role != "admin":
-                abort(403)
 
             if consultoria_form.validate_on_submit():
                 nome = (consultoria_form.nome.data or "").strip()
@@ -169,8 +165,6 @@ def consultorias():
 
         elif form_name == "consultoria_update":
             open_consultoria_modal = True
-            if current_user.role != "admin":
-                abort(403)
 
             consultoria_id_raw = request.form.get("consultoria_id")
             try:
@@ -220,7 +214,7 @@ def consultorias():
 
 
 @consultorias_bp.route("/consultorias/cadastro", methods=["GET", "POST"])
-@admin_required
+@login_required
 def cadastro_consultoria():
     """Rota legacy preservada: redireciona para experiencia modal."""
     if request.method == "POST":
@@ -245,7 +239,7 @@ def cadastro_consultoria():
 
 
 @consultorias_bp.route("/consultorias/editar/<int:id>", methods=["GET", "POST"])
-@admin_required
+@login_required
 def editar_consultoria_cadastro(id):
     """Endpoint legacy de edicao: redireciona para fluxo modal."""
     consultoria = Consultoria.query.get_or_404(id)
@@ -312,8 +306,6 @@ def setores():
             except (TypeError, ValueError):
                 abort(404)
             editing_setor = Setor.query.get_or_404(edit_id)
-            if current_user.role != "admin":
-                abort(403)
             setor_form = SetorForm(prefix="setor", obj=editing_setor)
             setor_form.submit.label.text = "Salvar"
             open_setor_modal = True
@@ -324,8 +316,6 @@ def setores():
 
         if form_name == "setor_create":
             open_setor_modal = True
-            if current_user.role != "admin":
-                abort(403)
 
             if setor_form.validate_on_submit():
                 nome = (setor_form.nome.data or "").strip()
@@ -351,8 +341,6 @@ def setores():
 
         elif form_name == "setor_update":
             open_setor_modal = True
-            if current_user.role != "admin":
-                abort(403)
 
             setor_id_raw = request.form.get("setor_id")
             try:
@@ -394,7 +382,7 @@ def setores():
 
 
 @consultorias_bp.route("/consultorias/setores/cadastro", methods=["GET", "POST"])
-@admin_required
+@login_required
 def cadastro_setor():
     """Rota legacy de criacao de setor: redireciona para UI modal."""
     if request.method == "POST":
@@ -425,7 +413,7 @@ def cadastro_setor():
 
 
 @consultorias_bp.route("/consultorias/setores/editar/<int:id>", methods=["GET", "POST"])
-@admin_required
+@login_required
 def editar_setor(id):
     """Endpoint legacy de edicao de setor: redireciona para fluxo modal."""
     setor = Setor.query.get_or_404(id)
