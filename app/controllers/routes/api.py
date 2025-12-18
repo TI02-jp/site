@@ -296,8 +296,16 @@ def _serialize_department(dept: Departamento) -> dict:
     }
 
 
-def _serialize_empresa(empresa: Empresa, include_departments: bool = False) -> dict:
-    """Return a concise company payload."""
+def _serialize_empresa(
+    empresa: Empresa,
+    include_departments: bool = False,
+    include_sensitive: bool = False,
+) -> dict:
+    """Return a concise company payload.
+
+    ``include_sensitive`` controls fields that may contain credentials or other
+    sensitive data and should be restricted to admins.
+    """
 
     payload = {
         "id": empresa.id,
@@ -310,12 +318,13 @@ def _serialize_empresa(empresa: Empresa, include_departments: bool = False) -> d
         "regime_lancamento": empresa.regime_lancamento,
         "sistemas_consultorias": empresa.sistemas_consultorias,
         "sistema_utilizado": empresa.sistema_utilizado,
-        "acessos": empresa.acessos,
-        "observacao_acessos": empresa.observacao_acessos,
         "codigo_empresa": empresa.codigo_empresa,
         "contatos": empresa.contatos,
         "ativo": empresa.ativo,
     }
+    if include_sensitive:
+        payload["acessos"] = empresa.acessos
+        payload["observacao_acessos"] = empresa.observacao_acessos
     if include_departments:
         payload["departamentos"] = [
             _serialize_department(dept) for dept in getattr(empresa, "departamentos", []) or []
@@ -1300,10 +1309,7 @@ def api_general_calendar_events():
 @api_bp.route("/empresas", methods=["GET"])
 @token_required
 def api_empresas():
-    """List companies (admin only)."""
-
-    if not is_user_admin(g.api_user):
-        return jsonify({"error": "forbidden"}), 403
+    """List companies."""
 
     q = (request.args.get("q") or "").strip()
     limit = request.args.get("limit", type=int, default=100) or 100
@@ -1315,30 +1321,36 @@ def api_empresas():
         query = query.filter(sa.or_(Empresa.nome_empresa.ilike(like), Empresa.cnpj.ilike(like)))
 
     empresas = query.order_by(Empresa.nome_empresa.asc()).limit(limit).all()
-    return jsonify([_serialize_empresa(e, include_departments=False) for e in empresas])
+    include_sensitive = is_user_admin(g.api_user)
+    return jsonify(
+        [
+            _serialize_empresa(e, include_departments=False, include_sensitive=include_sensitive)
+            for e in empresas
+        ]
+    )
 
 
 @api_bp.route("/empresas/<int:empresa_id>", methods=["GET"])
 @token_required
 def api_empresa_detail(empresa_id: int):
-    """Return company detail with departments (admin only)."""
-
-    if not is_user_admin(g.api_user):
-        return jsonify({"error": "forbidden"}), 403
+    """Return company detail with departments."""
 
     empresa = Empresa.query.get(empresa_id)
     if not empresa:
         return jsonify({"error": "not_found"}), 404
-    return jsonify(_serialize_empresa(empresa, include_departments=True))
+    return jsonify(
+        _serialize_empresa(
+            empresa,
+            include_departments=True,
+            include_sensitive=is_user_admin(g.api_user),
+        )
+    )
 
 
 @api_bp.route("/empresas/<int:empresa_id>/departamentos", methods=["GET"])
 @token_required
 def api_empresa_departments(empresa_id: int):
-    """List departments of a company (admin only)."""
-
-    if not is_user_admin(g.api_user):
-        return jsonify({"error": "forbidden"}), 403
+    """List departments of a company."""
 
     empresa = Empresa.query.get(empresa_id)
     if not empresa:
@@ -1390,7 +1402,7 @@ def api_create_empresa():
         current_app.logger.exception("Failed to create company via API")
         return jsonify({"error": "failed_to_create"}), 500
 
-    return jsonify(_serialize_empresa(empresa, include_departments=True)), 201
+    return jsonify(_serialize_empresa(empresa, include_departments=True, include_sensitive=True)), 201
 
 
 @api_bp.route("/empresas/<int:empresa_id>", methods=["PATCH"])
@@ -1440,7 +1452,7 @@ def api_update_empresa(empresa_id: int):
         current_app.logger.exception("Failed to update company via API")
         return jsonify({"error": "failed_to_update"}), 500
 
-    return jsonify(_serialize_empresa(empresa, include_departments=True))
+    return jsonify(_serialize_empresa(empresa, include_departments=True, include_sensitive=True))
 
 
 @api_bp.route("/empresas/<int:empresa_id>", methods=["DELETE"])

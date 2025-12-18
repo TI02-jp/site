@@ -48,9 +48,9 @@ Agenda / Calendários
 
 Empresas / Departamentos (admin)
 --------------------------------
-- Empresas: `GET /empresas`, `GET /empresas/{id}`, `POST /empresas`, `PATCH /empresas/{id}`, `DELETE /empresas/{id}`
+- Empresas: `GET /empresas`, `GET /empresas/{id}` (autenticado); `POST /empresas`, `PATCH /empresas/{id}`, `DELETE /empresas/{id}` (admin)
   - Campos obrigatórios no POST: `nome/nome_empresa`, `cnpj`, `data_abertura`, `codigo_empresa`
-- Departamentos: `GET /empresas/{id}/departamentos`, `POST /departamentos`, `PATCH /departamentos/{id}`, `DELETE /departamentos/{id}`
+- Departamentos: `GET /empresas/{id}/departamentos` (autenticado); `POST /departamentos`, `PATCH /departamentos/{id}`, `DELETE /departamentos/{id}` (admin)
 
 Procedimentos
 -------------

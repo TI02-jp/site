@@ -187,12 +187,18 @@ def cadastrar_empresa():
 @meeting_only_access_check
 def listar_empresas():
     """List companies with optional search and pagination."""
-    search = request.args.get("q", "").strip()
+    saved_filters = session.get("listar_empresas_filters", {})
+
+    search_arg = request.args.get("q")
+    if search_arg is None:
+        search = (saved_filters.get("search") or "").strip()
+    else:
+        search = search_arg.strip()
+
     page = request.args.get("page", 1, type=int)
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
     allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
-    saved_filters = session.get("listar_empresas_filters", {})
     sort_arg = request.args.get("sort")
     order_arg = request.args.get("order")
     clear_tributacao = request.args.get("clear_tributacao") == "1"
@@ -212,7 +218,7 @@ def listar_empresas():
     if order not in ("asc", "desc"):
         order = "asc"
 
-    session["listar_empresas_filters"] = {"sort": sort, "order": order}
+    session["listar_empresas_filters"] = {"sort": sort, "order": order, "search": search}
 
     query = Empresa.query
 
@@ -240,6 +246,7 @@ def listar_empresas():
         "sort": sort,
         "order": order,
         "tributacao_filters": tributacao_filters,
+        "search": search,
     }
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
