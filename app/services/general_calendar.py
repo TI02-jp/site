@@ -82,6 +82,10 @@ def _ensure_time_columns() -> None:
         statements.append(
             "ALTER TABLE general_calendar_events ADD COLUMN is_vacation BOOLEAN NOT NULL DEFAULT 0"
         )
+    if "is_notice" not in existing_columns:
+        statements.append(
+            "ALTER TABLE general_calendar_events ADD COLUMN is_notice BOOLEAN NOT NULL DEFAULT 0"
+        )
 
     if not statements:
         _TIME_COLUMNS_VERIFIED = True
@@ -144,6 +148,7 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
     is_birthday = bool(form.is_birthday.data)
     is_absence = bool(form.is_absence.data)
     is_vacation = bool(form.is_vacation.data)
+    is_notice = bool(form.is_notice.data)
     birthday_user_id = form.birthday_user_id.data or 0
     if is_birthday:
         end_date = start_date
@@ -179,6 +184,7 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
         is_birthday=is_birthday,
         is_absence=is_absence,
         is_vacation=is_vacation,
+        is_notice=is_notice,
         birthday_user_id=birthday_user.id if birthday_user else None,
         birthday_user_name=(
             (birthday_user.name or birthday_user.username)
@@ -222,6 +228,7 @@ def update_calendar_event_from_form(
     event.is_birthday = bool(form.is_birthday.data)
     event.is_absence = bool(form.is_absence.data)
     event.is_vacation = bool(form.is_vacation.data)
+    event.is_notice = bool(form.is_notice.data)
     event.birthday_recurs_annually = (
         bool(form.birthday_recurs_annually.data) if event.is_birthday else False
     )
@@ -338,6 +345,7 @@ def serialize_events_for_calendar(
         )
         is_vacation_flag = bool(event.is_vacation)
         is_absence_flag = bool(event.is_absence)
+        is_notice_flag = bool(event.is_notice)
         keyword_vacation = contains_keyword("ferias", "férias")
         keyword_absence = contains_keyword("ausencia", "ausência")
         is_vacation_event = is_vacation_flag or keyword_vacation
@@ -353,6 +361,11 @@ def serialize_events_for_calendar(
             event_border = "#22c55e"
             event_text = "#ffffff"
             event_classes.append("birthday-event")
+        elif is_notice_flag:
+            event_background = "#eab308"
+            event_border = "#eab308"
+            event_text = "#000000"
+            event_classes.append("notice-event")
         elif is_vacation_event:
             event_background = "#f58220"
             event_border = "#f58220"
@@ -388,6 +401,7 @@ def serialize_events_for_calendar(
             "birthday_recurrence_years": recurrence_years,
             "is_vacation": is_vacation_flag,
             "is_absence": is_absence_flag,
+            "is_notice": is_notice_flag,
             "is_vacation_event": is_vacation_event,
             "is_absence_event": is_absence_event,
             "originalId": event.id,

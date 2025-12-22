@@ -40,6 +40,27 @@ procedimentos_bp = Blueprint('procedimentos', __name__)
 
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _can_manage_procedures() -> bool:
+    """Verifica se o usuário pode gerenciar procedimentos operacionais.
+
+    Returns:
+        True se o usuário é admin OU tem a permissão procedures_manage
+    """
+    from app.controllers.routes._decorators import has_report_access
+    from app.utils.permissions import is_user_admin
+
+    # Admin sempre pode
+    if is_user_admin(current_user):
+        return True
+
+    # Verifica permissão específica
+    return has_report_access("procedures_manage")
+
+
+# =============================================================================
 # ROTAS
 # =============================================================================
 
@@ -81,6 +102,9 @@ def procedimentos_operacionais():
 
     # Processa POST (criacao)
     if request.method == "POST":
+        if not _can_manage_procedures():
+            abort(403)
+
         if form.validate_on_submit():
             proc = OperationalProcedure(
                 title=form.title.data,
@@ -94,11 +118,13 @@ def procedimentos_operacionais():
 
         flash("Nao foi possivel criar o procedimento. Corrija os erros do formulario.", "danger")
 
+    can_manage = _can_manage_procedures()
     return render_template(
         "procedimentos.html",
         form=form,
         procedures=procedures,
         search_term=search_term,
+        can_manage=can_manage,
     )
 
 
@@ -131,7 +157,8 @@ def procedimentos_operacionais_ver(proc_id: int):
         404: Procedimento nao encontrado
     """
     proc = OperationalProcedure.query.get_or_404(proc_id)
-    return render_template("procedimento_view.html", procedure=proc)
+    can_manage = _can_manage_procedures()
+    return render_template("procedimento_view.html", procedure=proc, can_manage=can_manage)
 
 
 @procedimentos_bp.route("/procedimentos/<int:proc_id>/json")
@@ -160,7 +187,7 @@ def procedimentos_operacionais_json(proc_id: int):
 @login_required
 def procedimentos_operacionais_editar(proc_id: int):
     """
-    Pagina de edicao do procedimento (apenas admin).
+    Pagina de edicao do procedimento.
 
     Args:
         proc_id: ID do procedimento
@@ -168,10 +195,10 @@ def procedimentos_operacionais_editar(proc_id: int):
     Returns:
         200: Formulario de edicao (GET)
         302: Redirect apos atualizacao (POST)
-        403: Acesso negado se nao for admin
+        403: Acesso negado se nao tiver permissao
         404: Procedimento nao encontrado
     """
-    if current_user.role != "admin":
+    if not _can_manage_procedures():
         abort(403)
 
     proc = OperationalProcedure.query.get_or_404(proc_id)
@@ -199,17 +226,17 @@ def procedimentos_operacionais_editar(proc_id: int):
 @login_required
 def procedimentos_operacionais_excluir(proc_id: int):
     """
-    Remove um procedimento (apenas admin).
+    Remove um procedimento.
 
     Args:
         proc_id: ID do procedimento
 
     Returns:
         302: Redirect para listagem apos exclusao
-        403: Acesso negado se nao for admin
+        403: Acesso negado se nao tiver permissao
         404: Procedimento nao encontrado
     """
-    if current_user.role != "admin":
+    if not _can_manage_procedures():
         abort(403)
 
     proc = OperationalProcedure.query.get_or_404(proc_id)

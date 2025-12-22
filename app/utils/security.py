@@ -1,13 +1,34 @@
-"""Security-related helper utilities."""
+"""Security-related helper utilities.
+
+Este módulo fornece sanitização HTML robusta usando a biblioteca bleach
+para proteger contra ataques XSS (Cross-Site Scripting).
+"""
 
 import re
+import bleach
+from bleach.linkifier import LinkifyFilter
+from markupsafe import Markup
 
-# Regular expressions to strip potentially dangerous content
-_SCRIPT_TAG_RE = re.compile(r'<script.*?>.*?</script>', re.IGNORECASE | re.DOTALL)
-# Matches inline event handlers, e.g. onclick="..."
-_EVENT_ATTR_RE = re.compile(r'on\w+\s*=\s*".*?"', re.IGNORECASE)
-_JS_PROTOCOL_RE = re.compile(r'javascript:', re.IGNORECASE)
-# Detect plain URLs that are not already part of an HTML attribute value
+# Tags HTML permitidas para conteúdo rico
+ALLOWED_TAGS = [
+    'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
+    'h1', 'h2', 'h3', 'h4', 'blockquote', 'code', 'pre',
+    'span', 'div', 'b', 'i'
+]
+
+# Atributos permitidos por tag
+ALLOWED_ATTRIBUTES = {
+    'a': ['href', 'title', 'target', 'rel'],
+    'span': ['class'],
+    'div': ['class'],
+    'code': ['class'],
+    '*': ['class']  # Permite class em todas as tags para estilização
+}
+
+# Protocolos permitidos em URLs
+ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+
+# Regex para detectar URLs bare (mantida para compatibilidade)
 _BARE_URL_RE = re.compile(
     r'(?<!["\'=])(?P<url>(?:https?://|www\.)[^\s<]+)',
     re.IGNORECASE,
@@ -16,8 +37,11 @@ _TRAILING_PUNCTUATION = re.compile(r'([.,!?;:]+)$')
 
 
 def _linkify(text: str) -> str:
-    """Wrap bare URLs in clickable anchor tags."""
+    """Wrap bare URLs in clickable anchor tags.
 
+    DEPRECATED: Use bleach's linkify filter instead.
+    Mantido para compatibilidade com código existente.
+    """
     def _replace(match: re.Match[str]) -> str:
         raw_url = match.group("url")
         before = match.string[: match.start()]
@@ -40,21 +64,86 @@ def _linkify(text: str) -> str:
     return _BARE_URL_RE.sub(_replace, text)
 
 
-def sanitize_html(value: str | None) -> str:
-    """Remove potentially dangerous HTML before rendering.
+def sanitize_html(value: str | None, linkify: bool = True, strip: bool = True) -> str:
+    """Remove potentially dangerous HTML and return safe HTML fragment.
 
-    The sanitizer removes script tags, inline event handlers and
-    ``javascript:`` URLs, returning a cleaned HTML fragment.
+    Esta função usa a biblioteca bleach (mantida pela Mozilla) para fornecer
+    sanitização HTML robusta contra ataques XSS.
+
+    Args:
+        value: HTML a ser sanitizado
+        linkify: Se True, converte URLs em links clicáveis
+        strip: Se True, remove tags não permitidas completamente.
+               Se False, escapa tags não permitidas.
+
+    Returns:
+        str: HTML sanitizado e seguro para renderização
+
+    Examples:
+        >>> sanitize_html('<script>alert("XSS")</script><p>Texto seguro</p>')
+        '<p>Texto seguro</p>'
+
+        >>> sanitize_html('<p onclick="alert()">Texto</p>')
+        '<p>Texto</p>'
+
+        >>> sanitize_html('<a href="javascript:alert()">Link</a>')
+        '<a>Link</a>'
+
+    Proteções implementadas:
+        - Remove tags de script, style, object, embed
+        - Remove atributos de eventos (onclick, onload, etc)
+        - Remove protocolo javascript: de URLs
+        - Permite apenas tags e atributos específicos (whitelist)
+        - Permite apenas protocolos http/https/mailto
+        - Opcionalmente converte URLs em links clicáveis
     """
     if not value:
         return ""
 
-    # Strip script tags completely
-    cleaned = _SCRIPT_TAG_RE.sub("", value)
-    # Drop inline event handler attributes like onclick="..."
-    cleaned = _EVENT_ATTR_RE.sub("", cleaned)
-    # Remove javascript: protocol usages
-    cleaned = _JS_PROTOCOL_RE.sub("", cleaned)
-    # Convert bare URLs into clickable links
-    cleaned = _linkify(cleaned)
+    # Sanitizar HTML com bleach
+    cleaned = bleach.clean(
+        value,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        protocols=ALLOWED_PROTOCOLS,
+        strip=strip  # Remove tags não permitidas (vs escapar)
+    )
+
+    # Linkify URLs se solicitado
+    if linkify:
+        from html import unescape
+        # Primeiro decodifica entidades HTML para evitar linkify duplo
+        cleaned = unescape(cleaned)
+        # Aplica linkify do bleach
+        cleaned = bleach.linkify(
+            cleaned,
+            callbacks=[
+                # Adiciona target=_blank e rel=noopener noreferrer
+                lambda attrs, new: {**attrs, **{(None, 'target'): '_blank', (None, 'rel'): 'noopener noreferrer'}}
+            ],
+            skip_tags=['pre', 'code']  # Não linkificar dentro de code blocks
+        )
+
     return cleaned
+
+
+def escape_html(value: str | None) -> str:
+    """Escapa completamente HTML para exibição como texto plano.
+
+    Use esta função quando você quer exibir HTML literalmente,
+    não permitindo nenhuma formatação HTML.
+
+    Args:
+        value: Texto a ser escapado
+
+    Returns:
+        str: Texto com caracteres HTML escapados
+
+    Example:
+        >>> escape_html('<script>alert("XSS")</script>')
+        '&lt;script&gt;alert("XSS")&lt;/script&gt;'
+    """
+    if not value:
+        return ""
+    # bleach.clean com tags=[] e strip=False escapa todo HTML
+    return bleach.clean(value, tags=[], attributes={}, strip=False)

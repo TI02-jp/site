@@ -667,7 +667,35 @@ class Consultoria(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
     usuario = db.Column(db.String(100))
-    senha = db.Column(db.String(255))
+    # Armazena senha criptografada no banco (tamanho aumentado para caber criptografia)
+    _senha_encrypted = db.Column('senha', db.String(500))
+
+    @property
+    def senha(self):
+        """Retorna senha em texto claro para exibição na interface."""
+        if not self._senha_encrypted:
+            return None
+        from app.utils.encryption import decrypt_field
+        try:
+            return decrypt_field(self._senha_encrypted)
+        except Exception as e:
+            # Se falhar descriptografia (ex: chave mudou), retorna None
+            from flask import current_app
+            current_app.logger.error(
+                f"Falha ao descriptografar senha. "
+                f"Tabela: consultoria, ID: {self.id}, Nome: '{self.nome}'. "
+                f"Erro: {str(e)}"
+            )
+            return None
+
+    @senha.setter
+    def senha(self, plaintext_senha):
+        """Criptografa senha automaticamente antes de salvar no banco."""
+        if not plaintext_senha:
+            self._senha_encrypted = None
+            return
+        from app.utils.encryption import encrypt_field
+        self._senha_encrypted = encrypt_field(plaintext_senha)
 
     def __repr__(self):
         return f"<Consultoria {self.nome}>"
@@ -785,9 +813,37 @@ class CadastroNota(db.Model):
     acordo = db.Column(db.String(100), nullable=True)
     forma_pagamento = db.Column(db.String(50), nullable=False)
     usuario = db.Column(db.String(255), nullable=True)
-    senha = db.Column(db.String(255), nullable=True)
+    # Armazena senha criptografada no banco (tamanho aumentado para caber criptografia)
+    _senha_encrypted = db.Column('senha', db.String(500), nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=sao_paulo_now_naive)
+
+    @property
+    def senha(self):
+        """Retorna senha em texto claro para exibição na interface."""
+        if not self._senha_encrypted:
+            return None
+        from app.utils.encryption import decrypt_field
+        try:
+            return decrypt_field(self._senha_encrypted)
+        except Exception as e:
+            # Se falhar descriptografia (ex: chave mudou), retorna None
+            from flask import current_app
+            current_app.logger.error(
+                f"Falha ao descriptografar senha. "
+                f"Tabela: cadastro_notas, ID: {self.id}, Cadastro: '{self.cadastro}'. "
+                f"Erro: {str(e)}"
+            )
+            return None
+
+    @senha.setter
+    def senha(self, plaintext_senha):
+        """Criptografa senha automaticamente antes de salvar no banco."""
+        if not plaintext_senha:
+            self._senha_encrypted = None
+            return
+        from app.utils.encryption import encrypt_field
+        self._senha_encrypted = encrypt_field(plaintext_senha)
 
     @property
     def valor_formatado(self):
@@ -1141,6 +1197,12 @@ class GeneralCalendarEvent(db.Model):
         server_default="0",
     )
     is_vacation = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+    is_notice = db.Column(
         db.Boolean,
         nullable=False,
         default=False,
@@ -1874,6 +1936,99 @@ def _format_value_for_history(value) -> str | None:
     if isinstance(value, bool):
         return str(value)
     return str(value)
+
+
+# =============================================================================
+# MANUAL SYSTEM MODELS
+# =============================================================================
+
+class ManualCategory(db.Model):
+    """Categoria de vídeos do manual."""
+
+    __tablename__ = "manual_categories"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.String(255), nullable=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
+        nullable=False
+    )
+
+    videos = db.relationship(
+        "ManualVideo",
+        backref="category",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    def __repr__(self) -> str:
+        return f"<ManualCategory {self.name}>"
+
+
+class ManualVideo(db.Model):
+    """Vídeo de treinamento do manual."""
+
+    __tablename__ = "manual_videos"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("manual_categories.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    # Arquivos
+    video_path = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    thumbnail_path = db.Column(db.String(255), nullable=True)
+    mime_type = db.Column(db.String(128), nullable=False)
+    file_size = db.Column(db.BigInteger, nullable=False)
+
+    # Metadados do vídeo
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    duration_formatted = db.Column(db.String(20), nullable=True)  # "HH:MM:SS"
+
+    # Ordenação e controle
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Auditoria
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
+        nullable=False
+    )
+
+    created_by = db.relationship("User", backref=db.backref("manual_videos", lazy=True))
+
+    def __repr__(self) -> str:
+        return f"<ManualVideo {self.title}>"
+
+    @property
+    def file_size_mb(self) -> float:
+        """Retorna tamanho do arquivo em MB."""
+        return round(self.file_size / (1024 * 1024), 2) if self.file_size else 0.0
+
+    @property
+    def thumbnail_url(self) -> str:
+        """Retorna URL da thumbnail ou placeholder."""
+        if self.thumbnail_path:
+            return f"/static/{self.thumbnail_path}"
+        return "/static/images/video-placeholder.png"
 
 
 def _record_task_change(connection, task: Task, field_name: str, old_value, new_value, changed_by: int | None):

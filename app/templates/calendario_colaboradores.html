@@ -101,6 +101,10 @@
         background-color: #ef4444;
         color: #fff;
     }
+    .badge-notice {
+        background-color: #eab308;
+        color: #000;
+    }
     .fc .vacation-event .fc-event-main {
         background: #f58220;
         color: #fff;
@@ -126,6 +130,19 @@
     .fc .absence-event .fc-event-dot {
         background-color: #ef4444;
         border-color: #ef4444;
+    }
+    .fc .notice-event .fc-event-main {
+        background: #eab308;
+        color: #000;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+    }
+    .fc .notice-event .fc-event-main .fc-event-title,
+    .fc .notice-event .fc-event-main .fc-event-time {
+        color: inherit;
+    }
+    .fc .notice-event .fc-event-dot {
+        background-color: #eab308;
+        border-color: #eab308;
     }
     .calendar-legend {
         display: flex;
@@ -157,6 +174,9 @@
     }
     .legend-color.absence {
         background-color: #ef4444;
+    }
+    .legend-color.notice {
+        background-color: #eab308;
     }
 </style>
 {% endblock %}
@@ -192,6 +212,10 @@
         <div class="legend-item">
             <div class="legend-color absence"></div>
             <span>Ausência</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color notice"></div>
+            <span>Aviso</span>
         </div>
     </div>
     <div class="agenda-calendar-body">
@@ -234,9 +258,13 @@
                                     {{ form.is_absence(class="form-check-input", id="is_absence") }}
                                     <label class="form-check-label" for="is_absence">Ausência</label>
                                 </div>
-                                <div class="form-check mb-3">
+                                <div class="form-check mb-2">
                                     {{ form.is_vacation(class="form-check-input", id="is_vacation") }}
                                     <label class="form-check-label" for="is_vacation">Férias</label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.is_notice(class="form-check-input", id="is_notice") }}
+                                    <label class="form-check-label" for="is_notice">Aviso (Todo o escritório)</label>
                                 </div>
                                 <div class="mb-3 d-none" id="birthdayUserWrapper">
                                     {{ form.birthday_user_id.label(class="form-label") }}
@@ -315,6 +343,7 @@
                             <span class="badge badge-birthday d-none" id="detailBirthdayBadge">Aniversário</span>
                             <span class="badge badge-vacation d-none" id="detailVacationBadge">Férias</span>
                             <span class="badge badge-absence d-none" id="detailAbsenceBadge">Ausência</span>
+                            <span class="badge badge-notice d-none" id="detailNoticeBadge">Aviso</span>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -549,6 +578,7 @@
                 }
                 var vacationBadge = document.getElementById('detailVacationBadge');
                 var absenceBadge = document.getElementById('detailAbsenceBadge');
+                var noticeBadge = document.getElementById('detailNoticeBadge');
                 var isVacationEvent = Boolean(
                     (currentEvent.extendedProps && (
                         currentEvent.extendedProps.is_vacation ||
@@ -561,11 +591,17 @@
                         currentEvent.extendedProps.is_absence_event
                     )) || currentEvent.is_absence || currentEvent.is_absence_event
                 );
+                var isNoticeEvent = Boolean(
+                    (currentEvent.extendedProps && currentEvent.extendedProps.is_notice) || currentEvent.is_notice
+                );
                 if (vacationBadge) {
                     vacationBadge.classList.toggle('d-none', !isVacationEvent);
                 }
                 if (absenceBadge) {
                     absenceBadge.classList.toggle('d-none', !isAbsenceEvent);
+                }
+                if (noticeBadge) {
+                    noticeBadge.classList.toggle('d-none', !isNoticeEvent);
                 }
                 var creatorEl = document.getElementById('detailCreator');
                 if (currentEvent.extendedProps.creator) {
@@ -677,6 +713,7 @@
         var birthdayRecurrenceYearsSelect = document.getElementById('birthday_recurrence_years');
         var absenceCheckbox = document.getElementById('is_absence');
         var vacationCheckbox = document.getElementById('is_vacation');
+        var noticeCheckbox = document.getElementById('is_notice');
         var previousBirthdayParticipantId = null;
         var autoBirthdayTitle = '';
 
@@ -812,7 +849,7 @@
             if (!checkbox) { return; }
             checkbox.addEventListener('change', function() {
                 if (checkbox.checked) {
-                    [birthdayCheckbox, absenceCheckbox, vacationCheckbox].forEach(function(other) {
+                    [birthdayCheckbox, absenceCheckbox, vacationCheckbox, noticeCheckbox].forEach(function(other) {
                         if (other && other !== checkbox) {
                             other.checked = false;
                         }
@@ -848,6 +885,7 @@
         handleSpecialCheckboxChange(birthdayCheckbox, syncBirthdayState);
         handleSpecialCheckboxChange(absenceCheckbox);
         handleSpecialCheckboxChange(vacationCheckbox);
+        handleSpecialCheckboxChange(noticeCheckbox);
         if (birthdayRecurringCheckbox) {
             birthdayRecurringCheckbox.addEventListener('change', function() {
                 if (birthdayRecurringCheckbox.checked || !birthdayCheckbox || birthdayCheckbox.checked) {
@@ -948,6 +986,9 @@
                         if (typeof ev.is_absence_event !== 'undefined') {
                             ev.extendedProps.is_absence_event = ev.is_absence_event;
                         }
+                        if (typeof ev.is_notice !== 'undefined') {
+                            ev.extendedProps.is_notice = ev.is_notice;
+                        }
                         if (typeof ev.birthday_recurs_annually !== 'undefined') {
                             ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
                         }
@@ -992,6 +1033,12 @@
                                 }
                                 if (typeof segment.is_birthday !== 'undefined') {
                                     segment.extendedProps.is_birthday = segment.is_birthday;
+                                }
+                                if (typeof segment.is_notice !== 'undefined') {
+                                    segment.extendedProps.is_notice = segment.is_notice;
+                                }
+                                if (typeof ev.is_notice !== 'undefined') {
+                                    segment.extendedProps.is_notice = ev.is_notice;
                                 }
                                 if (typeof ev.birthday_recurs_annually !== 'undefined') {
                                     segment.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
@@ -1084,6 +1131,9 @@
             if (vacationCheckbox) {
                 vacationCheckbox.checked = false;
             }
+            if (noticeCheckbox) {
+                noticeCheckbox.checked = false;
+            }
             if (dateStr) {
                 form.start_date.value = dateStr;
                 form.end_date.value = dateStr;
@@ -1154,6 +1204,11 @@
                         currentEvent.extendedProps.is_vacation ||
                         currentEvent.extendedProps.is_vacation_event
                     )) || currentEvent.is_vacation || currentEvent.is_vacation_event
+                );
+            }
+            if (noticeCheckbox) {
+                noticeCheckbox.checked = Boolean(
+                    (currentEvent.extendedProps && currentEvent.extendedProps.is_notice) || currentEvent.is_notice
                 );
             }
             if (birthdayRecurringCheckbox) {

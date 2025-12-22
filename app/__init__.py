@@ -753,6 +753,15 @@ def _log_request_end(response):
     log_request_info(request, response, duration_ms, request_id=request_id)
     return response
 
+@app.after_request
+def _ensure_utf8_charset(response):
+    """Guarantee UTF-8 charset on text responses to avoid accent corruption."""
+    try:
+        if response.mimetype and response.mimetype.startswith("text/"):
+            response.charset = "utf-8"
+    finally:
+        return response
+
 @app.teardown_appcontext
 def _commit_session_updates(exception=None):
     """Commit session updates after request completes (non-blocking optimization)."""

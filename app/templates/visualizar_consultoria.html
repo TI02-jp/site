@@ -23,11 +23,11 @@
             </div>
             <div class="mb-3 text-start">
                 <strong>Pergunta:</strong>
-                <div class="border p-3 rounded text-start" style="min-height:100px;">{{ inclusao.pergunta|safe }}</div>
+                <div class="border p-3 rounded text-start" style="min-height:100px;">{{ inclusao.pergunta | sanitize | safe }}</div>
             </div>
             <div class="mb-3 text-start">
                 <strong>Resposta:</strong>
-                <div class="border p-3 rounded text-start" style="min-height:100px;">{{ inclusao.resposta|safe }}</div>
+                <div class="border p-3 rounded text-start" style="min-height:100px;">{{ inclusao.resposta | sanitize | safe }}</div>
             </div>
             <div class="d-flex justify-content-end gap-2">
                 {% if next_url %}
