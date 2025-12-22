@@ -14,7 +14,7 @@ Autor: Refatoracao automatizada
 Data: 2024
 """
 
-import imghdr
+import filetype
 
 from app.controllers.routes._base import (
     IMAGE_EXTENSIONS,
@@ -101,7 +101,8 @@ def is_safe_image_upload(file) -> bool:
 
     # Verifica assinatura do arquivo (magic bytes)
     header = peek_stream(file)
-    detected = imghdr.what(None, header)
+    guess = filetype.guess(header)
+    detected = guess.extension if guess else None
     if not detected:
         return False
 
