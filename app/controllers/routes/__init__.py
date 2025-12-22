@@ -122,7 +122,7 @@ from app.forms import (
     CourseTagForm,
     OperationalProcedureForm,
 )
-import os, json, re, secrets, imghdr, time, calendar
+import os, json, re, secrets, filetype, time, calendar
 import requests
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
@@ -466,7 +466,8 @@ def is_safe_image_upload(file):
         return False
 
     header = _peek_stream(file)
-    detected = imghdr.what(None, header)
+    guess = filetype.guess(header)
+    detected = guess.extension if guess else None
     if not detected:
         return False
 
