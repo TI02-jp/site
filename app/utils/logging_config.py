@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from time import perf_counter
@@ -44,6 +45,41 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)
+
+
+class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
+    """TimedRotatingFileHandler that tolerates Windows file-lock rollover failures.
+
+    On Windows, log files can be held open by another process (commonly Flask/Werkzeug
+    reloader), which makes os.rename() fail with WinError 32. In that case we skip
+    rollover for this interval and reopen the base file so logging continues without
+    spamming tracebacks.
+    """
+
+    def doRollover(self) -> None:  # type: ignore[override]
+        try:
+            super().doRollover()
+        except PermissionError as exc:
+            if getattr(exc, "winerror", None) != 32:
+                raise
+
+            try:
+                self.stream = self._open()
+            except Exception:  # pylint: disable=broad-except
+                self.stream = None
+
+            self.rolloverAt = int(time.time()) + self.interval
+
+
+def _clear_logger_handlers(logger_name: str) -> logging.Logger:
+    logger = logging.getLogger(logger_name)
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        try:
+            handler.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+    return logger
 
 
 def _resolve_log_dir(app) -> str:
@@ -123,12 +159,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 1. General application log (rotated daily, keeps 60 days)
     app_log_path = os.path.join(log_dir, 'app.log')
-    app_handler = TimedRotatingFileHandler(
+    app_handler = SafeTimedRotatingFileHandler(
         app_log_path,
         when='midnight',
         interval=1,
         backupCount=60,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     app_handler.setLevel(logging.INFO)
     app_handler.setFormatter(text_formatter)
@@ -136,12 +173,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 2. Structured JSON log for ingest into observability tools
     json_log_path = os.path.join(log_dir, 'app.jsonl')
-    json_handler = TimedRotatingFileHandler(
+    json_handler = SafeTimedRotatingFileHandler(
         json_log_path,
         when='midnight',
         interval=1,
         backupCount=60,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     json_handler.setLevel(logging.INFO)
     json_handler.setFormatter(json_formatter)
@@ -149,12 +187,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 3. Error log (rotated daily, keeps 90 days for compliance)
     error_log_path = os.path.join(log_dir, 'error.log')
-    error_handler = TimedRotatingFileHandler(
+    error_handler = SafeTimedRotatingFileHandler(
         error_log_path,
         when='midnight',
         interval=1,
         backupCount=90,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(text_formatter)
@@ -162,12 +201,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 4. Warning log (rotated daily, keeps 90 days)
     warnings_log_path = os.path.join(log_dir, 'warnings.log')
-    warnings_handler = TimedRotatingFileHandler(
+    warnings_handler = SafeTimedRotatingFileHandler(
         warnings_log_path,
         when='midnight',
         interval=1,
         backupCount=90,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     warnings_handler.setLevel(logging.WARNING)
     # Filter to only capture WARNING level (not ERROR or CRITICAL)
@@ -177,12 +217,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 5. Slow request log (daily rotation)
     slow_log_path = os.path.join(log_dir, 'slow_requests.log')
-    slow_handler = TimedRotatingFileHandler(
+    slow_handler = SafeTimedRotatingFileHandler(
         slow_log_path,
         when='midnight',
         interval=1,
         backupCount=60,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     slow_handler.setLevel(logging.WARNING)
     slow_handler.setFormatter(text_formatter)
@@ -198,12 +239,13 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 6. SQLAlchemy slow query logging (queries > 1 second)
     slow_query_log_path = os.path.join(log_dir, 'slow_queries.log')
-    slow_query_handler = TimedRotatingFileHandler(
+    slow_query_handler = SafeTimedRotatingFileHandler(
         slow_query_log_path,
         when='W0',  # Rotate weekly on Monday
         interval=1,
         backupCount=12,  # Keep 3 months
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     slow_query_formatter = logging.Formatter(
         '[%(asctime)s] SLOW QUERY (%(duration).3fs): %(statement)s',
@@ -212,7 +254,7 @@ def setup_logging(app, engine: Optional[object] = None):
     slow_query_handler.setFormatter(slow_query_formatter)
 
     # Create slow query logger
-    slow_query_logger = logging.getLogger('sqlalchemy.slow_queries')
+    slow_query_logger = _clear_logger_handlers('sqlalchemy.slow_queries')
     slow_query_logger.setLevel(logging.WARNING)
     slow_query_logger.addHandler(slow_query_handler)
     slow_query_logger.propagate = False
@@ -224,30 +266,32 @@ def setup_logging(app, engine: Optional[object] = None):
 
     # 7. User actions log - Text format (rotated daily, keeps 180 days for compliance)
     user_actions_log_path = os.path.join(log_dir, 'user_actions.log')
-    user_actions_handler = TimedRotatingFileHandler(
+    user_actions_handler = SafeTimedRotatingFileHandler(
         user_actions_log_path,
         when='midnight',
         interval=1,
         backupCount=180,  # 6 months retention for audit compliance
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     user_actions_handler.setLevel(logging.INFO)
     user_actions_handler.setFormatter(text_formatter)
 
     # 8. User actions log - JSON format (rotated daily, keeps 180 days)
     user_actions_json_path = os.path.join(log_dir, 'user_actions.jsonl')
-    user_actions_json_handler = TimedRotatingFileHandler(
+    user_actions_json_handler = SafeTimedRotatingFileHandler(
         user_actions_json_path,
         when='midnight',
         interval=1,
         backupCount=180,
-        encoding='utf-8'
+        encoding='utf-8',
+        delay=True,
     )
     user_actions_json_handler.setLevel(logging.INFO)
     user_actions_json_handler.setFormatter(json_formatter)
 
     # Create separate user actions logger
-    user_actions_logger = logging.getLogger('user_actions')
+    user_actions_logger = _clear_logger_handlers('user_actions')
     user_actions_logger.setLevel(logging.INFO)
     user_actions_logger.addHandler(user_actions_handler)
     user_actions_logger.addHandler(user_actions_json_handler)

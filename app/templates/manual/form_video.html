@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Manual{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h1 class="h3 mb-1">
+        <i class="bi bi-film me-2"></i>{{ title }}
+      </h1>
+      <p class="text-muted mb-0">Envie o arquivo do vídeo e, se quiser, uma thumbnail e anotações.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ url_for('manual.admin_painel') }}">
+        <i class="bi bi-arrow-left me-1"></i>Voltar
+      </a>
+      {% if video %}
+      <a class="btn btn-outline-primary" href="{{ url_for('manual.assistir_video', video_id=video.id) }}">
+        <i class="bi bi-play me-1"></i>Visualizar
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+
+            <div class="mb-3">
+              <label class="form-label">Título</label>
+              {{ form.title(class_="form-control", placeholder="Ex.: Como abrir um chamado") }}
+              {% if form.title.errors %}
+              <div class="text-danger small mt-1">{{ form.title.errors[0] }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Conteúdo / Particularidades</label>
+              <div id="richDescription" class="quill-editor form-control" style="height: 220px;">{{ (form.description.data or '')|safe }}</div>
+              {{ form.description(class_="form-control d-none") }}
+              <div class="text-muted small mt-1">Formate o texto, cole prints e inclua comunicados.</div>
+              {% if form.description.errors %}
+              <div class="text-danger small mt-1">{{ form.description.errors[0] }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Categoria</label>
+              {{ form.category_id(class_="form-select") }}
+              {% if form.category_id.errors %}
+              <div class="text-danger small mt-1">{{ form.category_id.errors[0] }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Arquivo de vídeo {% if video %}(deixe vazio para manter o atual){% endif %}</label>
+              {{ form.video_file(class_="form-control") }}
+              {% if form.video_file.errors %}
+              <div class="text-danger small mt-1">{{ form.video_file.errors[0] }}</div>
+              {% endif %}
+              {% if video %}
+              <div class="text-muted small mt-1">
+                Atual: {{ video.original_filename }} • {{ video.file_size_mb }} MB
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Thumbnail (opcional)</label>
+              {{ form.thumbnail(class_="form-control") }}
+              {% if form.thumbnail.errors %}
+              <div class="text-danger small mt-1">{{ form.thumbnail.errors[0] }}</div>
+              {% endif %}
+              {% if video %}
+              <div class="mt-2">
+                <img src="{{ video.thumbnail_url }}" alt="" style="max-width: 240px; height: auto; border-radius: 10px;">
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check-lg me-1"></i>Salvar
+              </button>
+              <a class="btn btn-outline-secondary" href="{{ url_for('manual.admin_painel') }}">Cancelar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold">
+          Dicas
+        </div>
+        <div class="card-body text-muted small">
+          <ul class="mb-0">
+            <li>Vídeo: até 1024 MB (validação no servidor).</li>
+            <li>Thumbnail: até 10 MB (opcional).</li>
+            <li>Use títulos curtos e objetivos.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.getElementById('richDescription');
+  if (!container) return;
+
+  const toolbar = [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link', 'image'],
+    ['clean']
+  ];
+
+  const quill = new Quill(container, {
+    modules: { toolbar },
+    theme: 'snow',
+    placeholder: 'Escreva particularidades, comunicados ou observações. Cole prints diretamente aqui.'
+  });
+
+  const hiddenField = document.getElementById('{{ form.description.id }}');
+  if (hiddenField && hiddenField.value) {
+    try {
+      quill.root.innerHTML = hiddenField.value;
+    } catch (_) {
+      quill.root.innerHTML = '';
+    }
+  }
+
+  const formEl = container.closest('form');
+  if (formEl && hiddenField) {
+    formEl.addEventListener('submit', function() {
+      hiddenField.value = quill.root.innerHTML.trim();
+    });
+  }
+});
+</script>
+{% endblock %}

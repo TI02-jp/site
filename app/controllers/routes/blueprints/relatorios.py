@@ -69,9 +69,13 @@ REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
 }
 
 PORTAL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
-    "acessos_manage": {
-        "title": "Central de Acessos - Atalhos",
-        "description": "Criar, editar e excluir atalhos na central de acessos",
+    "announcements_manage": {
+        "title": "Mural - Criar e Gerenciar Comunicados",
+        "description": "Criar, editar e excluir comunicados no mural da empresa",
+    },
+    "procedures_manage": {
+        "title": "Procedimentos Operacionais - Gerenciar",
+        "description": "Criar, editar e excluir procedimentos operacionais",
     },
 }
 

@@ -3,7 +3,7 @@
 from datetime import date
 
 from flask_wtf import FlaskForm
-from flask_wtf.file import MultipleFileField
+from flask_wtf.file import FileField, MultipleFileField
 from wtforms import (
     StringField,
     RadioField,
@@ -712,13 +712,14 @@ class GeneralCalendarEventForm(FlaskForm):
     participants = SelectMultipleField(
         "Participantes",
         coerce=int,
-        validators=[Length(min=1, message="Selecione pelo menos um participante")],
+        validators=[Optional()],
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
     is_birthday = BooleanField("Marcar como aniversário", default=False)
     is_absence = BooleanField("Ausência", default=False)
     is_vacation = BooleanField("Férias", default=False)
+    is_notice = BooleanField("Aviso (Todo o escritório)", default=False)
     birthday_user_id = SelectField(
         "Colaborador aniversariante",
         coerce=int,
@@ -792,6 +793,10 @@ class GeneralCalendarEventForm(FlaskForm):
             self.birthday_recurrence_years.data = 1
         if not super().validate(extra_validators):
             return False
+        # Validar que pelo menos um participante foi selecionado (exceto para avisos)
+        if not self.is_notice.data and (not self.participants.data or len(self.participants.data) == 0):
+            self.participants.errors.append("Selecione pelo menos um participante ou marque como Aviso")
+            return False
         # Validar que apenas um tipo especial foi selecionado
         special_flags = sum(
             bool(flag)
@@ -799,11 +804,12 @@ class GeneralCalendarEventForm(FlaskForm):
                 self.is_birthday.data,
                 self.is_absence.data,
                 self.is_vacation.data,
+                self.is_notice.data,
             )
         )
         if special_flags > 1:
             message = "Selecione apenas um tipo especial por evento."
-            for field in (self.is_birthday, self.is_absence, self.is_vacation):
+            for field in (self.is_birthday, self.is_absence, self.is_vacation, self.is_notice):
                 field.errors.append(message)
             return False
         start_date = self.start_date.data
@@ -884,3 +890,48 @@ class TaskForm(FlaskForm):
     parent_id = HiddenField()
     task_id = HiddenField()
     submit = SubmitField("Salvar")
+
+
+class ManualCategoryForm(FlaskForm):
+    """Formulário para CRUD de categorias do manual."""
+
+    name = StringField(
+        "Nome da categoria",
+        validators=[DataRequired(), Length(max=100)]
+    )
+    description = StringField(
+        "Descrição (opcional)",
+        validators=[Optional(), Length(max=255)]
+    )
+    submit = SubmitField("Salvar categoria")
+
+
+class ManualVideoForm(FlaskForm):
+    """Formulário para upload e edição de vídeos do manual."""
+
+    title = StringField(
+        "Título do vídeo",
+        validators=[DataRequired(), Length(max=200)]
+    )
+    description = TextAreaField(
+        "Descrição (opcional)",
+        validators=[Optional()],
+        render_kw={"rows": 4}
+    )
+    category_id = SelectField(
+        "Categoria",
+        coerce=int,
+        validators=[DataRequired()],
+        choices=[]
+    )
+    video_file = FileField(
+        "Arquivo de vídeo",
+        validators=[Optional()],
+        render_kw={"accept": "video/mp4,video/webm"}
+    )
+    thumbnail = FileField(
+        "Thumbnail (opcional)",
+        validators=[Optional()],
+        render_kw={"accept": "image/*"}
+    )
+    submit = SubmitField("Salvar vídeo")

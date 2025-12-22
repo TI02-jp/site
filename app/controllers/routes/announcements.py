@@ -27,7 +27,7 @@ from werkzeug.utils import secure_filename
 
 from app import db
 from app.controllers.routes import utc3_now
-from app.controllers.routes._decorators import meeting_only_access_check
+from app.controllers.routes._decorators import has_report_access, meeting_only_access_check
 from app.controllers.routes.blueprints.notifications import _invalidate_notification_cache
 from app.forms import AnnouncementForm
 from app.models.tables import (
@@ -37,11 +37,26 @@ from app.models.tables import (
     TaskNotification,
     User,
 )
+from app.utils.permissions import is_user_admin
 from app.utils.security import sanitize_html
 
 announcements_bp = Blueprint("announcements", __name__)
 
 ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "announcements")
+
+
+def _can_manage_announcements() -> bool:
+    """Verifica se o usuário pode gerenciar comunicados.
+
+    Returns:
+        True se o usuário é admin OU tem a permissão announcements_manage
+    """
+    # Admin sempre pode
+    if is_user_admin(current_user):
+        return True
+
+    # Verifica permissão específica
+    return has_report_access("announcements_manage")
 
 
 def _remove_announcement_attachment(attachment_path: str | None) -> None:
@@ -208,7 +223,7 @@ def announcements():
     has_history = not search_term and history_count > 0
 
     if request.method == "POST":
-        if current_user.role != "admin":
+        if not _can_manage_announcements():
             abort(403)
 
         if form.validate_on_submit():
@@ -298,6 +313,7 @@ def announcements():
         search_action_url=url_for("announcements"),
         history_link_url=url_for("announcement_history"),
         history_back_url=None,
+        can_manage=_can_manage_announcements(),
     )
 
 
@@ -400,6 +416,7 @@ def announcement_history():
         page=page,
         per_page=per_page,
         total_pages=total_pages,
+        can_manage=_can_manage_announcements(),
     )
 
 
@@ -412,7 +429,7 @@ def announcement_history():
 def update_announcement(announcement_id: int):
     """Update an announcement's content and manage its attachments."""
 
-    if current_user.role != "admin":
+    if not _can_manage_announcements():
         abort(403)
 
     announcement = (
@@ -488,7 +505,7 @@ def update_announcement(announcement_id: int):
 def delete_announcement(announcement_id: int):
     """Remove an existing announcement and its attachments."""
 
-    if current_user.role != "admin":
+    if not _can_manage_announcements():
         abort(403)
 
     announcement = (

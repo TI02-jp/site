@@ -64,6 +64,27 @@ PDF_MIME_TYPES = {"application/pdf"}
 # Diretorio de uploads para tarefas
 TASKS_UPLOAD_SUBDIR = os.path.join("uploads", "tasks")
 
+# Extensoes de video permitidas
+VIDEO_EXTENSIONS = {"mp4", "webm"}
+
+# MIME types de video permitidos
+VIDEO_MIME_TYPES = {"video/mp4", "video/webm"}
+
+# Tamanho maximo de video em MB
+VIDEO_MAX_SIZE_MB = 1024  # 1 GB
+
+# Assinaturas de arquivo de video (magic bytes)
+VIDEO_SIGNATURES = {
+    b"\x00\x00\x00\x18ftypmp4": "mp4",
+    b"\x00\x00\x00\x1Cftypiso": "mp4",
+    b"\x00\x00\x00\x20ftypiso": "mp4",
+    b"\x1A\x45\xDF\xA3": "webm",
+}
+
+# Diretorios de uploads para manual
+MANUAL_VIDEOS_SUBDIR = os.path.join("uploads", "manual", "videos")
+MANUAL_THUMBNAILS_SUBDIR = os.path.join("uploads", "manual", "thumbnails")
+
 
 # =============================================================================
 # CONSTANTES DE CATEGORIAS

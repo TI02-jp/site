@@ -137,6 +137,10 @@ def register_all_blueprints(app: Flask) -> None:
     from app.controllers.routes.blueprints.tasks import tasks_bp
     app.register_blueprint(tasks_bp)
 
+    # Manual - manual do usuario com videos tutoriais
+    from app.controllers.routes.blueprints.manual import manual_bp
+    app.register_blueprint(manual_bp)
+
     # Empresas - gestao de empresas
     # TODO: Migrar rotas do __init__.py para este blueprint
     # from app.controllers.routes.blueprints.empresas import empresas_bp
@@ -162,7 +166,7 @@ def _add_legacy_endpoint_aliases(app: Flask) -> None:
         'auth.', 'cursos.', 'consultorias.', 'calendario.',
         'diretoria.', 'notifications.', 'notas.',
         'reunioes.', 'relatorios.', 'users.',
-        'tasks.', 'empresas.', 'core.'
+        'tasks.', 'empresas.', 'core.', 'manual.'
     ]
 
     for rule in list(app.url_map.iter_rules()):

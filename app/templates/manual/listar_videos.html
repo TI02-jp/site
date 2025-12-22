@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Manual do Usuário{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-2 fw-bold">
+                    <i class="bi bi-play-circle-fill text-primary me-2"></i>Manual do Usuário
+                </h1>
+                <p class="text-muted mb-0">Tutoriais em vídeo para aprender a usar o portal</p>
+            </div>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('manual.admin_painel') }}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-gear-fill me-2"></i>Gerenciar Vídeos
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros e Busca -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form method="get" action="{{ url_for('manual.listar_videos') }}" id="filterForm">
+                <div class="row g-3 align-items-end">
+                    <!-- Campo de Busca -->
+                    <div class="col-lg-5 col-md-12">
+                        <label class="form-label small text-muted fw-semibold mb-2">
+                            <i class="bi bi-search me-1"></i>Pesquisar
+                        </label>
+                        <input
+                            type="text"
+                            name="search"
+                            class="form-control form-control-lg rounded-pill"
+                            placeholder="Digite o título ou descrição do vídeo..."
+                            value="{{ search or '' }}"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <!-- Categoria -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted fw-semibold mb-2">
+                            <i class="bi bi-folder me-1"></i>Categoria
+                        </label>
+                        <select name="category" class="form-select form-select-lg rounded-pill">
+                            <option value="">Todas as categorias</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if selected_category == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Ordenação -->
+                    <div class="col-lg-4 col-md-6">
+                        <label class="form-label small text-muted fw-semibold mb-2">
+                            <i class="bi bi-sort-down me-1"></i>Ordenar por
+                        </label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="order" id="orderRecent" value="recent" {% if order == 'recent' %}checked{% endif %} onchange="document.getElementById('filterForm').submit()">
+                            <label class="btn btn-outline-primary rounded-start-pill" for="orderRecent">
+                                <i class="bi bi-clock-history me-1"></i>Recentes
+                            </label>
+
+                            <input type="radio" class="btn-check" name="order" id="orderAZ" value="az" {% if order == 'az' %}checked{% endif %} onchange="document.getElementById('filterForm').submit()">
+                            <label class="btn btn-outline-primary rounded-end-pill" for="orderAZ">
+                                <i class="bi bi-sort-alpha-down me-1"></i>A-Z
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 me-2">
+                            <i class="bi bi-funnel-fill me-2"></i>Aplicar Filtros
+                        </button>
+                        <a href="{{ url_for('manual.listar_videos') }}" class="btn btn-light rounded-pill px-4">
+                            <i class="bi bi-x-circle me-2"></i>Limpar Filtros
+                        </a>
+                        {% if search or selected_category %}
+                        <span class="badge bg-primary rounded-pill ms-2 px-3 py-2">
+                            <i class="bi bi-filter-circle-fill me-1"></i>
+                            Filtros ativos
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Grid de Vídeos -->
+    {% if videos %}
+    <div class="mb-3">
+        <h5 class="text-muted fw-semibold">
+            <i class="bi bi-collection-play me-2"></i>
+            {{ videos|length }} {% if videos|length == 1 %}vídeo disponível{% else %}vídeos disponíveis{% endif %}
+        </h5>
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        {% for video in videos %}
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm video-card">
+                <a href="{{ url_for('manual.assistir_video', video_id=video.id) }}" class="text-decoration-none">
+                    <!-- Thumbnail com Overlay -->
+                    <div class="position-relative video-thumbnail-wrapper">
+                        <img
+                            src="{{ video.thumbnail_url }}"
+                            class="card-img-top video-thumbnail"
+                            alt="{{ video.title }}"
+                            loading="lazy"
+                        >
+                        <!-- Overlay escuro -->
+                        <div class="video-overlay"></div>
+
+                        <!-- Play Button -->
+                        <div class="video-play-button">
+                            <i class="bi bi-play-circle-fill"></i>
+                        </div>
+
+                        <!-- Duração -->
+                        <div class="position-absolute bottom-0 end-0 m-3">
+                            <span class="badge bg-dark bg-opacity-75 px-2 py-1 rounded-pill">
+                                <i class="bi bi-clock me-1"></i>
+                                {% if video.duration_formatted %}{{ video.duration_formatted }}{% else %}--:--:--{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="card-body">
+                        <h5 class="card-title text-dark fw-bold mb-2 video-title">
+                            {{ video.title }}
+                        </h5>
+                        {% set clean_description = video.description|default('')|striptags|trim %}
+                        <p class="card-text text-muted small mb-3 video-description">
+                            {% if clean_description %}
+                                {{ clean_description|truncate(150, True, '...') }}
+                            {% else %}
+                                Sem descrição disponível
+                            {% endif %}
+                        </p>
+
+                        <!-- Footer do Card -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
+                                <i class="bi bi-folder-fill me-1"></i>{{ video.category.name }}
+                            </span>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>{{ video.created_at.strftime('%d/%m/%Y') }}
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Estado Vazio -->
+    <div class="text-center py-5 my-5">
+        <div class="empty-state">
+            <div class="empty-state-icon mb-4">
+                <i class="bi bi-film"></i>
+            </div>
+            <h4 class="text-muted fw-bold mb-2">Nenhum vídeo encontrado</h4>
+            <p class="text-muted mb-4">
+                {% if search or selected_category %}
+                Não encontramos vídeos com os filtros aplicados.<br>
+                Tente ajustar sua pesquisa ou limpar os filtros.
+                {% else %}
+                Ainda não há vídeos tutoriais disponíveis no momento.
+                {% endif %}
+            </p>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('manual.admin_video_novo') }}" class="btn btn-primary btn-lg rounded-pill px-5">
+                <i class="bi bi-plus-circle-fill me-2"></i>Adicionar Primeiro Vídeo
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* ===== Cards de Vídeo ===== */
+.video-card {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.video-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Thumbnail */
+.video-thumbnail-wrapper {
+    overflow: hidden;
+    height: 220px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.video-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.video-card:hover .video-thumbnail {
+    transform: scale(1.1);
+}
+
+/* Overlay escuro sobre a thumbnail */
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.video-card:hover .video-overlay {
+    opacity: 1;
+}
+
+/* Play Button */
+.video-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    color: white;
+    opacity: 0;
+    transition: all 0.3s ease;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.video-card:hover .video-play-button {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Título e Descrição */
+.video-title {
+    font-size: 1.1rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.8rem;
+}
+
+.video-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+    min-height: 3rem;
+}
+
+/* ===== Estado Vazio ===== */
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-state-icon {
+    font-size: 5rem;
+    color: #cbd5e1;
+}
+
+/* ===== Inputs e Selects Arredondados ===== */
+.form-control-lg.rounded-pill,
+.form-select-lg.rounded-pill {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.form-control-lg.rounded-pill:focus,
+.form-select-lg.rounded-pill:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* ===== Badges ===== */
+.badge.rounded-pill {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* ===== Botões ===== */
+.btn.rounded-pill {
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn.rounded-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== Animações ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.video-card {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.video-card:nth-child(1) { animation-delay: 0.1s; }
+.video-card:nth-child(2) { animation-delay: 0.2s; }
+.video-card:nth-child(3) { animation-delay: 0.3s; }
+.video-card:nth-child(4) { animation-delay: 0.4s; }
+.video-card:nth-child(5) { animation-delay: 0.5s; }
+.video-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* ===== Responsividade ===== */
+@media (max-width: 768px) {
+    .video-thumbnail-wrapper {
+        height: 180px;
+    }
+
+    .video-play-button {
+        font-size: 3rem;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+    }
+}
+</style>
+{% endblock %}

@@ -558,7 +558,7 @@
 <div class="container-fluid py-2">
   <div class="d-flex flex-column flex-md-row align-items-start justify-content-between gap-2 mb-3">
     <h1 class="h4 mb-0 fw-semibold text-uppercase"><i class="bi bi-megaphone me-2"></i>{{ page_title }}</h1>
-    {% if current_user.role == 'admin' and not is_history %}
+    {% if can_manage and not is_history %}
     <button type="button" class="btn btn-primary d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#newAnnouncementModal">
       <i class="bi bi-plus-circle"></i>
       <span>Novo comunicado</span>
@@ -628,7 +628,7 @@
                 </span>
                 <h3 class="mb-0 text-dark">{{ announcement.subject }}</h3>
               </div>
-              {% if current_user.role == 'admin' %}
+              {% if can_manage %}
               <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
                 <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
                   <i class="bi bi-pencil-square"></i>
@@ -645,7 +645,7 @@
               {% endif %}
             </div>
             <div class="announcement-card-content">
-              <div class="announcement-body text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content | safe }}</div>
+              <div class="announcement-body text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content | sanitize | safe }}</div>
               {% if image_count == 1 %}
               <div class="announcement-card-image" data-announcement-image-wrapper>
                 <img
@@ -725,7 +725,7 @@
               </div>
             </div>
             <div class="modal-body d-grid gap-2 text-start">
-              <div class="announcement-body text-start">{{ announcement.content | safe }}</div>
+              <div class="announcement-body text-start">{{ announcement.content | sanitize | safe }}</div>
               {% if attachments %}
               <div class="d-grid gap-2">
                 {% for attachment in attachments %}
@@ -783,7 +783,7 @@
         </div>
       </div>
 
-      {% if current_user.role == 'admin' %}
+      {% if can_manage %}
       {% set edit_form = edit_forms.get(announcement.id) %}
       {% if edit_form %}
       <div class="modal fade announcement-edit-modal" id="editAnnouncementModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="editAnnouncementModalLabel-{{ announcement.id }}" aria-hidden="true">
@@ -950,7 +950,7 @@
     </div>
   </div>
 
-  {% if current_user.role == 'admin' and not is_history %}
+  {% if can_manage and not is_history %}
   <div class="modal fade announcement-modal" id="newAnnouncementModal" tabindex="-1" aria-labelledby="newAnnouncementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
@@ -1103,7 +1103,7 @@
 
 {% block scripts %}
 {{ super() }}
-{% if current_user.role == 'admin' and not is_history %}
+{% if can_manage and not is_history %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-stop-propagation]').forEach((element) => {
