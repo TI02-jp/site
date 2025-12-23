@@ -1,6 +1,53 @@
 /* -----------------------------
 Fonte personalizada moderna
 ----------------------------- */
+/* Page transitions */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 180ms;
+    animation-timing-function: ease;
+}
+
+::view-transition-old(root) {
+    animation-name: fadeOut;
+}
+
+::view-transition-new(root) {
+    animation-name: fadeIn;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 1ms;
+    }
+}
 /* Botão "Cancelar" padrão com contraste para todos os modais/formulários */
 .btn-cancel {
     background: #f4f6fb;
@@ -1322,6 +1369,12 @@ body.login-page {
 
 .login-container .input-group-text i {
     font-size: 1rem;
+}
+
+.login-container .input-group-text svg {
+    width: 1rem;
+    height: 1rem;
+    display: block;
 }
 
 /* Inputs do formulário de login */
@@ -2646,6 +2699,12 @@ Flash Messages
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.flash-container .alert-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
 }
 
 .flash-container .flash-message {

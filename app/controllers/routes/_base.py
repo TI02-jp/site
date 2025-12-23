@@ -1,15 +1,16 @@
 """
 Modulo base com helpers e constantes compartilhados entre blueprints.
 
-Este modulo centraliza funcoes utilitarias, constantes e helpers que sao
+Este modulo centraliza funcoes utilitarias e helpers que sao
 utilizados por multiplos blueprints da aplicacao, evitando duplicacao de codigo.
 
 Conteudo:
-    - Constantes de configuracao (extensoes, MIME types, categorias)
     - Funcoes de formatacao (telefone, contatos, timestamps)
     - Helpers de cache (setores, consultorias, course tags)
     - Funcoes de encoding/decoding de IDs
     - Helpers para upload de arquivos
+
+Nota: Constantes foram movidas para app/constants.py
 
 Autor: Refatoracao automatizada
 Data: 2024
@@ -19,7 +20,7 @@ import os
 import re
 import time
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Iterable
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -40,136 +41,33 @@ from app.models.tables import (
     TaskNotification,
 )
 
-# =============================================================================
-# CONSTANTES DE UPLOAD
-# =============================================================================
-
-# Extensoes de imagem permitidas
-IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
-
-# Extensoes permitidas para uploads (imagens + PDFs)
-ALLOWED_EXTENSIONS_WITH_PDF = IMAGE_EXTENSIONS | {"pdf"}
-
-# Mapeamento de assinaturas de imagem para extensoes
-IMAGE_SIGNATURE_MAP = {
-    "jpeg": {"jpg", "jpeg"},
-    "png": {"png"},
-    "gif": {"gif"},
-}
-
-# MIME types permitidos
-IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/gif"}
-PDF_MIME_TYPES = {"application/pdf"}
-
-# Diretorio de uploads para tarefas
-TASKS_UPLOAD_SUBDIR = os.path.join("uploads", "tasks")
-
-# Extensoes de video permitidas
-VIDEO_EXTENSIONS = {"mp4", "webm"}
-
-# MIME types de video permitidos
-VIDEO_MIME_TYPES = {"video/mp4", "video/webm"}
-
-# Tamanho maximo de video em MB
-VIDEO_MAX_SIZE_MB = 1024  # 1 GB
-
-# Assinaturas de arquivo de video (magic bytes)
-VIDEO_SIGNATURES = {
-    b"\x00\x00\x00\x18ftypmp4": "mp4",
-    b"\x00\x00\x00\x1Cftypiso": "mp4",
-    b"\x00\x00\x00\x20ftypiso": "mp4",
-    b"\x1A\x45\xDF\xA3": "webm",
-}
-
-# Diretorios de uploads para manual
-MANUAL_VIDEOS_SUBDIR = os.path.join("uploads", "manual", "videos")
-MANUAL_THUMBNAILS_SUBDIR = os.path.join("uploads", "manual", "thumbnails")
-
-
-# =============================================================================
-# CONSTANTES DE CATEGORIAS
-# =============================================================================
-
-# Categorias de acessos por departamento
-ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
-    "fiscal": {
-        "title": "Fiscal",
-        "description": "Sistemas utilizados pela equipe fiscal para gestao de obrigacoes e documentos.",
-        "icon": "bi bi-clipboard-data",
-    },
-    "contabil": {
-        "title": "Contabil",
-        "description": "Ferramentas que apoiam a rotina contabil e o envio de documentos.",
-        "icon": "bi bi-journal-check",
-    },
-    "pessoal": {
-        "title": "Pessoal",
-        "description": "Portais e ferramentas de apoio as rotinas de Departamento Pessoal e RH.",
-        "icon": "bi bi-people",
-    },
-}
-
-# Labels para tipos de eventos da diretoria
-EVENT_TYPE_LABELS = {
-    "treinamento": "Treinamento",
-    "data_comemorativa": "Data comemorativa",
-    "evento": "Evento",
-}
-
-# Labels para audiencia de eventos
-EVENT_AUDIENCE_LABELS = {
-    "interno": "Interno",
-    "externo": "Externo",
-    "ambos": "Ambos",
-}
-
-# Labels para categorias de servicos em eventos
-EVENT_CATEGORY_LABELS = {
-    "cafe": "Cafe da manha",
-    "almoco": "Almoco",
-    "lanche": "Lanche",
-    "outros": "Outros servicos",
-}
-
-# Definicoes de relatorios disponiveis
-REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
-    "empresas": {"title": "Relatorio de Empresas", "description": "Dados consolidados das empresas"},
-    "fiscal": {"title": "Relatorio Fiscal", "description": "Indicadores e obrigacoes fiscais"},
-    "contabil": {"title": "Relatorio Contabil", "description": "Visao contabil e controle de relatorios"},
-    "usuarios": {"title": "Relatorio de Usuarios", "description": "Gestao e estatisticas de usuarios"},
-    "cursos": {"title": "Relatorio de Cursos", "description": "Metricas do catalogo de treinamentos"},
-    "tarefas": {"title": "Relatorio de Tarefas", "description": "Painel de tarefas e indicadores"},
-}
-
-# Tags excluidas das tarefas
-EXCLUDED_TASK_TAGS = ["Reuniao"]
-EXCLUDED_TASK_TAGS_LOWER = {t.lower() for t in EXCLUDED_TASK_TAGS}
-
-# Prefixo para tags pessoais
-PERSONAL_TAG_PREFIX = "__personal__"
-
-# Escopos OAuth do Google
-GOOGLE_OAUTH_SCOPES = [
-    "openid",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/calendar",
-    "https://mail.google.com/",
-    "https://www.googleapis.com/auth/gmail.labels",
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/gmail.compose",
-    "https://www.googleapis.com/auth/gmail.addons.current.message.action",
-    "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
-]
-
-
-# =============================================================================
-# CHAVES DE CACHE
-# =============================================================================
-
-_STATS_CACHE_KEY_PREFIX = "portal:stats:"
-_NOTIFICATION_COUNT_KEY_PREFIX = "portal:notifications:unread:"
-_NOTIFICATION_VERSION_KEY = "portal:notifications:version"
+# Re-export constants for backward compatibility
+from app.constants import (
+    ACESSOS_CATEGORIES,
+    ALLOWED_EXTENSIONS_WITH_PDF,
+    EVENT_AUDIENCE_LABELS,
+    EVENT_CATEGORY_LABELS,
+    EVENT_TYPE_LABELS,
+    EXCLUDED_TASK_TAGS,
+    EXCLUDED_TASK_TAGS_LOWER,
+    GOOGLE_OAUTH_SCOPES,
+    IMAGE_EXTENSIONS,
+    IMAGE_MIME_TYPES,
+    IMAGE_SIGNATURE_MAP,
+    MANUAL_THUMBNAILS_SUBDIR,
+    MANUAL_VIDEOS_SUBDIR,
+    PDF_MIME_TYPES,
+    PERSONAL_TAG_PREFIX,
+    REPORT_DEFINITIONS,
+    TASKS_UPLOAD_SUBDIR,
+    VIDEO_EXTENSIONS,
+    VIDEO_MAX_SIZE_MB,
+    VIDEO_MIME_TYPES,
+    VIDEO_SIGNATURES,
+    CACHE_KEY_NOTIFICATION_COUNT_PREFIX as _NOTIFICATION_COUNT_KEY_PREFIX,
+    CACHE_KEY_NOTIFICATION_VERSION as _NOTIFICATION_VERSION_KEY,
+    CACHE_KEY_STATS_PREFIX as _STATS_CACHE_KEY_PREFIX,
+)
 
 
 # =============================================================================
