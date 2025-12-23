@@ -15,58 +15,22 @@ from sqlalchemy.types import TypeDecorator, String, Time
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
+from app.models._mixins import AttachmentMixin, IMAGE_EXTENSIONS, TEXT_EXTENSIONS
 from app.services.google_calendar import get_calendar_timezone
-
-
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
-TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".log"}
+from app.utils.encryption import EncryptedString
 
 
 @dataclass(frozen=True)
-class LegacyAnnouncementAttachment:
-    """Simple wrapper exposing attachment attributes for legacy rows."""
+class LegacyAnnouncementAttachment(AttachmentMixin):
+    """Simple wrapper exposing attachment attributes for legacy rows.
+
+    Inherits file type detection properties from AttachmentMixin.
+    """
 
     file_path: str
     original_name: str | None = None
     mime_type: str | None = None
     id: int | None = None
-
-    @property
-    def extension(self) -> str:
-        """Return the lower-case extension for the stored file."""
-
-        _, extension = os.path.splitext(self.file_path or "")
-        return extension.lower()
-
-    @property
-    def is_image(self) -> bool:
-        """Return ``True`` when the attachment is an image."""
-
-        if self.mime_type and self.mime_type.startswith("image/"):
-            return True
-        return self.extension in IMAGE_EXTENSIONS
-
-    @property
-    def is_pdf(self) -> bool:
-        """Return ``True`` when the attachment is a PDF."""
-
-        if self.mime_type:
-            return self.mime_type == "application/pdf"
-        return self.extension == ".pdf"
-
-    @property
-    def is_text(self) -> bool:
-        """Return ``True`` when the attachment is a plain-text file."""
-
-        if self.mime_type and self.mime_type.startswith("text/"):
-            return True
-        return self.extension in TEXT_EXTENSIONS
-
-    @property
-    def display_name(self) -> str:
-        """Return a human friendly name for the attachment."""
-
-        return self.original_name or os.path.basename(self.file_path or "")
 
 # Timezone for timestamp fields
 # Default application timezone
@@ -245,12 +209,15 @@ class AccessLink(db.Model):
 
     created_by = db.relationship("User", backref=db.backref("access_links", lazy=True))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AccessLink {self.category}:{self.label}>"
 
 
-class AnnouncementAttachment(db.Model):
-    """Attachment stored for an :class:`Announcement`."""
+class AnnouncementAttachment(AttachmentMixin, db.Model):
+    """Attachment stored for an :class:`Announcement`.
+
+    Inherits file type detection properties from AttachmentMixin.
+    """
 
     __tablename__ = "announcement_attachments"
 
@@ -267,43 +234,6 @@ class AnnouncementAttachment(db.Model):
 
     def __repr__(self) -> str:
         return f"<AnnouncementAttachment {self.original_name or self.file_path}>"
-
-    @property
-    def extension(self) -> str:
-        """Return the lower-case file extension for the attachment."""
-
-        _, extension = os.path.splitext(self.file_path or "")
-        return extension.lower()
-
-    @property
-    def is_image(self) -> bool:
-        """Return ``True`` when the attachment is an image."""
-
-        if self.mime_type and self.mime_type.startswith("image/"):
-            return True
-        return self.extension in IMAGE_EXTENSIONS
-
-    @property
-    def is_pdf(self) -> bool:
-        """Return ``True`` when the attachment is a PDF document."""
-
-        if self.mime_type:
-            return self.mime_type == "application/pdf"
-        return self.extension == ".pdf"
-
-    @property
-    def is_text(self) -> bool:
-        """Return ``True`` when the attachment is a plain-text document."""
-
-        if self.mime_type and self.mime_type.startswith("text/"):
-            return True
-        return self.extension in TEXT_EXTENSIONS
-
-    @property
-    def display_name(self) -> str:
-        """Return a user-friendly attachment name."""
-
-        return self.original_name or os.path.basename(self.file_path or "")
 
 
 class NotificationType(str, Enum):
@@ -454,7 +384,7 @@ class Course(db.Model):
         lazy='selectin',
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Course {self.name} ({self.status})>"
 
 
@@ -472,7 +402,7 @@ class CourseTag(db.Model):
         back_populates='tags',
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CourseTag {self.name}>"
 
 
@@ -499,7 +429,7 @@ class DiretoriaEvent(db.Model):
 
     created_by = db.relationship("User", backref=db.backref("diretoria_events", lazy=True))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DiretoriaEvent {self.name} ({self.event_type})>"
 
 
@@ -521,15 +451,11 @@ class DiretoriaAgreement(db.Model):
         default=date.today,
     )
     description = db.Column(db.Text, nullable=False, default="")
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        nullable=False,
-    )
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -558,21 +484,13 @@ class DiretoriaFeedback(db.Model):
         nullable=False,
     )
     title = db.Column(db.String(150), nullable=False)
-    feedback_date = db.Column(
-        db.Date,
-        nullable=False,
-        default=date.today,
-    )
+    feedback_date = db.Column(db.Date, nullable=False, default=date.today)
     description = db.Column(db.Text, nullable=False, default="")
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        nullable=False,
-    )
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -604,8 +522,8 @@ class Session(db.Model):
     user_agent = db.Column(db.Text)
     last_activity = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        onupdate=lambda: datetime.now(SAO_PAULO_TZ),
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
         nullable=False,
     )
 
@@ -614,6 +532,7 @@ class Session(db.Model):
 
 class AuditLog(db.Model):
     """Comprehensive audit trail for all user actions."""
+
     __tablename__ = "audit_logs"
     __table_args__ = (
         db.Index('idx_audit_user_id', 'user_id'),
@@ -629,14 +548,14 @@ class AuditLog(db.Model):
     username = db.Column(db.String(80), nullable=False)  # Denormalizado para historico
 
     # Contexto da acao
-    action_type = db.Column(db.String(50), nullable=False)  # 'login', 'logout', 'create_user', etc.
-    resource_type = db.Column(db.String(50), nullable=False)  # 'user', 'task', 'announcement', etc.
-    resource_id = db.Column(db.Integer, nullable=True)  # ID do recurso afetado
+    action_type = db.Column(db.String(50), nullable=False)
+    resource_type = db.Column(db.String(50), nullable=False)
+    resource_id = db.Column(db.Integer, nullable=True)
 
     # Detalhes da acao
     action_description = db.Column(db.String(255), nullable=False)
-    old_values = db.Column(db.JSON, nullable=True)  # Estado anterior
-    new_values = db.Column(db.JSON, nullable=True)  # Estado novo
+    old_values = db.Column(db.JSON, nullable=True)
+    new_values = db.Column(db.JSON, nullable=True)
 
     # Contexto de rede
     ip_address = db.Column(db.String(45), nullable=True)
@@ -647,57 +566,29 @@ class AuditLog(db.Model):
     endpoint = db.Column(db.String(255), nullable=True)
 
     # Timestamp
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        default=lambda: datetime.now(SAO_PAULO_TZ),
-        nullable=False
-    )
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
 
     # Relacionamentos
     user = db.relationship("User", backref=db.backref("audit_logs", lazy="dynamic"))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AuditLog {self.id}: {self.username} {self.action_type} {self.resource_type}>"
 
 
 class Consultoria(db.Model):
-    """Stores consulting company credentials."""
+    """Stores consulting company credentials.
+
+    Uses EncryptedString for automatic encryption/decryption of password field.
+    """
+
     __tablename__ = 'consultorias'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
     usuario = db.Column(db.String(100))
-    # Armazena senha criptografada no banco (tamanho aumentado para caber criptografia)
-    _senha_encrypted = db.Column('senha', db.String(500))
+    senha = db.Column(EncryptedString(500))
 
-    @property
-    def senha(self):
-        """Retorna senha em texto claro para exibição na interface."""
-        if not self._senha_encrypted:
-            return None
-        from app.utils.encryption import decrypt_field
-        try:
-            return decrypt_field(self._senha_encrypted)
-        except Exception as e:
-            # Se falhar descriptografia (ex: chave mudou), retorna None
-            from flask import current_app
-            current_app.logger.error(
-                f"Falha ao descriptografar senha. "
-                f"Tabela: consultoria, ID: {self.id}, Nome: '{self.nome}'. "
-                f"Erro: {str(e)}"
-            )
-            return None
-
-    @senha.setter
-    def senha(self, plaintext_senha):
-        """Criptografa senha automaticamente antes de salvar no banco."""
-        if not plaintext_senha:
-            self._senha_encrypted = None
-            return
-        from app.utils.encryption import encrypt_field
-        self._senha_encrypted = encrypt_field(plaintext_senha)
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Consultoria {self.nome}>"
 
 
@@ -708,7 +599,7 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False, unique=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Tag {self.nome}>"
 
 
@@ -766,7 +657,7 @@ class Setor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Setor {self.nome}>"
 
 
@@ -798,12 +689,16 @@ class NotaDebito(db.Model):
     def total_formatado(self):
         return f"R$ {self.total:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.') if self.total else 'R$ -'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<NotaDebito {self.empresa} - {self.data_emissao}>"
 
 
 class CadastroNota(db.Model):
-    """Stores registration data for invoice control."""
+    """Stores registration data for invoice control.
+
+    Uses EncryptedString for automatic encryption/decryption of password field.
+    """
+
     __tablename__ = 'cadastro_notas'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -813,37 +708,9 @@ class CadastroNota(db.Model):
     acordo = db.Column(db.String(100), nullable=True)
     forma_pagamento = db.Column(db.String(50), nullable=False)
     usuario = db.Column(db.String(255), nullable=True)
-    # Armazena senha criptografada no banco (tamanho aumentado para caber criptografia)
-    _senha_encrypted = db.Column('senha', db.String(500), nullable=True)
+    senha = db.Column(EncryptedString(500), nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=sao_paulo_now_naive)
-
-    @property
-    def senha(self):
-        """Retorna senha em texto claro para exibição na interface."""
-        if not self._senha_encrypted:
-            return None
-        from app.utils.encryption import decrypt_field
-        try:
-            return decrypt_field(self._senha_encrypted)
-        except Exception as e:
-            # Se falhar descriptografia (ex: chave mudou), retorna None
-            from flask import current_app
-            current_app.logger.error(
-                f"Falha ao descriptografar senha. "
-                f"Tabela: cadastro_notas, ID: {self.id}, Cadastro: '{self.cadastro}'. "
-                f"Erro: {str(e)}"
-            )
-            return None
-
-    @senha.setter
-    def senha(self, plaintext_senha):
-        """Criptografa senha automaticamente antes de salvar no banco."""
-        if not plaintext_senha:
-            self._senha_encrypted = None
-            return
-        from app.utils.encryption import encrypt_field
-        self._senha_encrypted = encrypt_field(plaintext_senha)
 
     @property
     def valor_formatado(self):
@@ -862,7 +729,7 @@ class CadastroNota(db.Model):
         }
         return color_map.get((self.forma_pagamento or '').upper(), '')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CadastroNota {self.cadastro}>"
 
 
@@ -929,7 +796,7 @@ class Inclusao(db.Model):
     def data_formatada(self):
         return self.data.strftime('%d/%m/%Y') if self.data else ''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Inclusao {self.assunto}>"
 
 class Empresa(db.Model):
@@ -951,7 +818,7 @@ class Empresa(db.Model):
     contatos = db.Column(JsonString(255))
     ativo = db.Column(db.Boolean, default=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Empresa {self.nome_empresa}>"
 
 class Departamento(db.Model):
@@ -989,7 +856,7 @@ class Departamento(db.Model):
     )
     empresa = db.relationship('Empresa', backref=db.backref('departamentos', lazy=True))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Departamento {self.tipo} - Empresa {self.empresa_id}>"
 
 
@@ -1035,7 +902,7 @@ class ClienteReuniao(db.Model):
     autor = db.relationship("User", foreign_keys=[created_by])
     editor = db.relationship("User", foreign_keys=[updated_by])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ClienteReuniao empresa={self.empresa_id} data={self.data}>"
 
 
@@ -1241,8 +1108,11 @@ class GeneralCalendarEventParticipant(db.Model):
     user = db.relationship("User")
 
 
-class TaskAttachment(db.Model):
-    """Attachment stored for a :class:`Task`."""
+class TaskAttachment(AttachmentMixin, db.Model):
+    """Attachment stored for a :class:`Task`.
+
+    Inherits file type detection properties from AttachmentMixin.
+    """
 
     __tablename__ = "task_attachments"
 
@@ -1259,43 +1129,6 @@ class TaskAttachment(db.Model):
 
     def __repr__(self) -> str:
         return f"<TaskAttachment {self.original_name or self.file_path}>"
-
-    @property
-    def extension(self) -> str:
-        """Return the lower-case file extension for the attachment."""
-
-        _, extension = os.path.splitext(self.file_path or "")
-        return extension.lower()
-
-    @property
-    def is_image(self) -> bool:
-        """Return ``True`` when the attachment is an image."""
-
-        if self.mime_type and self.mime_type.startswith("image/"):
-            return True
-        return self.extension in IMAGE_EXTENSIONS
-
-    @property
-    def is_pdf(self) -> bool:
-        """Return ``True`` when the attachment is a PDF document."""
-
-        if self.mime_type:
-            return self.mime_type == "application/pdf"
-        return self.extension == ".pdf"
-
-    @property
-    def is_text(self) -> bool:
-        """Return ``True`` when the attachment is a plain-text document."""
-
-        if self.mime_type and self.mime_type.startswith("text/"):
-            return True
-        return self.extension in TEXT_EXTENSIONS
-
-    @property
-    def display_name(self) -> str:
-        """Return a user-friendly attachment name."""
-
-        return self.original_name or os.path.basename(self.file_path or "")
 
 
 class TaskStatus(Enum):
@@ -1383,7 +1216,7 @@ class Task(db.Model):
         completed = len([c for c in self.children if c.status == TaskStatus.DONE])
         return int((completed / total) * 100)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Task {self.title}>"
     @property
     def follow_up_users(self) -> list["User"]:
@@ -1474,7 +1307,7 @@ class TaskResponse(db.Model):
 
     author = db.relationship("User")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         preview = (self.body or "").strip().replace("\n", " ")
         if len(preview) > 40:
             preview = f"{preview[:37]}..."
@@ -1498,6 +1331,9 @@ class TaskResponseParticipant(db.Model):
         db.UniqueConstraint("task_id", "user_id", name="uq_task_response_participants_task_user"),
     )
 
+    def __repr__(self) -> str:
+        return f"<TaskResponseParticipant task={self.task_id} user={self.user_id}>"
+
 
 class TaskFollower(db.Model):
     """Associates tasks to users marked for acompanhamento."""
@@ -1519,11 +1355,8 @@ class TaskFollower(db.Model):
         db.UniqueConstraint("task_id", "user_id", name="uq_task_followers_task_user"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TaskFollower task={self.task_id} user={self.user_id}>"
-
-    def __repr__(self):
-        return f"<TaskResponseParticipant task={self.task_id} user={self.user_id}>"
 
 
 class TaskStatusHistory(db.Model):
@@ -1544,7 +1377,7 @@ class TaskStatusHistory(db.Model):
     )
     user = db.relationship("User")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TaskStatusHistory task={self.task_id} {self.from_status}->{self.to_status}>"
 
 
@@ -1568,7 +1401,7 @@ class TaskHistory(db.Model):
     )
     user = db.relationship("User")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TaskHistory task={self.task_id} field={self.field_name} type={self.change_type}>"
 
     @property
@@ -1670,7 +1503,7 @@ class TaskNotification(db.Model):
 
         return self.read_at is not None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<TaskNotification type={self.type} task={self.task_id} "
             f"announcement={self.announcement_id} user={self.user_id}>"
@@ -1695,7 +1528,7 @@ class PushSubscription(db.Model):
 
     user = db.relationship("User", backref=db.backref("push_subscriptions", lazy=True))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}...>"
 
 
@@ -1720,7 +1553,7 @@ class OperationalProcedure(db.Model):
         "User", backref=db.backref("operational_procedures", lazy=True)
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<OperationalProcedure {self.title}>"
 
 

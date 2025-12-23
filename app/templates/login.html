@@ -3,11 +3,15 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="view-transition" content="same-origin" />
+
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+      <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" /></noscript>
       <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
     </head>
 <body class="login-page">
@@ -20,7 +24,18 @@
                 class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
                 role="alert"
               >
-                <i class="bi bi-{{ 'exclamation-triangle-fill' if category == 'error' else 'check-circle-fill' }}"></i>
+                {% if category == 'error' %}
+                  <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                {% else %}
+                  <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                {% endif %}
                 <span class="flash-message">{{ message }}</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
               </div>
@@ -31,7 +46,7 @@
 
     <div class="login-container shadow-sm">
         <div class="text-center mb-4">
-            <img class="img-login" src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+            <img class="img-login" src="{{ url_for('static', filename='images/logo-login-356.png') }}" srcset="{{ url_for('static', filename='images/logo-login-356.png') }} 1x, {{ url_for('static', filename='images/logo-login-712.png') }} 2x" width="356" height="80" alt="Logo" loading="eager" decoding="async" fetchpriority="high">
         </div>
 
         <form method="POST" action="">
@@ -40,7 +55,12 @@
             <div class="mb-3">
                 <label for="username" class="form-label">{{ form.username.label }}</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+                    <span class="input-group-text">
+                        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </span>
                     {{ form.username(class="form-control", id="username", placeholder="Digite seu usuário") }}
                 </div>
                 {% for error in form.username.errors %}
@@ -51,10 +71,24 @@
             <div class="mb-3">
                 <label for="password" class="form-label">{{ form.password.label }}</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                    <span class="input-group-text">
+                        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </span>
                     {{ form.password(class="form-control", id="password", placeholder="Digite sua senha") }}
-                    <span class="input-group-text" style="cursor: pointer;">
-                        <i class="bi bi-eye" id="togglePassword"></i>
+                    <span class="input-group-text" style="cursor: pointer;" id="togglePassword" role="button" tabindex="0" aria-label="Mostrar senha">
+                        <svg class="login-icon" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <svg class="login-icon d-none" data-icon="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.87 21.87 0 0 1 5.06-6.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.87 21.87 0 0 1-4.2 5.94" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                            <line x1="14.12" y1="14.12" x2="9.88" y2="9.88" />
+                        </svg>
                     </span>
                 </div>
                 {% for error in form.password.errors %}
@@ -73,36 +107,68 @@
         </form>
         {% if google_enabled %}
         <a href="{{ url_for('google_login') }}" class="btn btn-google w-100 mt-3 d-flex align-items-center justify-content-center">
-            <i class="fab fa-google me-2"></i> Entrar com Google
+            <span class="me-2 fw-semibold" aria-hidden="true">G</span> Entrar com Google
         </a>
         {% endif %}
       </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const alerts = document.querySelectorAll('.alert');
+            const closeAlert = function (alert) {
+                if (!alert) return;
+                if (alert.classList.contains('fade')) {
+                    alert.classList.remove('show');
+                    alert.addEventListener('transitionend', function () {
+                        alert.remove();
+                    }, { once: true });
+                    setTimeout(function () {
+                        if (document.body.contains(alert)) {
+                            alert.remove();
+                        }
+                    }, 250);
+                } else {
+                    alert.remove();
+                }
+            };
+
             alerts.forEach(function (alert) {
                 setTimeout(function () {
-                    if (alert && bootstrap.Alert) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }
+                    closeAlert(alert);
                 }, 3000);
+            });
+
+            document.querySelectorAll('[data-bs-dismiss="alert"]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    closeAlert(button.closest('.alert'));
+                });
             });
 
             const togglePassword = document.querySelector('#togglePassword');
             const passwordField = document.querySelector('#password');
             if (togglePassword && passwordField) {
-                togglePassword.addEventListener('click', function () {
-                    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-                    passwordField.setAttribute('type', type);
-                    this.classList.toggle('bi-eye');
-                    this.classList.toggle('bi-eye-slash');
+                const eyeIcon = togglePassword.querySelector('[data-icon="eye"]');
+                const eyeOffIcon = togglePassword.querySelector('[data-icon="eye-off"]');
+                const toggleVisibility = function () {
+                    const isPassword = passwordField.getAttribute('type') === 'password';
+                    passwordField.setAttribute('type', isPassword ? 'text' : 'password');
+                    if (eyeIcon && eyeOffIcon) {
+                        eyeIcon.classList.toggle('d-none', !isPassword);
+                        eyeOffIcon.classList.toggle('d-none', isPassword);
+                    }
+                };
+
+                togglePassword.addEventListener('click', toggleVisibility);
+                togglePassword.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleVisibility();
+                    }
                 });
             }
         });
     </script>
 </body>
 </html>
+
+

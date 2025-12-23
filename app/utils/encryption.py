@@ -5,11 +5,21 @@ senhas de consultorias e outros sistemas de terceiros armazenadas no banco de da
 
 IMPORTANTE: Senhas permanecem visíveis na interface para usuários autorizados,
 mas são criptografadas no banco de dados para proteção contra dumps SQL e backups expostos.
+
+Uso com SQLAlchemy:
+    Utilize o TypeDecorator `EncryptedString` para campos criptografados:
+
+    class MyModel(db.Model):
+        senha = db.Column(EncryptedString(500), nullable=True)
+
+    A criptografia/descriptografia ocorre automaticamente ao ler/escrever.
 """
 
-from cryptography.fernet import Fernet
-import os
 import logging
+import os
+
+from cryptography.fernet import Fernet
+from sqlalchemy.types import String, TypeDecorator
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +129,53 @@ def generate_key() -> str:
         >>> print(f"Adicione ao .env: ENCRYPTION_KEY={key}")
     """
     return Fernet.generate_key().decode('utf-8')
+
+
+class EncryptedString(TypeDecorator):
+    """SQLAlchemy TypeDecorator que criptografa/descriptografa strings automaticamente.
+
+    Este tipo encapsula a lógica de criptografia AES-256 para campos sensíveis
+    como senhas de terceiros, eliminando a necessidade de properties manuais.
+
+    Args:
+        length: Tamanho máximo da coluna VARCHAR (deve acomodar texto criptografado).
+
+    Exemplo de uso:
+        class Consultoria(db.Model):
+            senha = db.Column(EncryptedString(500), nullable=True)
+
+        # Escreve automaticamente criptografado
+        consultoria.senha = "senha_secreta"
+
+        # Lê automaticamente descriptografado
+        print(consultoria.senha)  # "senha_secreta"
+    """
+
+    impl = String
+    cache_ok = True
+
+    def __init__(self, length: int = 500) -> None:
+        super().__init__(length=length)
+
+    def process_bind_param(self, value: str | None, dialect) -> str | None:
+        """Criptografa o valor antes de salvar no banco."""
+        if value is None or value == "":
+            return None
+        try:
+            return encrypt_field(value)
+        except Exception as e:
+            logger.error(f"Erro ao criptografar campo: {e}")
+            raise
+
+    def process_result_value(self, value: str | None, dialect) -> str | None:
+        """Descriptografa o valor ao ler do banco."""
+        if value is None:
+            return None
+        try:
+            return decrypt_field(value)
+        except Exception as e:
+            logger.error(f"Erro ao descriptografar campo: {e}")
+            return None
 
 
 if __name__ == "__main__":
