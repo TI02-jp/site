@@ -14,6 +14,7 @@ Rotas:
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime
 from typing import Iterable
@@ -47,7 +48,7 @@ from app.forms import (
     DepartamentoPessoalForm,
     EmpresaForm,
 )
-from app.models.tables import ClienteReuniao, Departamento, Empresa, Setor, User
+from app.models.tables import ClienteReuniao, Departamento, Empresa, Inventario, Setor, User
 from app.services.calendar_cache import calendar_cache
 from app.services.cnpj import consultar_cnpj
 from app.services.general_calendar import serialize_events_for_calendar
@@ -959,3 +960,484 @@ def normalize_contatos(contatos: Iterable[dict] | None) -> list[dict]:
             }
         )
     return normalized
+
+
+# =============================================================================
+# Rotas de Inventário
+# =============================================================================
+
+@empresas_bp.route("/inventario")
+@login_required
+def inventario():
+    """Lista todas as empresas com seus dados de inventário."""
+    STATUS_CHOICES = [
+        'FALTA ARQUIVO',
+        'AGUARDANDO TADEU',
+        'LIBERADO PARA IMPORTAÇÃO',
+        'IMPORTADO',
+        'LIBERADO PARA BALANÇO',
+        'ENCERRADO',
+        'ECD-ECF ENCERRADO',
+        'JULIANA IRÁ IMPORTAR',
+        'AGUARDANDO HELENA'
+    ]
+
+    saved_filters = session.get("inventario_filters", {})
+
+    # Parâmetros de ordenação
+    sort_arg = request.args.get('sort')
+    order_arg = request.args.get('order')
+
+    # Filtros
+    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    clear_tributacao = request.args.get("clear_tributacao") == "1"
+    raw_tributacoes = request.args.getlist('tributacao')
+    if clear_tributacao:
+        tributacao_filters = []
+    elif raw_tributacoes:
+        tributacao_filters = [t for t in raw_tributacoes if t in allowed_tributacoes]
+    else:
+        tributacao_filters = saved_filters.get("tributacao_filters", [])
+
+    # Filtro de status
+    clear_status = request.args.get("clear_status") == "1"
+    raw_status = request.args.getlist('status')
+    if clear_status:
+        status_filters = []
+    elif raw_status:
+        status_filters = [s for s in raw_status if s in STATUS_CHOICES]
+    else:
+        status_filters = saved_filters.get("status_filters", [])
+
+    sort = sort_arg or saved_filters.get("sort") or 'codigo'
+    if sort not in ('codigo', 'nome', 'tributacao'):
+        sort = 'codigo'
+
+    order = order_arg or saved_filters.get("order") or 'asc'
+    if order not in ('asc', 'desc'):
+        order = 'asc'
+
+    session["inventario_filters"] = {
+        "sort": sort,
+        "order": order,
+        "tributacao_filters": tributacao_filters,
+        "status_filters": status_filters,
+    }
+
+    # Query base - empresas ativas
+    query = Empresa.query.filter_by(ativo=True)
+
+    # Aplicar filtro de tributação
+    if tributacao_filters:
+        valid_filters = [t for t in tributacao_filters if t in allowed_tributacoes]
+        if valid_filters:
+            query = query.filter(Empresa.tributacao.in_(valid_filters))
+
+    # Aplicar ordenação
+    if sort == 'codigo':
+        order_column = Empresa.codigo_empresa
+    elif sort == 'nome':
+        order_column = Empresa.nome_empresa
+    elif sort == 'tributacao':
+        order_column = Empresa.tributacao
+    else:
+        order_column = Empresa.codigo_empresa
+
+    if order == 'desc':
+        query = query.order_by(order_column.desc())
+    else:
+        query = query.order_by(order_column.asc())
+
+    empresas = query.all()
+    empresa_ids = [empresa.id for empresa in empresas]
+
+    # Buscar inventários existentes
+    inventarios = {}
+    if empresa_ids:
+        inventarios = {
+            inv.empresa_id: inv
+            for inv in Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids)).all()
+        }
+
+    # Criar lista combinada
+    items = []
+    created_inventarios = False
+    for empresa in empresas:
+        inventario = inventarios.get(empresa.id)
+
+        # Criar inventário com status padrão se não existir
+        if not inventario:
+            inventario = Inventario(empresa_id=empresa.id, status='FALTA ARQUIVO')
+            db.session.add(inventario)
+            inventarios[empresa.id] = inventario
+            created_inventarios = True
+
+        items.append({
+            'empresa': empresa,
+            'inventario': inventario
+        })
+
+
+    # Aplicar filtro de status
+    if status_filters:
+        items = [item for item in items if item['inventario'] and item['inventario'].status in status_filters]
+
+    # Buscar todos os usuários para o select de encerramento
+    from app.models.tables import User
+    usuarios = User.query.filter(User.ativo.is_(True)).order_by(User.name).all()
+
+    response = render_template(
+        "empresas/inventario.html",
+        items=items,
+        status_choices=STATUS_CHOICES,
+        sort=sort,
+        order=order,
+        tributacao_filters=tributacao_filters,
+        allowed_tributacoes=allowed_tributacoes,
+        status_filters=status_filters,
+        usuarios=usuarios
+    )
+
+    if created_inventarios:
+        db.session.commit()
+
+    return response
+
+
+@empresas_bp.route("/api/inventario/update", methods=["POST"])
+@login_required
+@csrf.exempt
+def api_inventario_update():
+    """API para atualizar campos do inventário inline."""
+    from decimal import Decimal, InvalidOperation
+
+    try:
+        data = request.get_json()
+        empresa_id = data.get('empresa_id')
+        field = data.get('field')
+        value = data.get('value', '').strip()
+
+        if not empresa_id or not field:
+            return jsonify({'success': False, 'error': 'Dados inválidos'}), 400
+
+        # Verificar se a empresa existe
+        empresa = Empresa.query.get(empresa_id)
+        if not empresa:
+            return jsonify({'success': False, 'error': 'Empresa não encontrada'}), 404
+
+        # Buscar ou criar inventário
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            inventario = Inventario(empresa_id=empresa_id)
+            db.session.add(inventario)
+
+        # Campos monetários que precisam de conversão
+        campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'valor_enviado_sped']
+
+        # Campos booleanos
+        campos_booleanos = ['encerramento_fiscal']
+
+        # Campos de data
+        campos_data = ['encerramento_balanco_data']
+
+        # Campos inteiros
+        campos_inteiros = ['encerramento_balanco_usuario_id']
+
+        # Atualizar campo
+        field_map = {
+            'encerramento_fiscal': 'encerramento_fiscal',
+            'dief_2024': 'dief_2024',
+            'balanco_2025_cliente': 'balanco_2025_cliente',
+            'observacoes_tadeu': 'observacoes_tadeu',
+            'valor_enviado_sped': 'valor_enviado_sped',
+            'status': 'status',
+            'encerramento_balanco_data': 'encerramento_balanco_data',
+            'encerramento_balanco_usuario_id': 'encerramento_balanco_usuario_id',
+            'pdf_path': 'pdf_path',
+            'cliente_pdf_path': 'cliente_pdf_path',
+        }
+
+        if field not in field_map:
+            return jsonify({'success': False, 'error': 'Campo inválido'}), 400
+
+        # Processar valor
+        old_pdf_path = inventario.pdf_path
+        processed_value = None
+        if value:
+            if field in campos_monetarios:
+                # Converter valor monetário (remover R$, pontos e trocar vírgula por ponto)
+                try:
+                    value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                    processed_value = Decimal(value_clean) if value_clean else None
+                except (InvalidOperation, ValueError):
+                    return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
+            elif field in campos_booleanos:
+                # Converter para booleano
+                if value.lower() in ['true', '1', 'sim', 'yes']:
+                    processed_value = True
+                elif value.lower() in ['false', '0', 'não', 'nao', 'no']:
+                    processed_value = False
+                else:
+                    processed_value = None
+            elif field in campos_data:
+                # Converter para data (formato YYYY-MM-DD)
+                try:
+                    processed_value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
+                except ValueError:
+                    return jsonify({'success': False, 'error': 'Data inválida. Use o formato AAAA-MM-DD'}), 400
+            elif field in campos_inteiros:
+                # Converter para inteiro
+                try:
+                    processed_value = int(value) if value else None
+                except ValueError:
+                    return jsonify({'success': False, 'error': 'Valor inteiro inválido'}), 400
+            else:
+                processed_value = value
+        elif field in campos_booleanos:
+            # Se valor vazio para booleano, setar como None
+            processed_value = None
+        elif field in campos_data:
+            # Se valor vazio para data, setar como None
+            processed_value = None
+        elif field in campos_inteiros:
+            # Se valor vazio para inteiro, setar como None
+            processed_value = None
+
+        setattr(inventario, field_map[field], processed_value)
+
+        if field == "pdf_path":
+            is_url = bool(processed_value) and (
+                processed_value.startswith("http://")
+                or processed_value.startswith("https://")
+            )
+            if old_pdf_path and not (
+                old_pdf_path.startswith("http://") or old_pdf_path.startswith("https://")
+            ):
+                if processed_value is None or is_url:
+                    if old_pdf_path.startswith("uploads/"):
+                        file_path = os.path.join(current_app.root_path, "static", old_pdf_path)
+                        if os.path.exists(file_path):
+                            try:
+                                os.remove(file_path)
+                            except Exception:
+                                current_app.logger.exception(
+                                    "Erro ao remover PDF antigo: %s", file_path
+                                )
+            if is_url or processed_value is None:
+                inventario.pdf_original_name = None
+
+        db.session.commit()
+
+        # Retornar valor formatado se for campo monetário
+        response_value = value
+        if field in campos_monetarios and processed_value is not None:
+            response_value = f"R$ {processed_value:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
+
+        return jsonify({'success': True, 'value': response_value})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao atualizar inventário: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_upload_pdf(empresa_id):
+    """Upload de arquivo PDF para o inventário."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    try:
+        empresa = Empresa.query.get_or_404(empresa_id)
+
+        if 'pdf' not in request.files:
+            return jsonify({'success': False, 'error': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['pdf']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
+
+        # Verificar extensão
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
+
+        # Buscar ou criar inventário
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            inventario = Inventario(empresa_id=empresa_id)
+            db.session.add(inventario)
+
+        # Remover arquivo antigo se existir
+        if inventario.pdf_path and not inventario.pdf_path.startswith('http'):
+            old_path = os.path.join(current_app.root_path, 'static', inventario.pdf_path)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        new_filename = f"inventario_{empresa.codigo_empresa}_{timestamp}.pdf"
+
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'inventario')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        file_path = os.path.join(upload_folder, new_filename)
+        file.save(file_path)
+
+        # Atualizar inventário
+        inventario.pdf_path = f"uploads/inventario/{new_filename}"
+        inventario.pdf_original_name = filename
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'url': f"/static/{inventario.pdf_path}",
+            'storage': 'local'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao fazer upload do PDF: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/delete-pdf/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_delete_pdf(empresa_id):
+    """Remove o PDF do inventário."""
+    import os
+
+    try:
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario or not inventario.pdf_path:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Remover arquivo local se não for URL
+        if not inventario.pdf_path.startswith('http'):
+            file_path = os.path.join(current_app.root_path, 'static', inventario.pdf_path)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
+
+        # Limpar campos
+        inventario.pdf_path = None
+        inventario.pdf_original_name = None
+
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao deletar PDF: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/upload-cliente-file/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_upload_cliente_file(empresa_id):
+    """Upload de arquivo do cliente para o inventário."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    try:
+        empresa = Empresa.query.get_or_404(empresa_id)
+
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
+
+        # Buscar ou criar inventário
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            inventario = Inventario(empresa_id=empresa_id)
+            db.session.add(inventario)
+
+        # Remover arquivo antigo se existir
+        if inventario.cliente_pdf_path and not inventario.cliente_pdf_path.startswith('http'):
+            old_path = os.path.join(current_app.root_path, 'static', inventario.cliente_pdf_path)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Extrair extensão do arquivo original
+        file_ext = os.path.splitext(filename)[1]
+        new_filename = f"cliente_{empresa.codigo_empresa}_{timestamp}{file_ext}"
+
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'inventario')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        file_path = os.path.join(upload_folder, new_filename)
+        file.save(file_path)
+
+        # Atualizar inventário
+        inventario.cliente_pdf_path = f"uploads/inventario/{new_filename}"
+        inventario.cliente_original_name = filename
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'url': f"/static/{inventario.cliente_pdf_path}",
+            'storage': 'local'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao fazer upload do arquivo do cliente: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/delete-cliente-file/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_delete_cliente_file(empresa_id):
+    """Remove o arquivo do cliente do inventário."""
+    import os
+
+    try:
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario or not inventario.cliente_pdf_path:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Remover arquivo local se não for URL
+        if not inventario.cliente_pdf_path.startswith('http'):
+            file_path = os.path.join(current_app.root_path, 'static', inventario.cliente_pdf_path)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
+
+        # Limpar campos
+        inventario.cliente_pdf_path = None
+        inventario.cliente_original_name = None
+
+        db.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+

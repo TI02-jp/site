@@ -17,10 +17,35 @@
     <div class="nav-section-title">PRINCIPAL</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link{% if request.endpoint == 'listar_empresas' %} active{% endif %}" href="{{ url_for('listar_empresas') }}">
-                <i class="bi bi-list-task"></i>
+            {% set clientes_active = request.endpoint in ['listar_empresas', 'empresas.inventario'] %}
+            <a class="nav-link{% if clientes_active %} active{% endif %}"
+               data-bs-toggle="collapse"
+               data-sidebar-toggle="clientesMenu"
+               href="#clientesMenu"
+               role="button"
+               aria-expanded="{{ 'true' if clientes_active else 'false' }}"
+               aria-controls="clientesMenu">
+                <i class="bi bi-building"></i>
                 CLIENTES
             </a>
+            <div class="collapse{% if clientes_active %} show{% endif %}" id="clientesMenu">
+                <ul class="nav flex-column ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'listar_empresas' %} active{% endif %}"
+                           href="{{ url_for('listar_empresas') }}">
+                            <i class="bi bi-list"></i>
+                            CLIENTES
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'empresas.inventario' %} active{% endif %}"
+                           href="{{ url_for('empresas.inventario') }}">
+                            <i class="bi bi-clipboard-data"></i>
+                            INVENTÁRIO
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('consultorias') }}">
