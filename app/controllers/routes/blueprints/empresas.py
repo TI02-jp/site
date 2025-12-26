@@ -58,7 +58,7 @@ from app.services.meeting_room import (
     fetch_raw_events,
     try_get_cached_combined_events,
 )
-from app.utils.performance_middleware import track_custom_span
+from app.utils.performance_middleware import track_commit_end, track_commit_start, track_custom_span
 from app.utils.permissions import is_user_admin
 from app.utils.security import sanitize_html
 
@@ -1051,36 +1051,55 @@ def inventario():
     empresas = query.all()
     empresa_ids = [empresa.id for empresa in empresas]
 
-    # Buscar inventários existentes
+    # Buscar inventários existentes com filtro de status aplicado no SQL
     inventarios = {}
     if empresa_ids:
+        inventario_query = Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids))
+
+        # Aplicar filtro de status direto na query SQL (otimização crítica)
+        if status_filters:
+            inventario_query = inventario_query.filter(Inventario.status.in_(status_filters))
+
         inventarios = {
             inv.empresa_id: inv
-            for inv in Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids)).all()
+            for inv in inventario_query.all()
         }
 
-    # Criar lista combinada
-    items = []
+    # Identificar empresas sem inventário
+    empresas_sem_inventario = [e for e in empresas if e.id not in inventarios]
+
+    # Criar inventários faltantes em batch
     created_inventarios = False
+    if empresas_sem_inventario:
+        # Se há filtro de status e 'FALTA ARQUIVO' não está nos filtros, não criar
+        should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
+
+        if should_create:
+            novos_inventarios = [
+                Inventario(empresa_id=e.id, status='FALTA ARQUIVO')
+                for e in empresas_sem_inventario
+            ]
+            db.session.bulk_save_objects(novos_inventarios, return_defaults=True)
+            created_inventarios = True
+
+            # Atualizar dicionário de inventarios
+            for e in empresas_sem_inventario:
+                # Buscar o inventario recém-criado
+                inv = Inventario.query.filter_by(empresa_id=e.id).first()
+                if inv:
+                    inventarios[e.id] = inv
+
+    # Criar lista combinada apenas com empresas que têm inventário
+    items = []
     for empresa in empresas:
         inventario = inventarios.get(empresa.id)
 
-        # Criar inventário com status padrão se não existir
-        if not inventario:
-            inventario = Inventario(empresa_id=empresa.id, status='FALTA ARQUIVO')
-            db.session.add(inventario)
-            inventarios[empresa.id] = inventario
-            created_inventarios = True
-
-        items.append({
-            'empresa': empresa,
-            'inventario': inventario
-        })
-
-
-    # Aplicar filtro de status
-    if status_filters:
-        items = [item for item in items if item['inventario'] and item['inventario'].status in status_filters]
+        # Adicionar apenas se há inventário (respeitando filtros)
+        if inventario:
+            items.append({
+                'empresa': empresa,
+                'inventario': inventario
+            })
 
     # Buscar todos os usuários para o select de encerramento
     from app.models.tables import User
@@ -1112,27 +1131,30 @@ def api_inventario_update():
     from decimal import Decimal, InvalidOperation
 
     try:
-        data = request.get_json()
-        empresa_id = data.get('empresa_id')
-        field = data.get('field')
-        value = data.get('value', '').strip()
+        with track_custom_span("inventario_update", "parse_payload"):
+            data = request.get_json()
+            empresa_id = data.get('empresa_id')
+            field = data.get('field')
+            value = data.get('value', '').strip()
 
         if not empresa_id or not field:
             return jsonify({'success': False, 'error': 'Dados inválidos'}), 400
 
         # Verificar se a empresa existe
-        empresa = Empresa.query.get(empresa_id)
+        with track_custom_span("inventario_update", "load_empresa"):
+            empresa = Empresa.query.get(empresa_id)
         if not empresa:
             return jsonify({'success': False, 'error': 'Empresa não encontrada'}), 404
 
         # Buscar ou criar inventário
-        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
-        if not inventario:
-            inventario = Inventario(empresa_id=empresa_id)
-            db.session.add(inventario)
+        with track_custom_span("inventario_update", "load_inventario"):
+            inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+            if not inventario:
+                inventario = Inventario(empresa_id=empresa_id)
+                db.session.add(inventario)
 
         # Campos monetários que precisam de conversão
-        campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'valor_enviado_sped']
+        campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'fechamento_tadeu_2025', 'valor_enviado_sped']
 
         # Campos booleanos
         campos_booleanos = ['encerramento_fiscal']
@@ -1148,6 +1170,7 @@ def api_inventario_update():
             'encerramento_fiscal': 'encerramento_fiscal',
             'dief_2024': 'dief_2024',
             'balanco_2025_cliente': 'balanco_2025_cliente',
+            'fechamento_tadeu_2025': 'fechamento_tadeu_2025',
             'observacoes_tadeu': 'observacoes_tadeu',
             'valor_enviado_sped': 'valor_enviado_sped',
             'status': 'status',
@@ -1163,70 +1186,75 @@ def api_inventario_update():
         # Processar valor
         old_pdf_path = inventario.pdf_path
         processed_value = None
-        if value:
-            if field in campos_monetarios:
-                # Converter valor monetário (remover R$, pontos e trocar vírgula por ponto)
-                try:
-                    value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                    processed_value = Decimal(value_clean) if value_clean else None
-                except (InvalidOperation, ValueError):
-                    return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
-            elif field in campos_booleanos:
-                # Converter para booleano
-                if value.lower() in ['true', '1', 'sim', 'yes']:
-                    processed_value = True
-                elif value.lower() in ['false', '0', 'não', 'nao', 'no']:
-                    processed_value = False
+        with track_custom_span("inventario_update", "process_value"):
+            if value:
+                if field in campos_monetarios:
+                    # Converter valor monetário (remover R$, pontos e trocar vírgula por ponto)
+                    try:
+                        value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        processed_value = Decimal(value_clean) if value_clean else None
+                    except (InvalidOperation, ValueError):
+                        return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
+                elif field in campos_booleanos:
+                    # Converter para booleano
+                    if value.lower() in ['true', '1', 'sim', 'yes']:
+                        processed_value = True
+                    elif value.lower() in ['false', '0', 'não', 'nao', 'no']:
+                        processed_value = False
+                    else:
+                        processed_value = None
+                elif field in campos_data:
+                    # Converter para data (formato YYYY-MM-DD)
+                    try:
+                        processed_value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
+                    except ValueError:
+                        return jsonify({'success': False, 'error': 'Data inválida. Use o formato AAAA-MM-DD'}), 400
+                elif field in campos_inteiros:
+                    # Converter para inteiro
+                    try:
+                        processed_value = int(value) if value else None
+                    except ValueError:
+                        return jsonify({'success': False, 'error': 'Valor inteiro inválido'}), 400
                 else:
-                    processed_value = None
+                    processed_value = value
+            elif field in campos_booleanos:
+                # Se valor vazio para booleano, setar como None
+                processed_value = None
             elif field in campos_data:
-                # Converter para data (formato YYYY-MM-DD)
-                try:
-                    processed_value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
-                except ValueError:
-                    return jsonify({'success': False, 'error': 'Data inválida. Use o formato AAAA-MM-DD'}), 400
+                # Se valor vazio para data, setar como None
+                processed_value = None
             elif field in campos_inteiros:
-                # Converter para inteiro
-                try:
-                    processed_value = int(value) if value else None
-                except ValueError:
-                    return jsonify({'success': False, 'error': 'Valor inteiro inválido'}), 400
-            else:
-                processed_value = value
-        elif field in campos_booleanos:
-            # Se valor vazio para booleano, setar como None
-            processed_value = None
-        elif field in campos_data:
-            # Se valor vazio para data, setar como None
-            processed_value = None
-        elif field in campos_inteiros:
-            # Se valor vazio para inteiro, setar como None
-            processed_value = None
-
-        setattr(inventario, field_map[field], processed_value)
+                # Se valor vazio para inteiro, setar como None
+                processed_value = None
+            setattr(inventario, field_map[field], processed_value)
 
         if field == "pdf_path":
-            is_url = bool(processed_value) and (
-                processed_value.startswith("http://")
-                or processed_value.startswith("https://")
-            )
-            if old_pdf_path and not (
-                old_pdf_path.startswith("http://") or old_pdf_path.startswith("https://")
-            ):
-                if processed_value is None or is_url:
-                    if old_pdf_path.startswith("uploads/"):
-                        file_path = os.path.join(current_app.root_path, "static", old_pdf_path)
-                        if os.path.exists(file_path):
-                            try:
-                                os.remove(file_path)
-                            except Exception:
-                                current_app.logger.exception(
-                                    "Erro ao remover PDF antigo: %s", file_path
-                                )
-            if is_url or processed_value is None:
-                inventario.pdf_original_name = None
+            with track_custom_span("inventario_update", "cleanup_pdf"):
+                is_url = bool(processed_value) and (
+                    processed_value.startswith("http://")
+                    or processed_value.startswith("https://")
+                )
+                if old_pdf_path and not (
+                    old_pdf_path.startswith("http://") or old_pdf_path.startswith("https://")
+                ):
+                    if processed_value is None or is_url:
+                        if old_pdf_path.startswith("uploads/"):
+                            file_path = os.path.join(current_app.root_path, "static", old_pdf_path)
+                            if os.path.exists(file_path):
+                                try:
+                                    os.remove(file_path)
+                                except Exception:
+                                    current_app.logger.exception(
+                                        "Erro ao remover PDF antigo: %s", file_path
+                                    )
+                if is_url or processed_value is None:
+                    inventario.pdf_original_name = None
 
-        db.session.commit()
+        commit_started = track_commit_start()
+        try:
+            db.session.commit()
+        finally:
+            track_commit_end(commit_started)
 
         # Retornar valor formatado se for campo monetário
         response_value = value
@@ -1439,5 +1467,3 @@ def api_inventario_delete_cliente_file(empresa_id):
         db.session.rollback()
         current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
-
-

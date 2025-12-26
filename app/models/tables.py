@@ -1920,9 +1920,10 @@ class Inventario(db.Model):
     empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False, unique=True)
 
     # Campos editáveis da planilha
-    encerramento_fiscal = db.Column(db.Boolean, nullable=True)
+    encerramento_fiscal = db.Column(db.Boolean, nullable=True, default=False)
     dief_2024 = db.Column(db.Numeric(12, 2), nullable=True)
     balanco_2025_cliente = db.Column(db.Numeric(12, 2), nullable=True)
+    fechamento_tadeu_2025 = db.Column(db.Numeric(12, 2), nullable=True)
     observacoes_tadeu = db.Column(db.Text, nullable=True)
     valor_enviado_sped = db.Column(db.Numeric(12, 2), nullable=True)
     status = db.Column(db.String(50), nullable=True, default='FALTA ARQUIVO')
@@ -1960,6 +1961,11 @@ class Inventario(db.Model):
     def balanco_2025_cliente_formatado(self):
         """Retorna balanço cliente formatado como moeda."""
         return _format_brl(self.balanco_2025_cliente)
+
+    @property
+    def fechamento_tadeu_2025_formatado(self):
+        """Retorna fechamento Tadeu 2025 formatado como moeda."""
+        return _format_brl(self.fechamento_tadeu_2025)
 
     @property
     def valor_enviado_sped_formatado(self):
