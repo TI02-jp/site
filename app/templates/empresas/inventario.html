@@ -1,0 +1,1186 @@
+{% extends "base.html" %}
+
+{% block title %}Inventário 2026{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 inventario-page">
+    <!-- Cabeçalho da Página -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-primary mb-1">
+                        <i class="bi bi-clipboard-data me-2"></i>Inventário 2026
+                        <span class="badge bg-primary ms-2">{{ items|length }}</span>
+                    </h1>
+                    <p class="text-muted mb-0">Controle de inventário anual das empresas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Pesquisa e Filtros -->
+    <div class="mb-3">
+        <!-- Barra de Pesquisa -->
+        <div class="row mb-2">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control"
+                           id="searchInput"
+                           placeholder="Pesquisar por ID ou Razão Social...">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros Ativos -->
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-muted small">Filtros:</span>
+                {% if tributacao_filters or status_filters %}
+                    {% if tributacao_filters %}
+                        <span class="text-muted small">Tributação:</span>
+                        {% for trib in tributacao_filters %}
+                        <span class="badge bg-primary">{{ trib }}</span>
+                        {% endfor %}
+                    {% endif %}
+                    {% if status_filters %}
+                        <span class="text-muted small">Status:</span>
+                        {% for st in status_filters %}
+                        <span class="badge bg-info">{{ st }}</span>
+                        {% endfor %}
+                    {% endif %}
+                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1) }}"
+                       class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-x-circle"></i> Limpar Tudo
+                    </a>
+                {% else %}
+                    <span class="text-muted small">Nenhum filtro ativo</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Inventário -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0 compact-table" id="inventarioTable">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width: 55px;">
+                                <a href="?sort=codigo&order={{ 'desc' if sort == 'codigo' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                   class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
+                                    ID
+                                    {% if sort == 'codigo' %}
+                                        <i class="bi bi-{{ 'sort-down' if order == 'desc' else 'sort-up' }} ms-1"></i>
+                                    {% else %}
+                                        <i class="bi bi-filter text-muted ms-1"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th style="width: 220px;">
+                                <a href="?sort=nome&order={{ 'desc' if sort == 'nome' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                   class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
+                                    Razão Social
+                                    {% if sort == 'nome' %}
+                                        <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }} ms-1"></i>
+                                    {% else %}
+                                        <i class="bi bi-filter text-muted ms-1"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th style="width: 110px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span>Tributação</span>
+                                        <a href="?sort=tributacao&order={{ 'desc' if sort == 'tributacao' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                           class="text-decoration-none text-dark">
+                                            {% if sort == 'tributacao' %}
+                                                <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }}"></i>
+                                            {% endif %}
+                                        </a>
+                                    </div>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button class="btn btn-icon-xs {% if tributacao_filters %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                type="button"
+                                                id="tributacaoFilterDropdown"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Filtrar por tributação">
+                                            <i class="bi {% if tributacao_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if tributacao_filters %}
+                                                <span class="badge bg-light text-dark ms-1">{{ tributacao_filters|length }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="tributacaoFilterDropdown" style="min-width: 240px;">
+                                            <form method="GET" class="tributacao-filter-form">
+                                                <input type="hidden" name="sort" value="{{ sort }}">
+                                                <input type="hidden" name="order" value="{{ order }}">
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributação</p>
+                                                <div class="d-flex flex-column gap-1 mb-3" style="max-height: 220px; overflow-y: auto;">
+                                                    {% for trib in allowed_tributacoes %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="tributacao" id="tribFilter{{ loop.index }}" value="{{ trib }}" {% if trib in tributacao_filters %}checked{% endif %}>
+                                                        <label class="form-check-label" for="tribFilter{{ loop.index }}">{{ trib }}</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1) }}">Limpar</a>
+                                                    <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 95px;">Enc. Fiscal</th>
+                            <th style="width: 125px;">CFOP</th>
+                            <th style="width: 160px;">Arq. Cliente</th>
+                            <th style="width: 100px;">DIEF 24</th>
+                            <th style="width: 110px;">Bal. 25</th>
+                            <th style="width: 170px;">Obs. Tadeu</th>
+                            <th style="width: 110px;">Val. SPED</th>
+                            <th style="width: 150px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>Status</span>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button class="btn btn-icon-xs {% if status_filters %}btn-info{% else %}btn-outline-secondary{% endif %}"
+                                                type="button"
+                                                id="statusFilterDropdown"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Filtrar por status">
+                                            <i class="bi {% if status_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if status_filters %}
+                                                <span class="badge bg-light text-dark ms-1">{{ status_filters|length }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="statusFilterDropdown" style="min-width: 260px;">
+                                            <form method="GET" class="status-filter-form">
+                                                <input type="hidden" name="sort" value="{{ sort }}">
+                                                <input type="hidden" name="order" value="{{ order }}">
+                                                {% for trib in tributacao_filters %}
+                                                <input type="hidden" name="tributacao" value="{{ trib }}">
+                                                {% endfor %}
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por status</p>
+                                                <div class="d-flex flex-column gap-1 mb-3" style="max-height: 300px; overflow-y: auto;">
+                                                    {% for status_opt in status_choices %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="status" id="statusFilter{{ loop.index }}" value="{{ status_opt }}" {% if status_opt in status_filters %}checked{% endif %}>
+                                                        <label class="form-check-label" for="statusFilter{{ loop.index }}">{{ status_opt }}</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters) }}">Limpar</a>
+                                                    <button type="submit" class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="width: 115px;">Dt. Encerramento</th>
+                            <th style="width: 140px;">User Encerramento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr data-empresa-id="{{ item.empresa.id }}">
+                            <!-- ID -->
+                            <td class="text-center">
+                                <strong>{{ item.empresa.codigo_empresa }}</strong>
+                            </td>
+
+                            <!-- Razão Social -->
+                            <td>
+                                <a href="{{ url_for('empresas.visualizar_empresa', empresa_id=item.empresa.id) }}"
+                                   class="text-decoration-none" target="_blank">
+                                    {{ item.empresa.nome_empresa }}
+                                </a>
+                            </td>
+
+                            <!-- Tributação -->
+                            <td>
+                                <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
+                            </td>
+
+                            <!-- Encerramento Fiscal -->
+                            <td>
+                                <select class="form-select form-select-sm editable-field"
+                                        data-field="encerramento_fiscal">
+                                    <option value="">Selecione...</option>
+                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal == True %}selected{% endif %}>Sim</option>
+                                    <option value="false" {% if item.inventario and item.inventario.encerramento_fiscal == False %}selected{% endif %}>Não</option>
+                                </select>
+                            </td>
+
+                            <!-- CFOP -->
+                            <td>
+                                {% set pdf_path = item.inventario.pdf_path if item.inventario and item.inventario.pdf_path else '' %}
+                                {% set pdf_is_url = pdf_path.startswith('http://') or pdf_path.startswith('https://') %}
+                                {% set pdf_link = pdf_path if pdf_is_url else (pdf_path and '/static/' ~ pdf_path) %}
+                                <div class="pdf-upload-container d-flex gap-1">
+                                    {% if pdf_link %}
+                                        <!-- Mostra link quando há PDF -->
+                                        <div class="flex-grow-1 d-flex align-items-center">
+                                            <small class="text-muted text-truncate" style="max-width: 120px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
+                                                {{ item.inventario.pdf_original_name or 'PDF anexado' }}
+                                            </small>
+                                        </div>
+                                        <a href="{{ pdf_link }}"
+                                           target="_blank"
+                                           class="btn btn-outline-primary btn-sm"
+                                           title="Visualizar PDF">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-pdf-btn"
+                                                title="Remover PDF">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {% else %}
+                                        <!-- Input de upload quando não há PDF -->
+                                        <input type="file"
+                                               class="form-control form-control-sm pdf-upload"
+                                               accept=".pdf"
+                                               title="Fazer upload de PDF">
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Arquivo do Cliente -->
+                            <td>
+                                {% set cliente_pdf_path = item.inventario.cliente_pdf_path if item.inventario and item.inventario.cliente_pdf_path else '' %}
+                                {% set cliente_pdf_is_url = cliente_pdf_path.startswith('http://') or cliente_pdf_path.startswith('https://') %}
+                                {% set cliente_pdf_link = cliente_pdf_path if cliente_pdf_is_url else (cliente_pdf_path and '/static/' ~ cliente_pdf_path) %}
+                                <div class="cliente-upload-container d-flex gap-1">
+                                    {% if cliente_pdf_link %}
+                                        <!-- Mostra link quando há arquivo -->
+                                        <div class="flex-grow-1 d-flex align-items-center">
+                                            <small class="text-muted text-truncate" style="max-width: 85px;" title="{{ item.inventario.cliente_original_name or 'Arquivo' }}">
+                                                {{ item.inventario.cliente_original_name or 'Arquivo anexado' }}
+                                            </small>
+                                        </div>
+                                        <a href="{{ cliente_pdf_link }}"
+                                           target="_blank"
+                                           class="btn btn-outline-primary btn-sm"
+                                           title="Visualizar arquivo">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ cliente_pdf_link }}"
+                                           download="{{ item.inventario.cliente_original_name or 'arquivo' }}"
+                                           class="btn btn-outline-success btn-sm"
+                                           title="Baixar arquivo">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-cliente-btn"
+                                                title="Remover arquivo">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {% else %}
+                                        <!-- Input de upload quando não há arquivo -->
+                                        <input type="file"
+                                               class="form-control form-control-sm cliente-upload"
+                                               title="Fazer upload de arquivo">
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- DIEF 2024 -->
+                            <td>
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="dief_2024"
+                                       value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Balanço 2025 Cliente -->
+                            <td>
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="balanco_2025_cliente"
+                                       value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Observações Tadeu -->
+                            <td>
+                                <textarea class="form-control form-control-sm editable-field"
+                                          data-field="observacoes_tadeu"
+                                          rows="2"
+                                          placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
+                            </td>
+
+                            <!-- Valor Enviado SPED -->
+                            <td>
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="valor_enviado_sped"
+                                       value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Status -->
+                            <td>
+                                <select class="form-select form-select-sm editable-field"
+                                        data-field="status">
+                                    <option value="">Selecione...</option>
+                                    {% for status_opt in status_choices %}
+                                    <option value="{{ status_opt }}"
+                                            {% if item.inventario and item.inventario.status == status_opt %}selected{% endif %}>
+                                        {{ status_opt }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            <!-- Data Encerramento -->
+                            <td>
+                                <input type="date"
+                                       class="form-control form-control-sm editable-field"
+                                       data-field="encerramento_balanco_data"
+                                       value="{{ item.inventario.encerramento_balanco_data.strftime('%Y-%m-%d') if item.inventario and item.inventario.encerramento_balanco_data else '' }}">
+                            </td>
+
+                            <!-- Usuário Encerramento -->
+                            <td>
+                                <select class="form-select form-select-sm editable-field"
+                                        data-field="encerramento_balanco_usuario_id">
+                                    <option value="">Selecione...</option>
+                                    {% for usuario in usuarios %}
+                                    <option value="{{ usuario.id }}"
+                                            {% if item.inventario and item.inventario.encerramento_balanco_usuario_id == usuario.id %}selected{% endif %}>
+                                        {{ usuario.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.inventario-page {
+    font-size: calc(1rem - 1px);
+}
+
+.inventario-page .table > :not(caption) > * > * {
+    padding: 0.3rem 0.45rem;
+}
+
+.inventario-page .form-control,
+.inventario-page .form-select {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    min-height: 1.6rem;
+}
+
+.inventario-page textarea.form-control {
+    min-height: 1.6rem;
+}
+
+.inventario-page .btn {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.inventario-page .badge {
+    font-size: 0.7rem;
+    padding: 0.28em 0.55em;
+}
+
+.inventario-page #inventarioTable td {
+    vertical-align: middle;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: #f8f9fa !important;
+}
+
+/* Tabela compacta */
+.compact-table {
+    font-size: 0.8rem;
+}
+
+.compact-table thead th {
+    padding: 0.45rem 0.4rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.compact-table tbody td {
+    padding: 0.35rem 0.4rem;
+    vertical-align: middle;
+}
+
+/* Campos editáveis mais compactos */
+.compact-table .form-control,
+.compact-table .form-select {
+    font-size: 0.74rem;
+    padding: 0.3rem 0.45rem;
+    min-height: 30px;
+}
+
+.compact-table textarea.form-control {
+    padding: 0.3rem 0.45rem;
+    line-height: 1.35;
+}
+
+.compact-table .btn-sm {
+    padding: 0.25rem 0.45rem;
+    font-size: 0.7rem;
+}
+
+.editable-field {
+    border: 1px solid #e0e0e0;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.editable-field:focus {
+    border-color: #0d6efd;
+    background-color: #fff;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.1);
+}
+
+.editable-field.saving {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+}
+
+.editable-field.saved {
+    background-color: #d1e7dd;
+    border-color: #198754;
+}
+
+.editable-field.error {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}
+
+#inventarioTable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Estilos para cabeçalhos ordenáveis */
+#inventarioTable thead th a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+#inventarioTable thead th a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+#inventarioTable thead th a i {
+    font-size: 0.75rem;
+}
+
+/* Botão de filtro no cabeçalho */
+.btn-icon-xs {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+}
+
+/* Dropdown de filtro */
+.dropdown {
+    position: relative;
+    z-index: 1050;
+}
+
+.dropdown-menu {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    z-index: 1051;
+}
+
+.tributacao-filter-form .form-check,
+.status-filter-form .form-check {
+    padding-left: 1.5rem;
+}
+
+.tributacao-filter-form .form-check-input,
+.status-filter-form .form-check-input {
+    cursor: pointer;
+}
+
+.tributacao-filter-form .form-check-label,
+.status-filter-form .form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Ajustar z-index do thead para não sobrepor dropdown */
+#inventarioTable thead {
+    position: relative;
+    z-index: 5;
+}
+
+#inventarioTable thead th {
+    position: relative;
+}
+
+/* Permitir dropdown do filtro na 3a coluna (Tributação) */
+#inventarioTable thead th:nth-child(3) {
+    overflow: visible;
+}
+
+/* Permitir dropdown do filtro na coluna Status (11a coluna agora) */
+#inventarioTable thead th:nth-child(11) {
+    overflow: visible;
+}
+
+/* Inputs de upload compactos */
+.compact-table .pdf-upload-container,
+.compact-table .cliente-upload-container {
+    gap: 0.2rem !important;
+}
+
+.compact-table .pdf-upload-container small,
+.compact-table .cliente-upload-container small {
+    font-size: 0.68rem;
+}
+
+/* Melhorar estética dos inputs de upload */
+.compact-table .pdf-upload,
+.compact-table .cliente-upload {
+    font-size: 0.7rem !important;
+    padding: 0.2rem 0.3rem !important;
+    min-height: 26px !important;
+    height: 26px;
+}
+
+.compact-table .pdf-upload::file-selector-button,
+.compact-table .cliente-upload::file-selector-button {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    margin-right: 0.4rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.compact-table .pdf-upload::file-selector-button:hover,
+.compact-table .cliente-upload::file-selector-button:hover {
+    background-color: #e9ecef;
+}
+
+/* Input group compacto */
+.compact-table .input-group {
+    gap: 0.2rem;
+}
+
+/* Ajuste dinâmico de fonte no select de status */
+.compact-table select[data-field="status"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.compact-table select[data-field="status"] option {
+    font-size: 0.74rem;
+}
+
+/* Classes para ajustar tamanho de fonte baseado no comprimento */
+.compact-table select[data-field="status"].status-short {
+    font-size: 0.74rem;
+}
+
+.compact-table select[data-field="status"].status-medium {
+    font-size: 0.68rem;
+}
+
+.compact-table select[data-field="status"].status-long {
+    font-size: 0.62rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const allowedTributacoes = {{ allowed_tributacoes | tojson }};
+    const statusChoices = {{ status_choices | tojson }};
+    const tributacaoStorageKey = 'inventario-tributacao-filters';
+    const statusStorageKey = 'inventario-status-filters';
+    const currentUrl = new URL(window.location.href);
+    const clearTributacao = currentUrl.searchParams.get('clear_tributacao') === '1';
+    const clearStatus = currentUrl.searchParams.get('clear_status') === '1';
+    const currentTributacoes = currentUrl.searchParams.getAll('tributacao');
+    const currentStatus = currentUrl.searchParams.getAll('status');
+
+    // Funcionalidade de pesquisa
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const tableRows = document.querySelectorAll('#inventarioTable tbody tr');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+
+            tableRows.forEach(row => {
+                const empresaId = row.querySelector('td:first-child')?.textContent.toLowerCase() || '';
+                const razaoSocial = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+
+                if (empresaId.includes(searchTerm) || razaoSocial.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            tableRows.forEach(row => {
+                row.style.display = '';
+            });
+            searchInput.focus();
+        });
+    }
+
+    function sanitizeTributacoes(values) {
+        return values.filter((value) => allowedTributacoes.includes(value));
+    }
+
+    function sanitizeStatus(values) {
+        return values.filter((value) => statusChoices.includes(value));
+    }
+
+    // Gerenciar filtro de tributação
+    if (clearTributacao) {
+        try {
+            localStorage.removeItem(tributacaoStorageKey);
+        } catch (_) {
+            /* armazenamento indisponivel */
+        }
+    } else if (currentTributacoes.length) {
+        const sanitized = sanitizeTributacoes(currentTributacoes);
+        try {
+            localStorage.setItem(tributacaoStorageKey, JSON.stringify(sanitized));
+        } catch (_) {
+            /* armazenamento indisponivel */
+        }
+    } else {
+        let savedTributacoes = [];
+        try {
+            savedTributacoes = JSON.parse(localStorage.getItem(tributacaoStorageKey) || '[]');
+        } catch (_) {
+            savedTributacoes = [];
+        }
+        const sanitized = sanitizeTributacoes(Array.isArray(savedTributacoes) ? savedTributacoes : []);
+        if (sanitized.length) {
+            sanitized.forEach((value) => currentUrl.searchParams.append('tributacao', value));
+            window.location.replace(currentUrl.toString());
+            return;
+        }
+    }
+
+    // Gerenciar filtro de status
+    if (clearStatus) {
+        try {
+            localStorage.removeItem(statusStorageKey);
+        } catch (_) {
+            /* armazenamento indisponivel */
+        }
+    } else if (currentStatus.length) {
+        const sanitized = sanitizeStatus(currentStatus);
+        try {
+            localStorage.setItem(statusStorageKey, JSON.stringify(sanitized));
+        } catch (_) {
+            /* armazenamento indisponivel */
+        }
+    } else {
+        let savedStatus = [];
+        try {
+            savedStatus = JSON.parse(localStorage.getItem(statusStorageKey) || '[]');
+        } catch (_) {
+            savedStatus = [];
+        }
+        const sanitized = sanitizeStatus(Array.isArray(savedStatus) ? savedStatus : []);
+        if (sanitized.length) {
+            sanitized.forEach((value) => currentUrl.searchParams.append('status', value));
+            window.location.replace(currentUrl.toString());
+            return;
+        }
+    }
+
+    // Debounce para evitar requests excessivos
+    let debounceTimers = {};
+
+    // Função para formatar valor como moeda
+    function formatMoney(value) {
+        // Remover tudo exceto números
+        let numbers = value.replace(/\D/g, '');
+
+        if (!numbers) return '';
+
+        // Converter para número
+        let amount = parseFloat(numbers) / 100;
+
+        // Formatar como moeda brasileira
+        return 'R$ ' + amount.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // Aplicar máscara de moeda em campos monetários
+    document.querySelectorAll('.money-field').forEach(field => {
+        field.addEventListener('input', function(e) {
+            let cursorPosition = this.selectionStart;
+            let oldLength = this.value.length;
+
+            this.value = formatMoney(this.value);
+
+            // Ajustar posição do cursor
+            let newLength = this.value.length;
+            let diff = newLength - oldLength;
+            this.selectionStart = this.selectionEnd = cursorPosition + diff;
+        });
+
+        // Formatar ao carregar se já tiver valor
+        if (field.value && !field.value.startsWith('R$')) {
+            field.value = formatMoney(field.value);
+        }
+    });
+
+    // Função para ajustar tamanho da fonte do status
+    function adjustStatusFontSize(selectElement) {
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const text = selectedOption ? selectedOption.text : '';
+        const length = text.length;
+
+        selectElement.classList.remove('status-short', 'status-medium', 'status-long');
+
+        if (length === 0) {
+            selectElement.classList.add('status-short');
+        } else if (length <= 15) {
+            selectElement.classList.add('status-short');
+        } else if (length <= 25) {
+            selectElement.classList.add('status-medium');
+        } else {
+            selectElement.classList.add('status-long');
+        }
+    }
+
+    // Aplicar ajuste inicial nos selects de status
+    document.querySelectorAll('select[data-field="status"]').forEach(select => {
+        adjustStatusFontSize(select);
+    });
+
+    // Atualizar campo editável
+    document.querySelectorAll('.editable-field').forEach(field => {
+        field.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const empresaId = row.dataset.empresaId;
+            const fieldName = this.dataset.field;
+            const value = this.value;
+
+            // Ajustar fonte do status quando mudar
+            if (fieldName === 'status') {
+                adjustStatusFontSize(this);
+            }
+
+            updateInventario(empresaId, fieldName, value, this);
+        });
+
+        // Para inputs de texto (não monetários), usar debounce
+        if (this.tagName === 'INPUT' && this.type === 'text' && !this.classList.contains('money-field')) {
+            field.addEventListener('input', function() {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const fieldName = this.dataset.field;
+                const value = this.value;
+                const element = this;
+
+                // Limpar timer anterior
+                if (debounceTimers[fieldName + empresaId]) {
+                    clearTimeout(debounceTimers[fieldName + empresaId]);
+                }
+
+                // Criar novo timer
+                debounceTimers[fieldName + empresaId] = setTimeout(() => {
+                    updateInventario(empresaId, fieldName, value, element);
+                }, 1000); // 1 segundo de delay
+            });
+        }
+    });
+
+    // Upload de PDF
+    document.querySelectorAll('.pdf-upload').forEach(input => {
+        input.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const empresaId = row.dataset.empresaId;
+            const file = this.files[0];
+
+            if (file && file.type === 'application/pdf') {
+                uploadPDF(empresaId, file, this);
+            } else if (file) {
+                alert('Por favor, selecione um arquivo PDF válido.');
+                this.value = '';
+            }
+        });
+    });
+
+    // Deletar PDF
+    document.querySelectorAll('.delete-pdf-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Deseja realmente remover este arquivo PDF?')) {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                deletePDF(empresaId, this);
+            }
+        });
+    });
+
+    // Upload de arquivo do cliente
+    document.querySelectorAll('.cliente-upload').forEach(input => {
+        input.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const empresaId = row.dataset.empresaId;
+            const file = this.files[0];
+
+            if (file) {
+                uploadClienteFile(empresaId, file, this);
+            }
+        });
+    });
+
+    // Deletar arquivo do cliente
+    document.querySelectorAll('.delete-cliente-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Deseja realmente remover este arquivo?')) {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                deleteClienteFile(empresaId, this);
+            }
+        });
+    });
+
+    // Mantém dropdown de tributação aberto ao marcar checkboxes
+    const tribDropdownToggle = document.getElementById('tributacaoFilterDropdown');
+    if (tribDropdownToggle && bootstrap?.Dropdown) {
+        const tribDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(tribDropdownToggle, { autoClose: 'outside' });
+        const dropdownParent = tribDropdownToggle.closest('.dropdown');
+
+        if (dropdownParent) {
+            dropdownParent.addEventListener('hide.bs.dropdown', function (event) {
+                const clickTarget = event?.clickEvent?.target;
+                if (!clickTarget) return;
+
+                const insideForm = clickTarget.closest('.tributacao-filter-form');
+                const isApply = clickTarget.closest('.tributacao-filter-apply');
+                const isClear = clickTarget.closest('.tributacao-filter-clear');
+
+                if (insideForm && !isApply && !isClear) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // Evita propagação nos checkboxes para não fechar por engano
+        document.querySelectorAll('.tributacao-filter-form .form-check-input').forEach(function (input) {
+            input.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+            });
+        });
+    }
+
+    // Mantém dropdown de status aberto ao marcar checkboxes
+    const statusDropdownToggle = document.getElementById('statusFilterDropdown');
+    if (statusDropdownToggle && bootstrap?.Dropdown) {
+        const statusDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(statusDropdownToggle, { autoClose: 'outside' });
+        const statusDropdownParent = statusDropdownToggle.closest('.dropdown');
+
+        if (statusDropdownParent) {
+            statusDropdownParent.addEventListener('hide.bs.dropdown', function (event) {
+                const clickTarget = event?.clickEvent?.target;
+                if (!clickTarget) return;
+
+                const insideForm = clickTarget.closest('.status-filter-form');
+                const isApply = clickTarget.closest('.status-filter-apply');
+                const isClear = clickTarget.closest('.status-filter-clear');
+
+                if (insideForm && !isApply && !isClear) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // Evita propagação nos checkboxes para não fechar por engano
+        document.querySelectorAll('.status-filter-form .form-check-input').forEach(function (input) {
+            input.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+            });
+        });
+    }
+
+    function updateInventario(empresaId, field, value, element) {
+        // Indicador visual de salvamento
+        element.classList.remove('saved', 'error');
+        element.classList.add('saving');
+
+        fetch('/api/inventario/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                empresa_id: empresaId,
+                field: field,
+                value: value
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            element.classList.remove('saving');
+            if (data.success) {
+                // Atualizar valor formatado se retornado
+                if (data.value !== undefined && data.value !== value) {
+                    element.value = data.value;
+                }
+                if (field === 'pdf_path' || field === 'cliente_pdf_path') {
+                    const group = element.closest('.input-group');
+                    if (group) {
+                        const currentLink = group.querySelector('a');
+                        const raw = (element.value || '').trim();
+                        if (raw) {
+                            const isUrl = raw.startsWith('http://') || raw.startsWith('https://');
+                            const href = isUrl ? raw : `/static/${raw}`;
+                            if (currentLink) {
+                                currentLink.href = href;
+                            } else {
+                                const link = document.createElement('a');
+                                link.href = href;
+                                link.target = '_blank';
+                                link.className = 'btn btn-outline-primary btn-sm';
+                                link.title = 'Abrir PDF';
+                                link.innerHTML = '<i class="bi bi-file-pdf"></i>';
+                                group.appendChild(link);
+                            }
+                        } else if (currentLink) {
+                            currentLink.remove();
+                        }
+                    }
+                }
+                element.classList.add('saved');
+                setTimeout(() => element.classList.remove('saved'), 2000);
+            } else {
+                element.classList.add('error');
+                alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            element.classList.remove('saving');
+            element.classList.add('error');
+            console.error('Erro:', error);
+            alert('Erro ao salvar. Tente novamente.');
+        });
+    }
+
+    function uploadPDF(empresaId, file, inputElement) {
+        const formData = new FormData();
+        formData.append('pdf', file);
+        const csrfToken = window.csrfToken || '';
+
+        const container = inputElement.closest('.pdf-upload-container');
+        container.innerHTML = '<small class="text-muted">Enviando...</small>';
+
+        fetch(`/api/inventario/upload-pdf/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = `
+                    <div class="d-flex gap-1 align-items-center">
+                        <a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-primary" title="${data.filename}">
+                            <i class="bi bi-file-pdf"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-pdf-btn" title="Remover PDF">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Re-anexar evento de deletar
+                container.querySelector('.delete-pdf-btn').addEventListener('click', function() {
+                    if (confirm('Deseja realmente remover este arquivo PDF?')) {
+                        deletePDF(empresaId, this);
+                    }
+                });
+            } else {
+                alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
+                container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao fazer upload. Tente novamente.');
+            container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
+        });
+    }
+
+    function deletePDF(empresaId, btnElement) {
+        const container = btnElement.closest('.pdf-upload-container');
+        container.innerHTML = '<small class="text-muted">Removendo...</small>';
+        const csrfToken = window.csrfToken || '';
+
+        fetch(`/api/inventario/delete-pdf/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
+
+                // Re-anexar evento de upload
+                const newInput = container.querySelector('.pdf-upload');
+                newInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file && file.type === 'application/pdf') {
+                        uploadPDF(empresaId, file, this);
+                    } else if (file) {
+                        alert('Por favor, selecione um arquivo PDF válido.');
+                        this.value = '';
+                    }
+                });
+            } else {
+                alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao remover arquivo. Tente novamente.');
+            location.reload();
+        });
+    }
+
+    function uploadClienteFile(empresaId, file, inputElement) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const csrfToken = window.csrfToken || '';
+
+        const container = inputElement.closest('.cliente-upload-container');
+        container.innerHTML = '<small class="text-muted">Enviando...</small>';
+
+        fetch(`/api/inventario/upload-cliente-file/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = `
+                    <div class="flex-grow-1 d-flex align-items-center">
+                        <small class="text-muted text-truncate" style="max-width: 85px;" title="${data.filename}">${data.filename}</small>
+                    </div>
+                    <a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-primary" title="Visualizar arquivo">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="${data.url}" download="${data.filename}" class="btn btn-sm btn-outline-success" title="Baixar arquivo">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-cliente-btn" title="Remover arquivo">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+
+                // Re-anexar evento de deletar
+                container.querySelector('.delete-cliente-btn').addEventListener('click', function() {
+                    if (confirm('Deseja realmente remover este arquivo?')) {
+                        deleteClienteFile(empresaId, this);
+                    }
+                });
+            } else {
+                alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
+                container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao fazer upload. Tente novamente.');
+            container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
+        });
+    }
+
+    function deleteClienteFile(empresaId, btnElement) {
+        const container = btnElement.closest('.cliente-upload-container');
+        container.innerHTML = '<small class="text-muted">Removendo...</small>';
+        const csrfToken = window.csrfToken || '';
+
+        fetch(`/api/inventario/delete-cliente-file/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
+
+                // Re-anexar evento de upload
+                const newInput = container.querySelector('.cliente-upload');
+                newInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        uploadClienteFile(empresaId, file, this);
+                    }
+                });
+            } else {
+                alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao remover arquivo. Tente novamente.');
+            location.reload();
+        });
+    }
+});
+</script>
+{% endblock %}

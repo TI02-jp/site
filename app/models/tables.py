@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from enum import Enum
 from zoneinfo import ZoneInfo
 
@@ -121,6 +122,53 @@ def _coerce_time(value: time | str | timedelta | None) -> time | None:
         minutes, seconds = divmod(remainder, 60)
         return time(hour=hours % 24, minute=minutes, second=seconds)
     return None
+
+
+def _coerce_decimal(value) -> Decimal | None:
+    """Return Decimal parsed from legacy numeric values."""
+
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float)):
+        return Decimal(str(value))
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        cleaned = raw.replace("R$", "").strip()
+        cleaned = "".join(ch for ch in cleaned if ch.isdigit() or ch in ",.-")
+        if not cleaned:
+            return None
+        if "," in cleaned and "." in cleaned:
+            last_comma = cleaned.rfind(",")
+            last_dot = cleaned.rfind(".")
+            if last_comma > last_dot:
+                cleaned = cleaned.replace(".", "").replace(",", ".")
+            else:
+                cleaned = cleaned.replace(",", "")
+        elif "," in cleaned:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        try:
+            return Decimal(cleaned)
+        except InvalidOperation:
+            return None
+    return None
+
+
+def _format_brl(value) -> str:
+    """Return a BRL-formatted string for legacy numeric values."""
+
+    amount = _coerce_decimal(value)
+    if amount is None:
+        return "" if value is None else str(value)
+    return (
+        f"R$ {amount:,.2f}"
+        .replace(",", "_")
+        .replace(".", ",")
+        .replace("_", ".")
+    )
 
 
 class TolerantTime(TypeDecorator):
@@ -1864,6 +1912,61 @@ class ManualVideo(db.Model):
         return "/static/images/video-placeholder.png"
 
 
+class Inventario(db.Model):
+    """Inventário anual 2026 vinculado às empresas."""
+    __tablename__ = 'tbl_inventario'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False, unique=True)
+
+    # Campos editáveis da planilha
+    encerramento_fiscal = db.Column(db.Boolean, nullable=True)
+    dief_2024 = db.Column(db.Numeric(12, 2), nullable=True)
+    balanco_2025_cliente = db.Column(db.Numeric(12, 2), nullable=True)
+    observacoes_tadeu = db.Column(db.Text, nullable=True)
+    valor_enviado_sped = db.Column(db.Numeric(12, 2), nullable=True)
+    status = db.Column(db.String(50), nullable=True, default='FALTA ARQUIVO')
+    encerramento_balanco_data = db.Column(db.Date, nullable=True)
+    encerramento_balanco_usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Anexo PDF
+    pdf_path = db.Column(db.String(255), nullable=True)
+    pdf_original_name = db.Column(db.String(255), nullable=True)
+    cliente_pdf_path = db.Column(db.String(255), nullable=True)
+    cliente_original_name = db.Column(db.String(255), nullable=True)
+
+    # Auditoria
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
+        nullable=False
+    )
+
+    # Relacionamentos
+    empresa = db.relationship('Empresa', backref=db.backref('inventario', uselist=False, lazy=True))
+    encerramento_balanco_usuario = db.relationship('User', foreign_keys=[encerramento_balanco_usuario_id])
+
+    def __repr__(self) -> str:
+        return f"<Inventario empresa_id={self.empresa_id}>"
+
+    @property
+    def dief_2024_formatado(self):
+        """Retorna DIEF 2024 formatado como moeda."""
+        return _format_brl(self.dief_2024)
+
+    @property
+    def balanco_2025_cliente_formatado(self):
+        """Retorna balanço cliente formatado como moeda."""
+        return _format_brl(self.balanco_2025_cliente)
+
+    @property
+    def valor_enviado_sped_formatado(self):
+        """Retorna valor enviado SPED formatado como moeda."""
+        return _format_brl(self.valor_enviado_sped)
+
+
 def _record_task_change(connection, task: Task, field_name: str, old_value, new_value, changed_by: int | None):
     """Record a single field change in the task history."""
     from flask import has_request_context, g
@@ -1961,4 +2064,3 @@ def _record_task_updates(mapper, connection, target):
         new_value = next((v for v in history.added if v is not None), None)
 
         _record_task_change(connection, target, field_name, old_value, new_value, changed_by)
-
