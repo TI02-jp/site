@@ -616,19 +616,19 @@
         }
       }
 
-      // SEMPRE criar notifica??o do sistema (desktop) se tivermos permiss?o
-      // Isso garante que apare?a como pop-up nativo do Windows
+      // SEMPRE criar notificação do sistema (desktop) se tivermos permissão
+      // Isso garante que apareça como pop-up nativo do Windows
       if (!skipSystem && notificationPermission === 'granted') {
         showSystemNotification(item).then(success => {
           if (success) {
-            console.log('[Notifications] Notifica??o do Windows exibida com sucesso!');
+            console.log('[Notifications] Notificação do Windows exibida com sucesso!');
           }
         }).catch(error => {
-          console.error('[Notifications] Falha ao criar notifica??o do sistema:', error);
+          console.error('[Notifications] Falha ao criar notificação do sistema:', error);
         });
       } else if (!skipSystem) {
-        // Se n?o temos permiss?o, tentar solicitar novamente
-        console.log('[Notifications] Tentando solicitar permiss?o novamente...');
+        // Se não temos permissão, tentar solicitar novamente
+        console.log('[Notifications] Tentando solicitar permissão novamente...');
         requestNotificationPermission().then(granted => {
           if (granted) {
             showSystemNotification(item);
@@ -639,7 +639,7 @@
       if (!toastContainer) {
         return;
       }
-      const message = escapeHtml(item.message || 'Nova notifica??o');
+      const message = escapeHtml(item.message || 'Nova notificação');
       const time = formatRelativeTime(item.created_at);
       const actionLabel = escapeHtml(item.action_label || 'Abrir');
       const toast = document.createElement('div');

@@ -74,11 +74,12 @@
     <!-- Tabela de Inventário -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive table-wrapper">
                 <table class="table table-hover table-sm mb-0 compact-table" id="inventarioTable">
                     <thead class="table-light sticky-top">
                         <tr>
-                            <th style="width: 55px;">
+                            
+                            <th class="col-id" style="width: 65px;">
                                 <a href="?sort=codigo&order={{ 'desc' if sort == 'codigo' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
@@ -89,7 +90,7 @@
                                     {% endif %}
                                 </a>
                             </th>
-                            <th style="width: 220px;">
+                            <th class="col-razao" style="width: 220px;">
                                 <a href="?sort=nome&order={{ 'desc' if sort == 'nome' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
@@ -100,7 +101,7 @@
                                     {% endif %}
                                 </a>
                             </th>
-                            <th style="width: 110px;">
+                            <th class="col-tributacao" style="width: 130px;">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
@@ -145,14 +146,11 @@
                                     </div>
                                 </div>
                             </th>
-                            <th style="width: 95px;">Enc. Fiscal</th>
-                            <th style="width: 125px;">CFOP</th>
-                            <th style="width: 160px;">Arq. Cliente</th>
-                            <th style="width: 100px;">DIEF 24</th>
-                            <th style="width: 110px;">Bal. 25</th>
-                            <th style="width: 170px;">Obs. Tadeu</th>
-                            <th style="width: 110px;">Val. SPED</th>
-                            <th style="width: 150px;">
+                            <th class="col-dief" style="width: 100px;">DIEF 2024</th>
+                            <th class="col-balanco" style="width: 155px;">Balanço Cliente 2025</th>
+                            <th class="col-fechamento" style="width: 165px;">Fechamento Tadeu 2025</th>
+                            <th class="col-obs" style="width: 175px;">Observação Tadeu</th>
+                            <th class="col-status" style="width: 165px;">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span>Status</span>
                                     <div class="dropdown" data-bs-auto-close="outside">
@@ -192,20 +190,27 @@
                                     </div>
                                 </div>
                             </th>
-                            <th style="width: 115px;">Dt. Encerramento</th>
-                            <th style="width: 140px;">User Encerramento</th>
+
+                            
+                            <th style="width: 200px;">Valor Enviado SPED Fiscal 02/2025</th>
+                            <th style="width: 150px;">Encerramento Fiscal</th>
+                            <th style="width: 130px;">CFOP</th>
+                            <th style="width: 160px;">Arquivo Cliente</th>
+                            <th style="width: 155px;">Data Encerramento</th>
+                            <th style="width: 175px;">Usuário Encerramento</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         <tr data-empresa-id="{{ item.empresa.id }}">
+                            
                             <!-- ID -->
-                            <td class="text-center">
+                            <td class="col-id text-center">
                                 <strong>{{ item.empresa.codigo_empresa }}</strong>
                             </td>
 
                             <!-- Razão Social -->
-                            <td>
+                            <td class="col-razao">
                                 <a href="{{ url_for('empresas.visualizar_empresa', empresa_id=item.empresa.id) }}"
                                    class="text-decoration-none" target="_blank">
                                     {{ item.empresa.nome_empresa }}
@@ -213,8 +218,67 @@
                             </td>
 
                             <!-- Tributação -->
-                            <td>
+                            <td class="col-tributacao">
                                 <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
+                            </td>
+
+                            <!-- DIEF 2024 -->
+                            <td class="col-dief">
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="dief_2024"
+                                       value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Balanço Cliente 2025 -->
+                            <td class="col-balanco">
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="balanco_2025_cliente"
+                                       value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Fechamento Tadeu 2025 -->
+                            <td class="col-fechamento">
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="fechamento_tadeu_2025"
+                                       value="{{ item.inventario.fechamento_tadeu_2025_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Observação Tadeu -->
+                            <td class="col-obs">
+                                <textarea class="form-control form-control-sm editable-field"
+                                          data-field="observacoes_tadeu"
+                                          rows="2"
+                                          placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="col-status">
+                                <select class="form-select form-select-sm editable-field"
+                                        data-field="status">
+                                    <option value="">Selecione...</option>
+                                    {% for status_opt in status_choices %}
+                                    <option value="{{ status_opt }}"
+                                            {% if item.inventario and item.inventario.status == status_opt %}selected{% endif %}>
+                                        {{ status_opt }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            
+                            <!-- Valor Enviado SPED Fiscal 02/2025 -->
+                            <td>
+                                <input type="text"
+                                       class="form-control form-control-sm editable-field money-field"
+                                       data-field="valor_enviado_sped"
+                                       value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
+                                       placeholder="R$ 0,00">
                             </td>
 
                             <!-- Encerramento Fiscal -->
@@ -222,8 +286,8 @@
                                 <select class="form-select form-select-sm editable-field"
                                         data-field="encerramento_fiscal">
                                     <option value="">Selecione...</option>
-                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal == True %}selected{% endif %}>Sim</option>
-                                    <option value="false" {% if item.inventario and item.inventario.encerramento_fiscal == False %}selected{% endif %}>Não</option>
+                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal is true %}selected{% endif %}>Sim</option>
+                                    <option value="false" {% if not item.inventario or item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não</option>
                                 </select>
                             </td>
 
@@ -234,9 +298,8 @@
                                 {% set pdf_link = pdf_path if pdf_is_url else (pdf_path and '/static/' ~ pdf_path) %}
                                 <div class="pdf-upload-container d-flex gap-1">
                                     {% if pdf_link %}
-                                        <!-- Mostra link quando há PDF -->
                                         <div class="flex-grow-1 d-flex align-items-center">
-                                            <small class="text-muted text-truncate" style="max-width: 120px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
+                                            <small class="text-muted text-truncate" style="max-width: 110px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
                                                 {{ item.inventario.pdf_original_name or 'PDF anexado' }}
                                             </small>
                                         </div>
@@ -252,7 +315,6 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     {% else %}
-                                        <!-- Input de upload quando não há PDF -->
                                         <input type="file"
                                                class="form-control form-control-sm pdf-upload"
                                                accept=".pdf"
@@ -261,14 +323,13 @@
                                 </div>
                             </td>
 
-                            <!-- Arquivo do Cliente -->
+                            <!-- Arquivo Cliente -->
                             <td>
                                 {% set cliente_pdf_path = item.inventario.cliente_pdf_path if item.inventario and item.inventario.cliente_pdf_path else '' %}
                                 {% set cliente_pdf_is_url = cliente_pdf_path.startswith('http://') or cliente_pdf_path.startswith('https://') %}
                                 {% set cliente_pdf_link = cliente_pdf_path if cliente_pdf_is_url else (cliente_pdf_path and '/static/' ~ cliente_pdf_path) %}
                                 <div class="cliente-upload-container d-flex gap-1">
                                     {% if cliente_pdf_link %}
-                                        <!-- Mostra link quando há arquivo -->
                                         <div class="flex-grow-1 d-flex align-items-center">
                                             <small class="text-muted text-truncate" style="max-width: 85px;" title="{{ item.inventario.cliente_original_name or 'Arquivo' }}">
                                                 {{ item.inventario.cliente_original_name or 'Arquivo anexado' }}
@@ -292,61 +353,11 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     {% else %}
-                                        <!-- Input de upload quando não há arquivo -->
                                         <input type="file"
                                                class="form-control form-control-sm cliente-upload"
                                                title="Fazer upload de arquivo">
                                     {% endif %}
                                 </div>
-                            </td>
-
-                            <!-- DIEF 2024 -->
-                            <td>
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="dief_2024"
-                                       value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Balanço 2025 Cliente -->
-                            <td>
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="balanco_2025_cliente"
-                                       value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Observações Tadeu -->
-                            <td>
-                                <textarea class="form-control form-control-sm editable-field"
-                                          data-field="observacoes_tadeu"
-                                          rows="2"
-                                          placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
-                            </td>
-
-                            <!-- Valor Enviado SPED -->
-                            <td>
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="valor_enviado_sped"
-                                       value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Status -->
-                            <td>
-                                <select class="form-select form-select-sm editable-field"
-                                        data-field="status">
-                                    <option value="">Selecione...</option>
-                                    {% for status_opt in status_choices %}
-                                    <option value="{{ status_opt }}"
-                                            {% if item.inventario and item.inventario.status == status_opt %}selected{% endif %}>
-                                        {{ status_opt }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
                             </td>
 
                             <!-- Data Encerramento -->
@@ -381,7 +392,19 @@
 
 <style>
 .inventario-page {
-    font-size: calc(1rem - 1px);
+    font-size: calc(1rem - 2px);
+}
+
+.inventario-page h1 {
+    font-size: 1.1rem;
+}
+
+.inventario-page .row.mb-4 {
+    margin-bottom: 0.75rem !important;
+}
+
+.inventario-page .table {
+    line-height: 1.15;
 }
 
 .inventario-page .table > :not(caption) > * > * {
@@ -405,8 +428,8 @@
 }
 
 .inventario-page .badge {
-    font-size: 0.7rem;
-    padding: 0.28em 0.55em;
+    font-size: 0.68rem;
+    padding: 0.28em 0.5em;
 }
 
 .inventario-page #inventarioTable td {
@@ -422,37 +445,38 @@
 
 /* Tabela compacta */
 .compact-table {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .compact-table thead th {
-    padding: 0.45rem 0.4rem;
-    font-size: 0.74rem;
+    padding: 0.3rem 0.3rem;
+    font-size: 0.65rem;
     font-weight: 600;
     vertical-align: middle;
+    line-height: 1.2;
 }
 
 .compact-table tbody td {
-    padding: 0.35rem 0.4rem;
+    padding: 0.28rem 0.3rem;
     vertical-align: middle;
 }
 
 /* Campos editáveis mais compactos */
 .compact-table .form-control,
 .compact-table .form-select {
-    font-size: 0.74rem;
-    padding: 0.3rem 0.45rem;
-    min-height: 30px;
+    font-size: 0.68rem;
+    padding: 0.2rem 0.3rem;
+    min-height: 24px;
 }
 
 .compact-table textarea.form-control {
-    padding: 0.3rem 0.45rem;
-    line-height: 1.35;
+    padding: 0.2rem 0.3rem;
+    line-height: 1.25;
 }
 
 .compact-table .btn-sm {
-    padding: 0.25rem 0.45rem;
-    font-size: 0.7rem;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.64rem;
 }
 
 .editable-field {
@@ -551,15 +575,66 @@
     position: relative;
 }
 
-/* Permitir dropdown do filtro na 3a coluna (Tributação) */
+/* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
 #inventarioTable thead th:nth-child(3) {
     overflow: visible;
 }
 
-/* Permitir dropdown do filtro na coluna Status (11a coluna agora) */
-#inventarioTable thead th:nth-child(11) {
+/* Permitir dropdown do filtro na coluna Status (8a coluna) */
+#inventarioTable thead th:nth-child(8) {
     overflow: visible;
 }
+
+/* Container da tabela com scroll horizontal */
+.table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Garantir que a tabela não quebre e force o scroll */
+.table-wrapper .compact-table {
+    min-width: 2100px;
+    width: 2100px;
+}
+
+/* Garantir que todas as colunas respeitem a largura definida */
+.compact-table th {
+    white-space: nowrap;
+}
+
+.compact-table td {
+    overflow: visible;
+}
+
+/* Permitir que textareas e inputs quebrem linha normalmente */
+.compact-table textarea,
+.compact-table input,
+.compact-table select {
+    white-space: normal;
+}
+
+/* Estilizar scrollbar */
+.table-wrapper::-webkit-scrollbar {
+    height: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
 
 /* Inputs de upload compactos */
 .compact-table .pdf-upload-container,
@@ -569,13 +644,13 @@
 
 .compact-table .pdf-upload-container small,
 .compact-table .cliente-upload-container small {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
 }
 
 /* Melhorar estética dos inputs de upload */
 .compact-table .pdf-upload,
 .compact-table .cliente-upload {
-    font-size: 0.7rem !important;
+    font-size: 0.68rem !important;
     padding: 0.2rem 0.3rem !important;
     min-height: 26px !important;
     height: 26px;
@@ -583,7 +658,7 @@
 
 .compact-table .pdf-upload::file-selector-button,
 .compact-table .cliente-upload::file-selector-button {
-    font-size: 0.65rem;
+    font-size: 0.63rem;
     padding: 0.15rem 0.4rem;
     margin-right: 0.4rem;
     background-color: #f8f9fa;
@@ -610,20 +685,20 @@
 }
 
 .compact-table select[data-field="status"] option {
-    font-size: 0.74rem;
+    font-size: 0.7rem;
 }
 
 /* Classes para ajustar tamanho de fonte baseado no comprimento */
 .compact-table select[data-field="status"].status-short {
-    font-size: 0.74rem;
+    font-size: 0.7rem;
 }
 
 .compact-table select[data-field="status"].status-medium {
-    font-size: 0.68rem;
+    font-size: 0.64rem;
 }
 
 .compact-table select[data-field="status"].status-long {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
 }
 </style>
 
