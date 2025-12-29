@@ -1276,8 +1276,8 @@ def api_inventario_update():
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_pdf(empresa_id):
-    """Upload de arquivo PDF para o inventário."""
-    import os
+    """Upload de arquivo PDF para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
+    import base64
     from werkzeug.utils import secure_filename
 
     try:
@@ -1301,36 +1301,33 @@ def api_inventario_upload_pdf(empresa_id):
             inventario = Inventario(empresa_id=empresa_id)
             db.session.add(inventario)
 
-        # Remover arquivo antigo se existir
-        if inventario.pdf_path and not inventario.pdf_path.startswith('http'):
-            old_path = os.path.join(current_app.root_path, 'static', inventario.pdf_path)
-            if os.path.exists(old_path):
-                try:
-                    os.remove(old_path)
-                except Exception:
-                    pass
-
         filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        new_filename = f"inventario_{empresa.codigo_empresa}_{timestamp}.pdf"
 
-        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'inventario')
-        os.makedirs(upload_folder, exist_ok=True)
+        # Ler arquivo e converter para base64
+        file_data = base64.b64encode(file.read()).decode('utf-8')
 
-        file_path = os.path.join(upload_folder, new_filename)
-        file.save(file_path)
-
-        # Atualizar inventário
-        inventario.pdf_path = f"uploads/inventario/{new_filename}"
-        inventario.pdf_original_name = filename
+        # Atualizar array de arquivos
+        cfop_files = inventario.cfop_files or []
+        file_info = {
+            'filename': filename,
+            'file_data': file_data,
+            'uploaded_at': datetime.now().isoformat(),
+            'mime_type': 'application/pdf'
+        }
+        cfop_files.append(file_info)
+        inventario.cfop_files = cfop_files
+        # Marcar explicitamente que o JSON foi modificado
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cfop_files')
 
         db.session.commit()
 
         return jsonify({
             'success': True,
             'filename': filename,
-            'url': f"/static/{inventario.pdf_path}",
-            'storage': 'local'
+            'uploaded_at': file_info['uploaded_at'],
+            'storage': 'database',
+            'file_index': len(cfop_files) - 1  # Índice do arquivo no array
         })
 
     except Exception as e:
@@ -1377,8 +1374,9 @@ def api_inventario_delete_pdf(empresa_id):
 @empresas_bp.route("/api/inventario/upload-cliente-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_cliente_file(empresa_id):
-    """Upload de arquivo do cliente para o inventário."""
-    import os
+    """Upload de arquivo do cliente para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
+    import base64
+    import mimetypes
     from werkzeug.utils import secure_filename
 
     try:
@@ -1398,43 +1396,97 @@ def api_inventario_upload_cliente_file(empresa_id):
             inventario = Inventario(empresa_id=empresa_id)
             db.session.add(inventario)
 
-        # Remover arquivo antigo se existir
-        if inventario.cliente_pdf_path and not inventario.cliente_pdf_path.startswith('http'):
-            old_path = os.path.join(current_app.root_path, 'static', inventario.cliente_pdf_path)
-            if os.path.exists(old_path):
-                try:
-                    os.remove(old_path)
-                except Exception:
-                    pass
-
         filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        # Extrair extensão do arquivo original
-        file_ext = os.path.splitext(filename)[1]
-        new_filename = f"cliente_{empresa.codigo_empresa}_{timestamp}{file_ext}"
 
-        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'inventario')
-        os.makedirs(upload_folder, exist_ok=True)
+        # Detectar tipo MIME
+        mime_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
 
-        file_path = os.path.join(upload_folder, new_filename)
-        file.save(file_path)
+        # Ler arquivo e converter para base64
+        file_data = base64.b64encode(file.read()).decode('utf-8')
 
-        # Atualizar inventário
-        inventario.cliente_pdf_path = f"uploads/inventario/{new_filename}"
-        inventario.cliente_original_name = filename
+        # Atualizar array de arquivos
+        cliente_files = inventario.cliente_files or []
+        file_info = {
+            'filename': filename,
+            'file_data': file_data,
+            'uploaded_at': datetime.now().isoformat(),
+            'mime_type': mime_type
+        }
+        cliente_files.append(file_info)
+        inventario.cliente_files = cliente_files
+        # Marcar explicitamente que o JSON foi modificado
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cliente_files')
 
         db.session.commit()
 
         return jsonify({
             'success': True,
             'filename': filename,
-            'url': f"/static/{inventario.cliente_pdf_path}",
-            'storage': 'local'
+            'uploaded_at': file_info['uploaded_at'],
+            'storage': 'database',
+            'file_index': len(cliente_files) - 1  # Índice do arquivo no array
         })
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Erro ao fazer upload do arquivo do cliente: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/file/<int:empresa_id>/<file_type>/<int:file_index>", methods=["GET"])
+@login_required
+def api_inventario_get_file(empresa_id, file_type, file_index):
+    """Serve arquivo do inventário armazenado no banco de dados."""
+    import base64
+    from flask import send_file
+    import io
+
+    try:
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario:
+            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
+
+        # Selecionar array de arquivos correto
+        if file_type == 'cfop':
+            files_array = inventario.cfop_files or []
+        elif file_type == 'cliente':
+            files_array = inventario.cliente_files or []
+        else:
+            return jsonify({'success': False, 'error': 'Tipo de arquivo inválido'}), 400
+
+        # Verificar se o índice é válido
+        if file_index < 0 or file_index >= len(files_array):
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        file_info = files_array[file_index]
+
+        # Verificar se tem dados do arquivo
+        if 'file_data' not in file_info:
+            return jsonify({'success': False, 'error': 'Dados do arquivo não encontrados'}), 404
+
+        # Decodificar base64
+        file_data = base64.b64decode(file_info['file_data'])
+
+        # Criar buffer de memória
+        file_buffer = io.BytesIO(file_data)
+        file_buffer.seek(0)
+
+        # Obter informações do arquivo
+        filename = file_info.get('filename', 'arquivo')
+        mime_type = file_info.get('mime_type', 'application/octet-stream')
+
+        # Enviar arquivo
+        return send_file(
+            file_buffer,
+            mimetype=mime_type,
+            as_attachment=False,
+            download_name=filename
+        )
+
+    except Exception as e:
+        current_app.logger.exception("Erro ao servir arquivo do inventário: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1466,6 +1518,82 @@ def api_inventario_delete_cliente_file(empresa_id):
         db.session.commit()
 
         return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/delete-cfop-file/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_delete_cfop_file(empresa_id):
+    """Remove um arquivo específico do CFOP (armazenado no banco de dados)."""
+    try:
+        data = request.get_json()
+        file_index = data.get('file_index')
+
+        if file_index is None:
+            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario or not inventario.cfop_files:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Verificar se o índice é válido
+        cfop_files = inventario.cfop_files or []
+        if file_index < 0 or file_index >= len(cfop_files):
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Remover arquivo do array
+        cfop_files.pop(file_index)
+        inventario.cfop_files = cfop_files
+
+        # Marcar explicitamente que o JSON foi modificado
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cfop_files')
+        db.session.commit()
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao deletar arquivo CFOP: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/delete-cliente-file-v2/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_delete_cliente_file_v2(empresa_id):
+    """Remove um arquivo específico do cliente (armazenado no banco de dados)."""
+    try:
+        data = request.get_json()
+        file_index = data.get('file_index')
+
+        if file_index is None:
+            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario or not inventario.cliente_files:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Verificar se o índice é válido
+        cliente_files = inventario.cliente_files or []
+        if file_index < 0 or file_index >= len(cliente_files):
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        # Remover arquivo do array
+        cliente_files.pop(file_index)
+        inventario.cliente_files = cliente_files
+
+        # Marcar explicitamente que o JSON foi modificado
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cliente_files')
+        db.session.commit()
+
+        return jsonify({'success': True}), 200
 
     except Exception as e:
         db.session.rollback()

@@ -224,33 +224,40 @@
 
                             <!-- CFOP -->
                             <td class="col-cfop">
-                                {% set pdf_path = item.inventario.pdf_path if item.inventario and item.inventario.pdf_path else '' %}
-                                {% set pdf_is_url = pdf_path.startswith('http://') or pdf_path.startswith('https://') %}
-                                {% set pdf_link = pdf_path if pdf_is_url else (pdf_path and '/static/' ~ pdf_path) %}
-                                <div class="pdf-upload-container d-flex gap-1">
-                                    {% if pdf_link %}
-                                        <div class="flex-grow-1 d-flex align-items-center">
-                                            <small class="text-muted text-truncate" style="max-width: 110px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
-                                                {{ item.inventario.pdf_original_name or 'PDF anexado' }}
+                                {% set cfop_files = item.inventario.cfop_files if item.inventario and item.inventario.cfop_files else [] %}
+                                <div class="pdf-upload-container">
+                                    <!-- Lista de arquivos existentes -->
+                                    <div class="files-list mb-1">
+                                        {% for file in cfop_files %}
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1" data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;" title="{{ file.filename }}">
+                                                {{ file.filename }}
                                             </small>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
+                                               target="_blank"
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
+                                               download="{{ file.filename }}"
+                                               class="btn btn-outline-success btn-sm"
+                                               title="Baixar">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm delete-cfop-file-btn"
+                                                    title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </div>
-                                        <a href="{{ pdf_link }}"
-                                           target="_blank"
-                                           class="btn btn-outline-primary btn-sm"
-                                           title="Visualizar PDF">
-                                            <i class="bi bi-file-pdf"></i>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-pdf-btn"
-                                                title="Remover PDF">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% else %}
-                                        <input type="file"
-                                               class="form-control form-control-sm pdf-upload"
-                                               accept=".pdf"
-                                               title="Fazer upload de PDF">
-                                    {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <!-- Botão de upload -->
+                                    <input type="file"
+                                           class="form-control form-control-sm pdf-upload"
+                                           accept=".pdf"
+                                           title="Adicionar PDF">
                                 </div>
                             </td>
 
@@ -325,38 +332,39 @@
 
                             <!-- Arquivo Cliente -->
                             <td>
-                                {% set cliente_pdf_path = item.inventario.cliente_pdf_path if item.inventario and item.inventario.cliente_pdf_path else '' %}
-                                {% set cliente_pdf_is_url = cliente_pdf_path.startswith('http://') or cliente_pdf_path.startswith('https://') %}
-                                {% set cliente_pdf_link = cliente_pdf_path if cliente_pdf_is_url else (cliente_pdf_path and '/static/' ~ cliente_pdf_path) %}
-                                <div class="cliente-upload-container d-flex gap-1">
-                                    {% if cliente_pdf_link %}
-                                        <div class="flex-grow-1 d-flex align-items-center">
-                                            <small class="text-muted text-truncate" style="max-width: 85px;" title="{{ item.inventario.cliente_original_name or 'Arquivo' }}">
-                                                {{ item.inventario.cliente_original_name or 'Arquivo anexado' }}
+                                {% set cliente_files = item.inventario.cliente_files if item.inventario and item.inventario.cliente_files else [] %}
+                                <div class="cliente-upload-container">
+                                    <!-- Lista de arquivos existentes -->
+                                    <div class="files-list mb-1">
+                                        {% for file in cliente_files %}
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1" data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 60px;" title="{{ file.filename }}">
+                                                {{ file.filename }}
                                             </small>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
+                                               target="_blank"
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
+                                               download="{{ file.filename }}"
+                                               class="btn btn-outline-success btn-sm"
+                                               title="Baixar">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm delete-cliente-file-btn"
+                                                    title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </div>
-                                        <a href="{{ cliente_pdf_link }}"
-                                           target="_blank"
-                                           class="btn btn-outline-primary btn-sm"
-                                           title="Visualizar arquivo">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="{{ cliente_pdf_link }}"
-                                           download="{{ item.inventario.cliente_original_name or 'arquivo' }}"
-                                           class="btn btn-outline-success btn-sm"
-                                           title="Baixar arquivo">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-cliente-btn"
-                                                title="Remover arquivo">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% else %}
-                                        <input type="file"
-                                               class="form-control form-control-sm cliente-upload"
-                                               title="Fazer upload de arquivo">
-                                    {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <!-- Botão de upload -->
+                                    <input type="file"
+                                           class="form-control form-control-sm cliente-upload"
+                                           title="Adicionar arquivo">
                                 </div>
                             </td>
 
@@ -726,6 +734,40 @@
     background-color: #f8d7da !important;
     border: 2px solid #dc3545 !important;
     border-radius: 4px;
+    padding: 0.3rem;
+}
+
+/* Estilo para lista de arquivos */
+.files-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.files-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.files-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.files-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 2px;
+}
+
+.files-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.file-item {
+    background-color: #f8f9fa;
+    padding: 0.2rem;
+    border-radius: 3px;
+}
+
+.file-item:hover {
+    background-color: #e9ecef;
 }
 </style>
 
@@ -915,7 +957,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!encerramentoSelect || !cfopContainer) return;
 
         const encerramentoValue = encerramentoSelect.value;
-        const hasFile = cfopContainer.querySelector('a[href]') !== null;
+        const filesList = cfopContainer.querySelector('.files-list');
+        const hasFile = filesList && filesList.querySelector('.file-item') !== null;
 
         // Se encerramento = true (Sim) e não tem arquivo, marcar em vermelho
         if (encerramentoValue === 'true' && !hasFile) {
@@ -992,13 +1035,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Deletar PDF
-    document.querySelectorAll('.delete-pdf-btn').forEach(btn => {
+    // Deletar arquivo CFOP
+    document.querySelectorAll('.delete-cfop-file-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            if (confirm('Deseja realmente remover este arquivo PDF?')) {
+            if (confirm('Deseja realmente remover este arquivo?')) {
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
-                deletePDF(empresaId, this);
+                const fileItem = this.closest('.file-item');
+                const fileIndex = parseInt(fileItem.dataset.fileIndex);
+                deleteCFOPFile(empresaId, fileIndex, fileItem);
             }
         });
     });
@@ -1017,12 +1062,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Deletar arquivo do cliente
-    document.querySelectorAll('.delete-cliente-btn').forEach(btn => {
+    document.querySelectorAll('.delete-cliente-file-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             if (confirm('Deseja realmente remover este arquivo?')) {
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
-                deleteClienteFile(empresaId, this);
+                const fileItem = this.closest('.file-item');
+                const fileIndex = parseInt(fileItem.dataset.fileIndex);
+                deleteClienteFileV2(empresaId, fileIndex, fileItem);
             }
         });
     });
@@ -1154,7 +1201,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfToken = window.csrfToken || '';
 
         const container = inputElement.closest('.pdf-upload-container');
-        container.innerHTML = '<small class="text-muted">Enviando...</small>';
+        const filesList = container.querySelector('.files-list');
+
+        // Mostrar indicador de envio
+        const uploadIndicator = document.createElement('small');
+        uploadIndicator.className = 'text-muted d-block';
+        uploadIndicator.textContent = 'Enviando...';
+        container.insertBefore(uploadIndicator, inputElement);
 
         fetch(`/api/inventario/upload-pdf/${empresaId}`, {
             method: 'POST',
@@ -1165,80 +1218,52 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            uploadIndicator.remove();
+
             if (data.success) {
-                container.innerHTML = `
-                    <div class="d-flex gap-1 align-items-center">
-                        <a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-primary" title="${data.filename}">
-                            <i class="bi bi-file-pdf"></i>
-                        </a>
-                        <button type="button" class="btn btn-sm btn-outline-danger delete-pdf-btn" title="Remover PDF">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                `;
-
-                // Re-anexar evento de deletar
-                container.querySelector('.delete-pdf-btn').addEventListener('click', function() {
-                    if (confirm('Deseja realmente remover este arquivo PDF?')) {
-                        deletePDF(empresaId, this);
-                    }
-                });
-
-                // Verificar status do CFOP após upload
-                const row = container.closest('tr');
-                checkCFOPStatus(row);
+                // Recarregar a página para mostrar o novo arquivo com índice correto
+                window.location.reload();
             } else {
                 alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
-                container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
             }
         })
         .catch(error => {
+            uploadIndicator.remove();
             console.error('Erro:', error);
             alert('Erro ao fazer upload. Tente novamente.');
-            container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
         });
     }
 
-    function deletePDF(empresaId, btnElement) {
-        const container = btnElement.closest('.pdf-upload-container');
-        container.innerHTML = '<small class="text-muted">Removendo...</small>';
+    function deleteCFOPFile(empresaId, fileIndex, fileItem) {
         const csrfToken = window.csrfToken || '';
 
-        fetch(`/api/inventario/delete-pdf/${empresaId}`, {
+        fetch(`/api/inventario/delete-cfop-file/${empresaId}`, {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
-            }
+            },
+            body: JSON.stringify({ file_index: fileIndex })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Erro ao remover arquivo');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
-
-                // Re-anexar evento de upload
-                const newInput = container.querySelector('.pdf-upload');
-                newInput.addEventListener('change', function() {
-                    const file = this.files[0];
-                    if (file && file.type === 'application/pdf') {
-                        uploadPDF(empresaId, file, this);
-                    } else if (file) {
-                        alert('Por favor, selecione um arquivo PDF válido.');
-                        this.value = '';
-                    }
-                });
-
-                // Verificar status do CFOP após deletar
-                const row = container.closest('tr');
-                checkCFOPStatus(row);
+                // Recarregar a página para atualizar os índices
+                window.location.reload();
             } else {
                 alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
-                location.reload();
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao remover arquivo. Tente novamente.');
-            location.reload();
+            console.error('Erro ao deletar CFOP:', error);
+            alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
         });
     }
 
@@ -1248,7 +1273,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfToken = window.csrfToken || '';
 
         const container = inputElement.closest('.cliente-upload-container');
-        container.innerHTML = '<small class="text-muted">Enviando...</small>';
+        const filesList = container.querySelector('.files-list');
+
+        // Mostrar indicador de envio
+        const uploadIndicator = document.createElement('small');
+        uploadIndicator.className = 'text-muted d-block';
+        uploadIndicator.textContent = 'Enviando...';
+        container.insertBefore(uploadIndicator, inputElement);
 
         fetch(`/api/inventario/upload-cliente-file/${empresaId}`, {
             method: 'POST',
@@ -1259,73 +1290,52 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                container.innerHTML = `
-                    <div class="flex-grow-1 d-flex align-items-center">
-                        <small class="text-muted text-truncate" style="max-width: 85px;" title="${data.filename}">${data.filename}</small>
-                    </div>
-                    <a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-primary" title="Visualizar arquivo">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <a href="${data.url}" download="${data.filename}" class="btn btn-sm btn-outline-success" title="Baixar arquivo">
-                        <i class="bi bi-download"></i>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-outline-danger delete-cliente-btn" title="Remover arquivo">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                `;
+            uploadIndicator.remove();
 
-                // Re-anexar evento de deletar
-                container.querySelector('.delete-cliente-btn').addEventListener('click', function() {
-                    if (confirm('Deseja realmente remover este arquivo?')) {
-                        deleteClienteFile(empresaId, this);
-                    }
-                });
+            if (data.success) {
+                // Recarregar a página para mostrar o novo arquivo com índice correto
+                window.location.reload();
             } else {
                 alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
-                container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
             }
         })
         .catch(error => {
+            uploadIndicator.remove();
             console.error('Erro:', error);
             alert('Erro ao fazer upload. Tente novamente.');
-            container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
         });
     }
 
-    function deleteClienteFile(empresaId, btnElement) {
-        const container = btnElement.closest('.cliente-upload-container');
-        container.innerHTML = '<small class="text-muted">Removendo...</small>';
+    function deleteClienteFileV2(empresaId, fileIndex, fileItem) {
         const csrfToken = window.csrfToken || '';
 
-        fetch(`/api/inventario/delete-cliente-file/${empresaId}`, {
+        fetch(`/api/inventario/delete-cliente-file-v2/${empresaId}`, {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
-            }
+            },
+            body: JSON.stringify({ file_index: fileIndex })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Erro ao remover arquivo');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                container.innerHTML = '<input type="file" class="form-control form-control-sm cliente-upload">';
-
-                // Re-anexar evento de upload
-                const newInput = container.querySelector('.cliente-upload');
-                newInput.addEventListener('change', function() {
-                    const file = this.files[0];
-                    if (file) {
-                        uploadClienteFile(empresaId, file, this);
-                    }
-                });
+                // Recarregar a página para atualizar os índices
+                window.location.reload();
             } else {
                 alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
-                location.reload();
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao remover arquivo. Tente novamente.');
-            location.reload();
+            console.error('Erro ao deletar arquivo cliente:', error);
+            alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
         });
     }
 });

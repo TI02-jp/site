@@ -1930,11 +1930,15 @@ class Inventario(db.Model):
     encerramento_balanco_data = db.Column(db.Date, nullable=True)
     encerramento_balanco_usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
-    # Anexo PDF
+    # Anexo PDF (legado - mantido para compatibilidade)
     pdf_path = db.Column(db.String(255), nullable=True)
     pdf_original_name = db.Column(db.String(255), nullable=True)
     cliente_pdf_path = db.Column(db.String(255), nullable=True)
     cliente_original_name = db.Column(db.String(255), nullable=True)
+
+    # Múltiplos arquivos (JSON)
+    cfop_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
+    cliente_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
 
     # Auditoria
     created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
