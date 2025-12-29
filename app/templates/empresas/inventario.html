@@ -399,8 +399,21 @@
 </div>
 
 <style>
+/* Remover scroll do content-wrapper na página de inventário */
+.content-wrapper {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
 .inventario-page {
     font-size: calc(1rem - 2px);
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden;
+}
+
+.inventario-page .card {
+    margin-bottom: 0 !important;
 }
 
 .inventario-page h1 {
@@ -574,15 +587,18 @@
     user-select: none;
 }
 
-/* Ajustar z-index do thead para não sobrepor dropdown */
+/* Ajustar z-index do thead para não sobrepor dropdown e manter fixo no scroll */
 #inventarioTable thead {
-    position: relative;
-    z-index: 5;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa; /* Fundo sólido para cobrir conteúdo ao rolar */
 }
 
 #inventarioTable thead th {
     position: relative;
     overflow: visible;
+    background-color: #f8f9fa; /* Garantir que cada th tenha fundo sólido */
 }
 
 /* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
@@ -597,13 +613,14 @@
     z-index: 1052;
 }
 
-/* Container da tabela com scroll horizontal */
+/* Container da tabela com scroll horizontal e vertical */
 .table-wrapper {
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
     position: relative;
     width: 100%;
     max-width: 100%;
+    max-height: calc(100vh - 220px); /* Altura da viewport menos cabeçalho e filtros */
 }
 
 /* Garantir que dropdowns não sejam cortados pelo overflow do container */
@@ -633,9 +650,10 @@
     white-space: normal;
 }
 
-/* Estilizar scrollbar */
+/* Estilizar scrollbar horizontal e vertical */
 .table-wrapper::-webkit-scrollbar {
     height: 10px;
+    width: 10px;
 }
 
 .table-wrapper::-webkit-scrollbar-track {
