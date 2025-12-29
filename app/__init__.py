@@ -690,6 +690,20 @@ with app.app_context():
                             "ALTER TABLE tbl_inventario ADD COLUMN fechamento_tadeu_2025 DECIMAL(12, 2) NULL"
                         )
                     )
+            if "cfop_files" not in inventario_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_inventario ADD COLUMN cfop_files JSON NULL"
+                        )
+                    )
+            if "cliente_files" not in inventario_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_inventario ADD COLUMN cliente_files JSON NULL"
+                        )
+                    )
 
     except SQLAlchemyError as exc:
         app.logger.warning(
