@@ -677,6 +677,20 @@ with app.app_context():
                                 """
                             )
                         )
+
+        # Migration: Ensure tbl_inventario has all required columns
+        if inspector.has_table("tbl_inventario"):
+            inventario_columns = {
+                col["name"] for col in inspector.get_columns("tbl_inventario")
+            }
+            if "fechamento_tadeu_2025" not in inventario_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_inventario ADD COLUMN fechamento_tadeu_2025 DECIMAL(12, 2) NULL"
+                        )
+                    )
+
     except SQLAlchemyError as exc:
         app.logger.warning(
             "Não foi possível garantir as colunas obrigatórias: %s", exc
