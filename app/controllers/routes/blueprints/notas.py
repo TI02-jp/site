@@ -1182,7 +1182,7 @@ def notas_totalizador():
     from app.controllers.routes import user_has_tag
     pode_ver_forma_pagamento = (
         is_user_admin(current_user)
-        or user_has_tag("GestÇœo")
+        or user_has_tag("Gestão")
         or user_has_tag("Financeiro")
     )
 
