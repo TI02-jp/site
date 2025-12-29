@@ -1193,6 +1193,10 @@ def api_inventario_update():
                     try:
                         value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
                         processed_value = Decimal(value_clean) if value_clean else None
+
+                        # Validar limite de R$ 1.000.000.000,00 (1 bilhão)
+                        if processed_value is not None and processed_value > Decimal('1000000000.00'):
+                            return jsonify({'success': False, 'error': 'Valor não pode exceder R$ 1.000.000.000,00'}), 400
                     except (InvalidOperation, ValueError):
                         return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
                 elif field in campos_booleanos:

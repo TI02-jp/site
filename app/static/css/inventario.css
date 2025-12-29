@@ -1,0 +1,480 @@
+.inventario-page {
+    font-size: calc(1rem - 2px);
+    max-width: 100%;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inventario-page *,
+.inventario-page *::before,
+.inventario-page *::after {
+    box-sizing: border-box;
+}
+
+.inventario-page h1 {
+    font-size: 1.1rem;
+}
+
+.inventario-page .row.mb-4 {
+    margin-bottom: 0.75rem !important;
+}
+
+.inventario-page .container-fluid,
+.inventario-page.container-fluid {
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-left: 15px;
+    padding-right: 15px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Garantir que os filtros e search não ultrapassem */
+.inventario-page .mb-3,
+.inventario-page .row {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.inventario-page .table {
+    line-height: 1.15;
+}
+
+.inventario-page .table > :not(caption) > * > * {
+    padding: 0.3rem 0.45rem;
+}
+
+.inventario-page .form-control,
+.inventario-page .form-select {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    min-height: 1.6rem;
+}
+
+.inventario-page textarea.form-control {
+    min-height: 1.6rem;
+}
+
+.inventario-page .btn {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.inventario-page .badge {
+    font-size: 0.68rem;
+    padding: 0.28em 0.5em;
+}
+
+.inventario-page #inventarioTable td {
+    vertical-align: middle;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.inventario-page #inventarioTable thead.sticky-top th {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    background-color: #f8f9fa;
+}
+
+.inventario-page #inventarioTable thead th {
+    text-align: left;
+}
+
+/* Tabela compacta */
+.compact-table {
+    font-size: 0.75rem;
+}
+
+.compact-table thead th {
+    padding: 0.3rem 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    vertical-align: middle;
+    line-height: 1.2;
+}
+
+.compact-table tbody td {
+    padding: 0.28rem 0.3rem;
+    vertical-align: middle;
+}
+
+/* Campos editáveis mais compactos */
+.compact-table .form-control,
+.compact-table .form-select {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.3rem;
+    min-height: 24px;
+}
+
+.compact-table textarea.form-control {
+    padding: 0.2rem 0.3rem;
+    line-height: 1.25;
+}
+
+.compact-table .money-field {
+    min-width: 150px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+}
+
+.col-dief,
+.col-balanco,
+.col-fechamento,
+.col-valor {
+    min-width: 150px;
+}
+
+.col-cfop.cfop-missing {
+    background-color: #fdecea;
+    box-shadow: inset 0 0 0 1px #f5c2c7;
+}
+
+.col-cfop.cfop-missing .pdf-upload,
+.col-cfop.cfop-missing .btn {
+    border-color: #dc3545 !important;
+}
+
+.col-cfop.cfop-missing .pdf-upload::file-selector-button {
+    border-color: #dc3545;
+    color: #b02a37;
+}
+
+.compact-table .btn-sm {
+    padding: 0.2rem 0.35rem;
+    font-size: 0.64rem;
+}
+
+.editable-field {
+    border: 1px solid #e0e0e0;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.editable-field:focus {
+    border-color: #0d6efd;
+    background-color: #fff;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.1);
+}
+
+.editable-field.saving {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+}
+
+.editable-field.saved {
+    background-color: #d1e7dd;
+    border-color: #198754;
+}
+
+.editable-field.error {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}
+
+#inventarioTable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Estilos para cabeçalhos ordenáveis */
+#inventarioTable thead th a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+#inventarioTable thead th a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+#inventarioTable thead th a i {
+    font-size: 0.75rem;
+}
+
+/* Botão de filtro no cabeçalho */
+.btn-icon-xs {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+}
+
+/* Dropdown de filtro */
+.dropdown {
+    position: relative;
+    z-index: 2000;
+}
+
+.dropdown-menu {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    z-index: 2001;
+}
+
+.tributacao-filter-form .form-check,
+.status-filter-form .form-check {
+    padding-left: 1.5rem;
+}
+
+.tributacao-filter-form .form-check-input,
+.status-filter-form .form-check-input {
+    cursor: pointer;
+}
+
+.tributacao-filter-form .form-check-label,
+.status-filter-form .form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Ajustar z-index do thead para não sobrepor dropdown */
+#inventarioTable thead {
+    position: relative;
+    z-index: 5;
+}
+
+#inventarioTable thead th {
+    position: relative;
+}
+
+/* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
+#inventarioTable thead th:nth-child(3) {
+    overflow: visible;
+}
+
+/* Permitir dropdown do filtro na coluna Status (9a coluna) */
+#inventarioTable thead th:nth-child(9) {
+    overflow: visible;
+}
+
+/* Container da tabela com scroll horizontal e vertical - FIXO NA TELA */
+.table-wrapper {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100vh - 180px);
+    margin-top: 180px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    background: white;
+    z-index: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+/* Para telas com sidebar */
+@media (min-width: 768px) {
+    .table-wrapper {
+        left: 250px;
+    }
+}
+
+/* Responsividade para telas menores */
+@media (max-height: 800px) {
+    .table-wrapper {
+        max-height: calc(100vh - 220px);
+        min-height: 300px;
+    }
+}
+
+@media (max-height: 600px) {
+    .table-wrapper {
+        max-height: calc(100vh - 200px);
+        min-height: 250px;
+    }
+}
+
+/* Responsividade para largura da tela */
+@media (max-width: 768px) {
+    .inventario-page .container-fluid,
+    .inventario-page.container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .inventario-page .container-fluid,
+    .inventario-page.container-fluid {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+}
+
+/* Estilo personalizado para a barra de scroll */
+.table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Garantir que a tabela não quebre e force o scroll */
+.table-wrapper .compact-table {
+    min-width: 2300px;
+    width: auto;
+    margin-bottom: 0;
+    table-layout: auto;
+}
+
+/* Garantir que todas as colunas respeitem a largura definida */
+.compact-table th {
+    white-space: nowrap;
+}
+
+.compact-table td {
+    overflow: visible;
+}
+
+/* Permitir que textareas e inputs quebrem linha normalmente */
+.compact-table textarea,
+.compact-table input,
+.compact-table select {
+    white-space: normal;
+}
+
+/* Ajustes no card da tabela */
+.inventario-page .card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.inventario-page .card-body {
+    padding: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Inputs de upload compactos */
+.compact-table .pdf-upload-container,
+.compact-table .cliente-upload-container {
+    gap: 0.2rem !important;
+}
+
+.compact-table .pdf-upload-container small,
+.compact-table .cliente-upload-container small {
+    font-size: 0.65rem;
+}
+
+/* Melhorar estética dos inputs de upload */
+.compact-table .pdf-upload,
+.compact-table .cliente-upload {
+    font-size: 0.68rem !important;
+    padding: 0.2rem 0.3rem !important;
+    min-height: 26px !important;
+    height: 26px;
+    color: transparent;
+}
+
+.compact-table .pdf-upload::file-selector-button,
+.compact-table .cliente-upload::file-selector-button {
+    font-size: 0.63rem;
+    padding: 0.15rem 0.4rem;
+    margin-right: 0.4rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.compact-table .pdf-upload::file-selector-button:hover,
+.compact-table .cliente-upload::file-selector-button:hover {
+    background-color: #e9ecef;
+}
+
+/* Input group compacto */
+.compact-table .input-group {
+    gap: 0.2rem;
+}
+
+/* Gradiente para indicar scroll horizontal */
+.table-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 10px;
+    width: 30px;
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.95), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 8;
+}
+
+.table-wrapper.has-scroll-right::after {
+    opacity: 1;
+}
+
+/* Remover bordas da tabela para evitar duplicação com o container */
+.table-wrapper .table {
+    border: none;
+}
+
+.table-wrapper .table thead tr:first-child th:first-child {
+    border-top-left-radius: 0.25rem;
+}
+
+.table-wrapper .table thead tr:first-child th:last-child {
+    border-top-right-radius: 0.25rem;
+}
+
+/* Ajuste dinâmico de fonte no select de status */
+.compact-table select[data-field="status"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.compact-table select[data-field="status"] option {
+    font-size: 0.7rem;
+}
+
+/* Classes para ajustar tamanho de fonte baseado no comprimento */
+.compact-table select[data-field="status"].status-short {
+    font-size: 0.7rem;
+}
+
+.compact-table select[data-field="status"].status-medium {
+    font-size: 0.64rem;
+}
+
+.compact-table select[data-field="status"].status-long {
+    font-size: 0.58rem;
+}

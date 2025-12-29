@@ -146,9 +146,10 @@
                                     </div>
                                 </div>
                             </th>
-                            <th class="col-dief" style="width: 100px;">DIEF 2024</th>
-                            <th class="col-balanco" style="width: 155px;">Balanço Cliente 2025</th>
-                            <th class="col-fechamento" style="width: 165px;">Fechamento Tadeu 2025</th>
+                            <th class="col-cfop" style="width: 130px;">CFOP</th>
+                            <th class="col-dief" style="width: 150px;">DIEF 2024</th>
+                            <th class="col-balanco" style="width: 170px;">Balanço Cliente 2025</th>
+                            <th class="col-fechamento" style="width: 170px;">Fechamento Tadeu 2025</th>
                             <th class="col-obs" style="width: 175px;">Observação Tadeu</th>
                             <th class="col-status" style="width: 165px;">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -192,9 +193,8 @@
                             </th>
 
                             
-                            <th style="width: 200px;">Valor Enviado SPED Fiscal 02/2025</th>
+                            <th class="col-valor" style="width: 200px;">Valor Enviado SPED Fiscal 02/2025</th>
                             <th style="width: 150px;">Encerramento Fiscal</th>
-                            <th style="width: 130px;">CFOP</th>
                             <th style="width: 160px;">Arquivo Cliente</th>
                             <th style="width: 155px;">Data Encerramento</th>
                             <th style="width: 175px;">Usuário Encerramento</th>
@@ -220,6 +220,38 @@
                             <!-- Tributação -->
                             <td class="col-tributacao">
                                 <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
+                            </td>
+
+                            <!-- CFOP -->
+                            <td class="col-cfop">
+                                {% set pdf_path = item.inventario.pdf_path if item.inventario and item.inventario.pdf_path else '' %}
+                                {% set pdf_is_url = pdf_path.startswith('http://') or pdf_path.startswith('https://') %}
+                                {% set pdf_link = pdf_path if pdf_is_url else (pdf_path and '/static/' ~ pdf_path) %}
+                                <div class="pdf-upload-container d-flex gap-1">
+                                    {% if pdf_link %}
+                                        <div class="flex-grow-1 d-flex align-items-center">
+                                            <small class="text-muted text-truncate" style="max-width: 110px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
+                                                {{ item.inventario.pdf_original_name or 'PDF anexado' }}
+                                            </small>
+                                        </div>
+                                        <a href="{{ pdf_link }}"
+                                           target="_blank"
+                                           class="btn btn-outline-primary btn-sm"
+                                           title="Visualizar PDF">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-pdf-btn"
+                                                title="Remover PDF">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {% else %}
+                                        <input type="file"
+                                               class="form-control form-control-sm pdf-upload"
+                                               accept=".pdf"
+                                               title="Fazer upload de PDF">
+                                    {% endif %}
+                                </div>
                             </td>
 
                             <!-- DIEF 2024 -->
@@ -273,7 +305,7 @@
 
                             
                             <!-- Valor Enviado SPED Fiscal 02/2025 -->
-                            <td>
+                            <td class="col-valor">
                                 <input type="text"
                                        class="form-control form-control-sm editable-field money-field"
                                        data-field="valor_enviado_sped"
@@ -289,38 +321,6 @@
                                     <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal is true %}selected{% endif %}>Sim</option>
                                     <option value="false" {% if not item.inventario or item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não</option>
                                 </select>
-                            </td>
-
-                            <!-- CFOP -->
-                            <td>
-                                {% set pdf_path = item.inventario.pdf_path if item.inventario and item.inventario.pdf_path else '' %}
-                                {% set pdf_is_url = pdf_path.startswith('http://') or pdf_path.startswith('https://') %}
-                                {% set pdf_link = pdf_path if pdf_is_url else (pdf_path and '/static/' ~ pdf_path) %}
-                                <div class="pdf-upload-container d-flex gap-1">
-                                    {% if pdf_link %}
-                                        <div class="flex-grow-1 d-flex align-items-center">
-                                            <small class="text-muted text-truncate" style="max-width: 110px;" title="{{ item.inventario.pdf_original_name or 'PDF' }}">
-                                                {{ item.inventario.pdf_original_name or 'PDF anexado' }}
-                                            </small>
-                                        </div>
-                                        <a href="{{ pdf_link }}"
-                                           target="_blank"
-                                           class="btn btn-outline-primary btn-sm"
-                                           title="Visualizar PDF">
-                                            <i class="bi bi-file-pdf"></i>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-pdf-btn"
-                                                title="Remover PDF">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% else %}
-                                        <input type="file"
-                                               class="form-control form-control-sm pdf-upload"
-                                               accept=".pdf"
-                                               title="Fazer upload de PDF">
-                                    {% endif %}
-                                </div>
                             </td>
 
                             <!-- Arquivo Cliente -->
@@ -547,6 +547,7 @@
 .dropdown-menu {
     border: 1px solid rgba(0, 0, 0, 0.15);
     z-index: 1051;
+    position: absolute !important;
 }
 
 .tributacao-filter-form .form-check,
@@ -573,16 +574,19 @@
 
 #inventarioTable thead th {
     position: relative;
+    overflow: visible;
 }
 
 /* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
 #inventarioTable thead th:nth-child(3) {
     overflow: visible;
+    z-index: 1052;
 }
 
-/* Permitir dropdown do filtro na coluna Status (8a coluna) */
-#inventarioTable thead th:nth-child(8) {
+/* Permitir dropdown do filtro na coluna Status (9a coluna) */
+#inventarioTable thead th:nth-child(9) {
     overflow: visible;
+    z-index: 1052;
 }
 
 /* Container da tabela com scroll horizontal */
@@ -592,6 +596,11 @@
     position: relative;
     width: 100%;
     max-width: 100%;
+}
+
+/* Garantir que dropdowns não sejam cortados pelo overflow do container */
+.table-wrapper .dropdown-menu {
+    position: fixed !important;
 }
 
 /* Garantir que a tabela não quebre e force o scroll */
@@ -654,6 +663,17 @@
     padding: 0.2rem 0.3rem !important;
     min-height: 26px !important;
     height: 26px;
+    color: transparent;
+}
+
+.compact-table .pdf-upload::-webkit-file-upload-button,
+.compact-table .cliente-upload::-webkit-file-upload-button {
+    color: initial;
+}
+
+.compact-table .pdf-upload::file-selector-button,
+.compact-table .cliente-upload::file-selector-button {
+    color: initial;
 }
 
 .compact-table .pdf-upload::file-selector-button,
@@ -699,6 +719,13 @@
 
 .compact-table select[data-field="status"].status-long {
     font-size: 0.58rem;
+}
+
+/* Destacar CFOP quando encerramento fiscal = SIM e sem arquivo */
+.cfop-missing-file {
+    background-color: #f8d7da !important;
+    border: 2px solid #dc3545 !important;
+    border-radius: 4px;
 }
 </style>
 
@@ -823,6 +850,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Converter para número
         let amount = parseFloat(numbers) / 100;
 
+        // Limite de R$ 1.000.000.000,00 (1 bilhão)
+        const MAX_VALUE = 1000000000;
+        if (amount > MAX_VALUE) {
+            amount = MAX_VALUE;
+        }
+
         // Formatar como moeda brasileira
         return 'R$ ' + amount.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
@@ -872,6 +905,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Aplicar ajuste inicial nos selects de status
     document.querySelectorAll('select[data-field="status"]').forEach(select => {
         adjustStatusFontSize(select);
+    });
+
+    // Função para verificar e destacar CFOP quando encerramento fiscal = SIM e sem arquivo
+    function checkCFOPStatus(row) {
+        const encerramentoSelect = row.querySelector('select[data-field="encerramento_fiscal"]');
+        const cfopContainer = row.querySelector('.pdf-upload-container');
+
+        if (!encerramentoSelect || !cfopContainer) return;
+
+        const encerramentoValue = encerramentoSelect.value;
+        const hasFile = cfopContainer.querySelector('a[href]') !== null;
+
+        // Se encerramento = true (Sim) e não tem arquivo, marcar em vermelho
+        if (encerramentoValue === 'true' && !hasFile) {
+            cfopContainer.classList.add('cfop-missing-file');
+        } else {
+            cfopContainer.classList.remove('cfop-missing-file');
+        }
+    }
+
+    // Verificar todas as linhas ao carregar
+    document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
+        checkCFOPStatus(row);
+    });
+
+    // Verificar quando mudar o encerramento fiscal
+    document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {
+        select.addEventListener('change', function() {
+            const row = this.closest('tr');
+            checkCFOPStatus(row);
+        });
     });
 
     // Atualizar campo editável
@@ -1119,6 +1183,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         deletePDF(empresaId, this);
                     }
                 });
+
+                // Verificar status do CFOP após upload
+                const row = container.closest('tr');
+                checkCFOPStatus(row);
             } else {
                 alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
                 container.innerHTML = '<input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf">';
@@ -1158,6 +1226,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         this.value = '';
                     }
                 });
+
+                // Verificar status do CFOP após deletar
+                const row = container.closest('tr');
+                checkCFOPStatus(row);
             } else {
                 alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
                 location.reload();
