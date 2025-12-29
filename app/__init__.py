@@ -773,8 +773,9 @@ def _ensure_utf8_charset(response):
     try:
         if response.mimetype and response.mimetype.startswith("text/"):
             response.charset = "utf-8"
-    finally:
-        return response
+    except Exception:
+        pass
+    return response
 
 @app.teardown_appcontext
 def _commit_session_updates(exception=None):
