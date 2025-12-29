@@ -372,6 +372,14 @@ def _trigger_recorrente_notifications(reference_date: date | None = None) -> int
             continue
         if registro.ultimo_aviso == today:
             continue
+
+        # Auto-reset completion status if we've moved to a new emission day
+        if registro.concluida and registro.data_conclusao:
+            proxima_emissao = _next_emission_date(registro, registro.data_conclusao)
+            if today >= proxima_emissao:
+                registro.concluida = False
+                registro.data_conclusao = None
+
         due_records.append(registro)
 
     if not due_records:
@@ -897,6 +905,28 @@ def notas_recorrentes():
             status_label = "ativada" if registro.ativo else "pausada"
             flash(f"Nota recorrente {status_label}.", "success")
             return redirect(url_for("notas.notas_recorrentes"))
+        elif form_name == "recorrente_complete":
+            recorrente_id_raw = request.form.get("recorrente_id")
+            try:
+                recorrente_id = int(recorrente_id_raw)
+            except (TypeError, ValueError):
+                abort(400)
+            registro = NotaRecorrente.query.get_or_404(recorrente_id)
+
+            # Calculate the emission date for this period
+            proxima = _next_emission_date(registro, date.today())
+
+            # Toggle completion status
+            registro.concluida = not bool(registro.concluida)
+            if registro.concluida:
+                registro.data_conclusao = proxima
+            else:
+                registro.data_conclusao = None
+
+            db.session.commit()
+            status_label = "concluída" if registro.concluida else "pendente"
+            flash(f"Nota recorrente marcada como {status_label}.", "success")
+            return redirect(url_for("notas.notas_recorrentes"))
 
     hoje = date.today()
     recorrentes = (
@@ -916,6 +946,7 @@ def notas_recorrentes():
                 "dias_restantes": (proxima - hoje).days,
                 "emissao_hoje": proxima == hoje,
                 "valor_input": _format_decimal_input(registro.valor),
+                "concluida": registro.concluida,
             }
         )
 

@@ -56,6 +56,7 @@
                             <th>Dia emissão</th>
                             <th>Valor</th>
                             <th>Próxima emissão</th>
+                            <th class="text-center">Concluída</th>
                             <th>Status</th>
                             <th class="text-center">Obs.</th>
                             <th class="text-end">Ações</th>
@@ -81,6 +82,19 @@
                                     <span class="badge bg-light text-muted mt-1">Em {{ item.dias_restantes }} dias</span>
                                     {% endif %}
                                 </div>
+                            </td>
+                            <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-sm {% if item.concluida %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                        title="{% if item.concluida %}Marcar como pendente{% else %}Marcar como concluída{% endif %}"
+                                        data-recorrente-complete
+                                        data-recorrente-id="{{ registro.id }}"
+                                        data-recorrente-empresa="{{ registro.empresa|e }}"
+                                        data-recorrente-concluida="{{ '1' if item.concluida else '0' }}"
+                                        style="min-width: 90px;">
+                                    <i class="bi {% if item.concluida %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                                    {% if item.concluida %}Concluída{% else %}Pendente{% endif %}
+                                </button>
                             </td>
                             <td>
                                 {% if registro.ativo %}
@@ -135,7 +149,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="9" class="py-5 text-center text-muted">
+                            <td colspan="10" class="py-5 text-center text-muted">
                                 <i class="bi bi-calendar-check fs-1 d-block mb-3"></i>
                                 Nenhuma nota recorrente cadastrada.
                             </td>
@@ -230,6 +244,11 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="form_name" value="recorrente_toggle">
     <input type="hidden" name="recorrente_id" id="toggleRecorrenteId">
+</form>
+<form method="POST" action="{{ url_for('notas_recorrentes') }}" id="completeRecorrenteForm" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="form_name" value="recorrente_complete">
+    <input type="hidden" name="recorrente_id" id="completeRecorrenteId">
 </form>
 {% endblock %}
 
@@ -348,6 +367,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (confirm('Deseja ' + status + ' as notificações de "' + empresa + '"?')) {
                 toggleIdField.value = id;
                 toggleForm.submit();
+            }
+        });
+    });
+
+    // Completion toggle handler
+    var completeForm = document.getElementById('completeRecorrenteForm');
+    var completeIdField = document.getElementById('completeRecorrenteId');
+    document.querySelectorAll('[data-recorrente-complete]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            var target = event.currentTarget;
+            var id = target.getAttribute('data-recorrente-id');
+            var empresa = target.getAttribute('data-recorrente-empresa');
+            var concluida = target.getAttribute('data-recorrente-concluida');
+            var action = concluida === '1' ? 'marcar como pendente' : 'marcar como concluída';
+            if (confirm('Deseja ' + action + ' a nota de "' + empresa + '"?')) {
+                completeIdField.value = id;
+                completeForm.submit();
             }
         });
     });

@@ -796,6 +796,8 @@ class NotaRecorrente(db.Model):
     observacao = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     ultimo_aviso = db.Column(db.Date, nullable=True)
+    concluida = db.Column(db.Boolean, nullable=False, default=False)
+    data_conclusao = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(
         db.DateTime,
