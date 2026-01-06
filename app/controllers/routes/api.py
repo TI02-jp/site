@@ -163,15 +163,19 @@ def _serialize_announcement(announcement: Announcement) -> dict:
     """Return a lightweight announcement payload."""
 
     attachments = []
-    for attachment in getattr(announcement, "attachments", []) or []:
+    for attachment in getattr(announcement, "attachments_for_display", []) or []:
+        file_path = getattr(attachment, "file_path", None)
+        display_name = (
+            getattr(attachment, "original_name", None)
+            or getattr(attachment, "display_name", None)
+            or file_path
+        )
         attachments.append(
             {
-                "id": attachment.id,
-                "name": attachment.attachment_name or attachment.file_path,
-                "url": url_for("static", filename=attachment.attachment_path)
-                if attachment.attachment_path
-                else None,
-                "mime_type": attachment.mime_type if hasattr(attachment, "mime_type") else None,
+                "id": getattr(attachment, "id", None),
+                "name": display_name,
+                "url": url_for("static", filename=file_path) if file_path else None,
+                "mime_type": getattr(attachment, "mime_type", None),
             }
         )
 
@@ -470,13 +474,16 @@ def _serialize_diretoria_event(event: DiretoriaEvent) -> dict:
 def _serialize_diretoria_agreement(agreement: DiretoriaAgreement) -> dict:
     """Return Diretoria agreement payload."""
 
+    description = getattr(agreement, "description", None)
+
     return {
         "id": agreement.id,
         "user_id": agreement.user_id,
         "title": agreement.title,
         "agreement_date": agreement.agreement_date.isoformat() if agreement.agreement_date else None,
-        "notes": agreement.notes,
-        "status": agreement.status,
+        "description": description,
+        "notes": description,
+        "status": None,
         "created_at": agreement.created_at.isoformat() if agreement.created_at else None,
         "updated_at": agreement.updated_at.isoformat() if agreement.updated_at else None,
     }
@@ -485,12 +492,19 @@ def _serialize_diretoria_agreement(agreement: DiretoriaAgreement) -> dict:
 def _serialize_diretoria_feedback(feedback: DiretoriaFeedback) -> dict:
     """Return Diretoria feedback payload."""
 
+    description = getattr(feedback, "description", None)
+    title = getattr(feedback, "title", None)
+
     return {
         "id": feedback.id,
         "user_id": feedback.user_id,
-        "feedback_type": feedback.feedback_type,
-        "content": feedback.content,
+        "title": title,
+        "feedback_type": title,
+        "description": description,
+        "content": description,
+        "feedback_date": feedback.feedback_date.isoformat() if feedback.feedback_date else None,
         "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
+        "updated_at": feedback.updated_at.isoformat() if feedback.updated_at else None,
     }
 
 
@@ -2785,16 +2799,14 @@ def api_diretoria_acordo_create():
     except ValueError:
         return jsonify({"error": "invalid_agreement_date"}), 400
 
-    notes = (payload.get("notes") or "").strip() or None
-    status = (payload.get("status") or "").strip() or None
+    description = (payload.get("description") or payload.get("notes") or "").strip()
 
     try:
         agreement = DiretoriaAgreement(
             user_id=user_id,
             title=title,
             agreement_date=agreement_date,
-            notes=notes,
-            status=status,
+            description=description,
         )
         db.session.add(agreement)
         db.session.commit()
@@ -2821,10 +2833,8 @@ def api_diretoria_acordo_update(agreement_id: int):
     payload = request.get_json(silent=True) or {}
     if "title" in payload:
         agreement.title = (payload.get("title") or "").strip() or agreement.title
-    if "notes" in payload:
-        agreement.notes = (payload.get("notes") or "").strip() or None
-    if "status" in payload:
-        agreement.status = (payload.get("status") or "").strip() or agreement.status
+    if "description" in payload or "notes" in payload:
+        agreement.description = (payload.get("description") or payload.get("notes") or "").strip()
     if "agreement_date" in payload:
         raw = (payload.get("agreement_date") or "").strip()
         if raw:
@@ -2902,16 +2912,27 @@ def api_diretoria_feedback_create():
     """Create a Diretoria feedback (authenticated users)."""
 
     payload = request.get_json(silent=True) or {}
-    feedback_type = (payload.get("feedback_type") or "").strip()
-    content = (payload.get("content") or "").strip()
-    if not feedback_type or not content:
+    title = (payload.get("title") or payload.get("feedback_type") or "").strip()
+    description = (payload.get("description") or payload.get("content") or "").strip()
+    if not title or not description:
         return jsonify({"error": "feedback_type_and_content_required"}), 400
+
+    feedback_date_raw = (payload.get("feedback_date") or payload.get("date") or "").strip()
+    feedback_date = None
+    if feedback_date_raw:
+        try:
+            feedback_date = _parse_date(feedback_date_raw)
+        except ValueError:
+            return jsonify({"error": "invalid_feedback_date"}), 400
+    if feedback_date is None:
+        feedback_date = datetime.utcnow().date()
 
     try:
         fb = DiretoriaFeedback(
             user_id=g.api_user.id,
-            feedback_type=feedback_type,
-            content=content,
+            title=title,
+            description=description,
+            feedback_date=feedback_date,
         )
         db.session.add(fb)
         db.session.commit()

@@ -129,6 +129,35 @@ def _normalize_announcement_content(raw_content: str | None) -> str:
     return cleaned
 
 
+def _collect_uploaded_files(form: AnnouncementForm) -> list:
+    """Return uploaded files, falling back to raw request files when needed."""
+    uploaded_files = [
+        storage
+        for storage in (form.attachments.data or [])
+        if storage and storage.filename
+    ]
+    if uploaded_files:
+        return uploaded_files
+
+    field_name = getattr(form.attachments, "name", None) or "attachments"
+    uploaded_files = [
+        storage
+        for storage in request.files.getlist(field_name)
+        if storage and storage.filename
+    ]
+    if uploaded_files:
+        return uploaded_files
+
+    if field_name != "attachments":
+        return [
+            storage
+            for storage in request.files.getlist("attachments")
+            if storage and storage.filename
+        ]
+
+    return []
+
+
 def _broadcast_announcement_notification(announcement: Announcement) -> None:
     """Emit a notification about ``announcement`` for every active user."""
 
@@ -238,11 +267,7 @@ def announcements():
             db.session.add(announcement)
             db.session.flush()
 
-            uploaded_files = [
-                storage
-                for storage in (form.attachments.data or [])
-                if storage and storage.filename
-            ]
+            uploaded_files = _collect_uploaded_files(form)
 
             for uploaded_file in uploaded_files:
                 saved = _save_announcement_file(uploaded_file)
@@ -462,11 +487,7 @@ def update_announcement(announcement_id: int):
                 db.session.delete(attachment)
             attachments_modified = True
 
-        new_files = [
-            storage
-            for storage in (form.attachments.data or [])
-            if storage and storage.filename
-        ]
+        new_files = _collect_uploaded_files(form)
 
         for uploaded_file in new_files:
             saved = _save_announcement_file(uploaded_file)
@@ -563,4 +584,3 @@ def mark_announcement_read(announcement_id: int):
     read = bool(updated or already_read or not notifications)
 
     return jsonify({"status": "ok", "read": read})
-

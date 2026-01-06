@@ -170,6 +170,9 @@ def mapear_para_form(d: dict) -> dict:
         atividade = pick(ap, "text", "descricao") or ""
     elif isinstance(ap, str):
         atividade = ap
+    atividade = (atividade or "").strip()
+    if len(atividade) > 200:
+        atividade = atividade[:200]
 
     # Sócios administradores
     socio = ""

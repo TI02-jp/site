@@ -886,6 +886,11 @@
                         {% for error in edit_form.attachments.errors %}
                         <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
+                        <div class="d-grid gap-2 d-none" data-attachment-preview-wrapper>
+                          <span class="text-muted small text-uppercase fw-semibold">Anexos selecionados</span>
+                          <div class="text-muted small" data-attachment-preview-empty>Nenhum anexo selecionado.</div>
+                          <div class="d-grid gap-2" data-attachment-preview-list></div>
+                        </div>
                       </div>
                       <div class="d-grid gap-2">
                         <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Anexos atuais</span>
@@ -1050,6 +1055,11 @@
                     {% for error in form.attachments.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>
                     {% endfor %}
+                    <div class="d-grid gap-2 d-none" data-attachment-preview-wrapper>
+                      <span class="text-muted small text-uppercase fw-semibold">Anexos selecionados</span>
+                      <div class="text-muted small" data-attachment-preview-empty>Nenhum anexo selecionado.</div>
+                      <div class="d-grid gap-2" data-attachment-preview-list></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1118,7 +1128,17 @@
       });
     });
 
-    const supportsDataTransfer = typeof DataTransfer !== 'undefined';
+    const supportsDataTransfer = (() => {
+      if (typeof DataTransfer === 'undefined') {
+        return false;
+      }
+      try {
+        new DataTransfer();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    })();
     const previewModalElement = document.getElementById('announcementPreviewModal');
     const previewModalRoot = previewModalElement?.querySelector('[data-preview-root]');
     const previewDate = previewModalRoot?.querySelector('[data-preview-target="date"]');
@@ -1199,24 +1219,36 @@
 
       const resolveFormControl = (key) => {
         const fieldName = fieldMap[key];
-        if (!fieldName || !form.elements) {
+        if (!fieldName) {
           return null;
         }
-        let control = typeof form.elements.namedItem === 'function'
-          ? form.elements.namedItem(fieldName)
-          : form.elements[fieldName];
-        if (!control) {
-          return null;
+
+        // Tentar encontrar pelo form.elements
+        if (form.elements) {
+          let control = typeof form.elements.namedItem === 'function'
+            ? form.elements.namedItem(fieldName)
+            : form.elements[fieldName];
+          if (control) {
+            if (control instanceof Element) {
+              return control;
+            }
+            if (typeof control.item === 'function') {
+              control = control.item(0);
+            } else if (Array.isArray(control)) {
+              control = control[0];
+            }
+            if (control instanceof Element) {
+              return control;
+            }
+          }
         }
-        if (control instanceof Element) {
-          return control;
+
+        // Fallback: buscar por name ou id usando querySelector
+        let element = form.querySelector(`[name="${fieldName}"]`);
+        if (!element) {
+          element = form.querySelector(`#${fieldName}`);
         }
-        if (typeof control.item === 'function') {
-          control = control.item(0);
-        } else if (Array.isArray(control)) {
-          control = control[0];
-        }
-        return control instanceof Element ? control : null;
+        return element instanceof Element ? element : null;
       };
 
       const dateInput = resolveFormControl('date');
@@ -1224,6 +1256,9 @@
       const contentInput = resolveFormControl('content');
       const attachmentInput = resolveFormControl('attachments');
       const dropzone = modal.querySelector('[data-dropzone]');
+      const inlineAttachmentsWrapper = modal.querySelector('[data-attachment-preview-wrapper]');
+      const inlineAttachmentList = modal.querySelector('[data-attachment-preview-list]');
+      const inlineAttachmentsEmpty = modal.querySelector('[data-attachment-preview-empty]');
 
       const richtextRoot = form.querySelector('[data-richtext-root]');
       const richtextEditor = richtextRoot?.querySelector('[data-richtext-editor]');
@@ -1404,6 +1439,12 @@
         if (previewAttachmentsWrapper) {
           previewAttachmentsWrapper.classList.toggle('d-none', !(hasExisting || hasNew));
         }
+        if (inlineAttachmentsWrapper) {
+          inlineAttachmentsWrapper.classList.toggle('d-none', !hasNew);
+        }
+        if (inlineAttachmentsEmpty) {
+          inlineAttachmentsEmpty.classList.toggle('d-none', hasNew);
+        }
       };
 
       const updateTextPreview = () => {
@@ -1574,70 +1615,88 @@
         if (!supportsDataTransfer || !attachmentInput) {
           return;
         }
-        const dataTransfer = new DataTransfer();
+        let dataTransfer;
+        try {
+          dataTransfer = new DataTransfer();
+        } catch (_) {
+          return;
+        }
         selectedFiles.forEach((file) => dataTransfer.items.add(file));
-        attachmentInput.files = dataTransfer.files;
+        try {
+          attachmentInput.files = dataTransfer.files;
+        } catch (_) {
+          /* navegadores que bloqueiam a atribuicao de files */
+        }
       };
 
       const renderAttachments = () => {
-        if (!previewAttachmentList) {
+        const attachmentLists = [];
+        if (previewAttachmentList) {
+          attachmentLists.push(previewAttachmentList);
+        }
+        if (inlineAttachmentList && inlineAttachmentList !== previewAttachmentList) {
+          attachmentLists.push(inlineAttachmentList);
+        }
+        if (!attachmentLists.length) {
           updateAttachmentsVisibility();
           return;
         }
 
-        previewAttachmentList.innerHTML = '';
+        attachmentLists.forEach((listElement) => {
+          listElement.innerHTML = '';
 
-        selectedFiles.forEach((file, index) => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'preview-attachment';
+          selectedFiles.forEach((file, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'preview-attachment';
 
-          let previewElement;
-          if (file.type.startsWith('image/')) {
-            previewElement = document.createElement('img');
-            previewElement.classList.add('flex-shrink-0');
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              previewElement.src = event.target?.result || '';
-            };
-            reader.readAsDataURL(file);
-          } else {
-            previewElement = document.createElement('span');
-            previewElement.className = 'attachment-icon flex-shrink-0';
-            const icon = document.createElement('i');
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-              icon.className = 'bi bi-file-earmark-pdf';
-            } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt')) {
-              icon.className = 'bi bi-filetype-txt';
+            let previewElement;
+            if (file.type.startsWith('image/')) {
+              previewElement = document.createElement('img');
+              previewElement.classList.add('flex-shrink-0');
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                previewElement.src = event.target?.result || '';
+              };
+              reader.readAsDataURL(file);
             } else {
-              icon.className = 'bi bi-paperclip';
+              previewElement = document.createElement('span');
+              previewElement.className = 'attachment-icon flex-shrink-0';
+              const icon = document.createElement('i');
+              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                icon.className = 'bi bi-file-earmark-pdf';
+              } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt')) {
+                icon.className = 'bi bi-filetype-txt';
+              } else {
+                icon.className = 'bi bi-paperclip';
+              }
+              previewElement.appendChild(icon);
             }
-            previewElement.appendChild(icon);
-          }
 
-          const infoWrapper = document.createElement('div');
-          infoWrapper.className = 'attachment-details';
-          const nameElement = document.createElement('div');
-          nameElement.className = 'fw-semibold text-truncate';
-          nameElement.textContent = file.name || 'Arquivo sem nome';
-          const metaElement = document.createElement('div');
-          metaElement.className = 'text-muted';
-          metaElement.textContent = file.type || 'Formato desconhecido';
-          infoWrapper.append(nameElement, metaElement);
+            const infoWrapper = document.createElement('div');
+            infoWrapper.className = 'attachment-details';
+            const nameElement = document.createElement('div');
+            nameElement.className = 'fw-semibold text-truncate';
+            nameElement.textContent = file.name || 'Arquivo sem nome';
+            const metaElement = document.createElement('div');
+            metaElement.className = 'text-muted';
+            metaElement.textContent = file.type || 'Formato desconhecido';
+            infoWrapper.append(nameElement, metaElement);
 
-          const actionsWrapper = document.createElement('div');
-          actionsWrapper.className = 'd-flex align-items-center gap-2';
-          if (supportsDataTransfer) {
-            const removeButton = document.createElement('button');
-            removeButton.type = 'button';
-            removeButton.className = 'attachment-remove-btn';
-            removeButton.dataset.removeIndex = String(index);
-            removeButton.setAttribute('aria-label', `Remover ${file.name || 'arquivo'}`);
-            removeButton.innerHTML = '<i class="bi bi-trash"></i>';
-            actionsWrapper.appendChild(removeButton);
-          }
+            const actionsWrapper = document.createElement('div');
+            actionsWrapper.className = 'd-flex align-items-center gap-2';
+            if (supportsDataTransfer) {
+              const removeButton = document.createElement('button');
+              removeButton.type = 'button';
+              removeButton.className = 'attachment-remove-btn';
+              removeButton.dataset.removeIndex = String(index);
+              removeButton.setAttribute('aria-label', `Remover ${file.name || 'arquivo'}`);
+              removeButton.innerHTML = '<i class="bi bi-trash"></i>';
+              actionsWrapper.appendChild(removeButton);
+            }
 
-          wrapper.append(previewElement, infoWrapper, actionsWrapper);
-          previewAttachmentList.appendChild(wrapper);
+            wrapper.append(previewElement, infoWrapper, actionsWrapper);
+            listElement.appendChild(wrapper);
+          });
         });
 
         updateAttachmentsVisibility();
@@ -1664,15 +1723,29 @@
         addFiles(event.target.files || []);
       });
 
+      const triggerFilePicker = () => {
+        if (attachmentInput && typeof attachmentInput.click === 'function') {
+          attachmentInput.click();
+          return true;
+        }
+        return false;
+      };
+
       if (dropzone) {
-        dropzone.addEventListener('click', () => {
-          attachmentInput?.click();
+        dropzone.addEventListener('click', (event) => {
+          if (!triggerFilePicker()) {
+            return;
+          }
+          // Prevenir comportamento padrao do label para evitar duplo clique
+          event.preventDefault();
         });
 
         dropzone.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
+            if (!triggerFilePicker()) {
+              return;
+            }
             event.preventDefault();
-            attachmentInput?.click();
           }
         });
 
@@ -1697,8 +1770,8 @@
         });
       }
 
-      previewAttachmentList?.addEventListener('click', (event) => {
-        if (activePreviewContext?.modal !== modal) {
+      const handleAttachmentRemoval = (event, requiresActivePreview) => {
+        if (requiresActivePreview && activePreviewContext?.modal !== modal) {
           return;
         }
         const target = event.target.closest('[data-remove-index]');
@@ -1712,6 +1785,14 @@
         selectedFiles.splice(index, 1);
         refreshAttachmentInput();
         renderAttachments();
+      };
+
+      previewAttachmentList?.addEventListener('click', (event) => {
+        handleAttachmentRemoval(event, true);
+      });
+
+      inlineAttachmentList?.addEventListener('click', (event) => {
+        handleAttachmentRemoval(event, false);
       });
 
       dateInput?.addEventListener('change', updateTextPreview);

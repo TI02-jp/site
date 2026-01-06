@@ -372,9 +372,9 @@ def render_badge_list(items, classes, icon, placeholder):
 
 
 @app.template_filter('sanitize')
-def _sanitize_filter(value):
+def _sanitize_filter(value, allow_data_images: bool = False):
     """Jinja filter to strip unsafe HTML and mark the result safe."""
-    return Markup(sanitize_html(value))
+    return Markup(sanitize_html(value, allow_data_images=allow_data_images))
 
 with app.app_context():
     # Import models inside the application context so SQLAlchemy metadata

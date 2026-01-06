@@ -124,7 +124,10 @@ class EmpresaForm(FlaskForm):
     cnpj = StringField('CNPJ', validators=[DataRequired(), validar_cnpj])
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
     socio_administrador = StringField('Sócio Administrador', validators=[Optional()])
-    atividade_principal = StringField('Atividade Principal', validators=[Optional()])
+    atividade_principal = StringField(
+        'Atividade Principal',
+        validators=[Optional(), Length(max=200, message="Atividade principal deve ter no maximo 200 caracteres.")],
+    )
     tributacao = RadioField('Tributação', choices=[
         ('Simples Nacional', 'Simples Nacional'),
         ('Lucro Presumido', 'Lucro Presumido'),

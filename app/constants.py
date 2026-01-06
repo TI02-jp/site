@@ -22,7 +22,7 @@ from typing import Any
 # =============================================================================
 
 # Extensões de imagem permitidas (sem ponto)
-IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
 
 # Extensões de imagem com ponto (para verificação de path)
 IMAGE_EXTENSIONS_WITH_DOT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
@@ -31,7 +31,7 @@ IMAGE_EXTENSIONS_WITH_DOT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 ALLOWED_EXTENSIONS_WITH_PDF = IMAGE_EXTENSIONS | {"pdf"}
 
 # MIME types de imagem permitidos
-IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/gif"}
+IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp"}
 
 # MIME types de PDF permitidos
 PDF_MIME_TYPES = {"application/pdf"}
@@ -55,6 +55,8 @@ IMAGE_SIGNATURE_MAP = {
     "jpeg": {"jpg", "jpeg"},
     "png": {"png"},
     "gif": {"gif"},
+    "bmp": {"bmp"},
+    "webp": {"webp"},
 }
 
 # Assinaturas de arquivo de vídeo (magic bytes)
