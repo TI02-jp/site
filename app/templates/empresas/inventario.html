@@ -15,7 +15,7 @@
                 <div>
                     <h1 class="text-primary mb-1">
                         <i class="bi bi-clipboard-data me-2"></i>Inventário 2026
-                        <span class="badge bg-primary ms-2">{{ items|length }}</span>
+                        <span class="badge bg-primary ms-2">{{ pagination.total }}</span>
                     </h1>
                     <p class="text-muted mb-0">Controle de inventário anual das empresas</p>
                 </div>
@@ -28,18 +28,49 @@
         <!-- Barra de Pesquisa -->
         <div class="row mb-2">
             <div class="col-md-4">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light">
-                        <i class="bi bi-search"></i>
-                    </span>
-                    <input type="text"
-                           class="form-control"
-                           id="searchInput"
-                           placeholder="Pesquisar por ID ou Razão Social...">
-                    <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
+                <form method="get" id="inventarioSearchForm">
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <input type="hidden" name="order" value="{{ order }}">
+                    {% if show_all %}
+                    <input type="hidden" name="all" value="1">
+                    {% endif %}
+                    {% for trib in tributacao_filters %}
+                    <input type="hidden" name="tributacao" value="{{ trib }}">
+                    {% endfor %}
+                    {% for st in status_filters %}
+                    <input type="hidden" name="status" value="{{ st }}">
+                    {% endfor %}
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               id="searchInput"
+                               name="q"
+                               value="{{ search_term }}"
+                               placeholder="Pesquisar por ID ou Razão Social...">
+                        <a class="btn btn-outline-secondary"
+                           id="clearSearch"
+                           href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, all=all_param) }}"
+                           title="Limpar pesquisa">
+                            <i class="bi bi-x"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-8 d-flex justify-content-end align-items-start">
+                {% if show_all %}
+                    <a class="btn btn-outline-secondary btn-sm"
+                       href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term) }}">
+                        Paginar resultados
+                    </a>
+                {% else %}
+                    <a class="btn btn-outline-primary btn-sm"
+                       href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=1) }}">
+                        Listar tudo
+                    </a>
+                {% endif %}
             </div>
         </div>
 
@@ -60,7 +91,7 @@
                         <span class="badge bg-info">{{ st }}</span>
                         {% endfor %}
                     {% endif %}
-                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1) }}"
+                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, q=search_term, all=all_param) }}"
                        class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-x-circle"></i> Limpar Tudo
                     </a>
@@ -68,6 +99,38 @@
                     <span class="text-muted small">Nenhum filtro ativo</span>
                 {% endif %}
             </div>
+            {% if pagination.pages > 1 %}
+                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                    <span class="text-muted small">Página {{ pagination.page }} de {{ pagination.pages }}</span>
+                    <nav aria-label="Paginação do inventário">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
+                                <a class="page-link"
+                                   href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
+                                   {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
+                                    Anterior
+                                </a>
+                            </li>
+                            {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                                {% if p %}
+                                    <li class="page-item{% if p == pagination.page %} active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=p) }}">{{ p }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
+                                <a class="page-link"
+                                   href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
+                                   {% if not pagination.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                                    Próximo
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -80,7 +143,7 @@
                         <tr>
                             
                             <th class="col-id" style="width: 65px;">
-                                <a href="?sort=codigo&order={{ 'desc' if sort == 'codigo' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
                                     {% if sort == 'codigo' %}
@@ -91,7 +154,7 @@
                                 </a>
                             </th>
                             <th class="col-razao" style="width: 220px;">
-                                <a href="?sort=nome&order={{ 'desc' if sort == 'nome' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
                                     {% if sort == 'nome' %}
@@ -105,7 +168,7 @@
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
-                                        <a href="?sort=tributacao&order={{ 'desc' if sort == 'tributacao' and order == 'asc' else 'asc' }}{% for t in tributacao_filters %}&tributacao={{ t }}{% endfor %}"
+                                        <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                            class="text-decoration-none text-dark">
                                             {% if sort == 'tributacao' %}
                                                 <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }}"></i>
@@ -128,8 +191,12 @@
                                             <form method="GET" class="tributacao-filter-form">
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
+                                                <input type="hidden" name="q" value="{{ search_term }}">
+                                                {% if show_all %}
+                                                <input type="hidden" name="all" value="1">
+                                                {% endif %}
                                                 <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributação</p>
-                                                <div class="d-flex flex-column gap-1 mb-3" style="max-height: 220px; overflow-y: auto;">
+                                                <div class="d-flex flex-column gap-1 mb-3">
                                                     {% for trib in allowed_tributacoes %}
                                                     <div class="form-check">
                                                         <input class="form-check-input" type="checkbox" name="tributacao" id="tribFilter{{ loop.index }}" value="{{ trib }}" {% if trib in tributacao_filters %}checked{% endif %}>
@@ -138,7 +205,7 @@
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1) }}">Limpar</a>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
@@ -170,11 +237,15 @@
                                             <form method="GET" class="status-filter-form">
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
+                                                <input type="hidden" name="q" value="{{ search_term }}">
+                                                {% if show_all %}
+                                                <input type="hidden" name="all" value="1">
+                                                {% endif %}
                                                 {% for trib in tributacao_filters %}
                                                 <input type="hidden" name="tributacao" value="{{ trib }}">
                                                 {% endfor %}
                                                 <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por status</p>
-                                                <div class="d-flex flex-column gap-1 mb-3" style="max-height: 300px; overflow-y: auto;">
+                                                <div class="d-flex flex-column gap-1 mb-3">
                                                     {% for status_opt in status_choices %}
                                                     <div class="form-check">
                                                         <input class="form-check-input" type="checkbox" name="status" id="statusFilter{{ loop.index }}" value="{{ status_opt }}" {% if status_opt in status_filters %}checked{% endif %}>
@@ -183,7 +254,7 @@
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters) }}">Limpar</a>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit" class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
@@ -626,6 +697,7 @@
 /* Garantir que dropdowns não sejam cortados pelo overflow do container */
 .table-wrapper .dropdown-menu {
     position: fixed !important;
+    z-index: 2000;
 }
 
 /* Garantir que a tabela não quebre e force o scroll */
@@ -801,35 +873,80 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTributacoes = currentUrl.searchParams.getAll('tributacao');
     const currentStatus = currentUrl.searchParams.getAll('status');
 
-    // Funcionalidade de pesquisa
-    const searchInput = document.getElementById('searchInput');
-    const clearSearchBtn = document.getElementById('clearSearch');
-    const tableRows = document.querySelectorAll('#inventarioTable tbody tr');
+    // Garantir que dropdowns dos filtros sobreponham a tabela (sem corte por scroll)
+    const filterDropdownToggles = [
+        document.getElementById('tributacaoFilterDropdown'),
+        document.getElementById('statusFilterDropdown')
+    ].filter(Boolean);
+    let activeDropdown = null;
 
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-
-            tableRows.forEach(row => {
-                const empresaId = row.querySelector('td:first-child')?.textContent.toLowerCase() || '';
-                const razaoSocial = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
-
-                if (empresaId.includes(searchTerm) || razaoSocial.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-
-        clearSearchBtn.addEventListener('click', function() {
-            searchInput.value = '';
-            tableRows.forEach(row => {
-                row.style.display = '';
-            });
-            searchInput.focus();
-        });
+    function positionDetachedMenu(toggle, menu) {
+        if (!toggle || !menu) return;
+        const rect = toggle.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth || 0;
+        const padding = 8;
+        let left = rect.left;
+        if (menu.classList.contains('dropdown-menu-end')) {
+            left = rect.right - menuWidth;
+        }
+        const maxLeft = Math.max(padding, window.innerWidth - menuWidth - padding);
+        left = Math.min(Math.max(left, padding), maxLeft);
+        menu.style.position = 'fixed';
+        menu.style.top = `${rect.bottom + 4}px`;
+        menu.style.left = `${left}px`;
+        menu.style.zIndex = '2000';
     }
+
+    function detachDropdownMenu(toggle) {
+        const menu = toggle?.parentElement?.querySelector('.dropdown-menu');
+        if (!menu || menu.dataset.detached === '1') return;
+        menu.dataset.detached = '1';
+        menu._originalParent = menu.parentNode;
+        menu._originalNextSibling = menu.nextSibling;
+        document.body.appendChild(menu);
+        positionDetachedMenu(toggle, menu);
+        toggle._detachedMenu = menu;
+        activeDropdown = toggle;
+    }
+
+    function restoreDropdownMenu(toggle) {
+        const menu = toggle?._detachedMenu;
+        if (!menu || menu.dataset.detached !== '1') return;
+        if (menu._originalParent) {
+            if (menu._originalNextSibling) {
+                menu._originalParent.insertBefore(menu, menu._originalNextSibling);
+            } else {
+                menu._originalParent.appendChild(menu);
+            }
+        }
+        delete menu._originalParent;
+        delete menu._originalNextSibling;
+        menu.dataset.detached = '';
+        menu.style.position = '';
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.zIndex = '';
+        toggle._detachedMenu = null;
+        if (activeDropdown === toggle) {
+            activeDropdown = null;
+        }
+    }
+
+    filterDropdownToggles.forEach((toggle) => {
+        toggle.addEventListener('shown.bs.dropdown', () => detachDropdownMenu(toggle));
+        toggle.addEventListener('hide.bs.dropdown', () => restoreDropdownMenu(toggle));
+    });
+
+    window.addEventListener('resize', () => {
+        if (activeDropdown && activeDropdown._detachedMenu) {
+            positionDetachedMenu(activeDropdown, activeDropdown._detachedMenu);
+        }
+    });
+    window.addEventListener('scroll', () => {
+        if (activeDropdown && activeDropdown._detachedMenu) {
+            positionDetachedMenu(activeDropdown, activeDropdown._detachedMenu);
+        }
+    }, true);
 
     function sanitizeTributacoes(values) {
         return values.filter((value) => allowedTributacoes.includes(value));
@@ -1016,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Para inputs de texto (não monetários), usar debounce
-        if (this.tagName === 'INPUT' && this.type === 'text' && !this.classList.contains('money-field')) {
+        if (field.tagName === 'INPUT' && field.type === 'text' && !field.classList.contains('money-field')) {
             field.addEventListener('input', function() {
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
@@ -1043,8 +1160,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = this.closest('tr');
             const empresaId = row.dataset.empresaId;
             const file = this.files[0];
+            const isPdf = file && (
+                file.type === 'application/pdf'
+                || (file.name && file.name.toLowerCase().endsWith('.pdf'))
+            );
 
-            if (file && file.type === 'application/pdf') {
+            if (isPdf) {
                 uploadPDF(empresaId, file, this);
             } else if (file) {
                 alert('Por favor, selecione um arquivo PDF válido.');

@@ -108,7 +108,7 @@ def procedimentos_operacionais():
         if form.validate_on_submit():
             proc = OperationalProcedure(
                 title=form.title.data,
-                descricao=sanitize_html(form.descricao.data or "") or None,
+                descricao=sanitize_html(form.descricao.data or "", allow_data_images=True) or None,
                 created_by_id=current_user.id,
             )
             db.session.add(proc)
@@ -213,7 +213,7 @@ def procedimentos_operacionais_editar(proc_id: int):
     # Processa atualizacao
     if form.validate_on_submit():
         proc.title = form.title.data
-        proc.descricao = sanitize_html(form.descricao.data or "") or None
+        proc.descricao = sanitize_html(form.descricao.data or "", allow_data_images=True) or None
         db.session.commit()
         flash("Procedimento atualizado com sucesso.", "success")
         return redirect(url_for("procedimentos.procedimentos_operacionais_ver", proc_id=proc.id))

@@ -855,7 +855,7 @@ class Empresa(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome_empresa = db.Column(db.String(100), nullable=False)
     cnpj = db.Column(db.String(18), unique=True, nullable=False)
-    atividade_principal = db.Column(db.String(100))
+    atividade_principal = db.Column(db.String(200))
     data_abertura = db.Column(db.Date, nullable=False)
     socio_administrador = db.Column(db.String(100))
     tributacao = db.Column(db.String(50))

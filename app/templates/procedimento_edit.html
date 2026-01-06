@@ -85,6 +85,47 @@
       pdfBtn.addEventListener('click', ()=>{ fileInput.click(); });
     }
 
+    // Handler para imagens coladas (Ctrl+V)
+    quill.root.addEventListener('paste', (e)=>{
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if(!clipboardData) return;
+
+      const items = clipboardData.items;
+      if(!items) return;
+
+      for(let i = 0; i < items.length; i++){
+        const item = items[i];
+        if(item.type.indexOf('image') !== -1){
+          e.preventDefault();
+          e.stopPropagation();
+
+          const file = item.getAsFile();
+          if(!file) continue;
+
+          const range = quill.getSelection(true) || { index: quill.getLength() };
+
+          // Mostrar preview com base64 primeiro
+          const reader = new FileReader();
+          reader.onload = (ev)=>{
+            const b64 = ev.target.result;
+            quill.insertEmbed(range.index, 'image', b64);
+            quill.setSelection(range.index + 1);
+
+            // Fazer upload e substituir base64 pela URL
+            uploadFile(file).then(result=>{
+              const img = quill.root.querySelector(`img[src="${b64}"]`);
+              if(img) img.src = result.file_url;
+            }).catch((err)=>{
+              console.error('Erro ao enviar imagem colada:', err);
+              // Manter a imagem base64 se falhar o upload
+            });
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    });
+
     fileInput.addEventListener('change', ()=>{
       if(fileInput.files && fileInput.files[0]){
         const f = fileInput.files[0];

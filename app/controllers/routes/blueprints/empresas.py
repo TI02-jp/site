@@ -984,6 +984,12 @@ def inventario():
 
     saved_filters = session.get("inventario_filters", {})
 
+    search_arg = request.args.get("q")
+    if search_arg is None:
+        search_term = (saved_filters.get("search") or "").strip()
+    else:
+        search_term = search_arg.strip()
+
     # Parâmetros de ordenação
     sort_arg = request.args.get('sort')
     order_arg = request.args.get('order')
@@ -1022,16 +1028,31 @@ def inventario():
         "order": order,
         "tributacao_filters": tributacao_filters,
         "status_filters": status_filters,
+        "search": search_term,
     }
 
+    all_arg = request.args.get("all")
+    show_all = all_arg in ("1", "true", "on")
+    page = request.args.get("page", 1, type=int)
+
     # Query base - empresas ativas
-    query = Empresa.query.filter_by(ativo=True)
+    base_query = Empresa.query.filter_by(ativo=True)
+
+    # Aplicar filtro de pesquisa
+    if search_term:
+        like_pattern = f"%{search_term}%"
+        base_query = base_query.filter(
+            sa.or_(
+                Empresa.codigo_empresa.ilike(like_pattern),
+                Empresa.nome_empresa.ilike(like_pattern),
+            )
+        )
 
     # Aplicar filtro de tributação
     if tributacao_filters:
         valid_filters = [t for t in tributacao_filters if t in allowed_tributacoes]
         if valid_filters:
-            query = query.filter(Empresa.tributacao.in_(valid_filters))
+            base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
 
     # Aplicar ordenação
     if sort == 'codigo':
@@ -1044,12 +1065,63 @@ def inventario():
         order_column = Empresa.codigo_empresa
 
     if order == 'desc':
-        query = query.order_by(order_column.desc())
+        order_by_clause = order_column.desc()
     else:
-        query = query.order_by(order_column.asc())
+        order_by_clause = order_column.asc()
 
-    empresas = query.all()
+    if status_filters:
+        if "FALTA ARQUIVO" in status_filters:
+            query = base_query.outerjoin(Inventario).filter(
+                sa.or_(
+                    Inventario.status.in_(status_filters),
+                    Inventario.id.is_(None),
+                )
+            )
+        else:
+            query = base_query.join(Inventario).filter(Inventario.status.in_(status_filters))
+        query = query.order_by(order_by_clause)
+    else:
+        query = base_query.order_by(order_by_clause)
+
+    if show_all:
+        total = query.count()
+        per_page = total if total > 0 else 1
+        page = 1
+    else:
+        per_page = 50
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    empresas = pagination.items
     empresa_ids = [empresa.id for empresa in empresas]
+
+    # Identificar empresas sem inventário (sem considerar filtro de status)
+    existing_inventario_ids = set()
+    if empresa_ids:
+        existing_inventario_ids = {
+            row[0]
+            for row in db.session.query(Inventario.empresa_id)
+            .filter(Inventario.empresa_id.in_(empresa_ids))
+            .all()
+        }
+
+    empresas_sem_inventario = [e for e in empresas if e.id not in existing_inventario_ids]
+
+    # Criar inventários faltantes
+    created_inventarios = False
+    if empresas_sem_inventario:
+        # Se há filtro de status e 'FALTA ARQUIVO' não está nos filtros, não criar
+        should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
+
+        if should_create:
+            novos_inventarios = [
+                Inventario(
+                    empresa_id=e.id,
+                    status='FALTA ARQUIVO',
+                    encerramento_fiscal=False
+                )
+                for e in empresas_sem_inventario
+            ]
+            db.session.add_all(novos_inventarios)
+            created_inventarios = True
 
     # Buscar inventários existentes com filtro de status aplicado no SQL
     inventarios = {}
@@ -1064,30 +1136,6 @@ def inventario():
             inv.empresa_id: inv
             for inv in inventario_query.all()
         }
-
-    # Identificar empresas sem inventário
-    empresas_sem_inventario = [e for e in empresas if e.id not in inventarios]
-
-    # Criar inventários faltantes em batch
-    created_inventarios = False
-    if empresas_sem_inventario:
-        # Se há filtro de status e 'FALTA ARQUIVO' não está nos filtros, não criar
-        should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
-
-        if should_create:
-            novos_inventarios = [
-                Inventario(empresa_id=e.id, status='FALTA ARQUIVO')
-                for e in empresas_sem_inventario
-            ]
-            db.session.bulk_save_objects(novos_inventarios, return_defaults=True)
-            created_inventarios = True
-
-            # Atualizar dicionário de inventarios
-            for e in empresas_sem_inventario:
-                # Buscar o inventario recém-criado
-                inv = Inventario.query.filter_by(empresa_id=e.id).first()
-                if inv:
-                    inventarios[e.id] = inv
 
     # Criar lista combinada apenas com empresas que têm inventário
     items = []
@@ -1108,12 +1156,16 @@ def inventario():
     response = render_template(
         "empresas/inventario.html",
         items=items,
+        pagination=pagination,
         status_choices=STATUS_CHOICES,
         sort=sort,
         order=order,
         tributacao_filters=tributacao_filters,
         allowed_tributacoes=allowed_tributacoes,
         status_filters=status_filters,
+        search_term=search_term,
+        show_all=show_all,
+        all_param=1 if show_all else "",
         usuarios=usuarios
     )
 
@@ -1150,7 +1202,7 @@ def api_inventario_update():
         with track_custom_span("inventario_update", "load_inventario"):
             inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
             if not inventario:
-                inventario = Inventario(empresa_id=empresa_id)
+                inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
                 db.session.add(inventario)
 
         # Campos monetários que precisam de conversão
@@ -1298,7 +1350,7 @@ def api_inventario_upload_pdf(empresa_id):
         # Buscar ou criar inventário
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
-            inventario = Inventario(empresa_id=empresa_id)
+            inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
             db.session.add(inventario)
 
         filename = secure_filename(file.filename)
@@ -1393,7 +1445,7 @@ def api_inventario_upload_cliente_file(empresa_id):
         # Buscar ou criar inventário
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
-            inventario = Inventario(empresa_id=empresa_id)
+            inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
             db.session.add(inventario)
 
         filename = secure_filename(file.filename)

@@ -13,12 +13,13 @@ from markupsafe import Markup
 ALLOWED_TAGS = [
     'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
     'h1', 'h2', 'h3', 'h4', 'blockquote', 'code', 'pre',
-    'span', 'div', 'b', 'i'
+    'span', 'div', 'b', 'i', 'img'
 ]
 
 # Atributos permitidos por tag
 ALLOWED_ATTRIBUTES = {
     'a': ['href', 'title', 'target', 'rel'],
+    'img': ['src', 'alt', 'title', 'width', 'height'],
     'span': ['class'],
     'div': ['class'],
     'code': ['class'],
@@ -27,6 +28,7 @@ ALLOWED_ATTRIBUTES = {
 
 # Protocolos permitidos em URLs
 ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+ALLOWED_PROTOCOLS_WITH_DATA = ALLOWED_PROTOCOLS + ['data']
 
 # Regex para detectar URLs bare (mantida para compatibilidade)
 _BARE_URL_RE = re.compile(
@@ -64,7 +66,34 @@ def _linkify(text: str) -> str:
     return _BARE_URL_RE.sub(_replace, text)
 
 
-def sanitize_html(value: str | None, linkify: bool = True, strip: bool = True) -> str:
+def _build_attribute_filter(allow_data_images: bool):
+    """Return a bleach attribute filter honoring data image settings."""
+
+    def _is_allowed_attribute(tag: str, name: str, value: str) -> bool:
+        allowed_for_tag = (ALLOWED_ATTRIBUTES.get(tag, []) or []) + (ALLOWED_ATTRIBUTES.get('*', []) or [])
+        if name not in allowed_for_tag:
+            return False
+        if name in ("href", "src"):
+            if value is None:
+                return False
+            lowered = str(value).strip().lower()
+            if lowered.startswith("data:"):
+                if not allow_data_images:
+                    return False
+                if tag == "img" and name == "src":
+                    return lowered.startswith("data:image/") and not lowered.startswith("data:image/svg")
+                return False
+        return True
+
+    return _is_allowed_attribute
+
+
+def sanitize_html(
+    value: str | None,
+    linkify: bool = True,
+    strip: bool = True,
+    allow_data_images: bool = False,
+) -> str:
     """Remove potentially dangerous HTML and return safe HTML fragment.
 
     Esta função usa a biblioteca bleach (mantida pela Mozilla) para fornecer
@@ -101,11 +130,13 @@ def sanitize_html(value: str | None, linkify: bool = True, strip: bool = True) -
         return ""
 
     # Sanitizar HTML com bleach
+    attribute_filter = _build_attribute_filter(allow_data_images)
+    protocols = ALLOWED_PROTOCOLS_WITH_DATA if allow_data_images else ALLOWED_PROTOCOLS
     cleaned = bleach.clean(
         value,
         tags=ALLOWED_TAGS,
-        attributes=ALLOWED_ATTRIBUTES,
-        protocols=ALLOWED_PROTOCOLS,
+        attributes=attribute_filter,
+        protocols=protocols,
         strip=strip  # Remove tags não permitidas (vs escapar)
     )
 
