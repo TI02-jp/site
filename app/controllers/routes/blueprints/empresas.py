@@ -972,6 +972,7 @@ def inventario():
     """Lista todas as empresas com seus dados de inventário."""
     STATUS_CHOICES = [
         'FALTA ARQUIVO',
+        'AGUARDANDO FECHAMENTO FISCAL',
         'AGUARDANDO TADEU',
         'LIBERADO PARA IMPORTAÇÃO',
         'IMPORTADO',
@@ -1368,6 +1369,9 @@ def api_inventario_upload_pdf(empresa_id):
         }
         cfop_files.append(file_info)
         inventario.cfop_files = cfop_files
+        has_cliente_file = bool(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
+        if has_cliente_file:
+            inventario.status = "AGUARDANDO TADEU"
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cfop_files')
