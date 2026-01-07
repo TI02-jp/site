@@ -1326,6 +1326,34 @@ def api_inventario_update():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def _coerce_file_entries(value):
+    if not value:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except (TypeError, ValueError):
+            return []
+        return parsed if isinstance(parsed, list) else []
+    return []
+
+
+def _has_file_entries(value):
+    return bool(_coerce_file_entries(value))
+
+
+def _maybe_set_status_aguardando_tadeu(inventario):
+    has_cfop = _has_file_entries(inventario.cfop_files) or bool(inventario.pdf_path)
+    has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
+    if not (has_cfop and has_cliente):
+        return
+    inventario.status = "AGUARDANDO TADEU"
+
+
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_pdf(empresa_id):
@@ -1369,9 +1397,7 @@ def api_inventario_upload_pdf(empresa_id):
         }
         cfop_files.append(file_info)
         inventario.cfop_files = cfop_files
-        has_cliente_file = bool(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
-        if has_cliente_file:
-            inventario.status = "AGUARDANDO TADEU"
+        _maybe_set_status_aguardando_tadeu(inventario)
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cfop_files')
@@ -1383,6 +1409,7 @@ def api_inventario_upload_pdf(empresa_id):
             'filename': filename,
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
+            'status': inventario.status,
             'file_index': len(cfop_files) - 1  # Índice do arquivo no array
         })
 
@@ -1470,6 +1497,7 @@ def api_inventario_upload_cliente_file(empresa_id):
         }
         cliente_files.append(file_info)
         inventario.cliente_files = cliente_files
+        _maybe_set_status_aguardando_tadeu(inventario)
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cliente_files')
@@ -1481,6 +1509,7 @@ def api_inventario_upload_cliente_file(empresa_id):
             'filename': filename,
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
+            'status': inventario.status,
             'file_index': len(cliente_files) - 1  # Índice do arquivo no array
         })
 

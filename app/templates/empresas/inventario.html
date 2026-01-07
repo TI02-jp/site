@@ -1174,18 +1174,132 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Deletar arquivo CFOP
-    document.querySelectorAll('.delete-cfop-file-btn').forEach(btn => {
+    function bindDeleteCFOPButton(btn) {
         btn.addEventListener('click', function() {
             if (confirm('Deseja realmente remover este arquivo?')) {
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
                 const fileItem = this.closest('.file-item');
-                const fileIndex = parseInt(fileItem.dataset.fileIndex);
+                const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
                 deleteCFOPFile(empresaId, fileIndex, fileItem);
             }
         });
-    });
+    }
+
+    function bindDeleteClienteButton(btn) {
+        btn.addEventListener('click', function() {
+            if (confirm('Deseja realmente remover este arquivo?')) {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const fileItem = this.closest('.file-item');
+                const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
+                deleteClienteFileV2(empresaId, fileIndex, fileItem);
+            }
+        });
+    }
+
+    function ensureFilesList(container, inputElement) {
+        let filesList = container.querySelector('.files-list');
+        if (!filesList) {
+            filesList = document.createElement('div');
+            filesList.className = 'files-list mb-1';
+            container.insertBefore(filesList, inputElement);
+        }
+        return filesList;
+    }
+
+    function updateRowStatus(row, statusValue) {
+        if (!statusValue) return;
+        const statusSelect = row.querySelector('select[data-field="status"]');
+        if (!statusSelect) return;
+        statusSelect.value = statusValue;
+        adjustStatusFontSize(statusSelect);
+    }
+
+    function appendCfopFileItem(filesList, empresaId, fileIndex, filename) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
+        fileItem.dataset.fileIndex = fileIndex;
+
+        const nameEl = document.createElement('small');
+        nameEl.className = 'text-muted text-truncate flex-grow-1';
+        nameEl.style.maxWidth = '70px';
+        nameEl.title = filename;
+        nameEl.textContent = filename;
+
+        const viewLink = document.createElement('a');
+        viewLink.href = `/api/inventario/file/${empresaId}/cfop/${fileIndex}`;
+        viewLink.target = '_blank';
+        viewLink.className = 'btn btn-outline-primary btn-sm';
+        viewLink.title = 'Visualizar';
+        viewLink.innerHTML = '<i class="bi bi-eye"></i>';
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = viewLink.href;
+        downloadLink.download = filename;
+        downloadLink.className = 'btn btn-outline-success btn-sm';
+        downloadLink.title = 'Baixar';
+        downloadLink.innerHTML = '<i class="bi bi-download"></i>';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-outline-danger btn-sm delete-cfop-file-btn';
+        deleteBtn.title = 'Remover';
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        bindDeleteCFOPButton(deleteBtn);
+
+        fileItem.append(nameEl, viewLink, downloadLink, deleteBtn);
+        filesList.appendChild(fileItem);
+    }
+
+    function appendClienteFileItem(filesList, empresaId, fileIndex, filename) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
+        fileItem.dataset.fileIndex = fileIndex;
+
+        const nameEl = document.createElement('small');
+        nameEl.className = 'text-muted text-truncate flex-grow-1';
+        nameEl.style.maxWidth = '60px';
+        nameEl.title = filename;
+        nameEl.textContent = filename;
+
+        const viewLink = document.createElement('a');
+        viewLink.href = `/api/inventario/file/${empresaId}/cliente/${fileIndex}`;
+        viewLink.target = '_blank';
+        viewLink.className = 'btn btn-outline-primary btn-sm';
+        viewLink.title = 'Visualizar';
+        viewLink.innerHTML = '<i class="bi bi-eye"></i>';
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = viewLink.href;
+        downloadLink.download = filename;
+        downloadLink.className = 'btn btn-outline-success btn-sm';
+        downloadLink.title = 'Baixar';
+        downloadLink.innerHTML = '<i class="bi bi-download"></i>';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-outline-danger btn-sm delete-cliente-file-btn';
+        deleteBtn.title = 'Remover';
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        bindDeleteClienteButton(deleteBtn);
+
+        fileItem.append(nameEl, viewLink, downloadLink, deleteBtn);
+        filesList.appendChild(fileItem);
+    }
+
+    function updateFileListIndices(filesList, empresaId, fileType) {
+        const items = Array.from(filesList.querySelectorAll('.file-item'));
+        items.forEach((item, index) => {
+            item.dataset.fileIndex = index;
+            item.querySelectorAll('a').forEach(link => {
+                link.href = `/api/inventario/file/${empresaId}/${fileType}/${index}`;
+            });
+        });
+    }
+
+    // Deletar arquivo CFOP
+    document.querySelectorAll('.delete-cfop-file-btn').forEach(bindDeleteCFOPButton);
 
     // Upload de arquivo do cliente
     document.querySelectorAll('.cliente-upload').forEach(input => {
@@ -1201,17 +1315,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Deletar arquivo do cliente
-    document.querySelectorAll('.delete-cliente-file-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (confirm('Deseja realmente remover este arquivo?')) {
-                const row = this.closest('tr');
-                const empresaId = row.dataset.empresaId;
-                const fileItem = this.closest('.file-item');
-                const fileIndex = parseInt(fileItem.dataset.fileIndex);
-                deleteClienteFileV2(empresaId, fileIndex, fileItem);
-            }
-        });
-    });
+    document.querySelectorAll('.delete-cliente-file-btn').forEach(bindDeleteClienteButton);
 
     // Mantém dropdown de tributação aberto ao marcar checkboxes
     const tribDropdownToggle = document.getElementById('tributacaoFilterDropdown');
@@ -1340,7 +1444,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfToken = window.csrfToken || '';
 
         const container = inputElement.closest('.pdf-upload-container');
-        const filesList = container.querySelector('.files-list');
 
         // Mostrar indicador de envio
         const uploadIndicator = document.createElement('small');
@@ -1360,8 +1463,13 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadIndicator.remove();
 
             if (data.success) {
-                // Recarregar a página para mostrar o novo arquivo com índice correto
-                window.location.reload();
+                const row = inputElement.closest('tr');
+                const filesList = ensureFilesList(container, inputElement);
+                const filename = data.filename || (file && file.name) || 'arquivo.pdf';
+                appendCfopFileItem(filesList, empresaId, data.file_index, filename);
+                updateRowStatus(row, data.status);
+                checkCFOPStatus(row);
+                inputElement.value = '';
             } else {
                 alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
             }
@@ -1394,8 +1502,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                // Recarregar a página para atualizar os índices
-                window.location.reload();
+                if (fileItem) {
+                    const row = fileItem.closest('tr');
+                    const filesList = fileItem.closest('.files-list');
+                    fileItem.remove();
+                    if (filesList) {
+                        updateFileListIndices(filesList, empresaId, 'cfop');
+                    }
+                    if (row) {
+                        checkCFOPStatus(row);
+                    }
+                }
             } else {
                 alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
             }
@@ -1412,7 +1529,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfToken = window.csrfToken || '';
 
         const container = inputElement.closest('.cliente-upload-container');
-        const filesList = container.querySelector('.files-list');
 
         // Mostrar indicador de envio
         const uploadIndicator = document.createElement('small');
@@ -1432,8 +1548,12 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadIndicator.remove();
 
             if (data.success) {
-                // Recarregar a página para mostrar o novo arquivo com índice correto
-                window.location.reload();
+                const row = inputElement.closest('tr');
+                const filesList = ensureFilesList(container, inputElement);
+                const filename = data.filename || (file && file.name) || 'arquivo';
+                appendClienteFileItem(filesList, empresaId, data.file_index, filename);
+                updateRowStatus(row, data.status);
+                inputElement.value = '';
             } else {
                 alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
             }
@@ -1466,8 +1586,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                // Recarregar a página para atualizar os índices
-                window.location.reload();
+                if (fileItem) {
+                    const filesList = fileItem.closest('.files-list');
+                    fileItem.remove();
+                    if (filesList) {
+                        updateFileListIndices(filesList, empresaId, 'cliente');
+                    }
+                }
             } else {
                 alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
             }
