@@ -1282,7 +1282,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Ajustar fonte do status quando mudar
             if (fieldName === 'status') {
+                const prevStatus = this.dataset.prevStatus || row.dataset.status || '';
                 adjustStatusFontSize(this);
+                updateDashboardForStatus(row, value);
+                this.dataset.prevStatus = prevStatus;
             }
 
             updateInventario(empresaId, fieldName, value, this);
@@ -1592,6 +1595,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => element.classList.remove('saved'), 2000);
             } else {
                 element.classList.add('error');
+                if (field === 'status') {
+                    const row = element.closest('tr');
+                    const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
+                    element.value = prevStatus;
+                    adjustStatusFontSize(element);
+                    updateDashboardForStatus(row, prevStatus);
+                }
                 alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
             }
         })
@@ -1599,6 +1609,13 @@ document.addEventListener('DOMContentLoaded', function() {
             element.classList.remove('saving');
             element.classList.add('error');
             console.error('Erro:', error);
+            if (field === 'status') {
+                const row = element.closest('tr');
+                const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
+                element.value = prevStatus;
+                adjustStatusFontSize(element);
+                updateDashboardForStatus(row, prevStatus);
+            }
             alert('Erro ao salvar. Tente novamente.');
         });
     }
