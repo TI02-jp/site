@@ -1055,6 +1055,39 @@ def inventario():
         if valid_filters:
             base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
 
+    dashboard_stats = {
+        trib: {
+            "tributacao": trib,
+            "total": 0,
+            "concluida": 0,
+            "aguardando_arquivo": 0,
+        }
+        for trib in allowed_tributacoes
+    }
+    summary_rows = (
+        base_query.outerjoin(Inventario)
+        .with_entities(
+            Empresa.tributacao,
+            Inventario.status,
+            Inventario.cliente_files,
+            Inventario.cliente_pdf_path,
+        )
+        .all()
+    )
+    for tributacao, status, cliente_files, cliente_pdf_path in summary_rows:
+        if tributacao not in dashboard_stats:
+            continue
+        stats = dashboard_stats[tributacao]
+        stats["total"] += 1
+        if status == "ENCERRADO":
+            stats["concluida"] += 1
+        has_cliente_file = _has_file_entries(cliente_files) or bool(cliente_pdf_path)
+        if not has_cliente_file:
+            stats["aguardando_arquivo"] += 1
+    for stats in dashboard_stats.values():
+        stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
+    dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
+
     # Aplicar ordenação
     if sort == 'codigo':
         order_column = Empresa.codigo_empresa
@@ -1167,7 +1200,8 @@ def inventario():
         search_term=search_term,
         show_all=show_all,
         all_param=1 if show_all else "",
-        usuarios=usuarios
+        usuarios=usuarios,
+        dashboard_cards=dashboard_cards
     )
 
     if created_inventarios:

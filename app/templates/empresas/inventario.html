@@ -26,7 +26,7 @@
     <!-- Barra de Pesquisa e Filtros -->
     <div class="mb-3">
         <!-- Barra de Pesquisa -->
-        <div class="row mb-2">
+        <div class="row mb-2 align-items-start">
             <div class="col-md-4">
                 <form method="get" id="inventarioSearchForm">
                     <input type="hidden" name="sort" value="{{ sort }}">
@@ -59,18 +59,40 @@
                     </div>
                 </form>
             </div>
-            <div class="col-md-8 d-flex justify-content-end align-items-start">
-                {% if show_all %}
-                    <a class="btn btn-outline-secondary btn-sm"
-                       href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term) }}">
-                        Paginar resultados
-                    </a>
-                {% else %}
-                    <a class="btn btn-outline-primary btn-sm"
-                       href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=1) }}">
-                        Listar tudo
-                    </a>
-                {% endif %}
+            <div class="col-md-8">
+                <div class="d-flex align-items-start gap-2 flex-wrap inventario-toolbar">
+                    <div class="inventario-dashboard-inline d-flex flex-wrap gap-2 justify-content-start">
+                        {% for card in dashboard_cards %}
+                        <div class="inventario-summary-card"
+                             data-tributacao="{{ card.tributacao }}"
+                             data-total="{{ card.total }}"
+                             data-concluida="{{ card.concluida }}"
+                             data-aguardando="{{ card.aguardando_arquivo }}"
+                             data-faltantes="{{ card.faltantes }}">
+                            <div class="summary-title">{{ card.tributacao }}</div>
+                            <div class="summary-total"><span class="summary-number js-total">{{ card.total }}</span> EMPRESAS</div>
+                            <div class="summary-metrics">
+                                <span class="summary-metric">CONCLUIDA <span class="summary-number js-concluida">{{ card.concluida }}</span></span>
+                                <span class="summary-metric">AGUARDANDO ARQUIVO <span class="summary-number js-aguardando">{{ card.aguardando_arquivo }}</span></span>
+                                <span class="summary-metric">FALTANTES <span class="summary-number js-faltantes">{{ card.faltantes }}</span></span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="inventario-action ms-auto">
+                        {% if show_all %}
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term) }}">
+                                Paginar resultados
+                            </a>
+                        {% else %}
+                            <a class="btn btn-outline-primary btn-sm"
+                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=1) }}">
+                                Listar tudo
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -273,7 +295,13 @@
                     </thead>
                     <tbody>
                         {% for item in items %}
-                        <tr data-empresa-id="{{ item.empresa.id }}">
+                        {% set cliente_files = item.inventario.cliente_files if item.inventario and item.inventario.cliente_files else [] %}
+                        {% set has_cliente_file = cliente_files|length > 0 or (item.inventario and item.inventario.cliente_pdf_path) %}
+                        <tr data-empresa-id="{{ item.empresa.id }}"
+                            data-tributacao="{{ item.empresa.tributacao or '' }}"
+                            data-status="{{ item.inventario.status if item.inventario else '' }}"
+                            data-has-cliente-file="{{ 1 if has_cliente_file else 0 }}"
+                            data-has-cliente-legacy="{{ 1 if item.inventario and item.inventario.cliente_pdf_path else 0 }}">
                             
                             <!-- ID -->
                             <td class="col-id text-center">
@@ -370,7 +398,8 @@
                             <!-- Status -->
                             <td class="col-status">
                                 <select class="form-select form-select-sm editable-field"
-                                        data-field="status">
+                                        data-field="status"
+                                        data-prev-status="{{ item.inventario.status if item.inventario else '' }}">
                                     <option value="">Selecione...</option>
                                     {% for status_opt in status_choices %}
                                     <option value="{{ status_opt }}"
@@ -403,7 +432,6 @@
 
                             <!-- Arquivo Cliente -->
                             <td>
-                                {% set cliente_files = item.inventario.cliente_files if item.inventario and item.inventario.cliente_files else [] %}
                                 <div class="cliente-upload-container">
                                     <!-- Lista de arquivos existentes -->
                                     <div class="files-list mb-1">
@@ -493,6 +521,61 @@
 
 .inventario-page .row.mb-4 {
     margin-bottom: 0.75rem !important;
+}
+
+.inventario-toolbar {
+    row-gap: 0.4rem;
+}
+
+.inventario-dashboard-inline {
+    flex: 1 1 auto;
+}
+
+.inventario-action {
+    flex: 0 0 auto;
+}
+
+.inventario-dashboard-inline .inventario-summary-card {
+    background: #0f5e70;
+    border: 1px solid #0b4b58;
+    color: #f8f9fa;
+    border-radius: 0.35rem;
+    padding: 0.7rem 0.95rem;
+    text-align: center;
+    min-width: 230px;
+    max-width: 290px;
+    flex: 0 0 auto;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.inventario-dashboard-inline .summary-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.inventario-dashboard-inline .summary-total {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 0.25rem;
+}
+
+.inventario-dashboard-inline .summary-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem 0.8rem;
+    margin-top: 0.3rem;
+}
+
+.inventario-dashboard-inline .summary-metric {
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.inventario-dashboard-inline .summary-number {
+    font-weight: 700;
 }
 
 .inventario-page .table {
@@ -691,7 +774,7 @@
     position: relative;
     width: 100%;
     max-width: 100%;
-    max-height: calc(100vh - 220px); /* Altura da viewport menos cabeçalho e filtros */
+    max-height: calc(100vh - 260px);
 }
 
 /* Garantir que dropdowns não sejam cortados pelo overflow do container */
@@ -872,6 +955,79 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearStatus = currentUrl.searchParams.get('clear_status') === '1';
     const currentTributacoes = currentUrl.searchParams.getAll('tributacao');
     const currentStatus = currentUrl.searchParams.getAll('status');
+    const dashboardCards = new Map();
+
+    document.querySelectorAll('.inventario-summary-card').forEach((card) => {
+        const tributacao = card.dataset.tributacao;
+        if (!tributacao) return;
+        dashboardCards.set(tributacao, {
+            card,
+            totalEl: card.querySelector('.js-total'),
+            concluidaEl: card.querySelector('.js-concluida'),
+            aguardandoEl: card.querySelector('.js-aguardando'),
+            faltantesEl: card.querySelector('.js-faltantes')
+        });
+    });
+
+    function parseCount(value) {
+        const parsed = Number.parseInt(value, 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function adjustDashboardConcluida(tributacao, delta) {
+        const cardData = dashboardCards.get(tributacao);
+        if (!cardData) return;
+        const total = parseCount(cardData.card.dataset.total);
+        let concluida = parseCount(cardData.card.dataset.concluida) + delta;
+        concluida = Math.max(concluida, 0);
+        const faltantes = Math.max(total - concluida, 0);
+        cardData.card.dataset.concluida = String(concluida);
+        cardData.card.dataset.faltantes = String(faltantes);
+        if (cardData.concluidaEl) {
+            cardData.concluidaEl.textContent = concluida;
+        }
+        if (cardData.faltantesEl) {
+            cardData.faltantesEl.textContent = faltantes;
+        }
+    }
+
+    function adjustDashboardAguardando(tributacao, delta) {
+        const cardData = dashboardCards.get(tributacao);
+        if (!cardData) return;
+        let aguardando = parseCount(cardData.card.dataset.aguardando) + delta;
+        aguardando = Math.max(aguardando, 0);
+        cardData.card.dataset.aguardando = String(aguardando);
+        if (cardData.aguardandoEl) {
+            cardData.aguardandoEl.textContent = aguardando;
+        }
+    }
+
+    function updateDashboardForStatus(row, newStatus) {
+        if (!row) return;
+        const tributacao = row.dataset.tributacao;
+        const prevStatus = row.dataset.status || '';
+        const nextStatus = newStatus || '';
+        if (prevStatus === nextStatus) return;
+        if (tributacao) {
+            const wasConcluida = prevStatus === 'ENCERRADO';
+            const isConcluida = nextStatus === 'ENCERRADO';
+            if (wasConcluida !== isConcluida) {
+                adjustDashboardConcluida(tributacao, isConcluida ? 1 : -1);
+            }
+        }
+        row.dataset.status = nextStatus;
+    }
+
+    function updateDashboardForClienteFile(row, hasFileNow) {
+        if (!row) return;
+        const tributacao = row.dataset.tributacao;
+        const hadFile = row.dataset.hasClienteFile === '1';
+        if (hadFile === hasFileNow) return;
+        if (tributacao) {
+            adjustDashboardAguardando(tributacao, hasFileNow ? -1 : 1);
+        }
+        row.dataset.hasClienteFile = hasFileNow ? '1' : '0';
+    }
 
     // Garantir que dropdowns dos filtros sobreponham a tabela (sem corte por scroll)
     const filterDropdownToggles = [
@@ -1209,11 +1365,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateRowStatus(row, statusValue) {
-        if (!statusValue) return;
+        if (!row || statusValue === undefined || statusValue === null) return;
         const statusSelect = row.querySelector('select[data-field="status"]');
-        if (!statusSelect) return;
-        statusSelect.value = statusValue;
-        adjustStatusFontSize(statusSelect);
+        if (statusSelect) {
+            statusSelect.value = statusValue;
+            adjustStatusFontSize(statusSelect);
+            statusSelect.dataset.prevStatus = statusValue;
+        }
+        updateDashboardForStatus(row, statusValue);
     }
 
     function appendCfopFileItem(filesList, empresaId, fileIndex, filename) {
@@ -1395,6 +1554,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             element.classList.remove('saving');
             if (data.success) {
+                const resolvedValue = data.value !== undefined ? data.value : value;
                 // Atualizar valor formatado se retornado
                 if (data.value !== undefined && data.value !== value) {
                     element.value = data.value;
@@ -1422,6 +1582,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             currentLink.remove();
                         }
                     }
+                }
+                if (field === 'status') {
+                    const row = element.closest('tr');
+                    updateDashboardForStatus(row, resolvedValue);
+                    element.dataset.prevStatus = resolvedValue;
                 }
                 element.classList.add('saved');
                 setTimeout(() => element.classList.remove('saved'), 2000);
@@ -1552,6 +1717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const filesList = ensureFilesList(container, inputElement);
                 const filename = data.filename || (file && file.name) || 'arquivo';
                 appendClienteFileItem(filesList, empresaId, data.file_index, filename);
+                updateDashboardForClienteFile(row, true);
                 updateRowStatus(row, data.status);
                 inputElement.value = '';
             } else {
@@ -1587,10 +1753,16 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 if (fileItem) {
+                    const row = fileItem.closest('tr');
                     const filesList = fileItem.closest('.files-list');
                     fileItem.remove();
                     if (filesList) {
                         updateFileListIndices(filesList, empresaId, 'cliente');
+                    }
+                    if (row) {
+                        const hasLegacy = row.dataset.hasClienteLegacy === '1';
+                        const hasFileNow = hasLegacy || !!(filesList && filesList.querySelector('.file-item'));
+                        updateDashboardForClienteFile(row, hasFileNow);
                     }
                 }
             } else {
