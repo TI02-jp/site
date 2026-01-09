@@ -69,12 +69,26 @@
                              data-concluida="{{ card.concluida }}"
                              data-aguardando="{{ card.aguardando_arquivo }}"
                              data-faltantes="{{ card.faltantes }}">
-                            <div class="summary-title">{{ card.tributacao }}</div>
-                            <div class="summary-total"><span class="summary-number js-total">{{ card.total }}</span> EMPRESAS</div>
+                            <div class="summary-top">
+                                <div class="summary-title">{{ card.tributacao }}</div>
+                                <div class="summary-total">
+                                    <span class="summary-number js-total">{{ card.total }}</span>
+                                    <span class="summary-suffix">EMPRESAS</span>
+                                </div>
+                            </div>
                             <div class="summary-metrics">
-                                <span class="summary-metric">CONCLUIDA <span class="summary-number js-concluida">{{ card.concluida }}</span></span>
-                                <span class="summary-metric">AGUARDANDO ARQUIVO <span class="summary-number js-aguardando">{{ card.aguardando_arquivo }}</span></span>
-                                <span class="summary-metric">FALTANTES <span class="summary-number js-faltantes">{{ card.faltantes }}</span></span>
+                                <div class="summary-metric">
+                                    <span class="summary-label">CONCLUIDA</span>
+                                    <span class="summary-number js-concluida">{{ card.concluida }}</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="summary-label">AGUARDANDO ARQUIVO</span>
+                                    <span class="summary-number js-aguardando">{{ card.aguardando_arquivo }}</span>
+                                </div>
+                                <div class="summary-metric">
+                                    <span class="summary-label">FALTANTES</span>
+                                    <span class="summary-number js-faltantes">{{ card.faltantes }}</span>
+                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -529,6 +543,10 @@
 
 .inventario-dashboard-inline {
     flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.6rem;
+    min-width: 0;
 }
 
 .inventario-action {
@@ -536,46 +554,115 @@
 }
 
 .inventario-dashboard-inline .inventario-summary-card {
-    background: #0f5e70;
-    border: 1px solid #0b4b58;
-    color: #f8f9fa;
-    border-radius: 0.35rem;
-    padding: 0.7rem 0.95rem;
-    text-align: center;
-    min-width: 230px;
-    max-width: 290px;
-    flex: 0 0 auto;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    --summary-accent: var(--primary);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    color: var(--text-color);
+    border-radius: 0.65rem;
+    padding: 0.65rem 0.85rem 0.7rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 200px;
+}
+
+:root[data-theme="dark"] .inventario-dashboard-inline .inventario-summary-card {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.inventario-dashboard-inline .inventario-summary-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--summary-accent);
+    border-radius: 0.65rem 0 0 0.65rem;
+    opacity: 0.9;
+}
+
+.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="SIMPLES"] {
+    --summary-accent: var(--primary);
+}
+
+.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="PRESUMIDO"] {
+    --summary-accent: var(--accent);
+}
+
+.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="REAL"] {
+    --summary-accent: var(--primary-hover);
+}
+
+.inventario-dashboard-inline .summary-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
 .inventario-dashboard-inline .summary-title {
     font-weight: 700;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    color: var(--text-muted);
 }
 
 .inventario-dashboard-inline .summary-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
     font-weight: 700;
     font-size: 1rem;
-    margin-top: 0.25rem;
+}
+
+.inventario-dashboard-inline .summary-total .summary-number {
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.inventario-dashboard-inline .summary-suffix {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
 }
 
 .inventario-dashboard-inline .summary-metrics {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.25rem 0.8rem;
-    margin-top: 0.3rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.35rem 0.6rem;
 }
 
 .inventario-dashboard-inline .summary-metric {
-    font-size: 0.76rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.5rem;
+    background: var(--muted-surface);
+    border: 1px solid var(--card-border-color);
+    font-size: 0.68rem;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+}
+
+.inventario-dashboard-inline .summary-label {
+    line-height: 1.2;
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
 }
 
 .inventario-dashboard-inline .summary-number {
     font-weight: 700;
+    color: var(--text-color);
+    flex-shrink: 0;
 }
 
 .inventario-page .table {
