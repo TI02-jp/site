@@ -1,5 +1,6 @@
 """Flask application factory and common utilities."""
 
+import mimetypes
 import os
 import threading
 import time
@@ -36,6 +37,7 @@ load_dotenv()
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 
 app = Flask(__name__)
+mimetypes.add_type("text/javascript", ".mjs")
 
 logger = logging.getLogger(__name__)
 
@@ -735,6 +737,10 @@ with app.app_context():
 
     # Setup performance middleware (needs to be inside app context to access db.engine)
     register_performance_middleware(app, db)
+
+    # Inicializar scheduler de tarefas agendadas
+    from app.scheduler import init_scheduler
+    init_scheduler(app)
 
 # Setup structured logging with rotation (after app context is ready)
 from app.utils.logging_config import setup_logging, log_request_info

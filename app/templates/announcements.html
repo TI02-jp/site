@@ -364,6 +364,106 @@
     border-radius: 0.75rem;
   }
 
+  .announcement-modal-attachment-media.pdf-preview {
+    background: #f5f7fb;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .announcement-modal-attachment-media.pdf-preview canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .pdf-preview-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid #e0e6ed;
+    gap: 0.5rem;
+  }
+
+  .pdf-preview-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f5f7fb;
+    z-index: 10;
+  }
+
+  .pdf-preview-loading.hidden {
+    display: none;
+  }
+
+  .pdf-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e0e6ed;
+    border-top-color: #4361ee;
+    border-radius: 50%;
+    animation: pdf-spin 0.8s linear infinite;
+  }
+
+  @keyframes pdf-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .pdf-page-info {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+    user-select: none;
+  }
+
+  .pdf-nav-button {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    background: white;
+    color: #475569;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .pdf-nav-button:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #4361ee;
+    color: #4361ee;
+  }
+
+  .pdf-nav-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pdf-canvas-wrapper {
+    overflow: auto;
+    max-height: 700px;
+    background: white;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .pdf-canvas-wrapper canvas {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+  }
+
   .announcement-modal-attachment .attachment-icon,
   .preview-attachment .attachment-icon {
     width: 2.75rem;
@@ -645,7 +745,7 @@
               {% endif %}
             </div>
             <div class="announcement-card-content">
-              <div class="announcement-body text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content | sanitize | safe }}</div>
+              <div class="announcement-body text-start{% if image_count > 0 %} announcement-snippet{% endif %}">{{ announcement.content | sanitize(allow_data_images=true) | safe }}</div>
               {% if image_count == 1 %}
               <div class="announcement-card-image" data-announcement-image-wrapper>
                 <img
@@ -725,7 +825,7 @@
               </div>
             </div>
             <div class="modal-body d-grid gap-2 text-start">
-              <div class="announcement-body text-start">{{ announcement.content | sanitize | safe }}</div>
+              <div class="announcement-body text-start">{{ announcement.content | sanitize(allow_data_images=true) | safe }}</div>
               {% if attachments %}
               <div class="d-grid gap-2">
                 {% for attachment in attachments %}
@@ -751,15 +851,32 @@
                       alt="Anexo do comunicado {{ announcement.subject }}"
                       data-announcement-modal-image>
                   </div>
-                  {% elif attachment.is_pdf or attachment.is_text %}
-                  <div class="announcement-modal-attachment-media mt-2">
-                    <div class="ratio ratio-4x3">
-                      <iframe src="{{ url_for('static', filename=attachment.file_path) }}" title="Pré-visualização do anexo" class="w-100 h-100 border" allowfullscreen></iframe>
+                  {% elif attachment.is_pdf %}
+                  <div class="announcement-modal-attachment-media mt-2 pdf-preview" data-pdf-preview data-pdf-url="{{ url_for('static', filename=attachment.file_path) }}">
+                    <div class="pdf-preview-loading" data-pdf-loading>
+                      <div class="pdf-spinner"></div>
+                      <div class="text-muted small mt-3">Carregando PDF...</div>
+                    </div>
+                    <div class="pdf-preview-controls" style="display: none;" data-pdf-controls>
+                      <button class="pdf-nav-button" data-pdf-prev disabled>
+                        <i class="bi bi-chevron-left"></i>
+                        Anterior
+                      </button>
+                      <div class="pdf-page-info" data-pdf-page-info>
+                        Página <span data-pdf-current>1</span> de <span data-pdf-total>1</span>
+                      </div>
+                      <button class="pdf-nav-button" data-pdf-next disabled>
+                        Próxima
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </div>
+                    <div class="pdf-canvas-wrapper">
+                      <canvas aria-label="Pre-visualizacao do PDF"></canvas>
                     </div>
                   </div>
                   {% else %}
                   <div class="alert alert-light border mt-2 mb-0 text-muted small">
-                    Pré-visualização indisponível para este formato.
+                    Pre-visualizacao indisponivel para este formato. Use o botao "Abrir".
                   </div>
                   {% endif %}
                 </div>
@@ -1113,6 +1230,11 @@
 
 {% block scripts %}
 {{ super() }}
+<script type="module">
+  import * as pdfjsLib from "{{ url_for('static', filename='vendor/pdfjs/pdf.min.mjs') }}";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "{{ url_for('static', filename='vendor/pdfjs/pdf.worker.min.mjs') }}";
+  window.pdfjsLib = pdfjsLib;
+</script>
 {% if can_manage and not is_history %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -1379,6 +1501,28 @@
         });
       };
 
+      const insertNodeAtCaret = (node) => {
+        if (!richtextEditor) {
+          return;
+        }
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          richtextEditor.appendChild(node);
+          return;
+        }
+        const range = selection.getRangeAt(0);
+        if (!richtextEditor.contains(range.commonAncestorContainer)) {
+          richtextEditor.appendChild(node);
+          return;
+        }
+        range.deleteContents();
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      };
+
       const selectedFiles = [];
       const existingAttachmentSource = modal.querySelector('[data-existing-attachment-list]');
 
@@ -1560,6 +1704,109 @@
         richtextEditor.addEventListener('input', () => {
           updateTextPreview();
           storeSelection();
+        });
+
+        richtextEditor.addEventListener('paste', (event) => {
+          const clipboard = event.clipboardData;
+          if (!clipboard) {
+            return;
+          }
+
+          const extractDataImage = () => {
+            const html = clipboard.getData('text/html');
+            if (!html) {
+              return null;
+            }
+            const match = html.match(/<img[^>]+src=["'](data:image\/[^"']+)["']/i);
+            return match ? match[1] : null;
+          };
+
+          const dataUrlToBlob = (dataUrl) => {
+            const match = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/i);
+            if (!match) {
+              return null;
+            }
+            const mimeType = match[1];
+            const base64 = match[2];
+            const binary = atob(base64);
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+              array[i] = binary.charCodeAt(i);
+            }
+            return new Blob([array], { type: mimeType });
+          };
+
+          const items = Array.from(clipboard.items || []);
+          const imageItem = items.find((item) => item.type && item.type.startsWith('image/'));
+          let file = imageItem ? imageItem.getAsFile() : null;
+
+          if (!file && clipboard.files && clipboard.files.length > 0) {
+            const candidate = clipboard.files[0];
+            if (candidate && candidate.type && candidate.type.startsWith('image/')) {
+              file = candidate;
+            }
+          }
+
+          let dataUrl = null;
+          if (!file) {
+            dataUrl = extractDataImage();
+            if (dataUrl) {
+              const blob = dataUrlToBlob(dataUrl);
+              if (blob) {
+                file = blob;
+              } else {
+                event.preventDefault();
+                alert('Imagem colada nao suportada. Tente colar novamente.');
+                return;
+              }
+            }
+          }
+
+          if (!file) {
+            return;
+          }
+
+          event.preventDefault();
+
+          const placeholder = document.createElement('span');
+          placeholder.className = 'text-muted';
+          placeholder.textContent = 'Enviando imagem...';
+          insertNodeAtCaret(placeholder);
+
+          const formData = new FormData();
+          const filename = file.name || 'clipboard.png';
+          formData.append('image', file, filename);
+
+          fetch('/upload_image', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': window.csrfToken || '',
+            },
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data.image_url) {
+                throw new Error(data.error || 'Falha ao enviar imagem.');
+              }
+              const img = document.createElement('img');
+              img.src = data.image_url;
+              img.alt = filename ? `Imagem colada: ${filename}` : 'Imagem colada';
+              if (placeholder.isConnected) {
+                placeholder.replaceWith(img);
+              } else {
+                insertNodeAtCaret(img);
+              }
+              updateTextPreview();
+              storeSelection();
+            })
+            .catch((error) => {
+              if (placeholder.isConnected) {
+                placeholder.remove();
+              }
+              console.error('Falha ao enviar imagem do clipboard:', error);
+              alert('Falha ao enviar imagem colada. Tente novamente.');
+            });
         });
 
         richtextEditor.addEventListener('focus', () => {
@@ -1995,6 +2242,188 @@
         }
       });
     });
+
+    const initPdfPreviews = () => {
+      const ensurePdfJs = (retries = 10) => {
+        if (window.pdfjsLib) {
+          return Promise.resolve(window.pdfjsLib);
+        }
+        if (retries <= 0) {
+          return Promise.resolve(null);
+        }
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(ensurePdfJs(retries - 1)), 200);
+        });
+      };
+
+      ensurePdfJs().then((pdfjsLib) => {
+        if (!pdfjsLib) {
+          return;
+        }
+
+        const renderPreview = (container) => {
+        if (!container || container.dataset.pdfRendered === 'true') {
+          return;
+        }
+        const url = container.dataset.pdfUrl;
+        const canvas = container.querySelector('canvas');
+        const loading = container.querySelector('[data-pdf-loading]');
+        const controls = container.querySelector('[data-pdf-controls]');
+        const prevBtn = container.querySelector('[data-pdf-prev]');
+        const nextBtn = container.querySelector('[data-pdf-next]');
+        const currentPageSpan = container.querySelector('[data-pdf-current]');
+        const totalPageSpan = container.querySelector('[data-pdf-total]');
+
+        if (!url || !canvas) {
+          return;
+        }
+        const containerWidth = container.clientWidth || 0;
+        if (containerWidth < 80) {
+          return;
+        }
+
+        container.dataset.pdfRendered = 'loading';
+        let pdfDoc = null;
+        let currentPage = 1;
+
+        const renderPage = (pageNum) => {
+          if (!pdfDoc || pageNum < 1 || pageNum > pdfDoc.numPages) {
+            return Promise.resolve();
+          }
+
+          return pdfDoc.getPage(pageNum).then((page) => {
+            const baseViewport = page.getViewport({ scale: 1 });
+
+            // Aumentar o tamanho base para melhor legibilidade
+            const canvasWrapper = container.querySelector('.pdf-canvas-wrapper');
+            const availableWidth = canvasWrapper ? canvasWrapper.clientWidth - 32 : containerWidth;
+            const targetWidth = Math.max(availableWidth || 650, 650);
+
+            const computedStyle = window.getComputedStyle(container);
+            const maxHeight = (() => {
+              const parsed = parseFloat(computedStyle.maxHeight || '');
+              if (Number.isFinite(parsed) && parsed > 0) {
+                return parsed;
+              }
+              return Math.min(window.innerHeight * 0.75, 700);
+            })();
+
+            const widthScale = targetWidth / baseViewport.width;
+            const heightScale = maxHeight / baseViewport.height;
+
+            // Usar uma escala maior para melhor qualidade, com mínimo de 1.5
+            const scale = Math.max(Math.min(widthScale, heightScale), 1.5);
+            const viewport = page.getViewport({ scale });
+
+            // Aumentar a qualidade de renderização (mínimo 2x)
+            const outputScale = Math.max(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.floor(viewport.width * outputScale);
+            canvas.height = Math.floor(viewport.height * outputScale);
+            canvas.style.width = `${Math.floor(viewport.width)}px`;
+            canvas.style.height = `${Math.floor(viewport.height)}px`;
+            const context = canvas.getContext('2d');
+            const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+            return page.render({ canvasContext: context, viewport, transform }).promise;
+          });
+        };
+
+        const updateControls = () => {
+          if (currentPageSpan) currentPageSpan.textContent = currentPage;
+          if (prevBtn) prevBtn.disabled = currentPage <= 1;
+          if (nextBtn) nextBtn.disabled = currentPage >= pdfDoc.numPages;
+        };
+
+        const goToPrevPage = () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderPage(currentPage).then(updateControls);
+          }
+        };
+
+        const goToNextPage = () => {
+          if (pdfDoc && currentPage < pdfDoc.numPages) {
+            currentPage++;
+            renderPage(currentPage).then(updateControls);
+          }
+        };
+
+        if (prevBtn) {
+          prevBtn.addEventListener('click', goToPrevPage);
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', goToNextPage);
+        }
+
+        // Adicionar navegação por teclado (setas)
+        const handleKeyboard = (e) => {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            goToPrevPage();
+          } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            goToNextPage();
+          }
+        };
+
+        // Ativar navegação por teclado quando o container está visível
+        const modal = container.closest('.modal');
+        if (modal) {
+          const modalInstance = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+          modal.addEventListener('shown.bs.modal', () => {
+            document.addEventListener('keydown', handleKeyboard);
+          });
+          modal.addEventListener('hidden.bs.modal', () => {
+            document.removeEventListener('keydown', handleKeyboard);
+          });
+        }
+
+        pdfjsLib
+          .getDocument(url)
+          .promise
+          .then((doc) => {
+            pdfDoc = doc;
+            if (totalPageSpan) totalPageSpan.textContent = doc.numPages;
+            return renderPage(1);
+          })
+          .then(() => {
+            container.dataset.pdfRendered = 'true';
+            if (loading) {
+              loading.classList.add('hidden');
+            }
+            if (controls && pdfDoc && pdfDoc.numPages > 0) {
+              controls.style.display = 'flex';
+              updateControls();
+            }
+          })
+          .catch((error) => {
+            console.warn('Falha ao renderizar pre-visualizacao do PDF:', error);
+            container.dataset.pdfRendered = 'error';
+            if (loading) {
+              loading.innerHTML = '<i class="bi bi-exclamation-triangle text-warning"></i><div class="text-muted small mt-2">Pre-visualizacao indisponivel no momento.</div>';
+            }
+          });
+      };
+
+        const renderWithin = (root) => {
+        if (!root) {
+          return;
+        }
+        root.querySelectorAll('[data-pdf-preview]').forEach((container) => {
+          renderPreview(container);
+        });
+      };
+
+        document.querySelectorAll('.announcement-view-modal').forEach((modal) => {
+        modal.addEventListener('shown.bs.modal', () => {
+          renderWithin(modal);
+        });
+      });
+
+        renderWithin(document);
+      });
+    };
+
+    initPdfPreviews();
 
     const openAnnouncementFromHash = () => {
       const rawHash = window.location.hash || '';
