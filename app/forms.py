@@ -35,6 +35,7 @@ from wtforms.validators import (
 import re
 
 from app.services.courses import CourseStatus
+from app.constants import EMPRESA_TAG_CHOICES
 
 ANNOUNCEMENT_FILE_EXTENSIONS = (
     "pdf",
@@ -123,6 +124,12 @@ class EmpresaForm(FlaskForm):
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
     cnpj = StringField('CNPJ', validators=[DataRequired(), validar_cnpj])
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
+    tipo_empresa = RadioField(
+        'Tag do Cliente',
+        choices=EMPRESA_TAG_CHOICES,
+        validators=[DataRequired()],
+        default="Matriz"
+    )
     socio_administrador = StringField('Sócio Administrador', validators=[Optional()])
     atividade_principal = StringField(
         'Atividade Principal',

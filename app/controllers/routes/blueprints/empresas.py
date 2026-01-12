@@ -37,6 +37,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from app import csrf, db, limiter
+from app.constants import EMPRESA_TAG_CHOICES
 from app.controllers.routes import decode_id, encode_id, user_has_tag
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.forms import (
@@ -149,6 +150,7 @@ def cadastrar_empresa():
     if request.method == "GET":
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
         form.regime_lancamento.data = form.regime_lancamento.data or []
+        form.tipo_empresa.data = form.tipo_empresa.data or "Matriz"
     if form.validate_on_submit():
         try:
             cnpj_limpo = re.sub(r"\D", "", form.cnpj.data)
@@ -162,6 +164,7 @@ def cadastrar_empresa():
                 nome_empresa=form.nome_empresa.data,
                 cnpj=cnpj_limpo,
                 data_abertura=form.data_abertura.data,
+                tipo_empresa=form.tipo_empresa.data or "Matriz",
                 socio_administrador=form.socio_administrador.data,
                 tributacao=form.tributacao.data,
                 regime_lancamento=form.regime_lancamento.data,
@@ -200,6 +203,7 @@ def listar_empresas():
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
     allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     sort_arg = request.args.get("sort")
     order_arg = request.args.get("order")
     clear_tributacao = request.args.get("clear_tributacao") == "1"
@@ -211,6 +215,17 @@ def listar_empresas():
     else:
         tributacao_filters = saved_filters.get("tributacao_filters", [])
 
+    clear_tag = request.args.get("clear_tag") == "1"
+    raw_tags = request.args.getlist("tag")
+    if clear_tag:
+        tag_filters = ["Matriz"]
+    elif raw_tags:
+        tag_filters = [t for t in raw_tags if t in allowed_tag_filters]
+    else:
+        tag_filters = saved_filters.get("tag_filters") or ["Matriz"]
+    if not tag_filters:
+        tag_filters = ["Matriz"]
+
     sort = sort_arg or saved_filters.get("sort") or "nome"
     if sort not in ("nome", "codigo"):
         sort = "nome"
@@ -219,7 +234,12 @@ def listar_empresas():
     if order not in ("asc", "desc"):
         order = "asc"
 
-    session["listar_empresas_filters"] = {"sort": sort, "order": order, "search": search}
+    session["listar_empresas_filters"] = {
+        "sort": sort,
+        "order": order,
+        "search": search,
+        "tag_filters": tag_filters,
+    }
 
     query = Empresa.query
 
@@ -230,6 +250,12 @@ def listar_empresas():
 
     if tributacao_filters:
         query = query.filter(Empresa.tributacao.in_(tributacao_filters))
+
+    if tag_filters:
+        if "Matriz" in tag_filters:
+            query = query.filter(sa.or_(Empresa.tipo_empresa.in_(tag_filters), Empresa.tipo_empresa.is_(None)))
+        else:
+            query = query.filter(Empresa.tipo_empresa.in_(tag_filters))
 
     if search:
         like_pattern = f"%{search}%"
@@ -247,6 +273,7 @@ def listar_empresas():
         "sort": sort,
         "order": order,
         "tributacao_filters": tributacao_filters,
+        "tag_filters": tag_filters,
         "search": search,
     }
 
@@ -263,6 +290,8 @@ def listar_empresas():
         show_inactive=show_inactive,
         tributacao_filters=tributacao_filters,
         allowed_tributacoes=allowed_tributacoes,
+        tag_filters=tag_filters,
+        allowed_tag_filters=allowed_tag_filters,
     )
 
 
@@ -283,6 +312,7 @@ def editar_empresa(empresa_id: str | None = None, id: int | None = None):
         empresa_form.acessos_json.data = json.dumps(empresa.acessos or [])
         empresa_form.contatos_json.data = json.dumps(empresa.contatos or [])
         empresa_form.ativo.data = empresa.ativo
+        empresa_form.tipo_empresa.data = empresa.tipo_empresa or "Matriz"
 
     if request.method == "POST":
         if empresa_form.validate():
@@ -997,6 +1027,7 @@ def inventario():
 
     # Filtros
     allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     clear_tributacao = request.args.get("clear_tributacao") == "1"
     raw_tributacoes = request.args.getlist('tributacao')
     if clear_tributacao:
@@ -1005,6 +1036,17 @@ def inventario():
         tributacao_filters = [t for t in raw_tributacoes if t in allowed_tributacoes]
     else:
         tributacao_filters = saved_filters.get("tributacao_filters", [])
+
+    clear_tag = request.args.get("clear_tag") == "1"
+    raw_tags = request.args.getlist("tag")
+    if clear_tag:
+        tag_filters = ["Matriz"]
+    elif raw_tags:
+        tag_filters = [t for t in raw_tags if t in allowed_tag_filters]
+    else:
+        tag_filters = saved_filters.get("tag_filters") or ["Matriz"]
+    if not tag_filters:
+        tag_filters = ["Matriz"]
 
     # Filtro de status
     clear_status = request.args.get("clear_status") == "1"
@@ -1029,6 +1071,7 @@ def inventario():
         "order": order,
         "tributacao_filters": tributacao_filters,
         "status_filters": status_filters,
+        "tag_filters": tag_filters,
         "search": search_term,
     }
 
@@ -1038,6 +1081,14 @@ def inventario():
 
     # Query base - empresas ativas
     base_query = Empresa.query.filter_by(ativo=True)
+
+    if tag_filters:
+        if "Matriz" in tag_filters:
+            base_query = base_query.filter(
+                sa.or_(Empresa.tipo_empresa.in_(tag_filters), Empresa.tipo_empresa.is_(None))
+            )
+        else:
+            base_query = base_query.filter(Empresa.tipo_empresa.in_(tag_filters))
 
     # Aplicar filtro de pesquisa
     if search_term:
@@ -1196,6 +1247,8 @@ def inventario():
         order=order,
         tributacao_filters=tributacao_filters,
         allowed_tributacoes=allowed_tributacoes,
+        tag_filters=tag_filters,
+        allowed_tag_filters=allowed_tag_filters,
         status_filters=status_filters,
         search_term=search_term,
         show_all=show_all,

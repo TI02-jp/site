@@ -99,6 +99,27 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ empresa_form.tipo_empresa.label.text }}</label>
+                        <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tipo_empresa">
+                            {% for subfield in empresa_form.tipo_empresa %}
+                            <div class="form-check mb-2">
+                                {{ subfield(class="form-check-input") }}
+                                {{ subfield.label(class="form-check-label") }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if empresa_form.tipo_empresa.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in empresa_form.tipo_empresa.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Informações Empresariais -->
                 <div class="row mb-4">
                     <div class="col-12">

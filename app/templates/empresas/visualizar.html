@@ -125,9 +125,17 @@
                             <div class="info-value fw-semibold text-dept-blue">{{ empresa.nome_empresa or 'Não informado' }}</div>
                         </div>
                         <div class="info-item">
+                            <label class="info-label">Tag do Cliente</label>
+                            <div class="info-value">
+                                {% set tipo_tag = empresa.tipo_empresa or 'Matriz' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else 'bg-warning-subtle text-warning' %}
+                                <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
                             <label class="info-label">CNPJ</label>
                             <div class="info-value font-monospace clickable-copy">
-                                {% if empresa.cnpj %}<span class="cnpj-formatted">{{ empresa.cnpj }}</span>{% else %}<span class="text-muted">Não informado</span>{% endif %}
+                                {% if empresa.cnpj %}<span class="cnpj-formatted">{{ empresa.cnpj }}</span>{% else %}<span class="text-muted">Nao informado</span>{% endif %}
                             </div>
                         </div>
                         <div class="info-item">
