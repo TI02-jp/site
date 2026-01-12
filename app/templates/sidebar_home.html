@@ -198,6 +198,14 @@
                 MURAL
             </a>
         </li>
+        {% if current_user.role == 'admin' %}
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint == 'comunicados_clientes' %} active{% endif %}" href="{{ url_for('comunicados_clientes') }}">
+                <i class="bi bi-envelope-paper"></i>
+                COMUNICADOS CLIENTES
+            </a>
+        </li>
+        {% endif %}
     </ul>
 </div>
 {% if current_user.role == 'admin' or has_report_access() %}

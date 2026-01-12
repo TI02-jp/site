@@ -22,6 +22,7 @@ Blueprints Disponiveis:
     - users_bp: Gestao de usuarios
     - tasks_bp: Gestao de tarefas
     - empresas_bp: Gestao de empresas
+    - comunicados_clientes_bp: Comunicados enviados aos clientes (admin)
 
 Uso:
     from app.controllers.routes.blueprints import register_all_blueprints
@@ -119,6 +120,10 @@ def register_all_blueprints(app: Flask) -> None:
     # que deve ser aplicado apos o registro do blueprint no __init__.py principal
     from app.controllers.routes.blueprints.relatorios import relatorios_bp
     app.register_blueprint(relatorios_bp)
+
+    # Comunicados para clientes (admin)
+    from app.controllers.routes.blueprints.comunicados_clientes import comunicados_clientes_bp
+    app.register_blueprint(comunicados_clientes_bp)
     
     # Core - rotas principais (home/index)
     from app.controllers.routes.blueprints.core import core_bp
@@ -166,7 +171,8 @@ def _add_legacy_endpoint_aliases(app: Flask) -> None:
         'auth.', 'cursos.', 'consultorias.', 'calendario.',
         'diretoria.', 'notifications.', 'notas.',
         'reunioes.', 'relatorios.', 'users.',
-        'tasks.', 'empresas.', 'core.', 'manual.'
+        'tasks.', 'empresas.', 'core.', 'manual.',
+        'comunicados_clientes.',
     ]
 
     for rule in list(app.url_map.iter_rules()):

@@ -1518,6 +1518,7 @@ def _build_aguardando_tadeu_groups() -> list[dict]:
     outros: list[Empresa] = []
     empresas = (
         Empresa.query.join(Inventario, Inventario.empresa_id == Empresa.id)
+        .options(joinedload(Empresa.inventario))
         .filter(Empresa.ativo.is_(True), Inventario.status == "AGUARDANDO TADEU")
         .order_by(Empresa.tributacao, Empresa.codigo_empresa)
         .all()
