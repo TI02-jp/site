@@ -37,6 +37,9 @@
                     {% for trib in tributacao_filters %}
                     <input type="hidden" name="tributacao" value="{{ trib }}">
                     {% endfor %}
+                    {% for tag in tag_filters %}
+                    <input type="hidden" name="tag" value="{{ tag }}">
+                    {% endfor %}
                     {% for st in status_filters %}
                     <input type="hidden" name="status" value="{{ st }}">
                     {% endfor %}
@@ -52,7 +55,7 @@
                                placeholder="Pesquisar por ID ou Razão Social...">
                         <a class="btn btn-outline-secondary"
                            id="clearSearch"
-                           href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, all=all_param) }}"
+                           href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, all=all_param) }}"
                            title="Limpar pesquisa">
                             <i class="bi bi-x"></i>
                         </a>
@@ -93,15 +96,60 @@
                         </div>
                         {% endfor %}
                     </div>
-                    <div class="inventario-action ms-auto">
+                    <div class="inventario-action ms-auto d-flex align-items-center gap-2">
+                        {% set is_tag_filtered = tag_filters|length != 1 or 'Matriz' not in tag_filters %}
+                        <div class="dropdown" data-bs-auto-close="outside">
+                            <button class="btn btn-sm d-inline-flex align-items-center gap-1 {% if is_tag_filtered %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    type="button"
+                                    id="tagFilterDropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    aria-label="Filtrar por tag">
+                                <i class="bi bi-tags"></i>
+                                Tag
+                                {% if is_tag_filtered %}
+                                    <span class="badge bg-light text-dark ms-1">{{ tag_filters|length }}</span>
+                                {% endif %}
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="tagFilterDropdown" style="min-width: 220px;">
+                                <form method="GET" class="tag-filter-form">
+                                    <input type="hidden" name="sort" value="{{ sort }}">
+                                    <input type="hidden" name="order" value="{{ order }}">
+                                    <input type="hidden" name="q" value="{{ search_term }}">
+                                    {% if show_all %}
+                                    <input type="hidden" name="all" value="1">
+                                    {% endif %}
+                                    {% for trib in tributacao_filters %}
+                                    <input type="hidden" name="tributacao" value="{{ trib }}">
+                                    {% endfor %}
+                                    {% for st in status_filters %}
+                                    <input type="hidden" name="status" value="{{ st }}">
+                                    {% endfor %}
+                                    <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tag</p>
+                                    <div class="d-flex flex-column gap-1 mb-3">
+                                        {% for tag in allowed_tag_filters %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="tag" id="tagFilter{{ loop.index }}" value="{{ tag }}" {% if tag in tag_filters %}checked{% endif %}>
+                                            <label class="form-check-label" for="tagFilter{{ loop.index }}">{{ tag }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a class="btn btn-link btn-sm text-decoration-none px-0 tag-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, clear_tag=1) }}">Limpar</a>
+                                        <button type="submit" class="btn btn-primary btn-sm tag-filter-apply">Aplicar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                         {% if show_all %}
                             <a class="btn btn-outline-secondary btn-sm"
-                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term) }}">
+                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term) }}">
                                 Paginar resultados
                             </a>
                         {% else %}
                             <a class="btn btn-outline-primary btn-sm"
-                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=1) }}">
+                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=1) }}">
                                 Listar tudo
                             </a>
                         {% endif %}
@@ -114,7 +162,14 @@
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="text-muted small">Filtros:</span>
-                {% if tributacao_filters or status_filters %}
+                {% set show_tag_filter = tag_filters and (tag_filters|length != 1 or 'Matriz' not in tag_filters) %}
+                {% if tributacao_filters or status_filters or show_tag_filter %}
+                    {% if show_tag_filter %}
+                        <span class="text-muted small">Tag:</span>
+                        {% for tag in tag_filters %}
+                        <span class="badge bg-secondary">{{ tag }}</span>
+                        {% endfor %}
+                    {% endif %}
                     {% if tributacao_filters %}
                         <span class="text-muted small">Tributação:</span>
                         {% for trib in tributacao_filters %}
@@ -127,7 +182,7 @@
                         <span class="badge bg-info">{{ st }}</span>
                         {% endfor %}
                     {% endif %}
-                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, q=search_term, all=all_param) }}"
+                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, clear_tag=1, q=search_term, all=all_param) }}"
                        class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-x-circle"></i> Limpar Tudo
                     </a>
@@ -142,7 +197,7 @@
                         <ul class="pagination pagination-sm mb-0">
                             <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
                                 <a class="page-link"
-                                   href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
+                                   href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
                                    {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
                                     Anterior
                                 </a>
@@ -150,7 +205,7 @@
                             {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
                                 {% if p %}
                                     <li class="page-item{% if p == pagination.page %} active{% endif %}">
-                                        <a class="page-link" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=p) }}">{{ p }}</a>
+                                        <a class="page-link" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=p) }}">{{ p }}</a>
                                     </li>
                                 {% else %}
                                     <li class="page-item disabled"><span class="page-link">…</span></li>
@@ -158,7 +213,7 @@
                             {% endfor %}
                             <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
                                 <a class="page-link"
-                                   href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
+                                   href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
                                    {% if not pagination.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
                                     Próximo
                                 </a>
@@ -179,7 +234,7 @@
                         <tr>
                             
                             <th class="col-id" style="width: 65px;">
-                                <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
                                     {% if sort == 'codigo' %}
@@ -190,7 +245,7 @@
                                 </a>
                             </th>
                             <th class="col-razao" style="width: 220px;">
-                                <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
                                     {% if sort == 'nome' %}
@@ -204,7 +259,7 @@
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
-                                        <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                        <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                            class="text-decoration-none text-dark">
                                             {% if sort == 'tributacao' %}
                                                 <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }}"></i>
@@ -231,6 +286,9 @@
                                                 {% if show_all %}
                                                 <input type="hidden" name="all" value="1">
                                                 {% endif %}
+                                                {% for tag in tag_filters %}
+                                                <input type="hidden" name="tag" value="{{ tag }}">
+                                                {% endfor %}
                                                 <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributação</p>
                                                 <div class="d-flex flex-column gap-1 mb-3">
                                                     {% for trib in allowed_tributacoes %}
@@ -241,7 +299,7 @@
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, q=search_term, all=all_param) }}">Limpar</a>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
@@ -277,6 +335,9 @@
                                                 {% if show_all %}
                                                 <input type="hidden" name="all" value="1">
                                                 {% endif %}
+                                                {% for tag in tag_filters %}
+                                                <input type="hidden" name="tag" value="{{ tag }}">
+                                                {% endfor %}
                                                 {% for trib in tributacao_filters %}
                                                 <input type="hidden" name="tributacao" value="{{ trib }}">
                                                 {% endfor %}
@@ -290,7 +351,7 @@
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit" class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
@@ -328,6 +389,11 @@
                                    class="text-decoration-none" target="_blank">
                                     {{ item.empresa.nome_empresa }}
                                 </a>
+                                {% set tipo_tag = item.empresa.tipo_empresa or 'Matriz' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else 'bg-warning-subtle text-warning' %}
+                                <div class="mt-1">
+                                    <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
+                                </div>
                             </td>
 
                             <!-- Tributação -->
@@ -1618,6 +1684,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Evita propagação nos checkboxes para não fechar por engano
         document.querySelectorAll('.status-filter-form .form-check-input').forEach(function (input) {
+            input.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+            });
+        });
+    }
+
+    // Mantém dropdown de tag aberto ao marcar checkboxes
+    const tagDropdownToggle = document.getElementById('tagFilterDropdown');
+    if (tagDropdownToggle && bootstrap?.Dropdown) {
+        const tagDropdownInstance = bootstrap.Dropdown.getOrCreateInstance(tagDropdownToggle, { autoClose: 'outside' });
+        const tagDropdownParent = tagDropdownToggle.closest('.dropdown');
+
+        if (tagDropdownParent) {
+            tagDropdownParent.addEventListener('hide.bs.dropdown', function (event) {
+                const clickTarget = event?.clickEvent?.target;
+                if (!clickTarget) return;
+
+                const insideForm = clickTarget.closest('.tag-filter-form');
+                const isApply = clickTarget.closest('.tag-filter-apply');
+                const isClear = clickTarget.closest('.tag-filter-clear');
+
+                if (insideForm && !isApply && !isClear) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        document.querySelectorAll('.tag-filter-form .form-check-input').forEach(function (input) {
             input.addEventListener('click', function (ev) {
                 ev.stopPropagation();
             });

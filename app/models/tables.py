@@ -857,6 +857,7 @@ class Empresa(db.Model):
     cnpj = db.Column(db.String(18), unique=True, nullable=False)
     atividade_principal = db.Column(db.String(200))
     data_abertura = db.Column(db.Date, nullable=False)
+    tipo_empresa = db.Column(db.String(20), nullable=False, default="Matriz")
     socio_administrador = db.Column(db.String(100))
     tributacao = db.Column(db.String(50))
     regime_lancamento = db.Column(JsonString(50), nullable=False)
