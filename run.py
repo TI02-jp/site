@@ -52,6 +52,18 @@ if __name__ == "__main__":
 
     expose_tracebacks = os.getenv("WAITRESS_EXPOSE_TRACEBACKS", "0") == "1"
 
+    trusted_proxy = os.getenv("WAITRESS_TRUSTED_PROXY")
+    if trusted_proxy is None or not trusted_proxy.strip():
+        trusted_proxy = "127.0.0.1"
+    else:
+        trusted_proxy = trusted_proxy.split(",", 1)[0].strip() or None
+
+    trusted_proxy_count = None
+    trusted_proxy_headers = None
+    if trusted_proxy:
+        trusted_proxy_count = _get_int_env("WAITRESS_TRUSTED_PROXY_COUNT", 1)
+        trusted_proxy_headers = {"x-forwarded-proto"}
+
     logging.getLogger(__name__).info(
         "Starting Waitress: host=%s port=%s threads=%s channel_timeout=%s",
         host,
@@ -60,8 +72,7 @@ if __name__ == "__main__":
         channel_timeout,
     )
 
-    serve(
-        app,
+    serve_kwargs = dict(
         host=host,
         port=port,
         threads=threads,
@@ -76,3 +87,10 @@ if __name__ == "__main__":
         send_bytes=send_bytes,
         expose_tracebacks=app.debug or expose_tracebacks,
     )
+
+    if trusted_proxy:
+        serve_kwargs["trusted_proxy"] = trusted_proxy
+        serve_kwargs["trusted_proxy_count"] = trusted_proxy_count
+        serve_kwargs["trusted_proxy_headers"] = trusted_proxy_headers
+
+    serve(app, **serve_kwargs)
