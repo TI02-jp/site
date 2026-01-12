@@ -1,18 +1,113 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-br">
-  <body>
-    <h2>Inventario - empresas aguardando Tadeu</h2>
-    <p>Ola {{ destinatario.name }},</p>
-    <p>Segue a relacao de empresas com status "AGUARDANDO TADEU", separada por tributacao.</p>
-    {% for grupo in grupos %}
-      <h3>{{ grupo.tributacao }} ({{ grupo.empresas|length }})</h3>
-      <ul>
-        {% for empresa in grupo.empresas %}
-          <li>{{ empresa.codigo_empresa }} - {{ empresa.nome_empresa }}</li>
-        {% endfor %}
-      </ul>
-    {% endfor %}
-    <p><a href="{{ inventario_url }}">Abrir inventario</a></p>
-    <p>Mensagem automatica do portal JP.</p>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário - Empresas Aguardando</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0b288b 0%, #e87429 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">📋 Inventário 2025</h1>
+              <p style="margin: 8px 0 0 0; color: #ffffff; opacity: 0.9; font-size: 14px;">Empresas aguardando análise</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding: 30px 30px 20px 30px;">
+              <p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+                Olá <strong>{{ destinatario.name }}</strong>,
+              </p>
+              <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                Seguem as empresas com status <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-weight: 600;">AGUARDANDO TADEU</span>, organizadas por tributação.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Summary Stats -->
+          <tr>
+            <td style="padding: 0 30px 20px 30px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 6px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 16px; text-align: center; border-right: 1px solid #e5e7eb;">
+                    <div style="font-size: 28px; font-weight: 700; color: #0b288b;">{{ grupos|map(attribute='empresas')|map('length')|sum }}</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total de Empresas</div>
+                  </td>
+                  <td style="padding: 16px; text-align: center;">
+                    <div style="font-size: 28px; font-weight: 700; color: #e87429;">{{ grupos|length }}</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Tributações</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Companies by Taxation -->
+          {% for grupo in grupos %}
+          <tr>
+            <td style="padding: 0 30px 20px 30px;">
+              <!-- Taxation Header -->
+              <div style="background: linear-gradient(90deg, #0b288b 0%, #e87429 100%); padding: 12px 16px; border-radius: 6px 6px 0 0; margin-bottom: 0;">
+                <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="color: #ffffff; font-size: 16px; font-weight: 600;">
+                      {{ grupo.tributacao }}
+                    </td>
+                    <td style="text-align: right; color: #ffffff; opacity: 0.9; font-size: 14px; font-weight: 600;">
+                      {{ grupo.empresas|length }} {% if grupo.empresas|length == 1 %}empresa{% else %}empresas{% endif %}
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Companies List -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden;">
+                {% for empresa in grupo.empresas %}
+                <tr style="{% if loop.index % 2 == 0 %}background-color: #f9fafb;{% else %}background-color: #ffffff;{% endif %}">
+                  <td style="padding: 12px 16px; border-bottom: {% if not loop.last %}1px solid #e5e7eb{% else %}none{% endif %};">
+                    <div style="display: flex; align-items: center;">
+                      <span style="background-color: #0b288b; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 12px; min-width: 60px; text-align: center;">
+                        {{ empresa.codigo_empresa }}
+                      </span>
+                      <span style="color: #1f2937; font-size: 14px; line-height: 1.4;">
+                        {{ empresa.nome_empresa }}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endfor %}
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 20px 30px 30px 30px; text-align: center;">
+              <a href="{{ inventario_url }}" style="display: inline-block; background: linear-gradient(135deg, #0b288b 0%, #e87429 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(11, 40, 139, 0.3);">
+                🔗 Abrir Inventário no Portal
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 30px 30px 30px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center; line-height: 1.6;">
+                Mensagem automática do <strong style="color: #0b288b;">Portal JP Contábil</strong><br>
+                Este email foi enviado por jpcontabil.com.br
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>

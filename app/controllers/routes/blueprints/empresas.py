@@ -1380,6 +1380,11 @@ def api_inventario_update():
             and processed_value == "AGUARDANDO TADEU"
             and previous_status != "AGUARDANDO TADEU"
         )
+        notify_cristiano = (
+            field == "status"
+            and processed_value == "LIBERADO PARA IMPORTAÇÃO"
+            and previous_status != "LIBERADO PARA IMPORTAÇÃO"
+        )
         if field == "pdf_path":
             with track_custom_span("inventario_update", "cleanup_pdf"):
                 is_url = bool(processed_value) and (
@@ -1409,6 +1414,8 @@ def api_inventario_update():
             track_commit_end(commit_started)
         if notify_tadeu:
             _notify_tadeu_aguardando_inventario()
+        if notify_cristiano:
+            _notify_cristiano_liberado_importacao(empresa)
 
         # Retornar valor formatado se for campo monetário
         response_value = value
@@ -1535,15 +1542,16 @@ def _notify_tadeu_aguardando_inventario() -> None:
     if not groups:
         return
     inventario_url = url_for("empresas.inventario", _external=True)
-    _queue_inventario_email(
-        recipient_name="Tadeu",
-        subject="[Inventario] Empresas aguardando Tadeu",
-        template_name="emails/inventario_tadeu.html",
-        context={
-            "grupos": groups,
-            "inventario_url": inventario_url,
-        },
-    )
+    for recipient_name in ("Tadeu", "Cristiano"):
+        _queue_inventario_email(
+            recipient_name=recipient_name,
+            subject="[Inventario] Empresas aguardando Tadeu",
+            template_name="emails/inventario_tadeu.html",
+            context={
+                "grupos": groups,
+                "inventario_url": inventario_url,
+            },
+        )
 
 
 def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
@@ -1585,73 +1593,155 @@ def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
         )
 
 
-def send_daily_tadeu_notification() -> None:
-    """
-    Job agendado: envia notificação diária para Tadeu com empresas alteradas hoje.
-    Executado diariamente às 17h pelo scheduler.
-    """
-    from datetime import date
+def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
+    """Cria notificação no portal para Cristiano quando o inventário é liberado para importação."""
+    from app.models.tables import TaskNotification, NotificationType
 
-    current_app.logger.info("Executando job diário de notificação para Tadeu")
+    cristiano = _find_active_user_by_name("Cristiano")
+    if not cristiano:
+        current_app.logger.warning("Inventario: usuário Cristiano não encontrado para notificação")
+        return
 
-    # Buscar empresas atualizadas hoje com status AGUARDANDO TADEU
-    inventarios = (
-        Inventario.query.join(Empresa)
-        .filter(
-            Inventario.status == "AGUARDANDO TADEU",
-            db.func.date(Inventario.updated_at) == date.today(),
-            Empresa.ativo.is_(True),
-        )
-        .all()
+    message = f"Inventário liberado para importação: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    if len(message) > 255:
+        message = message[:252] + "..."
+
+    notification = TaskNotification(
+        user_id=cristiano.id,
+        task_id=None,
+        announcement_id=None,
+        type=NotificationType.INVENTARIO.value,
+        message=message,
     )
 
-    if not inventarios:
-        current_app.logger.info("Nenhuma empresa aguardando Tadeu atualizada hoje")
-        return
+    try:
+        db.session.add(notification)
+        db.session.commit()
+        current_app.logger.info(
+            "Notificação de inventário criada para Cristiano: empresa %s",
+            empresa.codigo_empresa,
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error(
+            "Erro ao criar notificação para Cristiano: %s",
+            exc,
+        )
 
-    # Agrupar empresas por tributação
-    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
-    grouped = {trib: [] for trib in allowed_tributacoes}
-    outros: list[Empresa] = []
 
-    empresas = [inv.empresa for inv in inventarios]
-    empresas.sort(key=lambda e: (e.tributacao or "", e.codigo_empresa or ""))
+def send_daily_tadeu_notification(recipients: Iterable[str] | None = None) -> None:
+    """
+    Job agendado: envia notificação diária para Tadeu com todas as empresas aguardando.
+    Executado diariamente às 17h pelo scheduler.
+    """
+    current_app.logger.info("Executando job diário de notificação para Tadeu")
 
-    for empresa in empresas:
-        trib = (empresa.tributacao or "").strip()
-        if trib in grouped:
-            grouped[trib].append(empresa)
-        else:
-            outros.append(empresa)
-
-    groups: list[dict] = []
-    for trib in allowed_tributacoes:
-        if grouped[trib]:
-            groups.append({"tributacao": trib, "empresas": grouped[trib]})
-    if outros:
-        groups.append({"tributacao": "Outros", "empresas": outros})
+    # Buscar TODAS as empresas com status AGUARDANDO TADEU (sem filtro de data)
+    groups = _build_aguardando_tadeu_groups()
 
     if not groups:
-        current_app.logger.info("Nenhum grupo de empresas para notificar Tadeu")
+        current_app.logger.info("Nenhuma empresa aguardando Tadeu")
         return
+
+    # Contar total de empresas
+    total_empresas = sum(len(group["empresas"]) for group in groups)
 
     # Enviar notificação
     inventario_url = url_for("empresas.inventario", _external=True)
-    _queue_inventario_email(
-        recipient_name="Tadeu",
-        subject="[Inventario] Atualização Diária - Empresas aguardando Tadeu",
-        template_name="emails/inventario_tadeu.html",
-        context={
-            "grupos": groups,
-            "inventario_url": inventario_url,
-        },
-    )
+    if recipients:
+        recipient_list = tuple(recipient.strip() for recipient in recipients if recipient and recipient.strip())
+    else:
+        recipient_list = ("Tadeu", "Cristiano")
+    for recipient_name in recipient_list:
+        _queue_inventario_email(
+            recipient_name=recipient_name,
+            subject="[Inventario] Empresas aguardando Tadeu",
+            template_name="emails/inventario_tadeu.html",
+            context={
+                "grupos": groups,
+                "inventario_url": inventario_url,
+            },
+        )
 
     current_app.logger.info(
         "Notificação diária enviada para Tadeu: %d empresas em %d grupos",
-        len(empresas),
+        total_empresas,
         len(groups),
     )
+
+
+@empresas_bp.route("/inventario/test-email")
+@login_required
+def inventario_test_email_page():
+    """Página para testar envio de emails do inventário."""
+    return render_template("empresas/inventario_test_email.html")
+
+
+@empresas_bp.route("/api/inventario/test-email-cristiano", methods=["POST"])
+@login_required
+@csrf.exempt
+def api_test_email_cristiano():
+    """Dispara email de teste imediato para Tadeu e Cristiano."""
+    from app.utils.mailer import send_email
+
+    try:
+        current_app.logger.info("🔥 Disparando email de teste para Tadeu e Cristiano")
+
+        # Verificar se há empresas aguardando
+        groups = _build_aguardando_tadeu_groups()
+        if not groups:
+            current_app.logger.warning("Nenhuma empresa aguardando Tadeu")
+            return jsonify({'success': False, 'error': 'Nenhuma empresa aguardando'}), 400
+
+        total_empresas = sum(len(group["empresas"]) for group in groups)
+        current_app.logger.info("Encontradas %d empresas aguardando em %d grupos", total_empresas, len(groups))
+
+        inventario_url = url_for("empresas.inventario", _external=True)
+        recipients_info = []
+
+        # Enviar para Tadeu e Cristiano
+        for recipient_name in ("Tadeu", "Cristiano"):
+            user = _find_active_user_by_name(recipient_name)
+            if not user:
+                current_app.logger.warning("Usuário %s não encontrado", recipient_name)
+                continue
+
+            if not user.email:
+                current_app.logger.warning("Usuário %s sem email cadastrado", recipient_name)
+                continue
+
+            current_app.logger.info("Enviando email para %s (%s)", recipient_name, user.email)
+
+            # Renderizar o template do email
+            html_body = render_template(
+                "emails/inventario_tadeu.html",
+                destinatario=user,
+                grupos=groups,
+                inventario_url=inventario_url
+            )
+
+            # Enviar email SÍNCRONO (direto, sem fila) para ver erros
+            send_email(
+                subject="[Inventario] Teste - Empresas aguardando Tadeu",
+                html_body=html_body,
+                recipients=[user.email]
+            )
+
+            recipients_info.append(f"{recipient_name} ({user.email})")
+            current_app.logger.info("Email enviado com sucesso para %s!", recipient_name)
+
+        if not recipients_info:
+            return jsonify({'success': False, 'error': 'Nenhum destinatário encontrado'}), 404
+
+        return jsonify({
+            'success': True,
+            'message': f'Emails enviados para: {", ".join(recipients_info)}',
+            'empresas': total_empresas,
+            'grupos': len(groups)
+        }), 200
+    except Exception as e:
+        current_app.logger.exception("Erro ao enviar email de teste: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
