@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Teste de Email - Inventário{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">📧 Teste de Email - Inventário</h4>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">
+            Envie um email de teste com a lista de empresas "AGUARDANDO TADEU" para <strong>Tadeu e Cristiano</strong>.
+          </p>
+
+          <button id="btnEnviar" class="btn btn-primary btn-lg btn-block" onclick="enviarEmail()">
+            <span id="btnTexto">Enviar Email de Teste</span>
+            <span id="btnSpinner" class="spinner-border spinner-border-sm d-none ml-2"></span>
+          </button>
+
+          <div id="resultado" class="mt-3" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function enviarEmail() {
+  const btn = document.getElementById('btnEnviar');
+  const btnTexto = document.getElementById('btnTexto');
+  const btnSpinner = document.getElementById('btnSpinner');
+  const resultado = document.getElementById('resultado');
+
+  // Desabilitar botão
+  btn.disabled = true;
+  btnTexto.textContent = 'Enviando...';
+  btnSpinner.classList.remove('d-none');
+  resultado.style.display = 'none';
+
+  try {
+    const response = await fetch('/api/inventario/test-email-cristiano', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      resultado.className = 'alert alert-success mt-3';
+      resultado.innerHTML = '<strong>✓ Sucesso!</strong> ' + data.message +
+        '<br><small>Empresas: ' + data.empresas + ' | Grupos: ' + data.grupos + '</small>';
+    } else {
+      resultado.className = 'alert alert-danger mt-3';
+      resultado.innerHTML = '<strong>✗ Erro!</strong> ' + (data.error || 'Falha ao enviar email');
+    }
+  } catch (error) {
+    resultado.className = 'alert alert-danger mt-3';
+    resultado.innerHTML = '<strong>✗ Erro!</strong> ' + error.message;
+  } finally {
+    // Reabilitar botão
+    btn.disabled = false;
+    btnTexto.textContent = 'Enviar Email de Teste';
+    btnSpinner.classList.add('d-none');
+    resultado.style.display = 'block';
+  }
+}
+</script>
+{% endblock %}
