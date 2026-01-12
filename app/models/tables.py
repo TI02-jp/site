@@ -409,6 +409,32 @@ class Announcement(db.Model):
         self.attachment_name = None
 
 
+class ClientAnnouncement(db.Model):
+    """Log of client-facing announcements with sequential numbering."""
+
+    __tablename__ = "client_announcements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sequence_number = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    subject = db.Column(db.String(255), nullable=False)
+    tax_regime = db.Column(db.String(20), nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+
+    created_by = db.relationship(
+        "User",
+        backref=db.backref("client_announcements", lazy=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ClientAnnouncement {self.sequence_number}: {self.subject!r}>"
+
+
 class Course(db.Model):
     """Internal training course available in the knowledge hub."""
 

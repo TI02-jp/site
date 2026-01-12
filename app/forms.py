@@ -50,6 +50,14 @@ ANNOUNCEMENT_FILE_EXTENSIONS = (
     "jpeg",
 )
 
+CLIENT_ANNOUNCEMENT_TAX_CHOICES = [
+    ("PRESUMIDO", "Presumido"),
+    ("REAL", "Real"),
+    ("SIMPLES", "Simples"),
+    ("MEI", "MEI"),
+    ("TODOS", "Todos"),
+]
+
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
     ('Competência', 'Competência')
@@ -259,6 +267,28 @@ class AnnouncementForm(FlaskForm):
         render_kw={"multiple": True},
     )
     submit = SubmitField("Salvar")
+
+
+class ClientAnnouncementForm(FlaskForm):
+    """Formulário para acompanhar comunicados enviados a clientes."""
+
+    subject = StringField(
+        "Assunto",
+        validators=[DataRequired(), Length(min=1, max=255)],
+        filters=[lambda value: value.strip() if value else value],
+    )
+    tax_regime = SelectField(
+        "Tributação",
+        choices=CLIENT_ANNOUNCEMENT_TAX_CHOICES,
+        validators=[DataRequired()],
+    )
+    summary = TextAreaField(
+        "Resumo do comunicado",
+        validators=[DataRequired(), Length(min=1, max=2000)],
+        render_kw={"rows": 3},
+        filters=[lambda value: value.strip() if value else value],
+    )
+    submit = SubmitField("Registrar comunicado")
 
 
 class OperationalProcedureForm(FlaskForm):
