@@ -17,6 +17,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from markupsafe import Markup, escape
 from sqlalchemy.exc import SQLAlchemyError
@@ -653,6 +654,28 @@ with app.app_context():
                     conn.execute(
                         sa.text(
                             "UPDATE tbl_empresas SET ativo = 1 WHERE ativo IS NULL"
+                        )
+                    )
+            if "tipo_empresa" not in empresa_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_empresas "
+                            "ADD COLUMN tipo_empresa VARCHAR(20) NULL"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "UPDATE tbl_empresas "
+                            "SET tipo_empresa = 'Matriz' "
+                            "WHERE tipo_empresa IS NULL"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_empresas "
+                            "MODIFY COLUMN tipo_empresa VARCHAR(20) "
+                            "NOT NULL DEFAULT 'Matriz'"
                         )
                     )
             if "contatos" not in empresa_columns:
