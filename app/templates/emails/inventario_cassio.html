@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-br">
+  <body>
+    <h2>Inventario finalizado sem arquivo do cliente</h2>
+    <p>Ola {{ destinatario.name }},</p>
+    <p>O CFOP foi adicionado e o inventario foi finalizado sem o arquivo do cliente.</p>
+    <ul>
+      <li>
+        {{ empresa.codigo_empresa }} - {{ empresa.nome_empresa }}
+        {% if empresa.tributacao %}({{ empresa.tributacao }}){% endif %}
+      </li>
+    </ul>
+    <p>
+      <a href="{{ empresa_url }}">Abrir empresa</a> |
+      <a href="{{ inventario_url }}">Abrir inventario</a>
+    </p>
+    <p>Mensagem automatica do portal JP.</p>
+  </body>
+</html>

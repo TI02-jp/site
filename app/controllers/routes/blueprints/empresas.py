@@ -40,6 +40,7 @@ from app import csrf, db, limiter
 from app.constants import EMPRESA_TAG_CHOICES
 from app.controllers.routes import decode_id, encode_id, user_has_tag
 from app.controllers.routes._decorators import meeting_only_access_check
+from app.extensions.task_queue import submit_io_task
 from app.forms import (
     ClienteReuniaoForm,
     DepartamentoAdministrativoForm,
@@ -61,6 +62,7 @@ from app.services.meeting_room import (
 )
 from app.utils.performance_middleware import track_commit_end, track_commit_start, track_custom_span
 from app.utils.permissions import is_user_admin
+from app.utils.mailer import send_email, EmailDeliveryError
 from app.utils.security import sanitize_html
 
 empresas_bp = Blueprint("empresas", __name__)
@@ -1292,6 +1294,7 @@ def api_inventario_update():
             if not inventario:
                 inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
                 db.session.add(inventario)
+        previous_status = inventario.status if field == "status" else None
 
         # Campos monetários que precisam de conversão
         campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'fechamento_tadeu_2025', 'valor_enviado_sped']
@@ -1372,6 +1375,11 @@ def api_inventario_update():
                 processed_value = None
             setattr(inventario, field_map[field], processed_value)
 
+        notify_tadeu = (
+            field == "status"
+            and processed_value == "AGUARDANDO TADEU"
+            and previous_status != "AGUARDANDO TADEU"
+        )
         if field == "pdf_path":
             with track_custom_span("inventario_update", "cleanup_pdf"):
                 is_url = bool(processed_value) and (
@@ -1399,6 +1407,8 @@ def api_inventario_update():
             db.session.commit()
         finally:
             track_commit_end(commit_started)
+        if notify_tadeu:
+            _notify_tadeu_aguardando_inventario()
 
         # Retornar valor formatado se for campo monetário
         response_value = value
@@ -1437,8 +1447,211 @@ def _maybe_set_status_aguardando_tadeu(inventario):
     has_cfop = _has_file_entries(inventario.cfop_files) or bool(inventario.pdf_path)
     has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
     if not (has_cfop and has_cliente):
-        return
+        return False
+    if inventario.status == "AGUARDANDO TADEU":
+        return False
     inventario.status = "AGUARDANDO TADEU"
+    return True
+
+
+def _find_active_user_by_name(name: str) -> User | None:
+    normalized = (name or "").strip()
+    if not normalized:
+        return None
+    normalized_lower = normalized.lower()
+    user = (
+        User.query.filter(User.ativo.is_(True))
+        .filter(sa.func.lower(User.name) == normalized_lower)
+        .first()
+    )
+    if user:
+        return user
+    return (
+        User.query.filter(User.ativo.is_(True), User.name.ilike(f"%{normalized}%"))
+        .order_by(sa.func.length(User.name))
+        .first()
+    )
+
+
+def _queue_inventario_email(*, recipient_name: str, subject: str, template_name: str, context: dict) -> None:
+    user = _find_active_user_by_name(recipient_name)
+    if not user or not user.email:
+        current_app.logger.warning(
+            "Inventario: usuario %s nao encontrado ou sem email para notificacao.",
+            recipient_name,
+        )
+        return
+    try:
+        html_body = render_template(template_name, destinatario=user, **context)
+    except Exception as exc:
+        current_app.logger.exception(
+            "Inventario: falha ao renderizar email para %s: %s",
+            recipient_name,
+            exc,
+        )
+        return
+    try:
+        submit_io_task(
+            send_email,
+            subject=subject,
+            html_body=html_body,
+            recipients=[user.email],
+        )
+    except EmailDeliveryError as exc:
+        current_app.logger.error(
+            "Inventario: falha ao enviar email para %s: %s",
+            recipient_name,
+            exc,
+        )
+
+
+def _build_aguardando_tadeu_groups() -> list[dict]:
+    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    grouped = {trib: [] for trib in allowed_tributacoes}
+    outros: list[Empresa] = []
+    empresas = (
+        Empresa.query.join(Inventario, Inventario.empresa_id == Empresa.id)
+        .filter(Empresa.ativo.is_(True), Inventario.status == "AGUARDANDO TADEU")
+        .order_by(Empresa.tributacao, Empresa.codigo_empresa)
+        .all()
+    )
+    for empresa in empresas:
+        trib = (empresa.tributacao or "").strip()
+        if trib in grouped:
+            grouped[trib].append(empresa)
+        else:
+            outros.append(empresa)
+    groups: list[dict] = []
+    for trib in allowed_tributacoes:
+        if grouped[trib]:
+            groups.append({"tributacao": trib, "empresas": grouped[trib]})
+    if outros:
+        groups.append({"tributacao": "Outros", "empresas": outros})
+    return groups
+
+
+def _notify_tadeu_aguardando_inventario() -> None:
+    groups = _build_aguardando_tadeu_groups()
+    if not groups:
+        return
+    inventario_url = url_for("empresas.inventario", _external=True)
+    _queue_inventario_email(
+        recipient_name="Tadeu",
+        subject="[Inventario] Empresas aguardando Tadeu",
+        template_name="emails/inventario_tadeu.html",
+        context={
+            "grupos": groups,
+            "inventario_url": inventario_url,
+        },
+    )
+
+
+def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
+    """Cria notificação no portal para Cassio quando CFOP é adicionado sem arquivo do cliente."""
+    from app.models.tables import TaskNotification, NotificationType
+
+    # Buscar usuário Cassio
+    cassio = _find_active_user_by_name("Cassio")
+    if not cassio:
+        current_app.logger.warning("Inventario: usuário Cassio não encontrado para notificação")
+        return
+
+    # Criar mensagem da notificação
+    message = f"Inventário finalizado sem arquivo do cliente: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    if len(message) > 255:
+        message = message[:252] + "..."
+
+    # Criar notificação no portal
+    notification = TaskNotification(
+        user_id=cassio.id,
+        task_id=None,
+        announcement_id=None,
+        type=NotificationType.INVENTARIO.value,
+        message=message,
+    )
+
+    try:
+        db.session.add(notification)
+        db.session.commit()
+        current_app.logger.info(
+            "Notificação de inventário criada para Cassio: empresa %s",
+            empresa.codigo_empresa,
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error(
+            "Erro ao criar notificação para Cassio: %s",
+            exc,
+        )
+
+
+def send_daily_tadeu_notification() -> None:
+    """
+    Job agendado: envia notificação diária para Tadeu com empresas alteradas hoje.
+    Executado diariamente às 17h pelo scheduler.
+    """
+    from datetime import date
+
+    current_app.logger.info("Executando job diário de notificação para Tadeu")
+
+    # Buscar empresas atualizadas hoje com status AGUARDANDO TADEU
+    inventarios = (
+        Inventario.query.join(Empresa)
+        .filter(
+            Inventario.status == "AGUARDANDO TADEU",
+            db.func.date(Inventario.updated_at) == date.today(),
+            Empresa.ativo.is_(True),
+        )
+        .all()
+    )
+
+    if not inventarios:
+        current_app.logger.info("Nenhuma empresa aguardando Tadeu atualizada hoje")
+        return
+
+    # Agrupar empresas por tributação
+    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    grouped = {trib: [] for trib in allowed_tributacoes}
+    outros: list[Empresa] = []
+
+    empresas = [inv.empresa for inv in inventarios]
+    empresas.sort(key=lambda e: (e.tributacao or "", e.codigo_empresa or ""))
+
+    for empresa in empresas:
+        trib = (empresa.tributacao or "").strip()
+        if trib in grouped:
+            grouped[trib].append(empresa)
+        else:
+            outros.append(empresa)
+
+    groups: list[dict] = []
+    for trib in allowed_tributacoes:
+        if grouped[trib]:
+            groups.append({"tributacao": trib, "empresas": grouped[trib]})
+    if outros:
+        groups.append({"tributacao": "Outros", "empresas": outros})
+
+    if not groups:
+        current_app.logger.info("Nenhum grupo de empresas para notificar Tadeu")
+        return
+
+    # Enviar notificação
+    inventario_url = url_for("empresas.inventario", _external=True)
+    _queue_inventario_email(
+        recipient_name="Tadeu",
+        subject="[Inventario] Atualização Diária - Empresas aguardando Tadeu",
+        template_name="emails/inventario_tadeu.html",
+        context={
+            "grupos": groups,
+            "inventario_url": inventario_url,
+        },
+    )
+
+    current_app.logger.info(
+        "Notificação diária enviada para Tadeu: %d empresas em %d grupos",
+        len(empresas),
+        len(groups),
+    )
 
 
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
@@ -1468,6 +1681,8 @@ def api_inventario_upload_pdf(empresa_id):
         if not inventario:
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
             db.session.add(inventario)
+        had_cfop = _has_file_entries(inventario.cfop_files) or bool(inventario.pdf_path)
+        has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
 
         filename = secure_filename(file.filename)
 
@@ -1484,12 +1699,17 @@ def api_inventario_upload_pdf(empresa_id):
         }
         cfop_files.append(file_info)
         inventario.cfop_files = cfop_files
-        _maybe_set_status_aguardando_tadeu(inventario)
+        status_changed = _maybe_set_status_aguardando_tadeu(inventario)
+        notify_cassio = (not had_cfop) and (not has_cliente)
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cfop_files')
 
         db.session.commit()
+        if status_changed:
+            _notify_tadeu_aguardando_inventario()
+        elif notify_cassio:
+            _notify_cassio_sem_cliente(empresa)
 
         return jsonify({
             'success': True,
@@ -1584,12 +1804,14 @@ def api_inventario_upload_cliente_file(empresa_id):
         }
         cliente_files.append(file_info)
         inventario.cliente_files = cliente_files
-        _maybe_set_status_aguardando_tadeu(inventario)
+        status_changed = _maybe_set_status_aguardando_tadeu(inventario)
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cliente_files')
 
         db.session.commit()
+        if status_changed:
+            _notify_tadeu_aguardando_inventario()
 
         return jsonify({
             'success': True,

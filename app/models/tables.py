@@ -292,6 +292,7 @@ class NotificationType(str, Enum):
     TASK_STATUS = "task_status"
     ANNOUNCEMENT = "announcement"
     RECURRING_INVOICE = "recurring_invoice"
+    INVENTARIO = "inventario"
 
 
 class Announcement(db.Model):

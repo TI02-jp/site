@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-br">
+  <body>
+    <h2>Inventario - empresas aguardando Tadeu</h2>
+    <p>Ola {{ destinatario.name }},</p>
+    <p>Segue a relacao de empresas com status "AGUARDANDO TADEU", separada por tributacao.</p>
+    {% for grupo in grupos %}
+      <h3>{{ grupo.tributacao }} ({{ grupo.empresas|length }})</h3>
+      <ul>
+        {% for empresa in grupo.empresas %}
+          <li>{{ empresa.codigo_empresa }} - {{ empresa.nome_empresa }}</li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+    <p><a href="{{ inventario_url }}">Abrir inventario</a></p>
+    <p>Mensagem automatica do portal JP.</p>
+  </body>
+</html>

@@ -118,7 +118,7 @@ def _save_announcement_file(uploaded_file) -> dict[str, str | None]:
 def _normalize_announcement_content(raw_content: str | None) -> str:
     """Sanitize announcement bodies and preserve line breaks for plain text."""
 
-    cleaned = sanitize_html(raw_content or "")
+    cleaned = sanitize_html(raw_content or "", allow_data_images=True)
     if not cleaned:
         return ""
 
