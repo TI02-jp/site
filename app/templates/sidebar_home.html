@@ -17,7 +17,7 @@
     <div class="nav-section-title">PRINCIPAL</div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            {% set clientes_active = request.endpoint in ['listar_empresas', 'empresas.inventario'] %}
+            {% set clientes_active = request.endpoint in ['listar_empresas', 'empresas.inventario', 'comunicados_clientes'] %}
             <a class="nav-link{% if clientes_active %} active{% endif %}"
                data-bs-toggle="collapse"
                data-sidebar-toggle="clientesMenu"
@@ -44,6 +44,15 @@
                             INVENTÁRIO
                         </a>
                     </li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'comunicados_clientes' %} active{% endif %}"
+                           href="{{ url_for('comunicados_clientes') }}">
+                            <i class="bi bi-envelope-paper"></i>
+                            COMUNICADOS CLIENTES
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </li>
@@ -198,14 +207,6 @@
                 MURAL
             </a>
         </li>
-        {% if current_user.role == 'admin' %}
-        <li class="nav-item">
-            <a class="nav-link{% if request.endpoint == 'comunicados_clientes' %} active{% endif %}" href="{{ url_for('comunicados_clientes') }}">
-                <i class="bi bi-envelope-paper"></i>
-                COMUNICADOS CLIENTES
-            </a>
-        </li>
-        {% endif %}
     </ul>
 </div>
 {% if current_user.role == 'admin' or has_report_access() %}
