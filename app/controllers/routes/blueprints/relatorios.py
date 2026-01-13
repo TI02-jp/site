@@ -77,6 +77,10 @@ PORTAL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
         "title": "Procedimentos Operacionais - Gerenciar",
         "description": "Criar, editar e excluir procedimentos operacionais",
     },
+    "procedures_ti_manage": {
+        "title": "Procedimentos TI - Gerenciar",
+        "description": "Criar, editar e excluir procedimentos exclusivos da equipe de TI",
+    },
 }
 
 ALL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {

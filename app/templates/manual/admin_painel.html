@@ -111,7 +111,7 @@
                 <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#catEdit{{ cat.id }}">
                   <i class="bi bi-pencil me-1"></i>Editar
                 </button>
-                <form method="post" action="{{ url_for('manual.admin_categorias') }}" onsubmit="return confirm('Excluir a categoria {{ cat.name }}?');">
+                <form method="post" action="{{ url_for('manual.admin_categorias') }}" data-confirm-message="Excluir a categoria {{ cat.name }}?" data-confirm-variant="danger">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="form_name" value="category_delete">
                   <input type="hidden" name="category_id" value="{{ cat.id }}">
@@ -190,7 +190,7 @@
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('manual.admin_video_editar', video_id=video.id) }}">
                   <i class="bi bi-pencil me-1"></i>Editar
                 </a>
-                <form method="post" action="{{ url_for('manual.admin_video_deletar', video_id=video.id) }}" onsubmit="return confirm('Excluir o vídeo {{ video.title }}?');">
+                <form method="post" action="{{ url_for('manual.admin_video_deletar', video_id=video.id) }}" data-confirm-message="Excluir o video {{ video.title }}?" data-confirm-variant="danger">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-outline-danger" type="submit">
                     <i class="bi bi-trash me-1"></i>Excluir
@@ -288,4 +288,3 @@
 })();
 </script>
 {% endblock %}
-

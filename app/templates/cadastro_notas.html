@@ -608,10 +608,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var cadastroId = target.getAttribute('data-cadastro-id');
             var nome = target.getAttribute('data-cadastro-nome');
 
-            if (confirm('Deseja desativar o cadastro "' + nome + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja desativar o cadastro \"' + nome + '\"?',
+                variant: 'warning'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 document.getElementById('deleteCadastroId').value = cadastroId;
                 document.getElementById('deleteCadastroForm').submit();
-            }
+            });
         });
     });
 
@@ -759,10 +766,17 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             var notaId = button.getAttribute('data-nota-id');
             var empresa = button.getAttribute('data-nota-empresa');
-            if (confirm('Excluir a nota da empresa "' + empresa + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Excluir a nota da empresa \"' + empresa + '\"?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 deleteNotaId.value = notaId;
                 deleteNotaForm.submit();
-            }
+            });
         });
     });
 

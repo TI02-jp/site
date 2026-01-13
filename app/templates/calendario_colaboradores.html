@@ -1245,9 +1245,16 @@
         });
 
         document.getElementById('deleteEventBtn').addEventListener('click', function() {
-            if (confirm('Deseja excluir este evento?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja excluir este evento?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 document.getElementById('deleteEventForm').submit();
-            }
+            });
         });
         {% endif %}
 

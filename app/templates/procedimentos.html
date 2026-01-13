@@ -8,32 +8,75 @@
 
 {% block content %}
 <div class="container-fluid py-2 px-2">
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'geral' %}active{% endif %}"
+         href="{{ url_for('procedimentos.procedimentos_operacionais', tab='geral') }}">
+        Procedimentos Gerais
+      </a>
+    </li>
+    {% if user_has_ti %}
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'ti' %}active{% endif %}"
+         href="{{ url_for('procedimentos.procedimentos_operacionais', tab='ti') }}">
+        <i class="bi bi-pc-display me-1"></i>Procedimentos TI
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+
   <div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h3 mb-0"><i class="bi bi-journal-text me-2"></i>Procedimentos Operacionais</h1>
+    <h1 class="h3 mb-0">
+      <i class="bi bi-journal-text me-2"></i>
+      {% if active_tab == 'ti' %}
+        Procedimentos TI
+      {% else %}
+        Procedimentos Operacionais
+      {% endif %}
+    </h1>
     <div class="d-flex align-items-center gap-2">
       {% if can_manage %}
       <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProcedureModal">
         <i class="bi bi-plus-lg me-1"></i>Novo procedimento
       </button>
       {% endif %}
-      <form class="d-flex" method="get" action="{{ url_for('procedimentos_operacionais') }}">
+      <form class="d-flex" method="get" action="{{ url_for('procedimentos.procedimentos_operacionais') }}">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
         <input class="form-control form-control-sm me-2" type="search" name="q" placeholder="Buscar por titulo ou descricao" value="{{ search_term }}">
         <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search"></i></button>
       </form>
     </div>
   </div>
 
+  <!-- Info alert for TI tab -->
+  {% if active_tab == 'ti' %}
+  <div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Procedimentos exclusivos da TI:</strong> Esta seção contém procedimentos técnicos
+    e documentação interna da equipe de Tecnologia da Informação.
+  </div>
+  {% endif %}
+
   <!-- Modal: Novo Procedimento -->
   <div class="modal fade" id="newProcedureModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: min(1400px, calc(100vw - 4rem)); margin: 0.5rem auto;">
       <div class="modal-content" style="overflow: hidden;">
         <div class="modal-header">
-          <h5 class="modal-title">Novo procedimento</h5>
+          <h5 class="modal-title">
+            {% if active_tab == 'ti' %}
+              Novo procedimento TI
+            {% else %}
+              Novo procedimento
+            {% endif %}
+          </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body" style="overflow: hidden;">
           <form method="POST" id="new-proc-form">
             {{ form.hidden_tag() }}
+            <!-- Hidden field to indicate TI procedure -->
+            <input type="hidden" name="is_ti_procedure" value="{% if active_tab == 'ti' %}true{% else %}false{% endif %}">
             <div class="mb-3">
               <label class="form-label">{{ form.title.label }}</label>
               {{ form.title(class="form-control", placeholder="Titulo do procedimento") }}
@@ -61,17 +104,23 @@
 
   <div class="card shadow-sm">
     <div class="card-header bg-light">
-      <strong>Procedimentos</strong>
+      <strong>
+        {% if active_tab == 'ti' %}
+          Procedimentos TI
+        {% else %}
+          Procedimentos
+        {% endif %}
+      </strong>
     </div>
     <ul class="list-group list-group-flush">
       {% if procedures %}
         {% for p in procedures %}
         <li class="list-group-item d-flex align-items-center justify-content-between">
           <div>
-            <a class="fw-semibold text-decoration-none" href="{{ url_for('procedimentos_operacionais_ver', proc_id=p.id) }}">{{ p.title }}</a>
+            <a class="fw-semibold text-decoration-none" href="{{ url_for('procedimentos.procedimentos_operacionais_ver', proc_id=p.id) }}">{{ p.title }}</a>
           </div>
           {% if can_manage %}
-          <form method="post" action="{{ url_for('procedimentos_operacionais_excluir', proc_id=p.id) }}" onsubmit="return confirm('Excluir este procedimento?');">
+          <form method="post" action="{{ url_for('procedimentos.procedimentos_operacionais_excluir', proc_id=p.id) }}" data-confirm-message="Excluir este procedimento?" data-confirm-variant="danger">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
           </form>

@@ -58,6 +58,11 @@ CLIENT_ANNOUNCEMENT_TAX_CHOICES = [
     ("TODOS", "Todos"),
 ]
 
+CLIENT_ANNOUNCEMENT_STATUS_CHOICES = [
+    ("Aguardando Envio", "Aguardando Envio"),
+    ("Enviado", "Enviado"),
+]
+
 REGIME_LANCAMENTO_CHOICES = [
     ('Caixa', 'Caixa'),
     ('Competência', 'Competência')
@@ -272,6 +277,17 @@ class AnnouncementForm(FlaskForm):
 class ClientAnnouncementForm(FlaskForm):
     """Formulário para acompanhar comunicados enviados a clientes."""
 
+    code = StringField(
+        "Codigo do comunicado",
+        validators=[Optional(), Length(max=50)],
+        filters=[lambda value: value.strip() if value else value],
+    )
+    status = SelectField(
+        "Status",
+        choices=CLIENT_ANNOUNCEMENT_STATUS_CHOICES,
+        validators=[DataRequired()],
+        default="Aguardando Envio",
+    )
     subject = StringField(
         "Assunto",
         validators=[DataRequired(), Length(min=1, max=255)],
@@ -287,6 +303,14 @@ class ClientAnnouncementForm(FlaskForm):
         validators=[DataRequired(), Length(min=1, max=2000)],
         render_kw={"rows": 3},
         filters=[lambda value: value.strip() if value else value],
+    )
+    attachments = MultipleFileField(
+        "Anexos",
+        validators=[Optional()],
+        render_kw={
+            "multiple": True,
+            "accept": "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt",
+        },
     )
     submit = SubmitField("Registrar comunicado")
 

@@ -567,10 +567,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var target = event.currentTarget;
             var id = target.getAttribute('data-recorrente-id');
             var empresa = target.getAttribute('data-recorrente-empresa');
-            if (confirm('Excluir a nota recorrente de "' + empresa + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Excluir a nota recorrente de "' + empresa + '"?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 deleteIdField.value = id;
                 deleteForm.submit();
-            }
+            });
         });
     });
 
@@ -582,10 +589,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var id = target.getAttribute('data-recorrente-id');
             var empresa = target.getAttribute('data-recorrente-empresa');
             var status = target.getAttribute('data-recorrente-status');
-            if (confirm('Deseja ' + status + ' as notificações de "' + empresa + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja ' + status + ' as notificacoes de "' + empresa + '"?',
+                variant: 'warning'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 toggleIdField.value = id;
                 toggleForm.submit();
-            }
+            });
         });
     });
 
@@ -599,10 +613,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var empresa = target.getAttribute('data-recorrente-empresa');
             var concluida = target.getAttribute('data-recorrente-concluida');
             var action = concluida === '1' ? 'marcar como pendente' : 'marcar como concluída';
-            if (confirm('Deseja ' + action + ' a nota de "' + empresa + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja ' + action + ' a nota de "' + empresa + '"?',
+                variant: 'primary'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 completeIdField.value = id;
                 completeForm.submit();
-            }
+            });
         });
     });
 

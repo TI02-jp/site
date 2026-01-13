@@ -315,7 +315,7 @@ def announcements():
             announcement_reads[announcement_id] = False
 
     edit_forms: dict[int, AnnouncementForm] = {}
-    if current_user.role == "admin":
+    if _can_manage_announcements():
         for item in announcement_items:
             edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
             edit_form.date.data = item.date
@@ -414,7 +414,7 @@ def announcement_history():
             announcement_reads[announcement_id] = False
 
     edit_forms: dict[int, AnnouncementForm] = {}
-    if current_user.role == "admin":
+    if _can_manage_announcements():
         for item in announcement_items:
             edit_form = AnnouncementForm(prefix=f"edit-{item.id}")
             edit_form.date.data = item.date

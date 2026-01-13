@@ -516,7 +516,7 @@
                                             <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=agreement.user_id, action='edit', agreement_id=agreement.id) }}">
                                                 <i class="bi bi-pencil me-1"></i>Editar
                                             </a>
-                                            <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
+                                            <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" data-confirm-message="Deseja realmente excluir este acordo?" data-confirm-variant="danger">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ agreement.user_id }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -650,7 +650,7 @@
                                                 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_acordos', user_id=selected_user.id, action='edit', agreement_id=agreement.id) }}">
                                                     <i class="bi bi-pencil me-1"></i>Editar
                                                 </a>
-                                                <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" onsubmit="return confirm('Deseja realmente excluir este acordo?');">
+                                                <form method="post" action="{{ url_for('diretoria_acordos_excluir', agreement_id=agreement.id) }}" data-confirm-message="Deseja realmente excluir este acordo?" data-confirm-variant="danger">
                                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <input type="hidden" name="user_id" value="{{ selected_user.id }}">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger">
