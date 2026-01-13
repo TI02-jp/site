@@ -112,6 +112,15 @@ def _collect_uploaded_files(form: ClientAnnouncementForm) -> list:
 @admin_required
 def comunicados_clientes():
     form = ClientAnnouncementForm()
+    allowed_tributacoes = {value for value, _ in form.tax_regime.choices}
+    if request.args.get("clear_tributacao"):
+        tributacao_filters: list[str] = []
+    else:
+        tributacao_filters = [
+            value
+            for value in request.args.getlist("tributacao")
+            if value in allowed_tributacoes
+        ]
 
     if form.validate_on_submit():
         next_number = _get_next_sequence_number()
@@ -157,12 +166,14 @@ def comunicados_clientes():
             flash("Comunicado registrado com sucesso.", "success")
             return redirect(url_for("comunicados_clientes"))
 
-    entries = (
-        ClientAnnouncement.query.options(
-            selectinload(ClientAnnouncement.attachments)
-        ).order_by(ClientAnnouncement.sequence_number.desc())
-        .all()
+    entries_query = ClientAnnouncement.query.options(
+        selectinload(ClientAnnouncement.attachments)
     )
+    if tributacao_filters:
+        entries_query = entries_query.filter(
+            ClientAnnouncement.tax_regime.in_(tributacao_filters)
+        )
+    entries = entries_query.order_by(ClientAnnouncement.sequence_number.desc()).all()
     edit_forms: dict[int, ClientAnnouncementForm] = {}
     for item in entries:
         edit_form = ClientAnnouncementForm(prefix=f"edit-{item.id}")
@@ -177,6 +188,7 @@ def comunicados_clientes():
         form=form,
         entries=entries,
         edit_forms=edit_forms,
+        tributacao_filters=tributacao_filters,
     )
 
 
