@@ -55,6 +55,12 @@ from app.services.calendar_cache import calendar_cache
 from app.services.cnpj import consultar_cnpj
 from app.services.general_calendar import serialize_events_for_calendar
 from app.services.google_calendar import get_calendar_timezone
+from app.services.inventario_sync import (
+    DEFAULT_PERIOD_END,
+    DEFAULT_PERIOD_START,
+    sync_encerramento_fiscal,
+)
+from app.services.acessorias_deliveries import DeliveriesAuthError
 from app.services.meeting_room import (
     combine_events,
     fetch_raw_events,
@@ -1275,7 +1281,8 @@ def inventario():
         show_all=show_all,
         all_param=1 if show_all else "",
         usuarios=usuarios,
-        dashboard_cards=dashboard_cards
+        dashboard_cards=dashboard_cards,
+        is_admin=is_user_admin(current_user),
     )
 
     if created_inventarios:
@@ -1449,6 +1456,259 @@ def api_inventario_update():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@empresas_bp.route("/api/inventario/sync-encerramento-fiscal", methods=["POST"])
+@login_required
+@csrf.exempt
+def api_sync_encerramento_fiscal():
+    """Sincroniza encerramento fiscal usando a API de entregas da Acessorias."""
+    if not is_user_admin(current_user):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    payload = request.get_json(silent=True) or {}
+
+    def _parse_date(raw_value, fallback):
+        raw = (raw_value or "").strip()
+        if not raw:
+            return fallback
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    start_date = _parse_date(payload.get("start_date") or payload.get("dt_initial"), DEFAULT_PERIOD_START)
+    end_date = _parse_date(payload.get("end_date") or payload.get("dt_final"), DEFAULT_PERIOD_END)
+    if start_date is None or end_date is None:
+        return jsonify({"success": False, "error": "Datas invalidas. Use AAAA-MM-DD."}), 500
+    if start_date > end_date:
+        return jsonify({"success": False, "error": "Data inicial nao pode ser maior que a final."}), 500
+
+    dt_last_dh_raw = (payload.get("dt_last_dh") or payload.get("last_dh") or "").strip()
+    dt_last_dh = dt_last_dh_raw or None
+
+    try:
+        result = sync_encerramento_fiscal(
+            start_date=start_date,
+            end_date=end_date,
+            last_dh=dt_last_dh,
+            logger=current_app.logger,
+        )
+    except DeliveriesAuthError as exc:
+        current_app.logger.error("Token invalido para API de entregas: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
+    except Exception as exc:  # pragma: no cover - protecao defensiva
+        current_app.logger.exception("Erro ao sincronizar encerramento fiscal: %s", exc)
+        return jsonify({"success": False, "error": "Erro interno ao sincronizar"}), 500
+
+    message = f"Sincronizacao concluida. Empresas atualizadas: {result.set_true}."
+    response = {
+        "success": True,
+        "message": message,
+        "updated": result.set_true,
+        "checked": result.checked,
+        "skipped_no_cnpj": result.skipped_no_cnpj,
+        "errors": result.errors or [],
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+    }
+    return jsonify(response), 200
+
+@empresas_bp.route("/api/inventario/debug-encerramento/<int:empresa_id>", methods=["GET"])
+@login_required
+def api_debug_encerramento_fiscal(empresa_id):
+    """Debug endpoint para testar API de encerramento fiscal para uma empresa específica."""
+    if not is_user_admin(current_user):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    from app.services.acessorias_deliveries import (
+        AcessoriasDeliveriesClient,
+        DeliveriesAuthError,
+        DeliveriesClientError,
+    )
+
+    # Buscar empresa
+    empresa = Empresa.query.get(empresa_id)
+    if not empresa:
+        return jsonify({"success": False, "error": "Empresa não encontrada"}), 404
+
+    # Obter CNPJ
+    cnpj = getattr(empresa, "cnpj", None)
+    if not cnpj:
+        return jsonify({
+            "success": False,
+            "error": "Empresa sem CNPJ",
+            "empresa": {
+                "id": empresa.id,
+                "razao_social": getattr(empresa, "razao_social", "N/A"),
+            }
+        }), 400
+
+    # Limpar CNPJ
+    import re
+    cnpj_clean = re.sub(r"\D", "", cnpj)
+
+    if len(cnpj_clean) != 14:
+        return jsonify({
+            "success": False,
+            "error": f"CNPJ inválido (tem {len(cnpj_clean)} dígitos, esperado 14)",
+            "empresa": {
+                "id": empresa.id,
+                "razao_social": getattr(empresa, "razao_social", "N/A"),
+            },
+            "cnpj_original": cnpj,
+            "cnpj_limpo": cnpj_clean,
+        }), 400
+
+    # Fazer chamada à API
+    client = AcessoriasDeliveriesClient(logger=current_app.logger)
+
+    try:
+        entregas = client.fetch_deliveries(
+            cnpj_clean,
+            DEFAULT_PERIOD_START,
+            DEFAULT_PERIOD_END,
+            include_config=False,
+        )
+
+        # Verificar match
+        match = client.find_encerramento_fiscal(
+            entregas,
+            start_date=DEFAULT_PERIOD_START,
+            end_date=DEFAULT_PERIOD_END,
+        )
+
+        result = {
+            "success": True,
+            "empresa": {
+                "id": empresa.id,
+                "razao_social": getattr(empresa, "razao_social", "N/A"),
+            },
+            "cnpj": cnpj_clean,
+            "period": {
+                "start": DEFAULT_PERIOD_START.isoformat(),
+                "end": DEFAULT_PERIOD_END.isoformat(),
+            },
+            "api_response": {
+                "total_entregas": len(entregas),
+                "entregas": entregas,
+            },
+            "match": {
+                "found": bool(match),
+                "encerramento_fiscal": bool(match),
+                "details": {
+                    "nome": match.raw.get("Nome") if match else None,
+                    "status": match.raw.get("Status") if match else None,
+                    "referencia": match.referencia.isoformat() if match and match.referencia else None,
+                    "raw": match.raw if match else None,
+                } if match else None,
+            },
+        }
+
+        return jsonify(result)
+
+    except DeliveriesAuthError as e:
+        return jsonify({
+            "success": False,
+            "error": "Token inválido ou expirado",
+            "details": str(e),
+        }), 401
+
+    except DeliveriesClientError as e:
+        return jsonify({
+            "success": False,
+            "error": "Erro ao buscar entregas",
+            "details": str(e),
+        }), 500
+
+    except Exception as e:
+        current_app.logger.exception("Erro inesperado no debug de encerramento fiscal")
+        return jsonify({
+            "success": False,
+            "error": "Erro interno",
+            "details": str(e),
+        }), 500
+
+
+@empresas_bp.route("/api/inventario/check-api-connection", methods=["GET"])
+@login_required
+def api_check_acessorias_connection():
+    """Verifica se a API da Acessorias está acessível e token válido."""
+    if not is_user_admin(current_user):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    from app.services.acessorias_deliveries import (
+        AcessoriasDeliveriesClient,
+        DEFAULT_TOKEN,
+        DeliveriesAuthError,
+        DeliveriesClientError,
+    )
+
+    # Verificar se token existe
+    if not DEFAULT_TOKEN:
+        return jsonify({
+            "success": False,
+            "error": "Token não configurado. Defina ACESSORIAS_DELIVERIES_TOKEN no .env"
+        }), 500
+
+    # Tentar fazer uma chamada simples com primeiro CNPJ válido
+    test_empresa = Empresa.query.filter(
+        Empresa.ativo.is_(True),
+        Empresa.cnpj.isnot(None)
+    ).first()
+
+    if not test_empresa:
+        return jsonify({
+            "success": False,
+            "error": "Nenhuma empresa ativa com CNPJ encontrada para teste"
+        }), 500
+
+    import re
+    test_cnpj = re.sub(r"\D", "", getattr(test_empresa, "cnpj", ""))
+
+    if len(test_cnpj) != 14:
+        return jsonify({
+            "success": False,
+            "error": "Primeira empresa encontrada tem CNPJ inválido"
+        }), 500
+
+    client = AcessoriasDeliveriesClient(logger=current_app.logger)
+    try:
+        entregas = client.fetch_deliveries(
+            test_cnpj,
+            DEFAULT_PERIOD_START,
+            DEFAULT_PERIOD_END,
+        )
+        return jsonify({
+            "success": True,
+            "message": "API acessível e token válido",
+            "token_configured": True,
+            "test_cnpj": test_cnpj,
+            "test_empresa": {
+                "id": test_empresa.id,
+                "razao_social": getattr(test_empresa, "razao_social", "N/A"),
+            },
+            "total_entregas": len(entregas),
+        })
+    except DeliveriesAuthError as e:
+        return jsonify({
+            "success": False,
+            "error": "Token inválido ou expirado",
+            "details": str(e),
+        }), 401
+    except DeliveriesClientError as e:
+        return jsonify({
+            "success": False,
+            "error": "Erro ao conectar com API",
+            "details": str(e),
+        }), 500
+    except Exception as e:
+        current_app.logger.exception("Erro ao verificar conexão com API")
+        return jsonify({
+            "success": False,
+            "error": "Erro interno",
+            "details": str(e),
+        }), 500
+
+
 def _coerce_file_entries(value):
     if not value:
         return []
@@ -1585,7 +1845,7 @@ def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
         return
 
     # Criar mensagem da notificação
-    message = f"Inventário finalizado sem arquivo do cliente: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    message = f"Fechamento Fiscal finalizado sem arquivo do inventário: {empresa.codigo_empresa} - {empresa.nome_empresa}"
     if len(message) > 255:
         message = message[:252] + "..."
 
