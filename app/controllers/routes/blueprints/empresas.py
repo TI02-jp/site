@@ -266,9 +266,15 @@ def listar_empresas():
 
     if search:
         like_pattern = f"%{search}%"
-        query = query.filter(
-            sa.or_(Empresa.nome_empresa.ilike(like_pattern), Empresa.codigo_empresa.ilike(like_pattern))
-        )
+        cnpj_digits = re.sub(r"\D", "", search)
+        search_filters = [
+            Empresa.nome_empresa.ilike(like_pattern),
+            Empresa.codigo_empresa.ilike(like_pattern),
+        ]
+        if cnpj_digits:
+            cnpj_like = f"%{cnpj_digits}%"
+            search_filters.append(Empresa.cnpj.ilike(cnpj_like))
+        query = query.filter(sa.or_(*search_filters))
 
     order_column = Empresa.codigo_empresa if sort == "codigo" else Empresa.nome_empresa
     if order == "desc":
