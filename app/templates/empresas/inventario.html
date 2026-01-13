@@ -1488,25 +1488,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function bindDeleteCFOPButton(btn) {
         btn.addEventListener('click', function() {
-            if (confirm('Deseja realmente remover este arquivo?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja realmente remover este arquivo?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
                 const fileItem = this.closest('.file-item');
                 const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
                 deleteCFOPFile(empresaId, fileIndex, fileItem);
-            }
+            });
         });
     }
 
     function bindDeleteClienteButton(btn) {
         btn.addEventListener('click', function() {
-            if (confirm('Deseja realmente remover este arquivo?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja realmente remover este arquivo?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
                 const fileItem = this.closest('.file-item');
                 const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
                 deleteClienteFileV2(empresaId, fileIndex, fileItem);
-            }
+            });
         });
     }
 

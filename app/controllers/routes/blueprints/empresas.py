@@ -201,7 +201,11 @@ def listar_empresas():
     else:
         search = search_arg.strip()
 
-    page = request.args.get("page", 1, type=int)
+    page_arg = request.args.get("page", type=int)
+    if page_arg is None:
+        page = saved_filters.get("page", 1)
+    else:
+        page = page_arg
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
     allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
@@ -241,6 +245,7 @@ def listar_empresas():
         "order": order,
         "search": search,
         "tag_filters": tag_filters,
+        "page": page,
     }
 
     query = Empresa.query
@@ -277,6 +282,7 @@ def listar_empresas():
         "tributacao_filters": tributacao_filters,
         "tag_filters": tag_filters,
         "search": search,
+        "page": page,
     }
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -1023,6 +1029,12 @@ def inventario():
     else:
         search_term = search_arg.strip()
 
+    page_arg = request.args.get("page", type=int)
+    if page_arg is None:
+        saved_page = saved_filters.get("page", 1)
+    else:
+        saved_page = page_arg
+
     # Parâmetros de ordenação
     sort_arg = request.args.get('sort')
     order_arg = request.args.get('order')
@@ -1075,11 +1087,12 @@ def inventario():
         "status_filters": status_filters,
         "tag_filters": tag_filters,
         "search": search_term,
+        "page": saved_page,
     }
 
     all_arg = request.args.get("all")
     show_all = all_arg in ("1", "true", "on")
-    page = request.args.get("page", 1, type=int)
+    page = saved_page
 
     # Query base - empresas ativas
     base_query = Empresa.query.filter_by(ativo=True)

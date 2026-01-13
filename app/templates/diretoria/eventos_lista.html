@@ -166,9 +166,9 @@
                                 <a class="btn btn-outline-primary btn-sm me-1" href="{{ url_for('diretoria_eventos_editar', event_id=event.id) }}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <form action="{{ url_for('diretoria_eventos_excluir', event_id=event.id) }}" method="post" class="d-inline">
+                                <form action="{{ url_for('diretoria_eventos_excluir', event_id=event.id) }}" method="post" class="d-inline" data-confirm-message="Tem certeza de que deseja excluir o evento {{ event.name }}?" data-confirm-variant="danger">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza de que deseja excluir o evento ' + {{ event.name|tojson }} + '?');">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>

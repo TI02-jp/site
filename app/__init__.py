@@ -459,6 +459,30 @@ with app.app_context():
                         )
                     )
 
+        if inspector.has_table("client_announcements"):
+            client_columns = {
+                col["name"] for col in inspector.get_columns("client_announcements")
+            }
+            if "code" not in client_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE client_announcements ADD COLUMN code VARCHAR(50) NULL"
+                        )
+                    )
+            if "status" not in client_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE client_announcements ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Aguardando Envio'"
+                        )
+                    )
+                    conn.execute(
+                        sa.text(
+                            "UPDATE client_announcements SET status = 'Enviado' WHERE status IS NULL OR status = ''"
+                        )
+                    )
+
         attachments_table_exists = inspector.has_table("announcement_attachments")
         if not attachments_table_exists and inspector.has_table("announcements"):
             with db.engine.begin() as conn:

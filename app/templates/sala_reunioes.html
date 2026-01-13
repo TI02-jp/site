@@ -2167,7 +2167,14 @@
         if (!currentEvent || !currentEvent.id) {
             return;
         }
-        if (confirm('Deseja excluir esta reunião?')) {
+        window.portalConfirm({
+            title: 'Confirmar acao',
+            message: 'Deseja excluir esta reuniao?',
+            variant: 'danger'
+        }).then((confirmed) => {
+            if (!confirmed) {
+                return;
+            }
             var meetingId = currentEvent.id;
             var deleteUrl = '/reuniao/' + meetingId + '/delete';
             var csrfToken = document.querySelector('#csrf_token_delete').value;
@@ -2188,7 +2195,7 @@
             })
             .then(function(result) {
                 if (result.data.success) {
-                    // Remover evento do calendário
+                    // Remover evento do calendario
                     var eventToRemove = calendar.getEventById(String(meetingId));
                     if (eventToRemove) {
                         eventToRemove.remove();
@@ -2198,18 +2205,12 @@
                     if (eventDetailsModalInstance) {
                         eventDetailsModalInstance.hide();
                     }
-
-                    // Exibir mensagem de sucesso
-                    showToast(result.data.message || 'Reunião excluída com sucesso!', 'success');
-                } else {
-                    showToast(result.data.error || 'Erro ao excluir reunião.', 'danger');
                 }
             })
             .catch(function(error) {
-                console.error('Erro ao excluir reunião:', error);
-                showToast('Erro ao excluir reunião. Tente novamente.', 'danger');
+                console.error(error);
             });
-        }
+        });
     });
 
     document.getElementById('openMeetingModal').addEventListener('click', function() {

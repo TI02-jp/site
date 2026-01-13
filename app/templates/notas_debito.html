@@ -573,10 +573,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var notaId = target.getAttribute('data-nota-id');
             var empresa = target.getAttribute('data-nota-empresa');
 
-            if (confirm('Deseja realmente excluir a nota da empresa "' + empresa + '"?')) {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja realmente excluir a nota da empresa "' + empresa + '"?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
                 document.getElementById('deleteNotaId').value = notaId;
                 document.getElementById('deleteNotaForm').submit();
-            }
+            });
         });
     });
 

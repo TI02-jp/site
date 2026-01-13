@@ -41,7 +41,7 @@
         </div>
         <div class="d-flex justify-content-between">
           <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Salvar</button>
-          <form method="post" action="{{ url_for('procedimentos_operacionais_excluir', proc_id=procedure.id) }}" onsubmit="return confirm('Excluir este procedimento?');">
+          <form method="post" action="{{ url_for('procedimentos_operacionais_excluir', proc_id=procedure.id) }}" data-confirm-message="Excluir este procedimento?" data-confirm-variant="danger">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>Excluir</button>
           </form>

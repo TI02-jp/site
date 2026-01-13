@@ -47,10 +47,15 @@ def sao_paulo_now_naive() -> datetime:
 
 
 def _normalize_utc(dt: datetime) -> datetime:
-    """Return ``dt`` converted to an aware UTC timestamp."""
+    """Return ``dt`` converted to an aware UTC timestamp.
+
+    If dt is naive (no timezone), assumes it's in São Paulo timezone,
+    since all naive datetimes in the database are stored using sao_paulo_now_naive().
+    """
 
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        # Assume naive datetimes are in São Paulo timezone
+        return dt.replace(tzinfo=SAO_PAULO_TZ).astimezone(timezone.utc)
     return dt.astimezone(timezone.utc)
 
 
@@ -416,6 +421,8 @@ class ClientAnnouncement(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     sequence_number = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    code = db.Column(db.String(50))
+    status = db.Column(db.String(20), nullable=False, default="Aguardando Envio")
     subject = db.Column(db.String(255), nullable=False)
     tax_regime = db.Column(db.String(20), nullable=False)
     summary = db.Column(db.Text, nullable=False)
@@ -430,9 +437,36 @@ class ClientAnnouncement(db.Model):
         "User",
         backref=db.backref("client_announcements", lazy=True),
     )
+    attachments = db.relationship(
+        "ClientAnnouncementAttachment",
+        backref="client_announcement",
+        cascade="all, delete-orphan",
+        order_by="ClientAnnouncementAttachment.created_at.asc()",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         return f"<ClientAnnouncement {self.sequence_number}: {self.subject!r}>"
+
+
+class ClientAnnouncementAttachment(AttachmentMixin, db.Model):
+    """Attachment stored for a client-facing announcement."""
+
+    __tablename__ = "client_announcement_attachments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_announcement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("client_announcements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    file_path = db.Column(db.String(255), nullable=False)
+    original_name = db.Column(db.String(255))
+    mime_type = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<ClientAnnouncementAttachment {self.original_name or self.file_path}>"
 
 
 class Course(db.Model):
@@ -1621,6 +1655,7 @@ class OperationalProcedure(db.Model):
         db.Text().with_variant(mysql.LONGTEXT, "mysql"),
         nullable=True,
     )
+    is_ti_procedure = db.Column(db.Boolean, default=False, nullable=False, index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
     updated_at = db.Column(

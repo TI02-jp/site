@@ -527,7 +527,7 @@
                                             <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_feedbacks', user_id=feedback.user_id, action='edit', feedback_id=feedback.id) }}">
                                                 <i class="bi bi-pencil me-1"></i>Editar
                                             </a>
-                                            <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" onsubmit="return confirm('Deseja realmente excluir este feedback?');">
+                                            <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" data-confirm-message="Deseja realmente excluir este feedback?" data-confirm-variant="danger">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ feedback.user_id }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -663,7 +663,7 @@
                                                 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('diretoria_feedbacks', user_id=selected_user.id, action='edit', feedback_id=feedback.id) }}">
                                                     <i class="bi bi-pencil me-1"></i>Editar
                                                 </a>
-                                                <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" onsubmit="return confirm('Deseja realmente excluir este feedback?');">
+                                                <form method="post" action="{{ url_for('diretoria_feedbacks_excluir', feedback_id=feedback.id) }}" data-confirm-message="Deseja realmente excluir este feedback?" data-confirm-variant="danger">
                                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <input type="hidden" name="user_id" value="{{ selected_user.id }}">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger">

@@ -691,7 +691,7 @@
                                        <a href="{{ url_for('editar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="btn btn-outline-primary btn-sm" title="Editar">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form method="POST" action="{{ url_for('excluir_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir esta reunião?');">
+                                        <form method="POST" action="{{ url_for('excluir_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="d-inline" data-confirm-message="Deseja realmente excluir esta reuniao?" data-confirm-variant="danger">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-outline-danger btn-sm" title="Excluir">
                                                 <i class="bi bi-trash"></i>

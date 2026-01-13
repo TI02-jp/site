@@ -60,6 +60,48 @@ def _can_manage_procedures() -> bool:
     return has_report_access("procedures_manage")
 
 
+def _user_has_ti_tag() -> bool:
+    """Verifica se o usuário possui a tag TI.
+
+    Returns:
+        True se o usuário é admin OU possui a tag TI
+    """
+    from app.controllers.routes._base import get_ti_tag
+    from app.utils.permissions import is_user_admin
+
+    # Admin sempre tem acesso
+    if is_user_admin(current_user):
+        return True
+
+    if not current_user.is_authenticated:
+        return False
+
+    # Verifica se usuário tem tag TI
+    ti_tag = get_ti_tag()
+    if not ti_tag:
+        return False
+
+    user_tag_ids = {t.id for t in getattr(current_user, "tags", []) or []}
+    return ti_tag.id in user_tag_ids
+
+
+def _can_manage_ti_procedures() -> bool:
+    """Verifica se o usuário pode gerenciar procedimentos TI.
+
+    Returns:
+        True se o usuário é admin OU tem a permissão procedures_ti_manage
+    """
+    from app.controllers.routes._decorators import has_portal_permission
+    from app.utils.permissions import is_user_admin
+
+    # Admin sempre pode
+    if is_user_admin(current_user):
+        return True
+
+    # Verifica permissão específica (opt-in/strict)
+    return has_portal_permission("procedures_ti_manage")
+
+
 # =============================================================================
 # ROTAS
 # =============================================================================
@@ -71,11 +113,12 @@ def procedimentos_operacionais():
     """
     Lista e permite criacao de procedimentos operacionais.
 
-    GET: Lista procedimentos com busca opcional
-    POST: Cria novo procedimento
+    GET: Lista procedimentos com busca opcional e suporte a tabs
+    POST: Cria novo procedimento (geral ou TI)
 
     Query params:
         q: Termo de busca (opcional)
+        tab: 'geral' ou 'ti' (default: 'geral')
 
     Returns:
         200: Pagina HTML com listagem de procedimentos
@@ -83,9 +126,23 @@ def procedimentos_operacionais():
     """
     form = OperationalProcedureForm()
     search_term = (request.args.get("q") or "").strip()
+    active_tab = (request.args.get("tab") or "geral").strip()
 
-    # Query base
+    # Valida tab
+    if active_tab not in ["geral", "ti"]:
+        active_tab = "geral"
+
+    # Verifica se usuário pode ver tab TI
+    user_has_ti = _user_has_ti_tag()
+    if active_tab == "ti" and not user_has_ti:
+        abort(403)
+
+    # Query base - filtra por tipo de procedimento
     query = OperationalProcedure.query
+    if active_tab == "ti":
+        query = query.filter(OperationalProcedure.is_ti_procedure == True)
+    else:
+        query = query.filter(OperationalProcedure.is_ti_procedure == False)
 
     # Aplica filtro de busca se informado
     if search_term:
@@ -102,29 +159,44 @@ def procedimentos_operacionais():
 
     # Processa POST (criacao)
     if request.method == "POST":
-        if not _can_manage_procedures():
-            abort(403)
+        is_ti_proc = request.form.get("is_ti_procedure") == "true"
+
+        # Verifica permissões apropriadas
+        if is_ti_proc:
+            if not _can_manage_ti_procedures():
+                abort(403)
+        else:
+            if not _can_manage_procedures():
+                abort(403)
 
         if form.validate_on_submit():
             proc = OperationalProcedure(
                 title=form.title.data,
                 descricao=sanitize_html(form.descricao.data or "", allow_data_images=True) or None,
+                is_ti_procedure=is_ti_proc,
                 created_by_id=current_user.id,
             )
             db.session.add(proc)
             db.session.commit()
             flash("Procedimento criado com sucesso.", "success")
-            return redirect(url_for("procedimentos.procedimentos_operacionais"))
+
+            # Redirect para a tab apropriada
+            tab_param = "ti" if is_ti_proc else "geral"
+            return redirect(url_for("procedimentos.procedimentos_operacionais", tab=tab_param))
 
         flash("Nao foi possivel criar o procedimento. Corrija os erros do formulario.", "danger")
 
-    can_manage = _can_manage_procedures()
+    # Permissões baseadas na tab ativa
+    can_manage = _can_manage_ti_procedures() if active_tab == "ti" else _can_manage_procedures()
+
     return render_template(
         "procedimentos.html",
         form=form,
         procedures=procedures,
         search_term=search_term,
         can_manage=can_manage,
+        active_tab=active_tab,
+        user_has_ti=user_has_ti,
     )
 
 
@@ -154,10 +226,18 @@ def procedimentos_operacionais_ver(proc_id: int):
 
     Returns:
         200: Pagina HTML com detalhes do procedimento
+        403: Acesso negado (tentou ver procedimento TI sem tag TI)
         404: Procedimento nao encontrado
     """
     proc = OperationalProcedure.query.get_or_404(proc_id)
-    can_manage = _can_manage_procedures()
+
+    # Se é procedimento TI, verifica se usuário tem tag TI
+    if proc.is_ti_procedure and not _user_has_ti_tag():
+        abort(403)
+
+    # Verifica permissão de gerenciamento apropriada
+    can_manage = _can_manage_ti_procedures() if proc.is_ti_procedure else _can_manage_procedures()
+
     return render_template("procedimento_view.html", procedure=proc, can_manage=can_manage)
 
 
@@ -198,10 +278,16 @@ def procedimentos_operacionais_editar(proc_id: int):
         403: Acesso negado se nao tiver permissao
         404: Procedimento nao encontrado
     """
-    if not _can_manage_procedures():
-        abort(403)
-
     proc = OperationalProcedure.query.get_or_404(proc_id)
+
+    # Verifica permissão apropriada baseada no tipo
+    if proc.is_ti_procedure:
+        if not _can_manage_ti_procedures():
+            abort(403)
+    else:
+        if not _can_manage_procedures():
+            abort(403)
+
     form = OperationalProcedureForm()
 
     if request.method == "GET":
@@ -214,6 +300,7 @@ def procedimentos_operacionais_editar(proc_id: int):
     if form.validate_on_submit():
         proc.title = form.title.data
         proc.descricao = sanitize_html(form.descricao.data or "", allow_data_images=True) or None
+        # Note: is_ti_procedure is NOT updated - it remains as originally set
         db.session.commit()
         flash("Procedimento atualizado com sucesso.", "success")
         return redirect(url_for("procedimentos.procedimentos_operacionais_ver", proc_id=proc.id))
@@ -236,11 +323,21 @@ def procedimentos_operacionais_excluir(proc_id: int):
         403: Acesso negado se nao tiver permissao
         404: Procedimento nao encontrado
     """
-    if not _can_manage_procedures():
-        abort(403)
-
     proc = OperationalProcedure.query.get_or_404(proc_id)
+
+    # Verifica permissão apropriada
+    if proc.is_ti_procedure:
+        if not _can_manage_ti_procedures():
+            abort(403)
+    else:
+        if not _can_manage_procedures():
+            abort(403)
+
+    is_ti = proc.is_ti_procedure
     db.session.delete(proc)
     db.session.commit()
     flash("Procedimento excluido com sucesso.", "success")
-    return redirect(url_for("procedimentos.procedimentos_operacionais"))
+
+    # Redirect para tab apropriada
+    tab_param = "ti" if is_ti else "geral"
+    return redirect(url_for("procedimentos.procedimentos_operacionais", tab=tab_param))

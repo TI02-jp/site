@@ -903,10 +903,26 @@
                     event.preventDefault();
                     return;
                 }
-                var confirmed = window.confirm('Tem certeza que deseja excluir este curso? Esta a├º├úo n├úo poder├í ser desfeita.');
-                if (!confirmed) {
-                    event.preventDefault();
+                if (deleteButton.dataset.confirmed === 'true') {
+                    deleteButton.dataset.confirmed = 'false';
+                    return;
                 }
+                event.preventDefault();
+                window.portalConfirm({
+                    title: 'Confirmar acao',
+                    message: 'Tem certeza que deseja excluir este curso? Esta acao nao podera ser desfeita.',
+                    variant: 'danger'
+                }).then((confirmed) => {
+                    if (!confirmed) {
+                        return;
+                    }
+                    deleteButton.dataset.confirmed = 'true';
+                    if (formEl.requestSubmit) {
+                        formEl.requestSubmit(deleteButton);
+                    } else {
+                        formEl.submit();
+                    }
+                });
             });
         }
     });

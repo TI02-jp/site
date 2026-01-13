@@ -734,7 +734,7 @@
                   <i class="bi bi-pencil-square"></i>
                   <span>Editar</span>
                 </button>
-                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline" onsubmit="return confirm('Deseja realmente excluir este comunicado?');">
+                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="d-inline" data-confirm-message="Deseja realmente excluir este comunicado?" data-confirm-variant="danger">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" title="Excluir comunicado">
                     <i class="bi bi-trash"></i>
