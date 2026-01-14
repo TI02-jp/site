@@ -572,6 +572,7 @@ class ClienteReuniaoForm(FlaskForm):
         option_widget=widgets.CheckboxInput(),
         widget=widgets.ListWidget(prefix_label=False),
     )
+    participantes_extras = HiddenField("Participantes externos", validators=[Optional()])
     setor_id = SelectField("Setor", coerce=int, validators=[Optional()], choices=[])
     topicos_json = HiddenField("Tópicos", validators=[Optional()])
     decisoes = TextAreaField("Decisões", validators=[Optional()])

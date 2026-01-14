@@ -47,16 +47,11 @@
                         <span class="input-group-text bg-light">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text"
-                               class="form-control"
-                               id="searchInput"
-                               name="q"
-                               value="{{ search_term }}"
-                               placeholder="Pesquisar por ID ou Razão Social...">
-                        <a class="btn btn-outline-secondary"
-                           id="clearSearch"
-                           href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, all=all_param) }}"
-                           title="Limpar pesquisa">
+                        <input type="text" class="form-control" id="searchInput" name="q" value="{{ search_term }}"
+                            placeholder="Pesquisar por ID ou Razão Social...">
+                        <a class="btn btn-outline-secondary" id="clearSearch"
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, all=all_param) }}"
+                            title="Limpar pesquisa">
                             <i class="bi bi-x"></i>
                         </a>
                     </div>
@@ -66,12 +61,10 @@
                 <div class="d-flex align-items-start gap-2 flex-wrap inventario-toolbar">
                     <div class="inventario-dashboard-inline d-flex flex-wrap gap-2 justify-content-start">
                         {% for card in dashboard_cards %}
-                        <div class="inventario-summary-card"
-                             data-tributacao="{{ card.tributacao }}"
-                             data-total="{{ card.total }}"
-                             data-concluida="{{ card.concluida }}"
-                             data-aguardando="{{ card.aguardando_arquivo }}"
-                             data-faltantes="{{ card.faltantes }}">
+                        <div class="inventario-summary-card" data-tributacao="{{ card.tributacao }}"
+                            data-total="{{ card.total }}" data-concluida="{{ card.concluida }}"
+                            data-aguardando="{{ card.aguardando_arquivo }}" data-faltantes="{{ card.faltantes }}"
+                            data-fechamento="{{ card.fechamento_fiscal }}">
                             <div class="summary-top">
                                 <div class="summary-title">{{ card.tributacao }}</div>
                                 <div class="summary-total">
@@ -92,6 +85,10 @@
                                     <span class="summary-label">FALTANTES</span>
                                     <span class="summary-number js-faltantes">{{ card.faltantes }}</span>
                                 </div>
+                                <div class="summary-metric">
+                                    <span class="summary-label">FECH. FISCAL</span>
+                                    <span class="summary-number js-fechamento">{{ card.fechamento_fiscal }}</span>
+                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -99,19 +96,18 @@
                     <div class="inventario-action ms-auto d-flex align-items-center gap-2">
                         {% set is_tag_filtered = tag_filters|length != 1 or 'Matriz' not in tag_filters %}
                         <div class="dropdown" data-bs-auto-close="outside">
-                            <button class="btn btn-sm d-inline-flex align-items-center gap-1 {% if is_tag_filtered %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                    type="button"
-                                    id="tagFilterDropdown"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                    aria-label="Filtrar por tag">
+                            <button
+                                class="btn btn-sm d-inline-flex align-items-center gap-1 {% if is_tag_filtered %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                type="button" id="tagFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Filtrar por tag">
                                 <i class="bi bi-tags"></i>
                                 Tag
                                 {% if is_tag_filtered %}
-                                    <span class="badge bg-light text-dark ms-1">{{ tag_filters|length }}</span>
+                                <span class="badge bg-light text-dark ms-1">{{ tag_filters|length }}</span>
                                 {% endif %}
                             </button>
-                            <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="tagFilterDropdown" style="min-width: 220px;">
+                            <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm"
+                                aria-labelledby="tagFilterDropdown" style="min-width: 220px;">
                                 <form method="GET" class="tag-filter-form">
                                     <input type="hidden" name="sort" value="{{ sort }}">
                                     <input type="hidden" name="order" value="{{ order }}">
@@ -129,14 +125,19 @@
                                     <div class="d-flex flex-column gap-1 mb-3">
                                         {% for tag in allowed_tag_filters %}
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="tag" id="tagFilter{{ loop.index }}" value="{{ tag }}" {% if tag in tag_filters %}checked{% endif %}>
-                                            <label class="form-check-label" for="tagFilter{{ loop.index }}">{{ tag }}</label>
+                                            <input class="form-check-input" type="checkbox" name="tag"
+                                                id="tagFilter{{ loop.index }}" value="{{ tag }}" {% if tag in
+                                                tag_filters %}checked{% endif %}>
+                                            <label class="form-check-label" for="tagFilter{{ loop.index }}">{{ tag
+                                                }}</label>
                                         </div>
                                         {% endfor %}
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <a class="btn btn-link btn-sm text-decoration-none px-0 tag-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, clear_tag=1) }}">Limpar</a>
-                                        <button type="submit" class="btn btn-primary btn-sm tag-filter-apply">Aplicar</button>
+                                        <a class="btn btn-link btn-sm text-decoration-none px-0 tag-filter-clear"
+                                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, clear_tag=1) }}">Limpar</a>
+                                        <button type="submit"
+                                            class="btn btn-primary btn-sm tag-filter-apply">Aplicar</button>
                                     </div>
                                 </form>
                             </div>
@@ -144,16 +145,13 @@
 
                         {% if is_admin %}
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button"
-                                    class="btn btn-sm btn-info d-inline-flex align-items-center gap-1"
-                                    id="checkApiBtn"
-                                    title="Testar se a API está acessível e o token é válido">
+                            <button type="button" class="btn btn-sm btn-info d-inline-flex align-items-center gap-1"
+                                id="checkApiBtn" title="Testar se a API está acessível e o token é válido">
                                 <i class="bi bi-shield-check"></i>
                                 Testar Conexão API
                             </button>
-                            <button type="button"
-                                    class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1"
-                                    id="syncEncerramentoBtn">
+                            <button type="button" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1"
+                                id="syncEncerramentoBtn">
                                 <i class="bi bi-cloud-arrow-down"></i>
                                 Sincronizar Encerramento (API)
                             </button>
@@ -162,15 +160,15 @@
                         {% endif %}
 
                         {% if show_all %}
-                            <a class="btn btn-outline-secondary btn-sm"
-                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term) }}">
-                                Paginar resultados
-                            </a>
+                        <a class="btn btn-outline-secondary btn-sm"
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term) }}">
+                            Paginar resultados
+                        </a>
                         {% else %}
-                            <a class="btn btn-outline-primary btn-sm"
-                               href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=1) }}">
-                                Listar tudo
-                            </a>
+                        <a class="btn btn-outline-primary btn-sm"
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=1) }}">
+                            Listar tudo
+                        </a>
                         {% endif %}
                     </div>
                 </div>
@@ -183,63 +181,65 @@
                 <span class="text-muted small">Filtros:</span>
                 {% set show_tag_filter = tag_filters and (tag_filters|length != 1 or 'Matriz' not in tag_filters) %}
                 {% if tributacao_filters or status_filters or show_tag_filter %}
-                    {% if show_tag_filter %}
-                        <span class="text-muted small">Tag:</span>
-                        {% for tag in tag_filters %}
-                        <span class="badge bg-secondary">{{ tag }}</span>
-                        {% endfor %}
-                    {% endif %}
-                    {% if tributacao_filters %}
-                        <span class="text-muted small">Tributação:</span>
-                        {% for trib in tributacao_filters %}
-                        <span class="badge bg-primary">{{ trib }}</span>
-                        {% endfor %}
-                    {% endif %}
-                    {% if status_filters %}
-                        <span class="text-muted small">Status:</span>
-                        {% for st in status_filters %}
-                        <span class="badge bg-info">{{ st }}</span>
-                        {% endfor %}
-                    {% endif %}
-                    <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, clear_tag=1, q=search_term, all=all_param) }}"
-                       class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-x-circle"></i> Limpar Tudo
-                    </a>
+                {% if show_tag_filter %}
+                <span class="text-muted small">Tag:</span>
+                {% for tag in tag_filters %}
+                <span class="badge bg-secondary">{{ tag }}</span>
+                {% endfor %}
+                {% endif %}
+                {% if tributacao_filters %}
+                <span class="text-muted small">Tributação:</span>
+                {% for trib in tributacao_filters %}
+                <span class="badge bg-primary">{{ trib }}</span>
+                {% endfor %}
+                {% endif %}
+                {% if status_filters %}
+                <span class="text-muted small">Status:</span>
+                {% for st in status_filters %}
+                <span class="badge bg-info">{{ st }}</span>
+                {% endfor %}
+                {% endif %}
+                <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, clear_tag=1, q=search_term, all=all_param) }}"
+                    class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-x-circle"></i> Limpar Tudo
+                </a>
                 {% else %}
-                    <span class="text-muted small">Nenhum filtro ativo</span>
+                <span class="text-muted small">Nenhum filtro ativo</span>
                 {% endif %}
             </div>
             {% if pagination.pages > 1 %}
-                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                    <span class="text-muted small">Página {{ pagination.page }} de {{ pagination.pages }}</span>
-                    <nav aria-label="Paginação do inventário">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
-                                <a class="page-link"
-                                   href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
-                                   {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
-                                    Anterior
-                                </a>
-                            </li>
-                            {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
-                                {% if p %}
-                                    <li class="page-item{% if p == pagination.page %} active{% endif %}">
-                                        <a class="page-link" href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=p) }}">{{ p }}</a>
-                                    </li>
-                                {% else %}
-                                    <li class="page-item disabled"><span class="page-link">…</span></li>
-                                {% endif %}
-                            {% endfor %}
-                            <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
-                                <a class="page-link"
-                                   href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
-                                   {% if not pagination.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
-                                    Próximo
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                <span class="text-muted small">Página {{ pagination.page }} de {{ pagination.pages }}</span>
+                <nav aria-label="Paginação do inventário">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
+                            <a class="page-link"
+                                href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
+                                {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true" {% endif %}>
+                                Anterior
+                            </a>
+                        </li>
+                        {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                        {% if p %}
+                        <li class="page-item{% if p == pagination.page %} active{% endif %}">
+                            <a class="page-link"
+                                href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=p) }}">{{
+                                p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% endif %}
+                        {% endfor %}
+                        <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
+                            <a class="page-link"
+                                href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
+                                {% if not pagination.has_next %}tabindex="-1" aria-disabled="true" {% endif %}>
+                                Próximo
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -251,26 +251,27 @@
                 <table class="table table-hover table-sm mb-0 compact-table" id="inventarioTable">
                     <thead class="table-light sticky-top">
                         <tr>
-                            
+
                             <th class="col-id" style="width: 65px;">
                                 <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
-                                   class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
+                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
                                     {% if sort == 'codigo' %}
-                                        <i class="bi bi-{{ 'sort-down' if order == 'desc' else 'sort-up' }} ms-1"></i>
+                                    <i class="bi bi-{{ 'sort-down' if order == 'desc' else 'sort-up' }} ms-1"></i>
                                     {% else %}
-                                        <i class="bi bi-filter text-muted ms-1"></i>
+                                    <i class="bi bi-filter text-muted ms-1"></i>
                                     {% endif %}
                                 </a>
                             </th>
                             <th class="col-razao" style="width: 220px;">
                                 <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
-                                   class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
+                                    class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
                                     {% if sort == 'nome' %}
-                                        <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }} ms-1"></i>
+                                    <i
+                                        class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }} ms-1"></i>
                                     {% else %}
-                                        <i class="bi bi-filter text-muted ms-1"></i>
+                                    <i class="bi bi-filter text-muted ms-1"></i>
                                     {% endif %}
                                 </a>
                             </th>
@@ -279,25 +280,27 @@
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
                                         <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
-                                           class="text-decoration-none text-dark">
+                                            class="text-decoration-none text-dark">
                                             {% if sort == 'tributacao' %}
-                                                <i class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }}"></i>
+                                            <i
+                                                class="bi bi-{{ 'sort-alpha-down' if order == 'desc' else 'sort-alpha-up' }}"></i>
                                             {% endif %}
                                         </a>
                                     </div>
                                     <div class="dropdown" data-bs-auto-close="outside">
-                                        <button class="btn btn-icon-xs {% if tributacao_filters %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                                type="button"
-                                                id="tributacaoFilterDropdown"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                aria-label="Filtrar por tributação">
-                                            <i class="bi {% if tributacao_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                        <button
+                                            class="btn btn-icon-xs {% if tributacao_filters %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                            type="button" id="tributacaoFilterDropdown" data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Filtrar por tributação">
+                                            <i
+                                                class="bi {% if tributacao_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
                                             {% if tributacao_filters %}
-                                                <span class="badge bg-light text-dark ms-1">{{ tributacao_filters|length }}</span>
+                                            <span class="badge bg-light text-dark ms-1">{{ tributacao_filters|length
+                                                }}</span>
                                             {% endif %}
                                         </button>
-                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="tributacaoFilterDropdown" style="min-width: 240px;">
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm"
+                                            aria-labelledby="tributacaoFilterDropdown" style="min-width: 240px;">
                                             <form method="GET" class="tributacao-filter-form">
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
@@ -308,18 +311,25 @@
                                                 {% for tag in tag_filters %}
                                                 <input type="hidden" name="tag" value="{{ tag }}">
                                                 {% endfor %}
-                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributação</p>
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por
+                                                    tributação</p>
                                                 <div class="d-flex flex-column gap-1 mb-3">
                                                     {% for trib in allowed_tributacoes %}
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" name="tributacao" id="tribFilter{{ loop.index }}" value="{{ trib }}" {% if trib in tributacao_filters %}checked{% endif %}>
-                                                        <label class="form-check-label" for="tribFilter{{ loop.index }}">{{ trib }}</label>
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="tributacao" id="tribFilter{{ loop.index }}"
+                                                            value="{{ trib }}" {% if trib in tributacao_filters
+                                                            %}checked{% endif %}>
+                                                        <label class="form-check-label"
+                                                            for="tribFilter{{ loop.index }}">{{ trib }}</label>
                                                     </div>
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
-                                                    <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear"
+                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                    <button type="submit"
+                                                        class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -335,18 +345,19 @@
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span>Status</span>
                                     <div class="dropdown" data-bs-auto-close="outside">
-                                        <button class="btn btn-icon-xs {% if status_filters %}btn-info{% else %}btn-outline-secondary{% endif %}"
-                                                type="button"
-                                                id="statusFilterDropdown"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                aria-label="Filtrar por status">
-                                            <i class="bi {% if status_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                        <button
+                                            class="btn btn-icon-xs {% if status_filters %}btn-info{% else %}btn-outline-secondary{% endif %}"
+                                            type="button" id="statusFilterDropdown" data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Filtrar por status">
+                                            <i
+                                                class="bi {% if status_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
                                             {% if status_filters %}
-                                                <span class="badge bg-light text-dark ms-1">{{ status_filters|length }}</span>
+                                            <span class="badge bg-light text-dark ms-1">{{ status_filters|length
+                                                }}</span>
                                             {% endif %}
                                         </button>
-                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="statusFilterDropdown" style="min-width: 260px;">
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm"
+                                            aria-labelledby="statusFilterDropdown" style="min-width: 260px;">
                                             <form method="GET" class="status-filter-form">
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
@@ -360,18 +371,24 @@
                                                 {% for trib in tributacao_filters %}
                                                 <input type="hidden" name="tributacao" value="{{ trib }}">
                                                 {% endfor %}
-                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por status</p>
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por
+                                                    status</p>
                                                 <div class="d-flex flex-column gap-1 mb-3">
                                                     {% for status_opt in status_choices %}
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" name="status" id="statusFilter{{ loop.index }}" value="{{ status_opt }}" {% if status_opt in status_filters %}checked{% endif %}>
-                                                        <label class="form-check-label" for="statusFilter{{ loop.index }}">{{ status_opt }}</label>
+                                                        <input class="form-check-input" type="checkbox" name="status"
+                                                            id="statusFilter{{ loop.index }}" value="{{ status_opt }}"
+                                                            {% if status_opt in status_filters %}checked{% endif %}>
+                                                        <label class="form-check-label"
+                                                            for="statusFilter{{ loop.index }}">{{ status_opt }}</label>
                                                     </div>
                                                     {% endfor %}
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear" href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
-                                                    <button type="submit" class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear"
+                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                    <button type="submit"
+                                                        class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -380,7 +397,8 @@
                             </th>
 
 
-                            <th class="col-valor text-start" style="width: 175px;">Valor Enviado SPED Fiscal 02/2025</th>
+                            <th class="col-valor text-start" style="width: 175px;">Valor Enviado SPED Fiscal 02/2025
+                            </th>
                             <th class="text-start" style="width: 125px;">Encerramento Fiscal</th>
                             <th class="text-start" style="width: 160px;">Arquivo Cliente</th>
                             <th class="text-start" style="width: 135px;">Data Encerramento</th>
@@ -389,14 +407,17 @@
                     </thead>
                     <tbody>
                         {% for item in items %}
-                        {% set cliente_files = item.inventario.cliente_files if item.inventario and item.inventario.cliente_files else [] %}
-                        {% set has_cliente_file = cliente_files|length > 0 or (item.inventario and item.inventario.cliente_pdf_path) %}
+                        {% set cliente_files = item.inventario.cliente_files if item.inventario and
+                        item.inventario.cliente_files else [] %}
+                        {% set has_cliente_file = cliente_files|length > 0 or (item.inventario and
+                        item.inventario.cliente_pdf_path) %}
                         <tr data-empresa-id="{{ item.empresa.id }}"
                             data-tributacao="{{ item.empresa.tributacao or '' }}"
                             data-status="{{ item.inventario.status if item.inventario else '' }}"
+                            data-encerramento-fiscal="{{ 1 if item.inventario and item.inventario.encerramento_fiscal else 0 }}"
                             data-has-cliente-file="{{ 1 if has_cliente_file else 0 }}"
                             data-has-cliente-legacy="{{ 1 if item.inventario and item.inventario.cliente_pdf_path else 0 }}">
-                            
+
                             <!-- ID -->
                             <td class="col-id text-center">
                                 <strong>{{ item.empresa.codigo_empresa }}</strong>
@@ -405,11 +426,12 @@
                             <!-- Razão Social -->
                             <td class="col-razao">
                                 <a href="{{ url_for('empresas.visualizar_empresa', empresa_id=item.empresa.id) }}"
-                                   class="text-decoration-none" target="_blank">
+                                    class="text-decoration-none" target="_blank">
                                     {{ item.empresa.nome_empresa }}
                                 </a>
                                 {% set tipo_tag = item.empresa.tipo_empresa or 'Matriz' %}
-                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else 'bg-warning-subtle text-warning' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else
+                                'bg-warning-subtle text-warning' %}
                                 <div class="mt-1">
                                     <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
                                 </div>
@@ -422,110 +444,106 @@
 
                             <!-- CFOP -->
                             <td class="col-cfop">
-                                {% set cfop_files = item.inventario.cfop_files if item.inventario and item.inventario.cfop_files else [] %}
+                                {% set cfop_files = item.inventario.cfop_files if item.inventario and
+                                item.inventario.cfop_files else [] %}
                                 <div class="pdf-upload-container">
                                     <!-- Lista de arquivos existentes -->
                                     <div class="files-list mb-1">
                                         {% for file in cfop_files %}
-                                        <div class="file-item d-flex gap-1 align-items-center mb-1" data-file-index="{{ loop.index0 }}">
-                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;" title="{{ file.filename }}">
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
+                                            data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;"
+                                                title="{{ file.filename }}">
                                                 {{ file.filename }}
                                             </small>
                                             <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
-                                               target="_blank"
-                                               class="btn btn-outline-primary btn-sm"
-                                               title="Visualizar">
+                                                target="_blank" class="btn btn-outline-primary btn-sm"
+                                                title="Visualizar">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
-                                               download="{{ file.filename }}"
-                                               class="btn btn-outline-success btn-sm"
-                                               title="Baixar">
+                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
+                                                title="Baixar">
                                                 <i class="bi bi-download"></i>
                                             </a>
                                             <button type="button"
-                                                    class="btn btn-outline-danger btn-sm delete-cfop-file-btn"
-                                                    title="Remover">
+                                                class="btn btn-outline-danger btn-sm delete-cfop-file-btn"
+                                                title="Remover">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         {% endfor %}
                                     </div>
                                     <!-- Botão de upload -->
-                                    <input type="file"
-                                           class="form-control form-control-sm pdf-upload"
-                                           accept=".pdf"
-                                           title="Adicionar PDF">
+                                    <input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf"
+                                        title="Adicionar PDF">
                                 </div>
                             </td>
 
                             <!-- DIEF 2024 -->
                             <td class="col-dief">
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="dief_2024"
-                                       value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="dief_2024"
+                                    value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
                             </td>
 
                             <!-- Balanço Cliente 2025 -->
                             <td class="col-balanco">
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="balanco_2025_cliente"
-                                       value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="balanco_2025_cliente"
+                                    value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
                             </td>
 
                             <!-- Fechamento Tadeu 2025 -->
                             <td class="col-fechamento">
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="fechamento_tadeu_2025"
-                                       value="{{ item.inventario.fechamento_tadeu_2025_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="fechamento_tadeu_2025"
+                                    value="{{ item.inventario.fechamento_tadeu_2025_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
                             </td>
 
                             <!-- Observação Tadeu -->
                             <td class="col-obs">
                                 <textarea class="form-control form-control-sm editable-field"
-                                          data-field="observacoes_tadeu"
-                                          rows="2"
-                                          placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
+                                    data-field="observacoes_tadeu" rows="2"
+                                    placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
                             </td>
 
                             <!-- Status -->
                             <td class="col-status">
-                                <select class="form-select form-select-sm editable-field"
-                                        data-field="status"
-                                        data-prev-status="{{ item.inventario.status if item.inventario else '' }}">
+                                <select class="form-select form-select-sm editable-field" data-field="status"
+                                    data-prev-status="{{ item.inventario.status if item.inventario else '' }}">
                                     <option value="">Selecione...</option>
                                     {% for status_opt in status_choices %}
-                                    <option value="{{ status_opt }}"
-                                            {% if item.inventario and item.inventario.status == status_opt %}selected{% endif %}>
+                                    <option value="{{ status_opt }}" {% if item.inventario and
+                                        item.inventario.status==status_opt %}selected{% endif %}>
                                         {{ status_opt }}
                                     </option>
                                     {% endfor %}
                                 </select>
                             </td>
 
-                            
+
                             <!-- Valor Enviado SPED Fiscal 02/2025 -->
                             <td class="col-valor">
-                                <input type="text"
-                                       class="form-control form-control-sm editable-field money-field"
-                                       data-field="valor_enviado_sped"
-                                       value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
-                                       placeholder="R$ 0,00">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="valor_enviado_sped"
+                                    value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
                             </td>
 
                             <!-- Encerramento Fiscal -->
                             <td>
                                 <select class="form-select form-select-sm editable-field"
-                                        data-field="encerramento_fiscal">
+                                    data-field="encerramento_fiscal">
                                     <option value="">Selecione...</option>
-                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal is true %}selected{% endif %}>Sim</option>
-                                    <option value="false" {% if not item.inventario or item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não</option>
+                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal
+                                        is true %}selected{% endif %}>Sim</option>
+                                    <option value="false" {% if not item.inventario or
+                                        item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não
+                                    </option>
                                 </select>
                             </td>
 
@@ -535,53 +553,52 @@
                                     <!-- Lista de arquivos existentes -->
                                     <div class="files-list mb-1">
                                         {% for file in cliente_files %}
-                                        <div class="file-item d-flex gap-1 align-items-center mb-1" data-file-index="{{ loop.index0 }}">
-                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 60px;" title="{{ file.filename }}">
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
+                                            data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 60px;"
+                                                title="{{ file.filename }}">
                                                 {{ file.filename }}
                                             </small>
                                             <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
-                                               target="_blank"
-                                               class="btn btn-outline-primary btn-sm"
-                                               title="Visualizar">
+                                                target="_blank" class="btn btn-outline-primary btn-sm"
+                                                title="Visualizar">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
-                                               download="{{ file.filename }}"
-                                               class="btn btn-outline-success btn-sm"
-                                               title="Baixar">
+                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
+                                                title="Baixar">
                                                 <i class="bi bi-download"></i>
                                             </a>
                                             <button type="button"
-                                                    class="btn btn-outline-danger btn-sm delete-cliente-file-btn"
-                                                    title="Remover">
+                                                class="btn btn-outline-danger btn-sm delete-cliente-file-btn"
+                                                title="Remover">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         {% endfor %}
                                     </div>
                                     <!-- Botão de upload -->
-                                    <input type="file"
-                                           class="form-control form-control-sm cliente-upload"
-                                           title="Adicionar arquivo">
+                                    <input type="file" class="form-control form-control-sm cliente-upload"
+                                        title="Adicionar arquivo">
                                 </div>
                             </td>
 
                             <!-- Data Encerramento -->
                             <td>
-                                <input type="date"
-                                       class="form-control form-control-sm editable-field"
-                                       data-field="encerramento_balanco_data"
-                                       value="{{ item.inventario.encerramento_balanco_data.strftime('%Y-%m-%d') if item.inventario and item.inventario.encerramento_balanco_data else '' }}">
+                                <input type="date" class="form-control form-control-sm editable-field"
+                                    data-field="encerramento_balanco_data"
+                                    value="{{ item.inventario.encerramento_balanco_data.strftime('%Y-%m-%d') if item.inventario and item.inventario.encerramento_balanco_data else '' }}">
                             </td>
 
                             <!-- Usuário Encerramento -->
                             <td>
                                 <select class="form-select form-select-sm editable-field"
-                                        data-field="encerramento_balanco_usuario_id">
+                                    data-field="encerramento_balanco_usuario_id">
                                     <option value="">Selecione...</option>
                                     {% for usuario in usuarios %}
-                                    <option value="{{ usuario.id }}"
-                                            {% if item.inventario and item.inventario.encerramento_balanco_usuario_id == usuario.id %}selected{% endif %}>
+                                    <option value="{{ usuario.id }}" {% if item.inventario and
+                                        item.inventario.encerramento_balanco_usuario_id==usuario.id %}selected{% endif
+                                        %}>
                                         {{ usuario.name }}
                                     </option>
                                     {% endfor %}
@@ -597,528 +614,558 @@
 </div>
 
 <style>
-/* Remover scroll do content-wrapper na página de inventário */
-.content-wrapper {
-    overflow: hidden !important;
-    height: 100vh !important;
-}
-
-.inventario-page {
-    font-size: calc(1rem - 2px);
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-    overflow: hidden;
-}
-
-.inventario-page .card {
-    margin-bottom: 0 !important;
-}
-
-.inventario-page h1 {
-    font-size: 1.1rem;
-}
-
-.inventario-page .row.mb-4 {
-    margin-bottom: 0.75rem !important;
-}
-
-.inventario-toolbar {
-    row-gap: 0.4rem;
-}
-
-.inventario-dashboard-inline {
-    flex: 1 1 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.6rem;
-    min-width: 0;
-}
-
-.inventario-action {
-    flex: 0 0 auto;
-}
-
-.inventario-dashboard-inline .inventario-summary-card {
-    --summary-accent: var(--primary);
-    background: var(--card-bg);
-    border: 1px solid var(--card-border-color);
-    color: var(--text-color);
-    border-radius: 0.65rem;
-    padding: 0.65rem 0.85rem 0.7rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    min-width: 200px;
-}
-
-:root[data-theme="dark"] .inventario-dashboard-inline .inventario-summary-card {
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-}
-
-.inventario-dashboard-inline .inventario-summary-card::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 4px;
-    background: var(--summary-accent);
-    border-radius: 0.65rem 0 0 0.65rem;
-    opacity: 0.9;
-}
-
-.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="SIMPLES"] {
-    --summary-accent: var(--primary);
-}
-
-.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="PRESUMIDO"] {
-    --summary-accent: var(--accent);
-}
-
-.inventario-dashboard-inline .inventario-summary-card[data-tributacao*="REAL"] {
-    --summary-accent: var(--primary-hover);
-}
-
-.inventario-dashboard-inline .summary-top {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-}
-
-.inventario-dashboard-inline .summary-title {
-    font-weight: 700;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.inventario-dashboard-inline .summary-total {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25rem;
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-.inventario-dashboard-inline .summary-total .summary-number {
-    font-size: 1.1rem;
-    color: var(--primary);
-}
-
-.inventario-dashboard-inline .summary-suffix {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-}
-
-.inventario-dashboard-inline .summary-metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.35rem 0.6rem;
-}
-
-.inventario-dashboard-inline .summary-metric {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.35rem;
-    padding: 0.2rem 0.45rem;
-    border-radius: 0.5rem;
-    background: var(--muted-surface);
-    border: 1px solid var(--card-border-color);
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-}
-
-.inventario-dashboard-inline .summary-label {
-    line-height: 1.2;
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: left;
-}
-
-.inventario-dashboard-inline .summary-number {
-    font-weight: 700;
-    color: var(--text-color);
-    flex-shrink: 0;
-}
-
-.inventario-page .table {
-    line-height: 1.15;
-}
-
-.inventario-page .table > :not(caption) > * > * {
-    padding: 0.3rem 0.45rem;
-}
-
-.inventario-page .form-control,
-.inventario-page .form-select {
-    font-size: 0.85rem;
-    padding: 0.2rem 0.4rem;
-    min-height: 1.6rem;
-}
-
-.inventario-page textarea.form-control {
-    min-height: 1.6rem;
-}
-
-.inventario-page .btn {
-    padding: 0.15rem 0.4rem;
-    font-size: 0.8rem;
-}
-
-.inventario-page .badge {
-    font-size: 0.68rem;
-    padding: 0.28em 0.5em;
-}
-
-.inventario-page #inventarioTable td {
-    vertical-align: middle;
-}
-
-.sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background-color: #f8f9fa !important;
-}
-
-/* Tabela compacta */
-.compact-table {
-    font-size: 0.75rem;
-}
-
-.compact-table thead th {
-    padding: 0.3rem 0.3rem;
-    font-size: 0.65rem;
-    font-weight: 600;
-    vertical-align: middle;
-    line-height: 1.2;
-}
-
-.compact-table tbody td {
-    padding: 0.28rem 0.3rem;
-    vertical-align: middle;
-}
-
-/* Campos editáveis mais compactos */
-.compact-table .form-control,
-.compact-table .form-select {
-    font-size: 0.68rem;
-    padding: 0.2rem 0.3rem;
-    min-height: 24px;
-}
-
-.compact-table textarea.form-control {
-    padding: 0.2rem 0.3rem;
-    line-height: 1.25;
-}
-
-.compact-table .btn-sm {
-    padding: 0.2rem 0.35rem;
-    font-size: 0.64rem;
-}
-
-.editable-field {
-    border: 1px solid #e0e0e0;
-    transition: border-color 0.2s, background-color 0.2s;
-}
-
-.editable-field:focus {
-    border-color: #0d6efd;
-    background-color: #fff;
-    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.1);
-}
-
-.editable-field.saving {
-    background-color: #fff3cd;
-    border-color: #ffc107;
-}
-
-.editable-field.saved {
-    background-color: #d1e7dd;
-    border-color: #198754;
-}
-
-.editable-field.error {
-    background-color: #f8d7da;
-    border-color: #dc3545;
-}
-
-#inventarioTable tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
-/* Estilos para cabeçalhos ordenáveis */
-#inventarioTable thead th a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-#inventarioTable thead th a:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-#inventarioTable thead th a i {
-    font-size: 0.75rem;
-}
-
-/* Botão de filtro no cabeçalho */
-.btn-icon-xs {
-    padding: 0.15rem 0.35rem;
-    font-size: 0.7rem;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.2rem;
-}
-
-/* Dropdown de filtro */
-.dropdown {
-    position: relative;
-    z-index: 1050;
-}
-
-.dropdown-menu {
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    z-index: 1051;
-    position: absolute !important;
-}
-
-.tributacao-filter-form .form-check,
-.status-filter-form .form-check {
-    padding-left: 1.5rem;
-}
-
-.tributacao-filter-form .form-check-input,
-.status-filter-form .form-check-input {
-    cursor: pointer;
-}
-
-.tributacao-filter-form .form-check-label,
-.status-filter-form .form-check-label {
-    cursor: pointer;
-    user-select: none;
-}
-
-/* Ajustar z-index do thead para não sobrepor dropdown e manter fixo no scroll */
-#inventarioTable thead {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: #f8f9fa; /* Fundo sólido para cobrir conteúdo ao rolar */
-}
-
-#inventarioTable thead th {
-    position: relative;
-    overflow: visible;
-    background-color: #f8f9fa; /* Garantir que cada th tenha fundo sólido */
-}
-
-/* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
-#inventarioTable thead th:nth-child(3) {
-    overflow: visible;
-    z-index: 1052;
-}
-
-/* Permitir dropdown do filtro na coluna Status (9a coluna) */
-#inventarioTable thead th:nth-child(9) {
-    overflow: visible;
-    z-index: 1052;
-}
-
-/* Container da tabela com scroll horizontal e vertical */
-.table-wrapper {
-    overflow-x: auto;
-    overflow-y: auto;
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100vh - 260px);
-}
-
-/* Garantir que dropdowns não sejam cortados pelo overflow do container */
-.table-wrapper .dropdown-menu {
-    position: fixed !important;
-    z-index: 2000;
-}
-
-/* Garantir que a tabela não quebre e force o scroll */
-.table-wrapper .compact-table {
-    min-width: 2100px;
-    width: 2100px;
-}
-
-/* Garantir que todas as colunas respeitem a largura definida */
-.compact-table th {
-    white-space: nowrap;
-}
-
-.compact-table td {
-    overflow: visible;
-}
-
-/* Permitir que textareas e inputs quebrem linha normalmente */
-.compact-table textarea,
-.compact-table input,
-.compact-table select {
-    white-space: normal;
-}
-
-/* Estilizar scrollbar horizontal e vertical */
-.table-wrapper::-webkit-scrollbar {
-    height: 10px;
-    width: 10px;
-}
-
-.table-wrapper::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 5px;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 5px;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-
-/* Inputs de upload compactos */
-.compact-table .pdf-upload-container,
-.compact-table .cliente-upload-container {
-    gap: 0.2rem !important;
-}
-
-.compact-table .pdf-upload-container small,
-.compact-table .cliente-upload-container small {
-    font-size: 0.65rem;
-}
-
-/* Melhorar estética dos inputs de upload */
-.compact-table .pdf-upload,
-.compact-table .cliente-upload {
-    font-size: 0.68rem !important;
-    padding: 0.2rem 0.3rem !important;
-    min-height: 26px !important;
-    height: 26px;
-    color: transparent;
-}
-
-.compact-table .pdf-upload::-webkit-file-upload-button,
-.compact-table .cliente-upload::-webkit-file-upload-button {
-    color: initial;
-}
-
-.compact-table .pdf-upload::file-selector-button,
-.compact-table .cliente-upload::file-selector-button {
-    color: initial;
-}
-
-.compact-table .pdf-upload::file-selector-button,
-.compact-table .cliente-upload::file-selector-button {
-    font-size: 0.63rem;
-    padding: 0.15rem 0.4rem;
-    margin-right: 0.4rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.compact-table .pdf-upload::file-selector-button:hover,
-.compact-table .cliente-upload::file-selector-button:hover {
-    background-color: #e9ecef;
-}
-
-/* Input group compacto */
-.compact-table .input-group {
-    gap: 0.2rem;
-}
-
-/* Ajuste dinâmico de fonte no select de status */
-.compact-table select[data-field="status"] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.compact-table select[data-field="status"] option {
-    font-size: 0.7rem;
-}
-
-/* Classes para ajustar tamanho de fonte baseado no comprimento */
-.compact-table select[data-field="status"].status-short {
-    font-size: 0.7rem;
-}
-
-.compact-table select[data-field="status"].status-medium {
-    font-size: 0.64rem;
-}
-
-.compact-table select[data-field="status"].status-long {
-    font-size: 0.58rem;
-}
-
-/* Destacar CFOP quando encerramento fiscal = SIM e sem arquivo */
-.cfop-missing-file {
-    background-color: #f8d7da !important;
-    border: 2px solid #dc3545 !important;
-    border-radius: 4px;
-    padding: 0.3rem;
-}
-
-/* Estilo para lista de arquivos */
-.files-list {
-    max-height: 150px;
-    overflow-y: auto;
-}
-
-.files-list::-webkit-scrollbar {
-    width: 4px;
-}
-
-.files-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-.files-list::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 2px;
-}
-
-.files-list::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-.file-item {
-    background-color: #f8f9fa;
-    padding: 0.2rem;
-    border-radius: 3px;
-}
-
-.file-item:hover {
-    background-color: #e9ecef;
-}
+    /* Remover scroll do content-wrapper na página de inventário */
+    .content-wrapper {
+        overflow: hidden !important;
+        height: 100vh !important;
+    }
+
+    .inventario-page {
+        font-size: calc(1rem - 2px);
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - 32px);
+        max-height: calc(100vh - 32px);
+    }
+
+    .inventario-page .card {
+        margin-bottom: 0 !important;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .inventario-page .card-body {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .inventario-page h1 {
+        font-size: 1.1rem;
+    }
+
+    .inventario-page .row.mb-4 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .inventario-toolbar {
+        row-gap: 0.4rem;
+    }
+
+    .inventario-dashboard-inline {
+        flex: 1 1 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.6rem;
+        min-width: 0;
+    }
+
+    .inventario-action {
+        flex: 0 0 auto;
+    }
+
+    .inventario-dashboard-inline .inventario-summary-card {
+        --summary-accent: var(--primary);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border-color);
+        color: var(--text-color);
+        border-radius: 0.65rem;
+        padding: 0.65rem 0.85rem 0.7rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 200px;
+    }
+
+    :root[data-theme="dark"] .inventario-dashboard-inline .inventario-summary-card {
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .inventario-dashboard-inline .inventario-summary-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        background: var(--summary-accent);
+        border-radius: 0.65rem 0 0 0.65rem;
+        opacity: 0.9;
+    }
+
+    .inventario-dashboard-inline .inventario-summary-card[data-tributacao*="SIMPLES"] {
+        --summary-accent: var(--primary);
+    }
+
+    .inventario-dashboard-inline .inventario-summary-card[data-tributacao*="PRESUMIDO"] {
+        --summary-accent: var(--accent);
+    }
+
+    .inventario-dashboard-inline .inventario-summary-card[data-tributacao*="REAL"] {
+        --summary-accent: var(--primary-hover);
+    }
+
+    .inventario-dashboard-inline .summary-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .inventario-dashboard-inline .summary-title {
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    .inventario-dashboard-inline .summary-total {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.25rem;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .inventario-dashboard-inline .summary-total .summary-number {
+        font-size: 1.1rem;
+        color: var(--primary);
+    }
+
+    .inventario-dashboard-inline .summary-suffix {
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    .inventario-dashboard-inline .summary-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.35rem 0.6rem;
+    }
+
+    .inventario-dashboard-inline .summary-metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.35rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 0.5rem;
+        background: var(--muted-surface);
+        border: 1px solid var(--card-border-color);
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+    }
+
+    .inventario-dashboard-inline .summary-label {
+        line-height: 1.2;
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .inventario-dashboard-inline .summary-number {
+        font-weight: 700;
+        color: var(--text-color);
+        flex-shrink: 0;
+    }
+
+    .inventario-page .table {
+        line-height: 1.15;
+    }
+
+    .inventario-page .table> :not(caption)>*>* {
+        padding: 0.3rem 0.45rem;
+    }
+
+    .inventario-page .form-control,
+    .inventario-page .form-select {
+        font-size: 0.85rem;
+        padding: 0.2rem 0.4rem;
+        min-height: 1.6rem;
+    }
+
+    .inventario-page textarea.form-control {
+        min-height: 1.6rem;
+    }
+
+    .inventario-page .btn {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    .inventario-page .badge {
+        font-size: 0.68rem;
+        padding: 0.28em 0.5em;
+    }
+
+    .inventario-page #inventarioTable td {
+        vertical-align: middle;
+    }
+
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: var(--card-bg, #f8f9fa) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        /* Sombra sutil para destacar o cabeçalho ao rolar */
+    }
+
+    /* Tabela compacta */
+    .compact-table {
+        font-size: 0.75rem;
+    }
+
+    .compact-table thead th {
+        padding: 0.3rem 0.3rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+        vertical-align: middle;
+        line-height: 1.2;
+    }
+
+    .compact-table tbody td {
+        padding: 0.28rem 0.3rem;
+        vertical-align: middle;
+    }
+
+    /* Campos editáveis mais compactos */
+    .compact-table .form-control,
+    .compact-table .form-select {
+        font-size: 0.68rem;
+        padding: 0.2rem 0.3rem;
+        min-height: 24px;
+    }
+
+    .compact-table textarea.form-control {
+        padding: 0.2rem 0.3rem;
+        line-height: 1.25;
+    }
+
+    .compact-table .btn-sm {
+        padding: 0.2rem 0.35rem;
+        font-size: 0.64rem;
+    }
+
+    .editable-field {
+        border: 1px solid #e0e0e0;
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .editable-field:focus {
+        border-color: #0d6efd;
+        background-color: #fff;
+        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.1);
+    }
+
+    .editable-field.saving {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+    }
+
+    .editable-field.saved {
+        background-color: #d1e7dd;
+        border-color: #198754;
+    }
+
+    .editable-field.error {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+    }
+
+    #inventarioTable tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Estilos para cabeçalhos ordenáveis */
+    #inventarioTable thead th a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+    #inventarioTable thead th a:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    #inventarioTable thead th a i {
+        font-size: 0.75rem;
+    }
+
+    /* Botão de filtro no cabeçalho */
+    .btn-icon-xs {
+        padding: 0.15rem 0.35rem;
+        font-size: 0.7rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+    }
+
+    /* Dropdown de filtro */
+    .dropdown {
+        position: relative;
+        z-index: 1050;
+    }
+
+    .dropdown-menu {
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        z-index: 1051;
+        position: absolute !important;
+    }
+
+    .tributacao-filter-form .form-check,
+    .status-filter-form .form-check {
+        padding-left: 1.5rem;
+    }
+
+    .tributacao-filter-form .form-check-input,
+    .status-filter-form .form-check-input {
+        cursor: pointer;
+    }
+
+    .tributacao-filter-form .form-check-label,
+    .status-filter-form .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* Ajustar z-index do thead para não sobrepor dropdown e manter fixo no scroll */
+    #inventarioTable thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: #f8f9fa;
+        /* Fundo sólido para cobrir conteúdo ao rolar */
+    }
+
+    #inventarioTable thead th {
+        position: relative;
+        overflow: visible;
+        background-color: #f8f9fa;
+        /* Garantir que cada th tenha fundo sólido */
+    }
+
+    /* Permitir dropdown do filtro na coluna Tributação (3a coluna) */
+    #inventarioTable thead th:nth-child(3) {
+        overflow: visible;
+        z-index: 1052;
+    }
+
+    /* Permitir dropdown do filtro na coluna Status (9a coluna) */
+    #inventarioTable thead th:nth-child(9) {
+        overflow: visible;
+        z-index: 1052;
+    }
+
+    /* Container da tabela com scroll horizontal e vertical */
+    .table-wrapper {
+        overflow: auto;
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        /* Altura equilibrada para criar o container de scroll */
+        max-height: calc(100vh - 290px);
+        min-height: 400px;
+        /* Borda e sombra premium para delimitar o container */
+        border: 1px solid var(--card-border-color, #e2e8f0);
+        border-radius: 0 0 0.75rem 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background: var(--card-bg, #fff);
+    }
+
+    /* Garantir que dropdowns não sejam cortados pelo overflow do container */
+    .table-wrapper .dropdown-menu {
+        position: fixed !important;
+        z-index: 2000;
+    }
+
+    /* Garantir que a tabela não quebre e force o scroll */
+    .table-wrapper .compact-table {
+        min-width: 2100px;
+        width: 2100px;
+    }
+
+    /* Garantir que todas as colunas respeitem a largura definida */
+    .compact-table th {
+        white-space: nowrap;
+    }
+
+    .compact-table td {
+        overflow: visible;
+    }
+
+    /* Permitir que textareas e inputs quebrem linha normalmente */
+    .compact-table textarea,
+    .compact-table input,
+    .compact-table select {
+        white-space: normal;
+    }
+
+    /* Estilizar scrollbar horizontal e vertical */
+    .table-wrapper::-webkit-scrollbar {
+        height: 12px;
+        width: 12px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+        background: var(--muted-surface, #f1f1f1);
+        border-radius: 6px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--primary, #4a6cf7);
+        border-radius: 6px;
+        border: 2px solid var(--muted-surface, #f1f1f1);
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-hover, #3a5bd7);
+    }
+
+    .table-wrapper::-webkit-scrollbar-corner {
+        background: var(--muted-surface, #f1f1f1);
+    }
+
+
+    /* Inputs de upload compactos */
+    .compact-table .pdf-upload-container,
+    .compact-table .cliente-upload-container {
+        gap: 0.2rem !important;
+    }
+
+    .compact-table .pdf-upload-container small,
+    .compact-table .cliente-upload-container small {
+        font-size: 0.65rem;
+    }
+
+    /* Melhorar estética dos inputs de upload */
+    .compact-table .pdf-upload,
+    .compact-table .cliente-upload {
+        font-size: 0.68rem !important;
+        padding: 0.2rem 0.3rem !important;
+        min-height: 26px !important;
+        height: 26px;
+        color: transparent;
+    }
+
+    .compact-table .pdf-upload::-webkit-file-upload-button,
+    .compact-table .cliente-upload::-webkit-file-upload-button {
+        color: initial;
+    }
+
+    .compact-table .pdf-upload::file-selector-button,
+    .compact-table .cliente-upload::file-selector-button {
+        color: initial;
+    }
+
+    .compact-table .pdf-upload::file-selector-button,
+    .compact-table .cliente-upload::file-selector-button {
+        font-size: 0.63rem;
+        padding: 0.15rem 0.4rem;
+        margin-right: 0.4rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .compact-table .pdf-upload::file-selector-button:hover,
+    .compact-table .cliente-upload::file-selector-button:hover {
+        background-color: #e9ecef;
+    }
+
+    /* Input group compacto */
+    .compact-table .input-group {
+        gap: 0.2rem;
+    }
+
+    /* Ajuste dinâmico de fonte no select de status */
+    .compact-table select[data-field="status"] {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .compact-table select[data-field="status"] option {
+        font-size: 0.7rem;
+    }
+
+    /* Classes para ajustar tamanho de fonte baseado no comprimento */
+    .compact-table select[data-field="status"].status-short {
+        font-size: 0.7rem;
+    }
+
+    .compact-table select[data-field="status"].status-medium {
+        font-size: 0.64rem;
+    }
+
+    .compact-table select[data-field="status"].status-long {
+        font-size: 0.58rem;
+    }
+
+    /* Destacar CFOP quando encerramento fiscal = SIM e sem arquivo */
+    .cfop-missing-file {
+        background-color: #f8d7da !important;
+        border: 2px solid #dc3545 !important;
+        border-radius: 4px;
+        padding: 0.3rem;
+    }
+
+    /* Estilo para lista de arquivos */
+    .files-list {
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    .files-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .files-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .files-list::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 2px;
+    }
+
+    .files-list::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .file-item {
+        background-color: #f8f9fa;
+        padding: 0.2rem;
+        border-radius: 3px;
+    }
+
+    .file-item:hover {
+        background-color: #e9ecef;
+    }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const allowedTributacoes = {{ allowed_tributacoes | tojson }};
+    document.addEventListener('DOMContentLoaded', function () {
+        const allowedTributacoes = {{ allowed_tributacoes | tojson
+    }};
     const statusChoices = {{ status_choices | tojson }};
     const tributacaoStorageKey = 'inventario-tributacao-filters';
     const statusStorageKey = 'inventario-status-filters';
@@ -1139,7 +1186,8 @@ document.addEventListener('DOMContentLoaded', function() {
             totalEl: card.querySelector('.js-total'),
             concluidaEl: card.querySelector('.js-concluida'),
             aguardandoEl: card.querySelector('.js-aguardando'),
-            faltantesEl: card.querySelector('.js-faltantes')
+            faltantesEl: card.querySelector('.js-faltantes'),
+            fechamentoEl: card.querySelector('.js-fechamento')
         });
     });
 
@@ -1176,6 +1224,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function adjustDashboardFechamento(tributacao, delta) {
+        const cardData = dashboardCards.get(tributacao);
+        if (!cardData) return;
+        let fechamento = parseCount(cardData.card.dataset.fechamento) + delta;
+        fechamento = Math.max(fechamento, 0);
+        cardData.card.dataset.fechamento = String(fechamento);
+        if (cardData.fechamentoEl) {
+            cardData.fechamentoEl.textContent = fechamento;
+        }
+    }
+
     function updateDashboardForStatus(row, newStatus) {
         if (!row) return;
         const tributacao = row.dataset.tributacao;
@@ -1201,6 +1260,18 @@ document.addEventListener('DOMContentLoaded', function() {
             adjustDashboardAguardando(tributacao, hasFileNow ? -1 : 1);
         }
         row.dataset.hasClienteFile = hasFileNow ? '1' : '0';
+    }
+
+    function updateDashboardForEncerramento(row, value) {
+        if (!row) return;
+        const tributacao = row.dataset.tributacao;
+        const prevValue = row.dataset.encerramentoFiscal === '1';
+        const nextValue = value === true || value === 'true' || value === 'True' || value === '1';
+        if (prevValue === nextValue) return;
+        if (tributacao) {
+            adjustDashboardFechamento(tributacao, nextValue ? 1 : -1);
+        }
+        row.dataset.encerramentoFiscal = nextValue ? '1' : '0';
     }
 
     // Garantir que dropdowns dos filtros sobreponham a tabela (sem corte por scroll)
@@ -1372,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Aplicar máscara de moeda em campos monetários
     document.querySelectorAll('.money-field').forEach(field => {
-        field.addEventListener('input', function(e) {
+        field.addEventListener('input', function (e) {
             let cursorPosition = this.selectionStart;
             let oldLength = this.value.length;
 
@@ -1440,11 +1511,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (syncButton) {
         const defaultLabel = syncButton.innerHTML;
-        syncButton.addEventListener('click', function() {
+        syncButton.addEventListener('click', function () {
             const msg = `Deseja sincronizar o Encerramento Fiscal via API da Acessorias?\n\n` +
-                        `Período: 01/01/2026 a 31/01/2026\n` +
-                        `Critério: Entregas de "Fechamento Fiscal" entregues\n\n` +
-                        `Esta operação pode levar alguns minutos.`;
+                `Período: 01/01/2026 a 31/01/2026\n` +
+                `Critério: Entregas de "Fechamento Fiscal" entregues\n\n` +
+                `Esta operação pode levar alguns minutos.`;
 
             if (!window.confirm(msg)) {
                 return;
@@ -1471,94 +1542,94 @@ document.addEventListener('DOMContentLoaded', function() {
                     end_date: '2026-01-31'
                 })
             })
-            .then(response => {
-                console.log('Response status:', response.status, 'OK:', response.ok);
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
-                }
-                return response.json().then(data => {
-                    console.log('Response data:', data);
-                    return { ok: response.ok, data };
-                });
-            })
-            .then(({ ok, data }) => {
-                if (ok && data.success) {
-                    let msg = `✓ Sincronização concluída!\n\n`;
-                    msg += `Empresas verificadas: ${data.checked || 0}\n`;
-                    msg += `Atualizadas: ${data.updated || 0}\n`;
-                    msg += `  - Marcadas como SIM: ${data.set_true || 0}\n`;
-                    msg += `  - Marcadas como NÃO: ${data.set_false || 0}\n`;
-
-                    if (data.skipped_no_cnpj > 0) {
-                        msg += `\n⚠ Empresas puladas (CNPJ inválido): ${data.skipped_no_cnpj}\n`;
-                    }
-
-                    if (data.errors && data.errors.length > 0) {
-                        msg += `\nErros em ${data.errors.length} empresa(s):\n`;
-                        data.errors.slice(0, 5).forEach(err => {
-                            msg += `  - ${err.razao_social || 'ID: ' + err.empresa_id}: ${err.error}\n`;
+                .then(response => {
+                    console.log('Response status:', response.status, 'OK:', response.ok);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text}`);
                         });
-                        if (data.errors.length > 5) {
-                            msg += `  ... e mais ${data.errors.length - 5} erros (veja o console)\n`;
+                    }
+                    return response.json().then(data => {
+                        console.log('Response data:', data);
+                        return { ok: response.ok, data };
+                    });
+                })
+                .then(({ ok, data }) => {
+                    if (ok && data.success) {
+                        let msg = `✓ Sincronização concluída!\n\n`;
+                        msg += `Empresas verificadas: ${data.checked || 0}\n`;
+                        msg += `Atualizadas: ${data.updated || 0}\n`;
+                        msg += `  - Marcadas como SIM: ${data.set_true || 0}\n`;
+                        msg += `  - Marcadas como NÃO: ${data.set_false || 0}\n`;
+
+                        if (data.skipped_no_cnpj > 0) {
+                            msg += `\n⚠ Empresas puladas (CNPJ inválido): ${data.skipped_no_cnpj}\n`;
                         }
-                        console.error('Erros detalhados:', data.errors);
+
+                        if (data.errors && data.errors.length > 0) {
+                            msg += `\nErros em ${data.errors.length} empresa(s):\n`;
+                            data.errors.slice(0, 5).forEach(err => {
+                                msg += `  - ${err.razao_social || 'ID: ' + err.empresa_id}: ${err.error}\n`;
+                            });
+                            if (data.errors.length > 5) {
+                                msg += `  ... e mais ${data.errors.length - 5} erros (veja o console)\n`;
+                            }
+                            console.error('Erros detalhados:', data.errors);
+                        }
+
+                        const statusMsg = data.message || `Atualizados: ${data.updated || 0}`;
+                        if (syncStatus) {
+                            syncStatus.textContent = statusMsg;
+                            syncStatus.classList.remove('text-danger');
+                            syncStatus.classList.add('text-success');
+                        }
+
+                        alert(msg);
+
+                        if ((data.updated || 0) > 0) {
+                            setTimeout(() => window.location.reload(), 1500);
+                        }
+                    } else {
+                        const err = data?.error || 'Erro ao sincronizar.';
+                        if (syncStatus) {
+                            syncStatus.textContent = err;
+                            syncStatus.classList.remove('text-success');
+                            syncStatus.classList.add('text-danger');
+                        }
+                        alert(err);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro completo:', error);
+                    let errMsg;
+
+                    if (error.name === 'AbortError') {
+                        errMsg = 'Timeout: A sincronização demorou mais de 10 minutos.\n\n';
+                        errMsg += 'Possíveis causas:\n';
+                        errMsg += '- Muitas empresas para sincronizar\n';
+                        errMsg += '- API da Acessorias lenta\n';
+                        errMsg += '- Problemas de rede\n\n';
+                        errMsg += 'Verifique os logs do servidor para ver se a sincronização completou.';
+                    } else {
+                        errMsg = 'Erro na chamada da API de sincronização.\n\n';
+                        if (error.message) {
+                            errMsg += `Detalhes: ${error.message}\n`;
+                        }
+                        errMsg += '\nVerifique o console do navegador (F12) para mais informações.';
                     }
 
-                    const statusMsg = data.message || `Atualizados: ${data.updated || 0}`;
                     if (syncStatus) {
-                        syncStatus.textContent = statusMsg;
-                        syncStatus.classList.remove('text-danger');
-                        syncStatus.classList.add('text-success');
-                    }
-
-                    alert(msg);
-
-                    if ((data.updated || 0) > 0) {
-                        setTimeout(() => window.location.reload(), 1500);
-                    }
-                } else {
-                    const err = data?.error || 'Erro ao sincronizar.';
-                    if (syncStatus) {
-                        syncStatus.textContent = err;
+                        syncStatus.textContent = 'Erro ao sincronizar';
                         syncStatus.classList.remove('text-success');
                         syncStatus.classList.add('text-danger');
                     }
-                    alert(err);
-                }
-            })
-            .catch(error => {
-                console.error('Erro completo:', error);
-                let errMsg;
-
-                if (error.name === 'AbortError') {
-                    errMsg = 'Timeout: A sincronização demorou mais de 10 minutos.\n\n';
-                    errMsg += 'Possíveis causas:\n';
-                    errMsg += '- Muitas empresas para sincronizar\n';
-                    errMsg += '- API da Acessorias lenta\n';
-                    errMsg += '- Problemas de rede\n\n';
-                    errMsg += 'Verifique os logs do servidor para ver se a sincronização completou.';
-                } else {
-                    errMsg = 'Erro na chamada da API de sincronização.\n\n';
-                    if (error.message) {
-                        errMsg += `Detalhes: ${error.message}\n`;
-                    }
-                    errMsg += '\nVerifique o console do navegador (F12) para mais informações.';
-                }
-
-                if (syncStatus) {
-                    syncStatus.textContent = 'Erro ao sincronizar';
-                    syncStatus.classList.remove('text-success');
-                    syncStatus.classList.add('text-danger');
-                }
-                alert(errMsg);
-            })
-            .finally(() => {
-                clearTimeout(timeoutId);
-                syncButton.disabled = false;
-                syncButton.innerHTML = defaultLabel;
-            });
+                    alert(errMsg);
+                })
+                .finally(() => {
+                    clearTimeout(timeoutId);
+                    syncButton.disabled = false;
+                    syncButton.innerHTML = defaultLabel;
+                });
         });
     }
 
@@ -1566,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkApiBtn = document.getElementById('checkApiBtn');
     if (checkApiBtn) {
         const defaultLabel = checkApiBtn.innerHTML;
-        checkApiBtn.addEventListener('click', function() {
+        checkApiBtn.addEventListener('click', function () {
             checkApiBtn.disabled = true;
             checkApiBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Testando...';
 
@@ -1576,40 +1647,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => response.json().then(data => ({ ok: response.ok, data })))
-            .then(({ ok, data }) => {
-                if (ok && data.success) {
-                    let msg = `✓ Conexão com API bem-sucedida!\n\n`;
-                    msg += `Token: Configurado e válido\n`;
-                    msg += `CNPJ de teste: ${data.test_cnpj}\n`;
-                    msg += `Empresa de teste: ${data.test_empresa?.razao_social || 'N/A'}\n`;
-                    msg += `Entregas encontradas: ${data.total_entregas || 0}\n`;
-                    alert(msg);
-                } else {
-                    let errMsg = `❌ Erro ao conectar com API\n\n`;
-                    if (data.error) {
-                        errMsg += `Erro: ${data.error}\n`;
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (ok && data.success) {
+                        let msg = `✓ Conexão com API bem-sucedida!\n\n`;
+                        msg += `Token: Configurado e válido\n`;
+                        msg += `CNPJ de teste: ${data.test_cnpj}\n`;
+                        msg += `Empresa de teste: ${data.test_empresa?.razao_social || 'N/A'}\n`;
+                        msg += `Entregas encontradas: ${data.total_entregas || 0}\n`;
+                        alert(msg);
+                    } else {
+                        let errMsg = `❌ Erro ao conectar com API\n\n`;
+                        if (data.error) {
+                            errMsg += `Erro: ${data.error}\n`;
+                        }
+                        if (data.details) {
+                            errMsg += `Detalhes: ${data.details}\n`;
+                        }
+                        alert(errMsg);
                     }
-                    if (data.details) {
-                        errMsg += `Detalhes: ${data.details}\n`;
-                    }
-                    alert(errMsg);
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                alert('❌ Erro ao testar conexão com API. Verifique o console para mais detalhes.');
-            })
-            .finally(() => {
-                checkApiBtn.disabled = false;
-                checkApiBtn.innerHTML = defaultLabel;
-            });
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert('❌ Erro ao testar conexão com API. Verifique o console para mais detalhes.');
+                })
+                .finally(() => {
+                    checkApiBtn.disabled = false;
+                    checkApiBtn.innerHTML = defaultLabel;
+                });
         });
     }
 
     // Verificar quando mudar o encerramento fiscal
     document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {
-        select.addEventListener('change', function() {
+        select.addEventListener('change', function () {
             const row = this.closest('tr');
             checkCFOPStatus(row);
         });
@@ -1617,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Atualizar campo editável
     document.querySelectorAll('.editable-field').forEach(field => {
-        field.addEventListener('change', function() {
+        field.addEventListener('change', function () {
             const row = this.closest('tr');
             const empresaId = row.dataset.empresaId;
             const fieldName = this.dataset.field;
@@ -1636,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Para inputs de texto (não monetários), usar debounce
         if (field.tagName === 'INPUT' && field.type === 'text' && !field.classList.contains('money-field')) {
-            field.addEventListener('input', function() {
+            field.addEventListener('input', function () {
                 const row = this.closest('tr');
                 const empresaId = row.dataset.empresaId;
                 const fieldName = this.dataset.field;
@@ -1658,7 +1729,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Upload de PDF
     document.querySelectorAll('.pdf-upload').forEach(input => {
-        input.addEventListener('change', function() {
+        input.addEventListener('change', function () {
             const row = this.closest('tr');
             const empresaId = row.dataset.empresaId;
             const file = this.files[0];
@@ -1677,7 +1748,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function bindDeleteCFOPButton(btn) {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             window.portalConfirm({
                 title: 'Confirmar acao',
                 message: 'Deseja realmente remover este arquivo?',
@@ -1696,7 +1767,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function bindDeleteClienteButton(btn) {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             window.portalConfirm({
                 title: 'Confirmar acao',
                 message: 'Deseja realmente remover este arquivo?',
@@ -1822,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Upload de arquivo do cliente
     document.querySelectorAll('.cliente-upload').forEach(input => {
-        input.addEventListener('change', function() {
+        input.addEventListener('change', function () {
             const row = this.closest('tr');
             const empresaId = row.dataset.empresaId;
             const file = this.files[0];
@@ -1938,48 +2009,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 value: value
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            element.classList.remove('saving');
-            if (data.success) {
-                const resolvedValue = data.value !== undefined ? data.value : value;
-                // Atualizar valor formatado se retornado
-                if (data.value !== undefined && data.value !== value) {
-                    element.value = data.value;
-                }
-                if (field === 'pdf_path' || field === 'cliente_pdf_path') {
-                    const group = element.closest('.input-group');
-                    if (group) {
-                        const currentLink = group.querySelector('a');
-                        const raw = (element.value || '').trim();
-                        if (raw) {
-                            const isUrl = raw.startsWith('http://') || raw.startsWith('https://');
-                            const href = isUrl ? raw : `/static/${raw}`;
-                            if (currentLink) {
-                                currentLink.href = href;
-                            } else {
-                                const link = document.createElement('a');
-                                link.href = href;
-                                link.target = '_blank';
-                                link.className = 'btn btn-outline-primary btn-sm';
-                                link.title = 'Abrir PDF';
-                                link.innerHTML = '<i class="bi bi-file-pdf"></i>';
-                                group.appendChild(link);
+            .then(response => response.json())
+            .then(data => {
+                element.classList.remove('saving');
+                if (data.success) {
+                    const resolvedValue = data.value !== undefined ? data.value : value;
+                    // Atualizar valor formatado se retornado
+                    if (data.value !== undefined && data.value !== value) {
+                        element.value = data.value;
+                    }
+                    if (field === 'pdf_path' || field === 'cliente_pdf_path') {
+                        const group = element.closest('.input-group');
+                        if (group) {
+                            const currentLink = group.querySelector('a');
+                            const raw = (element.value || '').trim();
+                            if (raw) {
+                                const isUrl = raw.startsWith('http://') || raw.startsWith('https://');
+                                const href = isUrl ? raw : `/static/${raw}`;
+                                if (currentLink) {
+                                    currentLink.href = href;
+                                } else {
+                                    const link = document.createElement('a');
+                                    link.href = href;
+                                    link.target = '_blank';
+                                    link.className = 'btn btn-outline-primary btn-sm';
+                                    link.title = 'Abrir PDF';
+                                    link.innerHTML = '<i class="bi bi-file-pdf"></i>';
+                                    group.appendChild(link);
+                                }
+                            } else if (currentLink) {
+                                currentLink.remove();
                             }
-                        } else if (currentLink) {
-                            currentLink.remove();
                         }
                     }
-                }
                 if (field === 'status') {
                     const row = element.closest('tr');
                     updateDashboardForStatus(row, resolvedValue);
                     element.dataset.prevStatus = resolvedValue;
                 }
+                if (field === 'encerramento_fiscal') {
+                    const row = element.closest('tr');
+                    updateDashboardForEncerramento(row, resolvedValue);
+                }
                 element.classList.add('saved');
                 setTimeout(() => element.classList.remove('saved'), 2000);
             } else {
                 element.classList.add('error');
+                if (field === 'status') {
+                        const row = element.closest('tr');
+                        const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
+                        element.value = prevStatus;
+                        adjustStatusFontSize(element);
+                        updateDashboardForStatus(row, prevStatus);
+                    }
+                    alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                element.classList.remove('saving');
+                element.classList.add('error');
+                console.error('Erro:', error);
                 if (field === 'status') {
                     const row = element.closest('tr');
                     const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
@@ -1987,22 +2076,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     adjustStatusFontSize(element);
                     updateDashboardForStatus(row, prevStatus);
                 }
-                alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            element.classList.remove('saving');
-            element.classList.add('error');
-            console.error('Erro:', error);
-            if (field === 'status') {
-                const row = element.closest('tr');
-                const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
-                element.value = prevStatus;
-                adjustStatusFontSize(element);
-                updateDashboardForStatus(row, prevStatus);
-            }
-            alert('Erro ao salvar. Tente novamente.');
-        });
+                alert('Erro ao salvar. Tente novamente.');
+            });
     }
 
     function uploadPDF(empresaId, file, inputElement) {
@@ -2025,27 +2100,27 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            uploadIndicator.remove();
+            .then(response => response.json())
+            .then(data => {
+                uploadIndicator.remove();
 
-            if (data.success) {
-                const row = inputElement.closest('tr');
-                const filesList = ensureFilesList(container, inputElement);
-                const filename = data.filename || (file && file.name) || 'arquivo.pdf';
-                appendCfopFileItem(filesList, empresaId, data.file_index, filename);
-                updateRowStatus(row, data.status);
-                checkCFOPStatus(row);
-                inputElement.value = '';
-            } else {
-                alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            uploadIndicator.remove();
-            console.error('Erro:', error);
-            alert('Erro ao fazer upload. Tente novamente.');
-        });
+                if (data.success) {
+                    const row = inputElement.closest('tr');
+                    const filesList = ensureFilesList(container, inputElement);
+                    const filename = data.filename || (file && file.name) || 'arquivo.pdf';
+                    appendCfopFileItem(filesList, empresaId, data.file_index, filename);
+                    updateRowStatus(row, data.status);
+                    checkCFOPStatus(row);
+                    inputElement.value = '';
+                } else {
+                    alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                uploadIndicator.remove();
+                console.error('Erro:', error);
+                alert('Erro ao fazer upload. Tente novamente.');
+            });
     }
 
     function deleteCFOPFile(empresaId, fileIndex, fileItem) {
@@ -2059,35 +2134,35 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({ file_index: fileIndex })
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Erro ao remover arquivo');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                if (fileItem) {
-                    const row = fileItem.closest('tr');
-                    const filesList = fileItem.closest('.files-list');
-                    fileItem.remove();
-                    if (filesList) {
-                        updateFileListIndices(filesList, empresaId, 'cfop');
-                    }
-                    if (row) {
-                        checkCFOPStatus(row);
-                    }
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Erro ao remover arquivo');
+                    });
                 }
-            } else {
-                alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao deletar CFOP:', error);
-            alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
-        });
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (fileItem) {
+                        const row = fileItem.closest('tr');
+                        const filesList = fileItem.closest('.files-list');
+                        fileItem.remove();
+                        if (filesList) {
+                            updateFileListIndices(filesList, empresaId, 'cfop');
+                        }
+                        if (row) {
+                            checkCFOPStatus(row);
+                        }
+                    }
+                } else {
+                    alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao deletar CFOP:', error);
+                alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
+            });
     }
 
     function uploadClienteFile(empresaId, file, inputElement) {
@@ -2110,27 +2185,27 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            uploadIndicator.remove();
+            .then(response => response.json())
+            .then(data => {
+                uploadIndicator.remove();
 
-            if (data.success) {
-                const row = inputElement.closest('tr');
-                const filesList = ensureFilesList(container, inputElement);
-                const filename = data.filename || (file && file.name) || 'arquivo';
-                appendClienteFileItem(filesList, empresaId, data.file_index, filename);
-                updateDashboardForClienteFile(row, true);
-                updateRowStatus(row, data.status);
-                inputElement.value = '';
-            } else {
-                alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            uploadIndicator.remove();
-            console.error('Erro:', error);
-            alert('Erro ao fazer upload. Tente novamente.');
-        });
+                if (data.success) {
+                    const row = inputElement.closest('tr');
+                    const filesList = ensureFilesList(container, inputElement);
+                    const filename = data.filename || (file && file.name) || 'arquivo';
+                    appendClienteFileItem(filesList, empresaId, data.file_index, filename);
+                    updateDashboardForClienteFile(row, true);
+                    updateRowStatus(row, data.status);
+                    inputElement.value = '';
+                } else {
+                    alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                uploadIndicator.remove();
+                console.error('Erro:', error);
+                alert('Erro ao fazer upload. Tente novamente.');
+            });
     }
 
     function deleteClienteFileV2(empresaId, fileIndex, fileItem) {
@@ -2144,37 +2219,37 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({ file_index: fileIndex })
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Erro ao remover arquivo');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                if (fileItem) {
-                    const row = fileItem.closest('tr');
-                    const filesList = fileItem.closest('.files-list');
-                    fileItem.remove();
-                    if (filesList) {
-                        updateFileListIndices(filesList, empresaId, 'cliente');
-                    }
-                    if (row) {
-                        const hasLegacy = row.dataset.hasClienteLegacy === '1';
-                        const hasFileNow = hasLegacy || !!(filesList && filesList.querySelector('.file-item'));
-                        updateDashboardForClienteFile(row, hasFileNow);
-                    }
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Erro ao remover arquivo');
+                    });
                 }
-            } else {
-                alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao deletar arquivo cliente:', error);
-            alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
-        });
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (fileItem) {
+                        const row = fileItem.closest('tr');
+                        const filesList = fileItem.closest('.files-list');
+                        fileItem.remove();
+                        if (filesList) {
+                            updateFileListIndices(filesList, empresaId, 'cliente');
+                        }
+                        if (row) {
+                            const hasLegacy = row.dataset.hasClienteLegacy === '1';
+                            const hasFileNow = hasLegacy || !!(filesList && filesList.querySelector('.file-item'));
+                            updateDashboardForClienteFile(row, hasFileNow);
+                        }
+                    }
+                } else {
+                    alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao deletar arquivo cliente:', error);
+                alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
+            });
     }
 });
 </script>

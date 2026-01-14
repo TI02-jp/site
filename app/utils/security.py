@@ -6,6 +6,7 @@ para proteger contra ataques XSS (Cross-Site Scripting).
 
 import re
 import bleach
+from bleach.css_sanitizer import CSSSanitizer
 from bleach.linkifier import LinkifyFilter
 from markupsafe import Markup
 
@@ -18,17 +19,30 @@ ALLOWED_TAGS = [
 
 # Atributos permitidos por tag
 ALLOWED_ATTRIBUTES = {
-    'a': ['href', 'title', 'target', 'rel'],
-    'img': ['src', 'alt', 'title', 'width', 'height'],
-    'span': ['class'],
-    'div': ['class'],
-    'code': ['class'],
-    '*': ['class']  # Permite class em todas as tags para estilização
+    'a': ['href', 'title', 'target', 'rel', 'style'],
+    'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+    'span': ['class', 'style'],
+    'div': ['class', 'style'],
+    'code': ['class', 'style'],
+    '*': ['class', 'style']  # Permite class/estilo controlado em todas as tags
 }
 
 # Protocolos permitidos em URLs
 ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
 ALLOWED_PROTOCOLS_WITH_DATA = ALLOWED_PROTOCOLS + ['data']
+
+ALLOWED_CSS_PROPERTIES = [
+    'color',
+    'background-color',
+    'text-align',
+    'text-decoration',
+    'font-weight',
+    'font-style',
+    'font-size',
+    'line-height',
+]
+
+CSS_SANITIZER = CSSSanitizer(allowed_css_properties=ALLOWED_CSS_PROPERTIES)
 
 # Regex para detectar URLs bare (mantida para compatibilidade)
 _BARE_URL_RE = re.compile(
@@ -137,7 +151,8 @@ def sanitize_html(
         tags=ALLOWED_TAGS,
         attributes=attribute_filter,
         protocols=protocols,
-        strip=strip  # Remove tags não permitidas (vs escapar)
+        strip=strip,  # Remove tags não permitidas (vs escapar)
+        css_sanitizer=CSS_SANITIZER,
     )
 
     # Linkify URLs se solicitado
