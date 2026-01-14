@@ -794,14 +794,13 @@
                                     <td>{{ reuniao.data.strftime('%d/%m/%Y') if reuniao.data else '-' }}</td>
                                     <td>{{ reuniao.setor.nome if reuniao.setor else 'Não informado' }}</td>
                                     <td>
-                                        {% if reuniao.participantes %}
+                                        {% set participantes_lista = reuniao.participantes_resolvidos | default([], true) %}
+                                        {% if participantes_lista %}
                         <div class="d-flex flex-wrap gap-1">
-                            {% set total_participantes = reuniao.participantes|length %}
-                            {% for participante_id in reuniao.participantes[:3] %}
-                                {% set participante = reunioes_participantes_map.get(participante_id) %}
-                                {% set nome_participante = participante.name or participante.username or ('Usuário ' ~ participante_id) if participante else 'Usuário #' ~ participante_id %}
+                            {% set total_participantes = participantes_lista|length %}
+                            {% for participante in participantes_lista[:3] %}
                                 <span class="participant-chip">
-                                    <i class="bi bi-person-badge"></i>{{ nome_participante }}
+                                    <i class="bi {{ 'bi-person-badge' if participante.is_user else 'bi-person' }}"></i>{{ participante.label }}
                                 </span>
                             {% endfor %}
                             {% if total_participantes > 3 %}

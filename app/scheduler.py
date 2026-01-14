@@ -25,6 +25,7 @@ def init_scheduler(app):
     """
     # Importar dentro da função para evitar imports circulares
     from app.controllers.routes.blueprints.empresas import send_daily_tadeu_notification
+    from app.services.inventario_sync import sync_encerramento_fiscal
 
     def job_wrapper():
         """Wrapper que executa a função dentro do contexto da aplicação Flask"""
@@ -38,17 +39,40 @@ def init_scheduler(app):
         """Wrapper para envio de teste do inventario apenas para Cristiano."""
         with app.app_context():
             try:
-                send_daily_tadeu_notification(recipients=("Cristiano",))
+                send_daily_tadeu_notification(recipients=("Cristiano",), force=True)
             except Exception as e:
                 logger.error(f"Erro ao executar teste de inventario para Cristiano: {e}", exc_info=True)
 
-    # Agendar notificação diária às 17h30 (horário de Brasília)
+    def sync_encerramento_wrapper():
+        """Wrapper para sincronização automática de encerramento fiscal."""
+        with app.app_context():
+            try:
+                result = sync_encerramento_fiscal()
+                logger.info(
+                    "Sync encerramento fiscal automático concluído",
+                    extra=result.as_dict()
+                )
+            except Exception as e:
+                logger.error(f"Erro no sync automático de encerramento fiscal: {e}", exc_info=True)
+
+    # Agendar sincronização de encerramento fiscal às 6h (horário de Brasília)
+    scheduler.add_job(
+        func=sync_encerramento_wrapper,
+        trigger=CronTrigger(hour=6, minute=0, timezone='America/Sao_Paulo'),
+        id='sync_encerramento_fiscal',
+        name='Sincronização automática encerramento fiscal',
+        replace_existing=True
+    )
+
+    # Agendar notificação diária às 17h00 (horário de Brasília)
     scheduler.add_job(
         func=job_wrapper,
-        trigger=CronTrigger(hour=17, minute=30, timezone='America/Sao_Paulo'),
+        trigger=CronTrigger(hour=17, minute=0, timezone='America/Sao_Paulo'),
         id='daily_tadeu_notification',
         name='Notificação diária para Tadeu e Cristiano - Inventário',
-        replace_existing=True
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
 
     if os.getenv("INVENTARIO_TEST_CRISTIANO_AT_14") == "1":

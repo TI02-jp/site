@@ -14,6 +14,8 @@ from datetime import date, datetime
 from typing import Any, Iterable, List, Sequence
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 DEFAULT_BASE_URL = os.getenv("ACESSORIAS_BASE", "https://api.acessorias.com")
 DEFAULT_TOKEN = (
@@ -86,6 +88,16 @@ class AcessoriasDeliveriesClient:
         self.timeout = timeout
         self.logger = logger
         self.session = requests.Session()
+        # Configurar retry automático e pool de conexões
+        retry = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=[500, 502, 503, 504]
+        )
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+        adapter.max_retries = retry
+        self.session.mount('https://', adapter)
+        self.session.mount('http://', adapter)
 
     # -- Fetch helpers -------------------------------------------------
     def _headers(self) -> dict[str, str]:

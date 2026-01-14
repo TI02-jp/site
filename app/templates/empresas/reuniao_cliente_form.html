@@ -49,6 +49,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold d-block">{{ form.participantes.label.text }}</label>
+                    {{ form.participantes_extras(id="participantes-extras-json", type="hidden") }}
                     {% if form.participantes.choices %}
                         <div class="participants-scroll border rounded p-3">
                             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
@@ -68,6 +69,17 @@
                     {% for error in form.participantes.errors %}
                         <div class="invalid-feedback d-block">{{ error }}</div>
                     {% endfor %}
+                    <div class="mt-3">
+                        <label class="form-label fw-semibold d-block" for="participante-extra-input">Outros participantes</label>
+                        <div class="input-group">
+                            <input type="text" id="participante-extra-input" class="form-control" placeholder="Nome do participante externo">
+                            <button type="button" id="add-participante-extra" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Adicionar
+                            </button>
+                        </div>
+                        <small class="text-muted">Use para pessoas que nao possuem acesso ao portal.</small>
+                        <div id="participantes-extra-list" class="d-flex flex-wrap gap-2 mt-2"></div>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -119,6 +131,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const topicosList = document.getElementById('topicos-list');
     const topicoInput = document.getElementById('topico-input');
     const addTopicoBtn = document.getElementById('add-topico');
+    const extrasField = document.getElementById('participantes-extras-json');
+    const extrasList = document.getElementById('participantes-extra-list');
+    const extraInput = document.getElementById('participante-extra-input');
+    const addExtraBtn = document.getElementById('add-participante-extra');
     const form = document.querySelector('form');
     const quill = new Quill('#decisoes-editor', {
         theme: 'snow',
@@ -127,23 +143,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const decisoesField = document.getElementById('decisoes-field');
 
     function renderTopicos(topicos) {
+        if (!topicosList) return;
         topicosList.innerHTML = '';
         if (!topicos.length) {
             const placeholder = document.createElement('li');
             placeholder.className = 'list-group-item text-muted';
-            placeholder.textContent = 'Nenhum tópico adicionado ainda.';
+            placeholder.textContent = 'Nenhum topico adicionado ainda.';
             topicosList.appendChild(placeholder);
             return;
         }
         topicos.forEach((texto, index) => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.innerHTML = `
-                <span>${texto}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-index="${index}">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            `;
+            const label = document.createElement('span');
+            label.textContent = texto;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn btn-sm btn-outline-danger';
+            remove.setAttribute('data-index', index);
+            remove.innerHTML = '<i class="bi bi-x-lg"></i>';
+            li.appendChild(label);
+            li.appendChild(remove);
             topicosList.appendChild(li);
         });
     }
@@ -161,27 +181,101 @@ document.addEventListener('DOMContentLoaded', function () {
         renderTopicos(topicos);
     }
 
-    addTopicoBtn.addEventListener('click', function () {
-        const texto = topicoInput.value.trim();
-        if (!texto) {
+    if (addTopicoBtn) {
+        addTopicoBtn.addEventListener('click', function () {
+            const texto = topicoInput.value.trim();
+            if (!texto) {
+                topicoInput.focus();
+                return;
+            }
+            const topicos = getTopicos();
+            topicos.push(texto);
+            setTopicos(topicos);
+            topicoInput.value = '';
             topicoInput.focus();
+        });
+    }
+
+    if (topicosList) {
+        topicosList.addEventListener('click', function (event) {
+            const target = event.target.closest('button[data-index]');
+            if (!target) return;
+            const index = parseInt(target.getAttribute('data-index'), 10);
+            const topicos = getTopicos();
+            topicos.splice(index, 1);
+            setTopicos(topicos);
+        });
+    }
+
+    function renderExtras(extras) {
+        if (!extrasList) return;
+        extrasList.innerHTML = '';
+        if (!extras.length) {
+            const span = document.createElement('span');
+            span.className = 'text-muted small';
+            span.textContent = 'Nenhum participante externo adicionado.';
+            extrasList.appendChild(span);
             return;
         }
-        const topicos = getTopicos();
-        topicos.push(texto);
-        setTopicos(topicos);
-        topicoInput.value = '';
-        topicoInput.focus();
-    });
+        extras.forEach((nome, index) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-light text-dark border d-flex align-items-center gap-2';
+            const icon = document.createElement('i');
+            icon.className = 'bi bi-person-plus';
+            const textNode = document.createElement('span');
+            textNode.textContent = nome;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-link text-danger p-0';
+            removeBtn.setAttribute('data-index', index);
+            removeBtn.innerHTML = '<i class="bi bi-x-circle"></i>';
+            badge.appendChild(icon);
+            badge.appendChild(textNode);
+            badge.appendChild(removeBtn);
+            extrasList.appendChild(badge);
+        });
+    }
 
-    topicosList.addEventListener('click', function (event) {
-        const target = event.target.closest('button[data-index]');
-        if (!target) return;
-        const index = parseInt(target.getAttribute('data-index'), 10);
-        const topicos = getTopicos();
-        topicos.splice(index, 1);
-        setTopicos(topicos);
-    });
+    function getExtras() {
+        if (!extrasField) return [];
+        try {
+            return JSON.parse(extrasField.value || '[]');
+        } catch (err) {
+            return [];
+        }
+    }
+
+    function setExtras(extras) {
+        if (!extrasField) return;
+        extrasField.value = JSON.stringify(extras);
+        renderExtras(extras);
+    }
+
+    if (addExtraBtn && extraInput) {
+        addExtraBtn.addEventListener('click', function () {
+            const nome = extraInput.value.trim();
+            if (!nome) {
+                extraInput.focus();
+                return;
+            }
+            const extras = getExtras();
+            extras.push(nome);
+            setExtras(extras);
+            extraInput.value = '';
+            extraInput.focus();
+        });
+    }
+
+    if (extrasList) {
+        extrasList.addEventListener('click', function (event) {
+            const btn = event.target.closest('button[data-index]');
+            if (!btn) return;
+            const index = parseInt(btn.getAttribute('data-index'), 10);
+            const extras = getExtras();
+            extras.splice(index, 1);
+            setExtras(extras);
+        });
+    }
 
     form.addEventListener('submit', function () {
         const pendingTopico = topicoInput.value.trim();
@@ -191,12 +285,18 @@ document.addEventListener('DOMContentLoaded', function () {
             setTopicos(topicos);
             topicoInput.value = '';
         }
+        if (extraInput && extraInput.value.trim()) {
+            const extras = getExtras();
+            extras.push(extraInput.value.trim());
+            setExtras(extras);
+            extraInput.value = '';
+        }
         decisoesField.value = quill.root.innerHTML.trim();
     });
 
-    // Inicialização
     const initialTopicos = getTopicos();
     setTopicos(initialTopicos);
+    setExtras(getExtras());
     if (decisoesField.value) {
         quill.root.innerHTML = decisoesField.value;
     }

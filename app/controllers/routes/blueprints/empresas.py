@@ -16,7 +16,8 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, date
+from pathlib import Path
 from typing import Iterable
 
 import sqlalchemy as sa
@@ -444,13 +445,17 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     )
     participante_ids: set[int] = set()
     for reuniao in cliente_reunioes:
-        for participante in reuniao.participantes or []:
-            if isinstance(participante, int):
-                participante_ids.add(participante)
+        user_ids, _ = _separate_cliente_reuniao_participantes(reuniao.participantes or [])
+        participante_ids.update(user_ids)
     reunioes_participantes_map: dict[int, User] = {}
     if participante_ids:
         usuarios = User.query.filter(User.id.in_(participante_ids)).all()
         reunioes_participantes_map = {usuario.id: usuario for usuario in usuarios}
+    for reuniao in cliente_reunioes:
+        reuniao.participantes_resolvidos = _resolve_reuniao_participantes(
+            reuniao.participantes or [],
+            reunioes_participantes_map,
+        )
 
     if fiscal is None:
         fiscal_view = SimpleNamespace(formas_importacao=[], envio_fisico=[])
@@ -726,13 +731,17 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
     )
     participante_ids: set[int] = set()
     for reuniao in reunioes_cliente:
-        for participante in reuniao.participantes or []:
-            if isinstance(participante, int):
-                participante_ids.add(participante)
+        user_ids, _ = _separate_cliente_reuniao_participantes(reuniao.participantes or [])
+        participante_ids.update(user_ids)
     reunioes_participantes_map: dict[int, User] = {}
     if participante_ids:
         usuarios = User.query.filter(User.id.in_(participante_ids)).all()
         reunioes_participantes_map = {usuario.id: usuario for usuario in usuarios}
+    for reuniao in reunioes_cliente:
+        reuniao.participantes_resolvidos = _resolve_reuniao_participantes(
+            reuniao.participantes or [],
+            reunioes_participantes_map,
+        )
 
     return render_template(
         "empresas/departamentos.html",
@@ -792,15 +801,112 @@ def _parse_cliente_reuniao_topicos(payload: str | None) -> list[str]:
     return topicos
 
 
-def _resolve_reuniao_participantes(participante_ids: list[int]) -> list[tuple[int, str]]:
-    """Return participant tuples preserving the original order."""
+def _parse_cliente_reuniao_participantes_extras(payload: str | None) -> list[str]:
+    """Return sanitized list of external participant names."""
 
-    ids = [pid for pid in participante_ids if isinstance(pid, int)]
-    if not ids:
+    if not payload:
         return []
-    usuarios = User.query.filter(User.id.in_(ids)).all()
-    lookup = {usuario.id: (usuario.name or usuario.username or f"Usuário {usuario.id}") for usuario in usuarios}
-    return [(pid, lookup.get(pid, f"Usuário {pid}")) for pid in ids]
+    try:
+        data = json.loads(payload)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    nomes: list[str] = []
+    for item in data:
+        if isinstance(item, str):
+            cleaned = item.strip()
+            if cleaned:
+                nomes.append(cleaned[:255])
+    return nomes
+
+
+def _separate_cliente_reuniao_participantes(participantes: list | None) -> tuple[list[int], list[str]]:
+    """Split stored participants into portal user IDs and external names."""
+
+    user_ids: list[int] = []
+    guest_names: list[str] = []
+    if not participantes:
+        return user_ids, guest_names
+
+    for participante in participantes:
+        if isinstance(participante, dict):
+            p_type = (participante.get("type") or participante.get("tipo") or participante.get("kind") or "").lower()
+            if p_type == "guest":
+                nome = (participante.get("name") or participante.get("nome") or participante.get("label") or "").strip()
+                if nome:
+                    guest_names.append(nome[:255])
+                continue
+            pid = participante.get("id") or participante.get("user_id")
+            if isinstance(pid, int):
+                user_ids.append(pid)
+                continue
+            alt_nome = (participante.get("name") or participante.get("label") or "").strip()
+            if alt_nome:
+                guest_names.append(alt_nome[:255])
+        elif isinstance(participante, int):
+            user_ids.append(participante)
+        elif isinstance(participante, str):
+            nome = participante.strip()
+            if nome:
+                guest_names.append(nome[:255])
+    return user_ids, guest_names
+
+
+def _build_cliente_reuniao_participantes(user_ids: list[int], extras: list[str]) -> list[dict]:
+    """Return normalized payload mixing portal users and external guests."""
+
+    participantes: list[dict] = []
+    seen_users: set[int] = set()
+    for pid in user_ids or []:
+        if isinstance(pid, int) and pid not in seen_users:
+            participantes.append({"type": "user", "id": pid})
+            seen_users.add(pid)
+    for nome in extras or []:
+        cleaned = (nome or "").strip()
+        if cleaned:
+            participantes.append({"type": "guest", "name": cleaned[:255]})
+    return participantes
+
+
+def _resolve_reuniao_participantes(participantes_raw: list | None, user_lookup: dict[int, User] | None = None) -> list[dict]:
+    """Return participant dicts ready for display."""
+
+    user_ids, _ = _separate_cliente_reuniao_participantes(participantes_raw)
+    lookup = user_lookup or {}
+    if not lookup and user_ids:
+        usuarios = User.query.filter(User.id.in_(user_ids)).all()
+        lookup = {usuario.id: usuario for usuario in usuarios}
+
+    resolved: list[dict] = []
+    for participante in participantes_raw or []:
+        if isinstance(participante, dict):
+            p_type = (participante.get("type") or participante.get("tipo") or participante.get("kind") or "").lower()
+            if p_type == "guest":
+                nome = (participante.get("name") or participante.get("nome") or participante.get("label") or "").strip()
+                if nome:
+                    resolved.append({"label": nome, "is_user": False})
+                continue
+            pid = participante.get("id") or participante.get("user_id")
+            if isinstance(pid, int):
+                usuario = lookup.get(pid) if isinstance(lookup, dict) else None
+                nome = None
+                if usuario is not None:
+                    nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
+                resolved.append({"label": nome or f"UsuÇ­rio #{pid}", "is_user": True, "id": pid})
+                continue
+            alt_nome = (participante.get("name") or participante.get("label") or "").strip()
+            if alt_nome:
+                resolved.append({"label": alt_nome, "is_user": False})
+        elif isinstance(participante, int):
+            usuario = lookup.get(participante) if isinstance(lookup, dict) else None
+            nome = None
+            if usuario is not None:
+                nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
+            resolved.append({"label": nome or f"UsuÇ­rio #{participante}", "is_user": True, "id": participante})
+        elif isinstance(participante, str):
+            nome = participante.strip()
+            if nome:
+                resolved.append({"label": nome, "is_user": False})
+    return resolved
 
 
 @empresas_bp.route("/empresa/<empresa_id>/reunioes-cliente/nova", methods=["GET", "POST"])
@@ -815,14 +921,18 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
     empresa = Empresa.query.get_or_404(empresa_id_int)
     form = ClienteReuniaoForm()
     _populate_cliente_reuniao_form(form)
+    if not form.participantes_extras.data:
+        form.participantes_extras.data = "[]"
 
     if form.validate_on_submit():
         topicos = _parse_cliente_reuniao_topicos(form.topicos_json.data)
+        participantes_extras = _parse_cliente_reuniao_participantes_extras(form.participantes_extras.data)
+        participantes_payload = _build_cliente_reuniao_participantes(form.participantes.data or [], participantes_extras)
         reuniao = ClienteReuniao(
             empresa_id=empresa.id,
             data=form.data.data,
             setor_id=form.setor_id.data or None,
-            participantes=form.participantes.data or [],
+            participantes=participantes_payload,
             topicos=topicos,
             decisoes=sanitize_html(form.decisoes.data or ""),
             acompanhar_ate=form.acompanhar_ate.data,
@@ -841,6 +951,8 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
+    if not form.participantes_extras.data:
+        form.participantes_extras.data = "[]"
 
     return render_template(
         "empresas/reuniao_cliente_form.html",
@@ -871,17 +983,25 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
     )
     form = ClienteReuniaoForm(obj=reuniao)
     _populate_cliente_reuniao_form(form)
+    if not form.participantes_extras.data:
+        form.participantes_extras.data = "[]"
 
     if request.method == "GET":
-        form.participantes.data = reuniao.participantes or []
+        user_ids, guest_names = _separate_cliente_reuniao_participantes(reuniao.participantes or [])
+        form.participantes.data = user_ids
+        form.participantes_extras.data = json.dumps(guest_names)
         form.setor_id.data = reuniao.setor_id or 0
         form.topicos_json.data = json.dumps(reuniao.topicos or [])
         form.decisoes.data = reuniao.decisoes or ""
     if form.validate_on_submit():
         topicos = _parse_cliente_reuniao_topicos(form.topicos_json.data)
+        participantes_extras = _parse_cliente_reuniao_participantes_extras(form.participantes_extras.data)
         reuniao.data = form.data.data
         reuniao.setor_id = form.setor_id.data or None
-        reuniao.participantes = form.participantes.data or []
+        reuniao.participantes = _build_cliente_reuniao_participantes(
+            form.participantes.data or [],
+            participantes_extras,
+        )
         reuniao.topicos = topicos
         reuniao.decisoes = sanitize_html(form.decisoes.data or "")
         reuniao.acompanhar_ate = form.acompanhar_ate.data
@@ -897,6 +1017,8 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
+    if not form.participantes_extras.data:
+        form.participantes_extras.data = "[]"
 
     return render_template(
         "empresas/reuniao_cliente_form.html",
@@ -1139,6 +1261,7 @@ def inventario():
             "total": 0,
             "concluida": 0,
             "aguardando_arquivo": 0,
+            "fechamento_fiscal": 0,
         }
         for trib in allowed_tributacoes
     }
@@ -1149,10 +1272,11 @@ def inventario():
             Inventario.status,
             Inventario.cliente_files,
             Inventario.cliente_pdf_path,
+            Inventario.encerramento_fiscal,
         )
         .all()
     )
-    for tributacao, status, cliente_files, cliente_pdf_path in summary_rows:
+    for tributacao, status, cliente_files, cliente_pdf_path, encerramento_fiscal in summary_rows:
         if tributacao not in dashboard_stats:
             continue
         stats = dashboard_stats[tributacao]
@@ -1162,6 +1286,8 @@ def inventario():
         has_cliente_file = _has_file_entries(cliente_files) or bool(cliente_pdf_path)
         if not has_cliente_file:
             stats["aguardando_arquivo"] += 1
+        if encerramento_fiscal is True:
+            stats["fechamento_fiscal"] += 1
     for stats in dashboard_stats.values():
         stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
     dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
@@ -1817,6 +1943,37 @@ def _build_aguardando_tadeu_groups() -> list[dict]:
     return groups
 
 
+def _tadeu_daily_state_file() -> Path:
+    """Return path to state file used to avoid duplicate daily emails."""
+
+    instance_dir = Path(current_app.instance_path)
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    return instance_dir / "daily_tadeu_notification.json"
+
+
+def _was_tadeu_notified_today(today: date) -> bool:
+    state_path = _tadeu_daily_state_file()
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return data.get("date") == today.isoformat()
+
+
+def _mark_tadeu_notified(today: date, total: int, groups_count: int) -> None:
+    state_path = _tadeu_daily_state_file()
+    payload = {
+        "date": today.isoformat(),
+        "total_empresas": total,
+        "groups": groups_count,
+        "marked_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    try:
+        state_path.write_text(json.dumps(payload), encoding="utf-8")
+    except Exception as exc:
+        current_app.logger.warning("Falha ao gravar estado de notificacao Tadeu: %s", exc)
+
+
 def _notify_tadeu_aguardando_inventario() -> None:
     groups = _build_aguardando_tadeu_groups()
     if not groups:
@@ -1909,12 +2066,17 @@ def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
         )
 
 
-def send_daily_tadeu_notification(recipients: Iterable[str] | None = None) -> None:
+def send_daily_tadeu_notification(recipients: Iterable[str] | None = None, force: bool = False) -> None:
     """
-    Job agendado: envia notificação diária para Tadeu com todas as empresas aguardando.
-    Executado diariamente às 17h pelo scheduler.
+    Job agendado: envia notifica??o di?ria para Tadeu com todas as empresas aguardando.
+    Executado diariamente ?s 17h pelo scheduler.
     """
-    current_app.logger.info("Executando job diário de notificação para Tadeu")
+    current_app.logger.info("Executando job di?rio de notifica??o para Tadeu")
+
+    hoje = datetime.now(get_calendar_timezone()).date()
+    if not force and _was_tadeu_notified_today(hoje):
+        current_app.logger.info("Notifica??o de hoje j? foi enviada; ignorando novo envio.")
+        return
 
     # Buscar TODAS as empresas com status AGUARDANDO TADEU (sem filtro de data)
     groups = _build_aguardando_tadeu_groups()
@@ -1926,7 +2088,7 @@ def send_daily_tadeu_notification(recipients: Iterable[str] | None = None) -> No
     # Contar total de empresas
     total_empresas = sum(len(group["empresas"]) for group in groups)
 
-    # Enviar notificação
+    # Enviar notifica??o
     inventario_url = url_for("empresas.inventario", _external=True)
     if recipients:
         recipient_list = tuple(recipient.strip() for recipient in recipients if recipient and recipient.strip())
@@ -1944,11 +2106,11 @@ def send_daily_tadeu_notification(recipients: Iterable[str] | None = None) -> No
         )
 
     current_app.logger.info(
-        "Notificação diária enviada para Tadeu: %d empresas em %d grupos",
+        "Notifica??o di?ria enviada para Tadeu: %d empresas em %d grupos",
         total_empresas,
         len(groups),
     )
-
+    _mark_tadeu_notified(hoje, total_empresas, len(groups))
 
 @empresas_bp.route("/inventario/test-email")
 @login_required
