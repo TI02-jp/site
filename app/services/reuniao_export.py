@@ -1,7 +1,7 @@
 """Geração de PDF de reuniões com cabeçalho timbrado.
 
-Usa o modelo DOTX fornecido em static/models/timbrado - retrato.dotx para
-preservar o cabeçalho e converte o conteúdo das decisões (HTML) em DOCX/PDF.
+Usa o template DOCX fornecido em static/models/ata-template.docx para
+preservar o cabeçalho/rodapé e converte o conteúdo das decisões (HTML) em PDF.
 """
 
 from __future__ import annotations
@@ -64,28 +64,6 @@ def _get_temp_dir() -> Path:
 
 class _HTMLPDF(FPDF, HTMLMixin):
     """Minimal HTML-capable PDF used as a fallback when docx2pdf is unavailable."""
-
-
-def _materialize_docx_from_template(template_path: Path) -> Path:
-    """Convert .dotx template into a .docx so python-docx can open it."""
-    temp_dir = _get_temp_dir()
-    tmp_copy = Path(tempfile.mkstemp(suffix=".docx", dir=str(temp_dir))[1])
-    
-    try:
-        with ZipFile(template_path, "r") as source, ZipFile(tmp_copy, "w") as target:
-            for item in source.infolist():
-                data = source.read(item.filename)
-                if item.filename == "[Content_Types].xml":
-                    data = data.replace(
-                        b"application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml",
-                        b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
-                    )
-                target.writestr(item, data)
-    except Exception as e:
-        current_app.logger.error(f"Erro ao materializar template DOCX: {e}", exc_info=True)
-        raise
-    
-    return tmp_copy
 
 
 def _add_html_to_docx(doc: Document, html_content: str) -> None:
@@ -302,7 +280,7 @@ def _resolve_participantes_labels(participantes_raw: Iterable | None) -> list[st
 def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     """Render decisions into the timbrado template and return PDF bytes + filename."""
     # Get template path with absolute resolution for service compatibility
-    template_filename = "doc.docx"
+    template_filename = "ata-template.docx"
     template_path = Path(current_app.root_path) / "static" / "models" / template_filename
 
     # Verify template exists
@@ -514,7 +492,7 @@ def _render_pdf_fallback(
     footer_img_path = None
 
     try:
-        template_path = Path(current_app.root_path) / "static" / "models" / "doc.docx"
+        template_path = Path(current_app.root_path) / "static" / "models" / "ata-template.docx"
         if template_path.exists():
             from zipfile import ZipFile
             import tempfile
