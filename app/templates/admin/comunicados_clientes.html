@@ -12,10 +12,121 @@
 .client-announcements-table td {
     text-align: left;
 }
+.client-announcements-table tbody tr {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.client-announcements-table tbody tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.status-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.trib-pill {
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.trib-pill.real { background: #f3f1ff; color: #5b4bff; }
+.trib-pill.presumido { background: #ecf7ff; color: #0b7cc1; }
+.trib-pill.simples { background: #eef8f1; color: #1b8c55; }
+.trib-pill.mei { background: #fff6e7; color: #c07a04; }
+.trib-pill.todos { background: #f5f5f5; color: #444; }
+.filter-chip {
+    background: #eef2ff;
+    color: #3247c4;
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    font-weight: 600;
+    border: 1px solid #d9defa;
+}
+.stat-card {
+    border: 1px solid #eef0f7;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    background: linear-gradient(135deg, #f9fbff 0%, #ffffff 100%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+.stat-card h6 {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    color: #60708c;
+    margin-bottom: 0.25rem;
+}
+.stat-card .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1c2a4a;
+}
+.stat-card .hint {
+    color: #7083a0;
+    font-size: 0.9rem;
+}
+.filter-surface {
+    border: 1px solid #e7eaf3;
+    background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.filter-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    color: #1c2a4a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.filter-label i {
+    color: #3247c4;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #1c2a4a;
+    font-weight: 600;
+    border: 1px solid #d9defa;
+}
+.chip i {
+    color: #3247c4;
+}
+.filter-surface.compact {
+    padding: 0.75rem 0.9rem;
+}
+.filter-surface .form-control,
+.filter-surface .form-select {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.9rem;
+}
+.filter-actions .btn {
+    min-width: 110px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
+{% set enviados = entries|selectattr("status", "equalto", "Enviado")|list|length %}
+{% set pendentes = entries|rejectattr("status", "equalto", "Enviado")|list|length %}
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -29,6 +140,66 @@
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#clientAnnouncementModal">
                     <i class="bi bi-plus-lg me-1"></i>Incluir comunicado
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card h-100">
+                <h6>Total</h6>
+                <div class="value">{{ entries|length }}</div>
+                <div class="hint">Comunicados listados</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card h-100">
+                <h6>Aguardando envio</h6>
+                <div class="value text-warning">{{ pendentes }}</div>
+                <div class="hint">Em fila de envio</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card h-100">
+                <h6>Enviados</h6>
+                <div class="value text-success">{{ enviados }}</div>
+                <div class="hint">Já compartilhados</div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-3">
+            <div class="filter-surface compact h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="filter-label"><i class="bi bi-funnel"></i>Filtros</div>
+                    <a class="btn btn-link btn-sm text-decoration-none px-0" href="{{ url_for('comunicados_clientes') }}">Limpar</a>
+                </div>
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-6">
+                        <label class="form-label mb-1" for="startDateFilter">Início</label>
+                        <input type="date" class="form-control form-control-sm" id="startDateFilter" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label mb-1" for="endDateFilter">Fim</label>
+                        <input type="date" class="form-control form-control-sm" id="endDateFilter" name="end_date" value="{{ end_date }}">
+                    </div>
+                    {% for value in tributacao_filters %}
+                        <input type="hidden" name="tributacao" value="{{ value }}">
+                    {% endfor %}
+                    <div class="col-12 d-flex gap-2 filter-actions">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-sliders me-1"></i>Aplicar
+                        </button>
+                    </div>
+                    {% if start_date or end_date or tributacao_filters %}
+                        <div class="col-12 d-flex flex-wrap gap-2 mt-1">
+                            {% if start_date or end_date %}
+                                <span class="chip"><i class="bi bi-calendar-event"></i>{{ start_date or 'início' }} → {{ end_date or 'hoje' }}</span>
+                            {% endif %}
+                            {% for trib in tributacao_filters %}
+                                <span class="chip"><i class="bi bi-tag"></i>{{ trib }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </form>
             </div>
         </div>
     </div>
@@ -62,6 +233,8 @@
                                     <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm" aria-labelledby="taxRegimeFilterDropdown" style="min-width: 240px;">
                                         <form method="GET" class="tributacao-filter-form">
                                             <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por tributacao</p>
+                                            <input type="hidden" name="start_date" value="{{ start_date }}">
+                                            <input type="hidden" name="end_date" value="{{ end_date }}">
                                             <div class="d-flex flex-column gap-1 mb-3">
                                                 {% for value, label in form.tax_regime.choices %}
                                                 <div class="form-check">
@@ -71,7 +244,7 @@
                                                 {% endfor %}
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('comunicados_clientes', clear_tributacao=1) }}">Limpar</a>
+                                                <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear" href="{{ url_for('comunicados_clientes', clear_tributacao=1, start_date=start_date, end_date=end_date) }}">Limpar</a>
                                                 <button type="submit" class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
                                             </div>
                                         </form>
@@ -79,6 +252,7 @@
                                 </div>
                             </div>
                         </th>
+                        <th style="width: 150px;">Data de envio</th>
                         <th style="width: 160px;">Status</th>
                         <th>Resumo do comunicado</th>
                         <th style="width: 200px;">Anexos</th>
@@ -91,15 +265,23 @@
                         <td class="fw-semibold">{{ item.code or "-" }}</td>
                         <td>{{ item.subject }}</td>
                         <td>
-                            <span class="badge bg-secondary-subtle text-secondary text-uppercase">
+                            {% set trib_class = item.tax_regime.lower() %}
+                            <span class="trib-pill {{ 'real' if 'real' in trib_class else 'presumido' if 'presumido' in trib_class else 'simples' if 'simp' in trib_class else 'mei' if 'mei' in trib_class else 'todos' }}">
                                 {{ item.tax_regime }}
                             </span>
                         </td>
                         <td>
-                            {% if item.status == "Enviado" %}
-                                <span class="badge bg-success-subtle text-success text-uppercase">Enviado</span>
+                            {% if item.send_date %}
+                                <span class="badge bg-light text-body border">{{ item.send_date.strftime("%d/%m/%Y") }}</span>
                             {% else %}
-                                <span class="badge bg-warning-subtle text-warning text-uppercase">{{ item.status or "Aguardando Envio" }}</span>
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.status == "Enviado" %}
+                                <span class="status-pill bg-success-subtle text-success"><span class="dot bg-success"></span>Enviado</span>
+                            {% else %}
+                                <span class="status-pill bg-warning-subtle text-warning"><span class="dot bg-warning"></span>{{ item.status or "Aguardando Envio" }}</span>
                             {% endif %}
                         </td>
                         <td style="white-space: pre-wrap;">{{ item.summary }}</td>
@@ -132,7 +314,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                             {% if tributacao_filters %}
                                 Nenhum comunicado encontrado para a tributacao selecionada.
@@ -160,25 +342,32 @@
             <div class="modal-body">
                 <form method="post" class="row g-3" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ form.code.label(class="form-label") }}
                         {{ form.code(class="form-control" + (" is-invalid" if form.code.errors else ""), placeholder="Ex: 2025-001") }}
                         {% if form.code.errors %}
                             <div class="invalid-feedback">{{ form.code.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ form.status.label(class="form-label") }}
                         {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
                         {% if form.status.errors %}
                             <div class="invalid-feedback">{{ form.status.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ form.tax_regime.label(class="form-label") }}
                         {{ form.tax_regime(class="form-select" + (" is-invalid" if form.tax_regime.errors else "")) }}
                         {% if form.tax_regime.errors %}
                             <div class="invalid-feedback">{{ form.tax_regime.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        {{ form.send_date.label(class="form-label") }}
+                        {{ form.send_date(class="form-control" + (" is-invalid" if form.send_date.errors else "")) }}
+                        {% if form.send_date.errors %}
+                            <div class="invalid-feedback">{{ form.send_date.errors[0] }}</div>
                         {% endif %}
                     </div>
                     <div class="col-12">
@@ -227,25 +416,32 @@
             <div class="modal-body">
                 <form method="post" class="row g-3" enctype="multipart/form-data" action="{{ url_for('comunicados_clientes_update', announcement_id=item.id) }}">
                     {{ edit_form.hidden_tag() }}
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ edit_form.code.label(class="form-label") }}
                         {{ edit_form.code(class="form-control" + (" is-invalid" if edit_form.code.errors else ""), placeholder="Ex: 2025-001") }}
                         {% if edit_form.code.errors %}
                             <div class="invalid-feedback">{{ edit_form.code.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ edit_form.status.label(class="form-label") }}
                         {{ edit_form.status(class="form-select" + (" is-invalid" if edit_form.status.errors else "")) }}
                         {% if edit_form.status.errors %}
                             <div class="invalid-feedback">{{ edit_form.status.errors[0] }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col-lg-3 col-md-6">
                         {{ edit_form.tax_regime.label(class="form-label") }}
                         {{ edit_form.tax_regime(class="form-select" + (" is-invalid" if edit_form.tax_regime.errors else "")) }}
                         {% if edit_form.tax_regime.errors %}
                             <div class="invalid-feedback">{{ edit_form.tax_regime.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        {{ edit_form.send_date.label(class="form-label") }}
+                        {{ edit_form.send_date(class="form-control" + (" is-invalid" if edit_form.send_date.errors else "")) }}
+                        {% if edit_form.send_date.errors %}
+                            <div class="invalid-feedback">{{ edit_form.send_date.errors[0] }}</div>
                         {% endif %}
                     </div>
                     <div class="col-12">

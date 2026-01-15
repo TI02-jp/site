@@ -298,6 +298,12 @@ class ClientAnnouncementForm(FlaskForm):
         choices=CLIENT_ANNOUNCEMENT_TAX_CHOICES,
         validators=[DataRequired()],
     )
+    send_date = DateField(
+        "Data de envio",
+        format="%Y-%m-%d",
+        validators=[DataRequired()],
+        default=date.today,
+    )
     summary = TextAreaField(
         "Resumo do comunicado",
         validators=[DataRequired(), Length(min=1, max=2000)],

@@ -6,6 +6,7 @@ Rotas:
 """
 
 import os
+from datetime import date, datetime
 from mimetypes import guess_type
 from uuid import uuid4
 
@@ -30,6 +31,17 @@ CLIENT_ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "client_announcemen
 def _get_next_sequence_number() -> int:
     last_number = db.session.query(func.max(ClientAnnouncement.sequence_number)).scalar()
     return (last_number or 0) + 1
+
+
+def _parse_date(raw_value: str | None) -> date | None:
+    """Return a parsed date from YYYY-MM-DD strings or None when invalid."""
+
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(raw_value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def _remove_client_announcement_attachment(attachment_path: str | None) -> None:
@@ -113,6 +125,11 @@ def _collect_uploaded_files(form: ClientAnnouncementForm) -> list:
 def comunicados_clientes():
     form = ClientAnnouncementForm()
     allowed_tributacoes = {value for value, _ in form.tax_regime.choices}
+    start_date = _parse_date(request.args.get("start_date"))
+    end_date = _parse_date(request.args.get("end_date"))
+    if start_date and end_date and end_date < start_date:
+        start_date, end_date = end_date, start_date
+
     if request.args.get("clear_tributacao"):
         tributacao_filters: list[str] = []
     else:
@@ -132,6 +149,7 @@ def comunicados_clientes():
             status=status_value,
             subject=form.subject.data or "",
             tax_regime=form.tax_regime.data or "",
+            send_date=form.send_date.data or date.today(),
             summary=form.summary.data or "",
             created_by_id=current_user.id,
         )
@@ -173,7 +191,14 @@ def comunicados_clientes():
         entries_query = entries_query.filter(
             ClientAnnouncement.tax_regime.in_(tributacao_filters)
         )
-    entries = entries_query.order_by(ClientAnnouncement.sequence_number.desc()).all()
+    if start_date:
+        entries_query = entries_query.filter(ClientAnnouncement.send_date >= start_date)
+    if end_date:
+        entries_query = entries_query.filter(ClientAnnouncement.send_date <= end_date)
+    entries = entries_query.order_by(
+        ClientAnnouncement.send_date.asc(),
+        ClientAnnouncement.sequence_number.desc(),
+    ).all()
     edit_forms: dict[int, ClientAnnouncementForm] = {}
     for item in entries:
         edit_form = ClientAnnouncementForm(prefix=f"edit-{item.id}")
@@ -181,6 +206,7 @@ def comunicados_clientes():
         edit_form.status.data = item.status or "Aguardando Envio"
         edit_form.subject.data = item.subject
         edit_form.tax_regime.data = item.tax_regime
+        edit_form.send_date.data = item.send_date
         edit_form.summary.data = item.summary
         edit_forms[item.id] = edit_form
     return render_template(
@@ -189,6 +215,8 @@ def comunicados_clientes():
         entries=entries,
         edit_forms=edit_forms,
         tributacao_filters=tributacao_filters,
+        start_date=start_date.isoformat() if start_date else "",
+        end_date=end_date.isoformat() if end_date else "",
     )
 
 
@@ -210,6 +238,7 @@ def update_comunicado_cliente(announcement_id: int):
         entry.status = (form.status.data or "Aguardando Envio").strip() or "Aguardando Envio"
         entry.subject = form.subject.data or ""
         entry.tax_regime = form.tax_regime.data or ""
+        entry.send_date = form.send_date.data or entry.send_date
         entry.summary = form.summary.data or ""
 
         remove_ids = {
