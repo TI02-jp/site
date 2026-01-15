@@ -2644,11 +2644,55 @@ Responsividade
 }
 
 
-/* Left align and preserve line breaks for particularidades content */
+/* Left align and preserve author formatting for rich text content */
 .editor-content {
     text-align: left;
-    white-space: pre-line;
+    white-space: pre-wrap; /* keep indentation, spacing and paragraphs as entered */
+    word-break: break-word;
     text-transform: none; /* preserve original casing */
+}
+
+.editor-content p {
+    margin: 0 0 0.6rem;
+}
+
+.editor-content p:last-child {
+    margin-bottom: 0;
+}
+
+.editor-content ol,
+.editor-content ul {
+    padding-left: 1.35rem;
+    margin: 0 0 0.75rem;
+}
+
+.editor-content li + li {
+    margin-top: 0.25rem;
+}
+
+/* Support Quill indentation/align classes on view mode (e.g., decisões de reuniões) */
+.editor-content .ql-indent-1 { padding-left: 1.5em; }
+.editor-content .ql-indent-2 { padding-left: 3em; }
+.editor-content .ql-indent-3 { padding-left: 4.5em; }
+.editor-content .ql-indent-4 { padding-left: 6em; }
+.editor-content .ql-indent-5 { padding-left: 7.5em; }
+.editor-content .ql-indent-6 { padding-left: 9em; }
+.editor-content .ql-indent-7 { padding-left: 10.5em; }
+.editor-content .ql-indent-8 { padding-left: 12em; }
+.editor-content .ql-align-center { text-align: center; }
+.editor-content .ql-align-right { text-align: right; }
+.editor-content .ql-align-justify { text-align: justify; }
+
+.editor-content .ql-indent-1.ql-direction-rtl { padding-right: 1.5em; padding-left: 0; }
+.editor-content .ql-indent-2.ql-direction-rtl { padding-right: 3em; padding-left: 0; }
+.editor-content .ql-indent-3.ql-direction-rtl { padding-right: 4.5em; padding-left: 0; }
+.editor-content .ql-indent-4.ql-direction-rtl { padding-right: 6em; padding-left: 0; }
+.editor-content .ql-indent-5.ql-direction-rtl { padding-right: 7.5em; padding-left: 0; }
+.editor-content .ql-indent-6.ql-direction-rtl { padding-right: 9em; padding-left: 0; }
+.editor-content .ql-indent-7.ql-direction-rtl { padding-right: 10.5em; padding-left: 0; }
+.editor-content .ql-indent-8.ql-direction-rtl { padding-right: 12em; padding-left: 0; }
+.editor-content .ql-align-right.ql-direction-rtl { text-align: left; }
+.editor-content .ql-align-left.ql-direction-rtl  { text-align: right; }
 }
 
 /* Ensure images inside particularidades are responsive and clickable */

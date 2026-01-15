@@ -19,6 +19,9 @@
                     <a href="{{ url_for('visualizar_empresa', id=empresa.id) }}#reunioes-cliente" class="btn btn-outline-light btn-sm">
                         <i class="bi bi-arrow-left me-1"></i>Voltar
                     </a>
+                    <a href="{{ url_for('empresas.reuniao_cliente_pdf', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-filetype-pdf me-1"></i>Exportar PDF
+                    </a>
                     <a href="{{ url_for('editar_reuniao_cliente', empresa_id=empresa.id, reuniao_id=reuniao.id) }}" class="btn btn-light btn-sm text-primary fw-semibold">
                         <i class="bi bi-pencil me-1"></i>Editar
                     </a>

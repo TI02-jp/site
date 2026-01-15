@@ -17,6 +17,7 @@ import json
 import os
 import re
 from datetime import datetime, date
+from io import BytesIO
 from pathlib import Path
 from typing import Iterable
 
@@ -31,6 +32,7 @@ from flask import (
     render_template,
     request,
     session,
+    send_file,
     url_for,
 )
 from flask_login import current_user, login_required
@@ -54,6 +56,7 @@ from app.forms import (
 from app.models.tables import ClienteReuniao, Departamento, Empresa, Inventario, Setor, User
 from app.services.calendar_cache import calendar_cache
 from app.services.cnpj import consultar_cnpj
+from app.services.reuniao_export import export_reuniao_decisoes_pdf
 from app.services.general_calendar import serialize_events_for_calendar
 from app.services.google_calendar import get_calendar_timezone
 from app.services.inventario_sync import (
@@ -1090,6 +1093,40 @@ def reuniao_cliente_detalhes_modal(empresa_id: str | None = None, reuniao_id: st
     )
 
 
+@empresas_bp.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>/pdf")
+@empresas_bp.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>/pdf")
+@empresas_bp.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>/pdf")
+@empresas_bp.route("/empresa/<int:id>/reunioes-cliente/<int:rid>/pdf")
+@login_required
+def reuniao_cliente_pdf(empresa_id: str | None = None, reuniao_id: str | None = None, id: int | None = None, rid: int | None = None):
+    """Export meeting decisions to PDF using the timbrado template."""
+
+    raw_empresa = empresa_id if empresa_id is not None else id
+    raw_reuniao = reuniao_id if reuniao_id is not None else rid
+    empresa_id_int = decode_id(str(raw_empresa), namespace="empresa")
+    reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
+    reuniao = (
+        ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int)
+        .options(joinedload(ClienteReuniao.setor), joinedload(ClienteReuniao.autor))
+        .first_or_404()
+    )
+
+    try:
+        pdf_bytes, filename = export_reuniao_decisoes_pdf(reuniao)
+    except FileNotFoundError as exc:
+        current_app.logger.error("Modelo de timbrado não encontrado: %s", exc)
+        abort(404, description="Modelo de timbrado não encontrado.")
+    except Exception as exc:  # pragma: no cover - caminho de erro
+        current_app.logger.exception("Falha ao gerar PDF da reunião", exc_info=exc)
+        abort(500, description="Falha ao gerar PDF da reunião.")
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @empresas_bp.route("/empresa/<empresa_id>/reunioes-cliente/<reuniao_id>/excluir", methods=["POST"])
 @empresas_bp.route("/empresa/<int:id>/reunioes-cliente/<reuniao_id>/excluir", methods=["POST"])
 @empresas_bp.route("/empresa/<empresa_id>/reunioes-cliente/<int:rid>/excluir", methods=["POST"])
@@ -1375,17 +1412,33 @@ def inventario():
             for inv in inventario_query.all()
         }
 
-    # Criar lista combinada apenas com empresas que têm inventário
-    items = []
+    # Criar lista combinada garantindo que empresas sem inventário apareçam quando aplicável
+    items: list[dict] = []
     for empresa in empresas:
         inventario = inventarios.get(empresa.id)
 
-        # Adicionar apenas se há inventário (respeitando filtros)
-        if inventario:
-            items.append({
-                'empresa': empresa,
-                'inventario': inventario
-            })
+        # Se não houver inventário, mas não há filtro de status (ou inclui FALTA ARQUIVO), cria placeholder
+        if inventario is None and (not status_filters or "FALTA ARQUIVO" in status_filters):
+            inventario = Inventario(
+                empresa_id=empresa.id,
+                status='FALTA ARQUIVO',
+                encerramento_fiscal=False,
+            )
+            db.session.add(inventario)
+            created_inventarios = True
+
+        # Respeita filtro de status: se houver filtro e o inventário não atende, pula
+        if status_filters:
+            if inventario is None:
+                continue
+            if inventario.status not in status_filters:
+                continue
+
+        # Adiciona item (permitindo inventário None somente quando sem filtros)
+        items.append({
+            'empresa': empresa,
+            'inventario': inventario
+        })
 
     # Buscar todos os usuários para o select de encerramento
     from app.models.tables import User
