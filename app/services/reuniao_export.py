@@ -6,12 +6,12 @@ preservar o cabeçalho e converte o conteúdo das decisões (HTML) em DOCX/PDF.
 
 from __future__ import annotations
 
+import os
 import re
 import tempfile
 from datetime import datetime
 from typing import Iterable
 from pathlib import Path
-from shutil import copyfile
 from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
@@ -19,8 +19,8 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx2pdf import convert as docx2pdf_convert
-import pythoncom
 from flask import current_app
+from fpdf import FPDF, HTMLMixin
 
 from app.models.tables import ClienteReuniao, User
 
@@ -30,22 +30,61 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "reuniao"
 
 
+def _get_temp_dir() -> Path:
+    """Get a reliable temporary directory with proper permissions.
+    
+    For Windows services, ensures the temp directory is accessible
+    and has proper write permissions.
+    """
+    # Try instance folder first (usually has proper permissions in production)
+    instance_dir = Path(current_app.instance_path)
+    if instance_dir.exists():
+        temp_dir = instance_dir / "tmp"
+        try:
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            # Test write permission
+            test_file = temp_dir / ".test_write"
+            test_file.touch()
+            test_file.unlink()
+            return temp_dir
+        except (PermissionError, OSError):
+            pass
+    
+    # Fall back to system temp directory
+    try:
+        temp_root = Path(tempfile.gettempdir())
+        # For Windows services, create a subdirectory in temp
+        temp_dir = temp_root / "flask_reuniao_pdf"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        return temp_dir
+    except (PermissionError, OSError):
+        # Last resort: use current working directory
+        return Path.cwd()
+
+
+class _HTMLPDF(FPDF, HTMLMixin):
+    """Minimal HTML-capable PDF used as a fallback when docx2pdf is unavailable."""
+
+
 def _materialize_docx_from_template(template_path: Path) -> Path:
     """Convert .dotx template into a .docx so python-docx can open it."""
-
-    tmp_copy = Path(tempfile.mkstemp(suffix=".docx")[1])
-    copyfile(template_path, tmp_copy)
-    with ZipFile(tmp_copy, "a") as zf:
-        try:
-            content_xml = zf.read("[Content_Types].xml")
-            fixed = content_xml.replace(
-                b"application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml",
-                b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
-            )
-            if fixed != content_xml:
-                zf.writestr("[Content_Types].xml", fixed)
-        except KeyError:
-            pass
+    temp_dir = _get_temp_dir()
+    tmp_copy = Path(tempfile.mkstemp(suffix=".docx", dir=str(temp_dir))[1])
+    
+    try:
+        with ZipFile(template_path, "r") as source, ZipFile(tmp_copy, "w") as target:
+            for item in source.infolist():
+                data = source.read(item.filename)
+                if item.filename == "[Content_Types].xml":
+                    data = data.replace(
+                        b"application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml",
+                        b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+                    )
+                target.writestr(item, data)
+    except Exception as e:
+        current_app.logger.error(f"Erro ao materializar template DOCX: {e}", exc_info=True)
+        raise
+    
     return tmp_copy
 
 
@@ -262,19 +301,27 @@ def _resolve_participantes_labels(participantes_raw: Iterable | None) -> list[st
 
 def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     """Render decisions into the timbrado template and return PDF bytes + filename."""
-    template_path = (
-        Path(current_app.root_path) / "static" / "models" / "timbrado - retrato.dotx"
-    )
+    # Get template path with absolute resolution for service compatibility
+    template_filename = "timbrado - retrato.dotx"
+    template_path = Path(current_app.root_path) / "static" / "models" / template_filename
+    
+    # Verify template exists
     if not template_path.exists():
-        raise FileNotFoundError("Modelo timbrado não encontrado.")
+        current_app.logger.error(f"Template file not found: {template_path}")
+        raise FileNotFoundError(f"Modelo timbrado não encontrado: {template_path}")
+    
+    # Ensure we have read permissions
+    if not os.access(template_path, os.R_OK):
+        current_app.logger.error(f"No read permission for template: {template_path}")
+        raise PermissionError(f"Sem permissão de leitura no modelo: {template_path}")
 
     base_docx_path = _materialize_docx_from_template(template_path)
     doc = Document(str(base_docx_path))
 
     empresa_nome = getattr(reuniao.empresa, "nome_empresa", "") or "Empresa"
-    data_str = reuniao.data.strftime("%d/%m/%Y") if getattr(reuniao, "data", None) else "—"
+    data_str = reuniao.data.strftime("%d/%m/%Y") if getattr(reuniao, "data", None) else "Não informado"
     setor_nome = getattr(getattr(reuniao, "setor", None), "nome", None) or "Não informado"
-    acompanhar_ate_str = reuniao.acompanhar_ate.strftime("%d/%m/%Y") if getattr(reuniao, "acompanhar_ate", None) else "—"
+    acompanhar_ate_str = reuniao.acompanhar_ate.strftime("%d/%m/%Y") if getattr(reuniao, "acompanhar_ate", None) else "Não informado"
 
     # ==== TÍTULO PRINCIPAL ====
     titulo = doc.add_heading("ATA DE REUNIÃO", level=1)
@@ -342,46 +389,100 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     # Usa a função que preserva a formatação do Quill
     _add_html_to_docx(doc, decisoes_html)
 
-    with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp_docx:
-        doc.save(tmp_docx.name)
-        tmp_docx_path = Path(tmp_docx.name)
-
+    # Initialize variables for cleanup in finally block
     pdf_bytes: bytes | None = None
+    tmp_docx_path: Path | None = None
     tmp_pdf_path: Path | None = None
     co_initialized = False
+    pythoncom_mod = None
+    temp_dir: Path | None = None
+
+    # Wrap all temp file operations in try-except to trigger fallback on permission errors
     try:
+        temp_dir = _get_temp_dir()
+        current_app.logger.debug(f"Using temp directory: {temp_dir}")
+
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False, dir=str(temp_dir)) as tmp_docx:
+            doc.save(tmp_docx.name)
+            tmp_docx_path = Path(tmp_docx.name)
+
+        current_app.logger.debug(f"Created temp DOCX at: {tmp_docx_path}")
+
         try:
-            pythoncom.CoInitialize()
+            import pythoncom as pythoncom_mod  # type: ignore
+
+            pythoncom_mod.CoInitialize()
             co_initialized = True
         except Exception:
-            # Se já estiver inicializado, seguimos
-            pass
+            # Se ja estiver inicializado ou indisponivel (ex.: Linux), seguimos
+            pythoncom_mod = None
 
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_pdf:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=str(temp_dir)) as tmp_pdf:
             tmp_pdf_path = Path(tmp_pdf.name)
-        # docx2pdf gera PDF usando Word/LibreOffice disponíveis
-        docx2pdf_convert(str(tmp_docx_path), str(tmp_pdf_path))
-        pdf_bytes = tmp_pdf_path.read_bytes()
+
+        # docx2pdf gera PDF usando Word/LibreOffice disponiveis
+        try:
+            docx2pdf_convert(str(tmp_docx_path), str(tmp_pdf_path))
+            pdf_bytes = tmp_pdf_path.read_bytes()
+            current_app.logger.debug("PDF generated successfully using docx2pdf")
+        except Exception as docx2pdf_error:
+            current_app.logger.warning(
+                f"docx2pdf falhou na geração de PDF (usando fallback): {docx2pdf_error}",
+                exc_info=docx2pdf_error
+            )
+            raise
+    except Exception as exc:
+        # Log detailed error information for debugging production issues
+        error_context = {
+            "temp_dir": str(temp_dir) if temp_dir else "not_created",
+            "tmp_docx_path": str(tmp_docx_path) if tmp_docx_path else "not_created",
+            "error_type": type(exc).__name__
+        }
+        current_app.logger.warning(
+            "Temp file operations or docx2pdf failed (context: %s); using fallback HTML->PDF renderer: %s",
+            error_context, exc, exc_info=exc
+        )
+
+        # Use fallback PDF generation with robust error handling
+        participantes_labels = todos_participantes or []
+        try:
+            pdf_bytes = _render_pdf_fallback(
+                empresa_nome=empresa_nome,
+                data_str=data_str,
+                setor_nome=setor_nome,
+                acompanhar_ate_str=acompanhar_ate_str,
+                participantes=participantes_labels,
+                decisoes_html=decisoes_html,
+            )
+            current_app.logger.info("PDF generated successfully using fallback renderer")
+        except Exception as fallback_error:
+            current_app.logger.error(
+                "Fallback PDF renderer also failed: %s", fallback_error, exc_info=fallback_error
+            )
+            # Re-raise to trigger 500 error with proper logging
+            raise RuntimeError(
+                "Falha ao gerar PDF da reunião usando ambos os métodos (docx2pdf e fallback)"
+            ) from fallback_error
     finally:
-        if co_initialized:
+        if co_initialized and pythoncom_mod:
             try:
-                pythoncom.CoUninitialize()
+                pythoncom_mod.CoUninitialize()
             except Exception:
                 pass
         try:
             tmp_docx_path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.debug(f"Não foi possível remover arquivo temporário DOCX: {e}")
         try:
             base_docx_path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.debug(f"Não foi possível remover arquivo de base DOCX: {e}")
         if tmp_pdf_path:
             try:
                 tmp_pdf_path.unlink(missing_ok=True)
-            except Exception:
-                pass
-
+            except Exception as e:
+                current_app.logger.debug(f"Não foi possível remover arquivo temporário PDF: {e}")
+    
     if not pdf_bytes:
         raise RuntimeError("Falha ao gerar PDF da reunião.")
 
@@ -392,3 +493,54 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     filename = f"reuniao-{empresa_slug}-{date_for_name}.pdf"
 
     return pdf_bytes, filename
+
+
+def _render_pdf_fallback(
+    *,
+    empresa_nome: str,
+    data_str: str,
+    setor_nome: str,
+    acompanhar_ate_str: str,
+    participantes: list[str],
+    decisoes_html: str,
+) -> bytes:
+    """Generate a lightweight PDF using fpdf2 when docx2pdf/Word is unavailable."""
+
+    pdf = _HTMLPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "ATA DE REUNIÃO", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "", 12)
+
+    meta_html = (
+        "<h3>Identificação</h3>"
+        f"<p><b>Empresa:</b> {empresa_nome}<br>"
+        f"<b>Data:</b> {data_str}<br>"
+        f"<b>Setor:</b> {setor_nome}<br>"
+        f"<b>Acompanhar até:</b> {acompanhar_ate_str}</p>"
+    )
+    pdf.write_html(meta_html)
+
+    participantes_html = "<h3>Participantes</h3>"
+    if participantes:
+        participantes_html += "<ul>" + "".join(f"<li>{p}</li>" for p in participantes) + "</ul>"
+    else:
+        participantes_html += "<p>Não informado.</p>"
+    pdf.write_html(participantes_html)
+
+    decisoes_section = "<h3>Assuntos tratados</h3>" + (decisoes_html or "<p>Sem assuntos registrados.</p>")
+    pdf.write_html(decisoes_section)
+
+    pdf_output = pdf.output(dest="S")
+    try:
+        return pdf_output.encode("latin-1")
+    except UnicodeEncodeError as exc:
+        current_app.logger.warning(
+            "Falling back to latin-1 replacement when rendering PDF failed: %s",
+            exc,
+            exc_info=exc,
+        )
+        return pdf_output.encode("latin-1", errors="replace")
