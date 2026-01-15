@@ -1580,7 +1580,7 @@ def api_inventario_update():
                 processed_value = None
             setattr(inventario, field_map[field], processed_value)
 
-        notify_tadeu = (
+        status_changed_to_tadeu = (
             field == "status"
             and processed_value == "AGUARDANDO TADEU"
             and previous_status != "AGUARDANDO TADEU"
@@ -1617,8 +1617,10 @@ def api_inventario_update():
             db.session.commit()
         finally:
             track_commit_end(commit_started)
-        if notify_tadeu:
-            _notify_tadeu_aguardando_inventario()
+        if status_changed_to_tadeu:
+            current_app.logger.info(
+                "Inventario: status alterado para AGUARDANDO TADEU; email sai pelo job diario das 17h"
+            )
         if notify_cristiano:
             _notify_cristiano_liberado_importacao(empresa)
 
@@ -2292,7 +2294,9 @@ def api_inventario_upload_pdf(empresa_id):
 
         db.session.commit()
         if status_changed:
-            _notify_tadeu_aguardando_inventario()
+            current_app.logger.info(
+                "Inventario: status AGUARDANDO TADEU atualizado por upload de CFOP; email aguardara job diario das 17h"
+            )
         elif notify_cassio:
             _notify_cassio_sem_cliente(empresa)
 
@@ -2396,7 +2400,9 @@ def api_inventario_upload_cliente_file(empresa_id):
 
         db.session.commit()
         if status_changed:
-            _notify_tadeu_aguardando_inventario()
+            current_app.logger.info(
+                "Inventario: status AGUARDANDO TADEU atualizado por arquivo do cliente; email aguardara job diario das 17h"
+            )
 
         return jsonify({
             'success': True,
