@@ -425,6 +425,7 @@ class ClientAnnouncement(db.Model):
     status = db.Column(db.String(20), nullable=False, default="Aguardando Envio")
     subject = db.Column(db.String(255), nullable=False)
     tax_regime = db.Column(db.String(20), nullable=False)
+    send_date = db.Column(db.Date, nullable=False, default=date.today)
     summary = db.Column(db.Text, nullable=False)
     created_by_id = db.Column(
         db.Integer,

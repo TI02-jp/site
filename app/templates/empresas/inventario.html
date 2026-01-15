@@ -1488,16 +1488,19 @@
     // Função para verificar e destacar CFOP quando encerramento fiscal = SIM e sem arquivo
     function checkCFOPStatus(row) {
         const encerramentoSelect = row.querySelector('select[data-field="encerramento_fiscal"]');
+        const statusSelect = row.querySelector('select[data-field="status"]');
         const cfopContainer = row.querySelector('.pdf-upload-container');
 
         if (!encerramentoSelect || !cfopContainer) return;
 
         const encerramentoValue = encerramentoSelect.value;
+        const statusValue = (statusSelect && statusSelect.value ? statusSelect.value : '').trim();
         const filesList = cfopContainer.querySelector('.files-list');
         const hasFile = filesList && filesList.querySelector('.file-item') !== null;
+        const isLiberadoBalanco = statusValue === 'LIBERADO PARA BALANÇO';
 
         // Se encerramento = true (Sim) e não tem arquivo, marcar em vermelho
-        if (encerramentoValue === 'true' && !hasFile) {
+        if (encerramentoValue === 'true' && !hasFile && !isLiberadoBalanco) {
             cfopContainer.classList.add('cfop-missing-file');
         } else {
             cfopContainer.classList.remove('cfop-missing-file');

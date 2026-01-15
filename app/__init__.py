@@ -482,6 +482,43 @@ with app.app_context():
                             "UPDATE client_announcements SET status = 'Enviado' WHERE status IS NULL OR status = ''"
                         )
                     )
+            if "send_date" not in client_columns:
+                dialect = db.engine.url.get_backend_name()
+                with db.engine.begin() as conn:
+                    if dialect == "sqlite":
+                        conn.execute(
+                            sa.text("ALTER TABLE client_announcements ADD COLUMN send_date DATE")
+                        )
+                        conn.execute(
+                            sa.text(
+                                """
+                                UPDATE client_announcements
+                                SET send_date = COALESCE(DATE(created_at), DATE('now'))
+                                WHERE send_date IS NULL
+                                """
+                            )
+                        )
+                        # SQLite cannot easily enforce NOT NULL via ALTER without table rewrite; rely on app-level default.
+                    else:
+                        conn.execute(
+                            sa.text(
+                                "ALTER TABLE client_announcements ADD COLUMN send_date DATE NULL"
+                            )
+                        )
+                        conn.execute(
+                            sa.text(
+                                """
+                                UPDATE client_announcements
+                                SET send_date = COALESCE(DATE(created_at), CURDATE())
+                                WHERE send_date IS NULL
+                                """
+                            )
+                        )
+                        conn.execute(
+                            sa.text(
+                                "ALTER TABLE client_announcements MODIFY COLUMN send_date DATE NOT NULL"
+                            )
+                        )
 
         attachments_table_exists = inspector.has_table("announcement_attachments")
         if not attachments_table_exists and inspector.has_table("announcements"):
