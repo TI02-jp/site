@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import tempfile
 from datetime import datetime
+from typing import Iterable
 from pathlib import Path
 from shutil import copyfile
 from zipfile import ZipFile
@@ -21,7 +22,7 @@ from docx2pdf import convert as docx2pdf_convert
 import pythoncom
 from flask import current_app
 
-from app.models.tables import ClienteReuniao
+from app.models.tables import ClienteReuniao, User
 
 
 def _slugify(value: str) -> str:
@@ -198,6 +199,67 @@ def _add_html_to_docx(doc: Document, html_content: str) -> None:
             process_element(child)
 
 
+def _resolve_participantes_labels(participantes_raw: Iterable | None) -> list[str]:
+    """Return all participant names (users + guests) without duplicates."""
+
+    if not participantes_raw:
+        return []
+
+    user_ids: list[int] = []
+    guest_names: list[str] = []
+
+    def _add_guest(name: str) -> None:
+        cleaned = (name or "").strip()
+        if cleaned:
+            guest_names.append(cleaned[:255])
+
+    # First pass: separate user IDs and guest names
+    for participante in participantes_raw:
+        if isinstance(participante, dict):
+            p_type = (participante.get("type") or participante.get("tipo") or participante.get("kind") or "").lower()
+            if p_type == "guest":
+                _add_guest(participante.get("name") or participante.get("nome") or participante.get("label") or "")
+                continue
+            pid = participante.get("id") or participante.get("user_id")
+            if isinstance(pid, int):
+                user_ids.append(pid)
+                continue
+            _add_guest(participante.get("name") or participante.get("label") or "")
+        elif isinstance(participante, int):
+            user_ids.append(participante)
+        elif isinstance(participante, str):
+            _add_guest(participante)
+
+    # Build user lookup to resolve names
+    user_lookup: dict[int, User] = {}
+    if user_ids:
+        usuarios = User.query.filter(User.id.in_(user_ids)).all()
+        user_lookup = {usuario.id: usuario for usuario in usuarios}
+
+    resolved: list[str] = []
+    seen: set[str] = set()
+
+    def _add(name: str) -> None:
+        cleaned = (name or "").strip()
+        if cleaned and cleaned not in seen:
+            resolved.append(cleaned)
+            seen.add(cleaned)
+
+    # Add resolved users in the order they appeared
+    for pid in user_ids:
+        usuario = user_lookup.get(pid)
+        nome_usuario = None
+        if usuario is not None:
+            nome_usuario = getattr(usuario, "name", None) or getattr(usuario, "username", None)
+        _add(nome_usuario or f"Usuario #{pid}")
+
+    # Add guests
+    for nome in guest_names:
+        _add(nome)
+
+    return resolved
+
+
 def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     """Render decisions into the timbrado template and return PDF bytes + filename."""
     template_path = (
@@ -249,24 +311,15 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     for run in participantes_heading.runs:
         run.font.color.rgb = RGBColor(31, 78, 120)
 
-    # Monta lista completa de participantes: autor + participantes adicionados
+    # Monta lista completa de participantes vindos do campo da reunião
     todos_participantes = []
+    seen = set()
 
-    # Adiciona o autor da reunião primeiro
-    if hasattr(reuniao, 'autor') and reuniao.autor:
-        nome_autor = getattr(reuniao.autor, 'nome', None) or getattr(reuniao.autor, 'username', None)
-        if nome_autor:
-            todos_participantes.append(nome_autor)
-
-    # Adiciona os participantes manuais
-    participantes = reuniao.participantes or []
-    for participante in participantes:
-        if isinstance(participante, dict):
-            nome = participante.get("nome", participante.get("name", ""))
-            if nome and nome not in todos_participantes:
-                todos_participantes.append(nome)
-        elif isinstance(participante, str) and participante not in todos_participantes:
-            todos_participantes.append(participante)
+    # Apenas quem está no campo de participantes (usuários + convidados)
+    for nome in _resolve_participantes_labels(reuniao.participantes):
+        if nome not in seen:
+            todos_participantes.append(nome)
+            seen.add(nome)
 
     # Renderiza a lista
     if todos_participantes:
