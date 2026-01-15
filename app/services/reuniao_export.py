@@ -400,34 +400,39 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     # Wrap all temp file operations in try-except to trigger fallback on permission errors
     try:
         temp_dir = _get_temp_dir()
-        current_app.logger.debug(f"Using temp directory: {temp_dir}")
+        current_app.logger.info(f"[PDF Export] Using temp directory: {temp_dir}")
 
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False, dir=str(temp_dir)) as tmp_docx:
             doc.save(tmp_docx.name)
             tmp_docx_path = Path(tmp_docx.name)
 
-        current_app.logger.debug(f"Created temp DOCX at: {tmp_docx_path}")
+        current_app.logger.info(f"[PDF Export] Created temp DOCX at: {tmp_docx_path}")
 
         try:
             import pythoncom as pythoncom_mod  # type: ignore
 
             pythoncom_mod.CoInitialize()
             co_initialized = True
-        except Exception:
+            current_app.logger.info("[PDF Export] pythoncom.CoInitialize() succeeded")
+        except Exception as pythoncom_error:
             # Se ja estiver inicializado ou indisponivel (ex.: Linux), seguimos
             pythoncom_mod = None
+            current_app.logger.warning(f"[PDF Export] pythoncom initialization failed or not available: {pythoncom_error}")
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=str(temp_dir)) as tmp_pdf:
             tmp_pdf_path = Path(tmp_pdf.name)
+
+        current_app.logger.info(f"[PDF Export] Starting docx2pdf conversion: {tmp_docx_path} -> {tmp_pdf_path}")
 
         # docx2pdf gera PDF usando Word/LibreOffice disponiveis
         try:
             docx2pdf_convert(str(tmp_docx_path), str(tmp_pdf_path))
             pdf_bytes = tmp_pdf_path.read_bytes()
-            current_app.logger.debug("PDF generated successfully using docx2pdf")
+            pdf_size_kb = len(pdf_bytes) / 1024
+            current_app.logger.info(f"[PDF Export] ✓ PDF generated successfully using docx2pdf ({pdf_size_kb:.1f} KB)")
         except Exception as docx2pdf_error:
-            current_app.logger.warning(
-                f"docx2pdf falhou na geração de PDF (usando fallback): {docx2pdf_error}",
+            current_app.logger.error(
+                f"[PDF Export] ✗ docx2pdf conversion FAILED (will use fallback): {type(docx2pdf_error).__name__}: {docx2pdf_error}",
                 exc_info=docx2pdf_error
             )
             raise
@@ -439,13 +444,14 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
             "error_type": type(exc).__name__
         }
         current_app.logger.warning(
-            "Temp file operations or docx2pdf failed (context: %s); using fallback HTML->PDF renderer: %s",
+            "[PDF Export] ⚠ Temp file operations or docx2pdf failed (context: %s); using fallback HTML->PDF renderer: %s",
             error_context, exc, exc_info=exc
         )
 
         # Use fallback PDF generation with robust error handling
         participantes_labels = todos_participantes or []
         try:
+            current_app.logger.info("[PDF Export] Attempting fallback PDF generation using fpdf2 (NOTE: template header will NOT be included)")
             pdf_bytes = _render_pdf_fallback(
                 empresa_nome=empresa_nome,
                 data_str=data_str,
@@ -454,7 +460,8 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
                 participantes=participantes_labels,
                 decisoes_html=decisoes_html,
             )
-            current_app.logger.info("PDF generated successfully using fallback renderer")
+            pdf_size_kb = len(pdf_bytes) / 1024
+            current_app.logger.warning(f"[PDF Export] ✓ PDF generated using FALLBACK renderer ({pdf_size_kb:.1f} KB) - Template header/logo NOT included")
         except Exception as fallback_error:
             current_app.logger.error(
                 "Fallback PDF renderer also failed: %s", fallback_error, exc_info=fallback_error
