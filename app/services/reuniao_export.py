@@ -508,39 +508,65 @@ def _render_pdf_fallback(
     """Generate a lightweight PDF using fpdf2 when docx2pdf/Word is unavailable."""
 
     pdf = _HTMLPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
 
-    # Try to extract and add header image from template
+    # Extract header and footer images from template
+    header_img_path = None
+    footer_img_path = None
+
     try:
         template_path = Path(current_app.root_path) / "static" / "models" / "doc.docx"
         if template_path.exists():
             from zipfile import ZipFile
             import tempfile
 
-            # Extract header image from DOCX (DOCX is a ZIP file)
+            # Extract images from DOCX (DOCX is a ZIP file)
             with ZipFile(template_path, 'r') as docx_zip:
                 # Look for images in word/media/
                 image_files = [f for f in docx_zip.namelist() if f.startswith('word/media/')]
-                if image_files:
-                    # Extract first image to temp location
-                    first_image = image_files[0]
-                    image_data = docx_zip.read(first_image)
 
-                    # Save to temp file
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(first_image).suffix) as tmp_img:
-                        tmp_img.write(image_data)
-                        tmp_img_path = tmp_img.name
+                if len(image_files) >= 1:
+                    # Extract header image (first image)
+                    header_image = image_files[0]
+                    header_data = docx_zip.read(header_image)
 
-                    try:
-                        # Add image as header (top of page)
-                        pdf.image(tmp_img_path, x=10, y=8, w=190)
-                        pdf.ln(40)  # Space after header image
-                    finally:
-                        Path(tmp_img_path).unlink(missing_ok=True)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(header_image).suffix) as tmp_img:
+                        tmp_img.write(header_data)
+                        header_img_path = tmp_img.name
+
+                if len(image_files) >= 2:
+                    # Extract footer image (second image)
+                    footer_image = image_files[1]
+                    footer_data = docx_zip.read(footer_image)
+
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(footer_image).suffix) as tmp_img:
+                        tmp_img.write(footer_data)
+                        footer_img_path = tmp_img.name
     except Exception as img_error:
-        current_app.logger.warning(f"Could not extract header image from template: {img_error}")
-        # Continue without header image
+        current_app.logger.warning(f"Could not extract images from template: {img_error}")
+
+    # Set auto page break with margin for footer
+    pdf.set_auto_page_break(auto=True, margin=40)  # Space for footer
+    pdf.add_page()
+
+    # Add header image at top
+    if header_img_path:
+        try:
+            pdf.image(header_img_path, x=10, y=8, w=190)
+            pdf.ln(40)  # Space after header image
+        except Exception as e:
+            current_app.logger.warning(f"Could not add header image: {e}")
+
+    # Add footer image on every page
+    if footer_img_path:
+        def footer_with_image():
+            pdf.set_y(-35)  # Position 35mm from bottom
+            try:
+                pdf.image(footer_img_path, x=10, y=pdf.get_y(), w=190)
+            except Exception as e:
+                current_app.logger.warning(f"Could not add footer image: {e}")
+
+        # Override footer method
+        pdf.footer = footer_with_image
 
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, "ATA DE REUNIÃO", new_x="LMARGIN", new_y="NEXT", align="C")
@@ -567,6 +593,19 @@ def _render_pdf_fallback(
 
     # pdf.output() retorna bytes diretamente no fpdf2 moderno
     pdf_output = pdf.output()
+
+    # Clean up temporary image files
+    if header_img_path:
+        try:
+            Path(header_img_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    if footer_img_path:
+        try:
+            Path(footer_img_path).unlink(missing_ok=True)
+        except Exception:
+            pass
 
     # Se for string (versão antiga do fpdf), converte para bytes
     if isinstance(pdf_output, str):
