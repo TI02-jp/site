@@ -469,14 +469,16 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
                 pythoncom_mod.CoUninitialize()
             except Exception:
                 pass
-        try:
-            tmp_docx_path.unlink(missing_ok=True)
-        except Exception as e:
-            current_app.logger.debug(f"Não foi possível remover arquivo temporário DOCX: {e}")
-        try:
-            base_docx_path.unlink(missing_ok=True)
-        except Exception as e:
-            current_app.logger.debug(f"Não foi possível remover arquivo de base DOCX: {e}")
+        if tmp_docx_path:
+            try:
+                tmp_docx_path.unlink(missing_ok=True)
+            except Exception as e:
+                current_app.logger.debug(f"Não foi possível remover arquivo temporário DOCX: {e}")
+        if base_docx_path:
+            try:
+                base_docx_path.unlink(missing_ok=True)
+            except Exception as e:
+                current_app.logger.debug(f"Não foi possível remover arquivo de base DOCX: {e}")
         if tmp_pdf_path:
             try:
                 tmp_pdf_path.unlink(missing_ok=True)
@@ -534,13 +536,16 @@ def _render_pdf_fallback(
     decisoes_section = "<h3>Assuntos tratados</h3>" + (decisoes_html or "<p>Sem assuntos registrados.</p>")
     pdf.write_html(decisoes_section)
 
-    pdf_output = pdf.output(dest="S")
-    try:
-        return pdf_output.encode("latin-1")
-    except UnicodeEncodeError as exc:
-        current_app.logger.warning(
-            "Falling back to latin-1 replacement when rendering PDF failed: %s",
-            exc,
-            exc_info=exc,
-        )
-        return pdf_output.encode("latin-1", errors="replace")
+    # pdf.output() retorna bytes diretamente no fpdf2 moderno
+    pdf_output = pdf.output()
+
+    # Se for string (versão antiga do fpdf), converte para bytes
+    if isinstance(pdf_output, str):
+        try:
+            return pdf_output.encode("latin-1")
+        except UnicodeEncodeError:
+            current_app.logger.warning("Encoding PDF with replacements for incompatible characters")
+            return pdf_output.encode("latin-1", errors="replace")
+
+    # Já é bytes, retorna diretamente
+    return pdf_output
