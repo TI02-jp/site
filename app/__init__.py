@@ -611,6 +611,32 @@ with app.app_context():
                         },
                     )
 
+        tag_links_table_exists = inspector.has_table("announcement_tag_links")
+        tags_table_exists = inspector.has_table("tags")
+        if (
+            not tag_links_table_exists
+            and inspector.has_table("announcements")
+            and tags_table_exists
+        ):
+            with db.engine.begin() as conn:
+                conn.execute(
+                    sa.text(
+                        """
+                        CREATE TABLE announcement_tag_links (
+                            announcement_id INTEGER NOT NULL,
+                            tag_id INTEGER NOT NULL,
+                            PRIMARY KEY (announcement_id, tag_id),
+                            CONSTRAINT fk_announcement_tag_links_announcement_id_announcements
+                                FOREIGN KEY (announcement_id) REFERENCES announcements (id)
+                                ON DELETE CASCADE,
+                            CONSTRAINT fk_announcement_tag_links_tag_id_tags
+                                FOREIGN KEY (tag_id) REFERENCES tags (id)
+                                ON DELETE CASCADE
+                        )
+                        """
+                    )
+                )
+
         if inspector.has_table("task_notifications"):
             notification_columns = {
                 col["name"] for col in inspector.get_columns("task_notifications")

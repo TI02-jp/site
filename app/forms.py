@@ -271,6 +271,13 @@ class AnnouncementForm(FlaskForm):
         validators=[Optional()],
         render_kw={"multiple": True},
     )
+    target_tag_ids = SelectMultipleField(
+        "Setores que podem ver este comunicado (deixe em branco para todos)",
+        coerce=int,
+        validators=[Optional()],
+        option_widget=widgets.CheckboxInput(),
+        widget=widgets.ListWidget(prefix_label=False),
+    )
     submit = SubmitField("Salvar")
 
 

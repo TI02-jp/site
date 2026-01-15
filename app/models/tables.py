@@ -80,6 +80,22 @@ course_tag_links = db.Table(
     db.Column('tag_id', db.Integer, db.ForeignKey('course_tags.id', ondelete='CASCADE'), primary_key=True),
 )
 
+announcement_tag_links = db.Table(
+    'announcement_tag_links',
+    db.Column(
+        'announcement_id',
+        db.Integer,
+        db.ForeignKey('announcements.id', ondelete='CASCADE'),
+        primary_key=True,
+    ),
+    db.Column(
+        'tag_id',
+        db.Integer,
+        db.ForeignKey('tags.id', ondelete='CASCADE'),
+        primary_key=True,
+    ),
+)
+
 class JsonString(TypeDecorator):
     """Store JSON as a serialized string."""
     impl = String
@@ -333,6 +349,11 @@ class Announcement(db.Model):
         backref="announcement",
         cascade="all, delete-orphan",
         order_by="AnnouncementAttachment.created_at.asc()",
+        lazy="selectin",
+    )
+    target_tags = db.relationship(
+        "Tag",
+        secondary=announcement_tag_links,
         lazy="selectin",
     )
 

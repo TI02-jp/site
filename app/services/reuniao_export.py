@@ -139,20 +139,24 @@ def _add_html_to_docx(doc: Document, html_content: str) -> None:
             if text.strip():
                 paragraph.add_run(text)
 
-    def process_list(list_element, is_ordered=False):
-        """Processa listas <ul> ou <ol>."""
+    def process_list(list_element, is_ordered=False, parent_indent=0):
+        """Processa listas <ul> ou <ol> com suporte a aninhamento."""
         list_items = list_element.find_all("li", recursive=False)
         for idx, li in enumerate(list_items):
-            indent = get_indent_level(li)
+            # Extrai classe de indentação do item
+            indent_level = get_indent_level(li)
+            # Calcula indentação total: indentação do item + indentação do pai
+            total_indent = parent_indent + indent_level
             alignment = get_alignment(li)
 
             # Cria parágrafo com marcador
             p = doc.add_paragraph()
             p.alignment = alignment
-
-            # Aplica indentação
-            if indent > 0:
-                p.paragraph_format.left_indent = Inches(0.25 * indent)
+            
+            # Aplica indentação em polegadas
+            # Usa 0.5" por nível para ficar mais visível
+            indent_inches = 0.5 * (total_indent + 1)
+            p.paragraph_format.left_indent = Inches(indent_inches)
 
             # Adiciona marcador/número
             if is_ordered:
@@ -162,13 +166,18 @@ def _add_html_to_docx(doc: Document, html_content: str) -> None:
 
             p.add_run(prefix)
 
-            # Processa conteúdo do item
+            # Processa conteúdo do item (texto e formatação)
+            has_nested_list = False
             for child in li.children:
-                if child.name in ["ul", "ol"]:
-                    # Lista aninhada
-                    process_list(child, child.name == "ol")
+                if hasattr(child, "name") and child.name in ["ul", "ol"]:
+                    has_nested_list = True
                 else:
                     add_formatted_text(p, child)
+            
+            # Se houver listas aninhadas, processa-as com indentação aumentada
+            for child in li.children:
+                if hasattr(child, "name") and child.name in ["ul", "ol"]:
+                    process_list(child, child.name == "ol", parent_indent=total_indent + 1)
 
     def process_element(element):
         """Processa um elemento HTML genérico."""
@@ -301,7 +310,7 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     setor_nome = getattr(getattr(reuniao, "setor", None), "nome", None) or "Não informado"
 
     # ==== TÍTULO PRINCIPAL ====
-    titulo = doc.add_heading("ATA DE REUNIÃO", level=1)
+    titulo = doc.add_heading("REUNIÃO DE ALINHAMENTO", level=1)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in titulo.runs:
         run.font.size = Pt(16)
@@ -547,7 +556,7 @@ def _render_pdf_fallback(
         pdf.footer = footer_with_image
 
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "ATA DE REUNIÃO", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.cell(0, 10, "REUNIÃO DE ALINHAMENTO", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(4)
     pdf.set_font("Helvetica", "", 12)
 

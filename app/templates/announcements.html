@@ -88,6 +88,19 @@
     font-weight: 600;
   }
 
+  .announcement-target-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    font-size: var(--font-sm);
+  }
+
+  .announcement-target-tags .badge {
+    font-size: var(--font-xs);
+    text-transform: none;
+  }
+
   .announcement-card .text-body-secondary,
   .announcement-card .announcement-snippet,
   .announcement-card .announcement-meta {
@@ -680,20 +693,32 @@
           {% endif %}
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 ms-lg-auto w-100 w-sm-auto">
-          <form method="get" action="{{ search_action_url }}" class="d-flex w-100" role="search">
-            <div class="input-group input-group-sm">
+          <form method="get" action="{{ search_action_url }}" class="d-flex flex-wrap gap-2 w-100 align-items-center" role="search">
+            <div class="input-group input-group-sm flex-grow-1 min-w-0">
               <input type="search" name="q" class="form-control" placeholder="Pesquisar comunicados" aria-label="Pesquisar comunicados" value="{{ search_value }}">
               <button class="btn btn-outline-primary d-flex align-items-center gap-1" type="submit">
                 <i class="bi bi-search"></i>
                 <span>Pesquisar</span>
               </button>
               {% if search_value %}
-              <a class="btn btn-outline-secondary d-flex align-items-center gap-1" href="{{ search_action_url }}" aria-label="Limpar pesquisa">
+              <a class="btn btn-outline-secondary d-flex align-items-center gap-1" href="{{ search_action_url }}{% if selected_tag_id %}?tag_id={{ selected_tag_id }}{% endif %}" aria-label="Limpar pesquisa">
                 <i class="bi bi-x-circle"></i>
                 <span>Limpar</span>
               </a>
               {% endif %}
             </div>
+            {% if available_tags %}
+            <select name="tag_id" class="form-select form-select-sm w-auto" aria-label="Filtrar comunicados por setor">
+              <option value="">Todos os setores</option>
+              {% for tag in available_tags %}
+              <option value="{{ tag.id }}" {% if tag.id == selected_tag_id %}selected{% endif %}>{{ tag.nome }}</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <select class="form-select form-select-sm w-auto" aria-label="Nenhum setor disponível" disabled>
+              <option>Nenhum setor cadastrado</option>
+            </select>
+            {% endif %}
           </form>
           {% if is_history and history_back_url %}
           <a class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center gap-1" href="{{ history_back_url }}">
@@ -727,6 +752,14 @@
                   <span>{{ announcement.date.strftime('%d/%m/%Y') }}</span>
                 </span>
                 <h3 class="mb-0 text-dark">{{ announcement.subject }}</h3>
+                {% if announcement.target_tags %}
+                <div class="announcement-target-tags text-uppercase text-muted">
+                  <span class="fw-semibold text-dark small mb-0">Setores:</span>
+                  {% for tag in announcement.target_tags %}
+                  <span class="badge bg-secondary text-dark">{{ tag.nome }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
               </div>
               {% if can_manage %}
               <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
@@ -990,6 +1023,27 @@
                           <div class="invalid-feedback d-block">{{ error }}</div>
                           {% endfor %}
                         </div>
+                        <div class="d-grid gap-2">
+                          <div class="d-flex align-items-baseline justify-content-between">
+                            <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Setores que podem ver este comunicado</span>
+                            <small class="text-muted small mb-0">Sem seleção = todos os colaboradores</small>
+                          </div>
+                          {% if edit_form.target_tag_ids.choices %}
+                          <div class="d-flex flex-wrap gap-3 mt-1">
+                            {% for option in edit_form.target_tag_ids %}
+                            <div class="form-check form-check-inline">
+                              {{ option(class="form-check-input") }}
+                              {{ option.label(class="form-check-label small mb-0") }}
+                            </div>
+                            {% endfor %}
+                          </div>
+                          {% else %}
+                          <p class="text-muted small mb-0">Nenhum setor cadastrado.</p>
+                          {% endif %}
+                          {% for error in edit_form.target_tag_ids.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                          {% endfor %}
+                        </div>
                       </div>
                       <div class="d-grid gap-2">
                         <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Novos anexos</span>
@@ -1155,12 +1209,33 @@
                           <span>Visualizar prévia</span>
                         </button>
                       </div>
-                      {% for error in form.content.errors %}
-                      <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    </div>
+                    {% for error in form.content.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
                   </div>
-                  <div class="d-grid gap-2">
+                </div>
+                <div class="d-grid gap-2">
+                  <div class="d-flex align-items-baseline justify-content-between">
+                    <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Setores que podem ver este comunicado</span>
+                    <small class="text-muted small mb-0">Sem seleção = todos os colaboradores</small>
+                  </div>
+                  {% if form.target_tag_ids.choices %}
+                  <div class="d-flex flex-wrap gap-3 mt-1">
+                    {% for option in form.target_tag_ids %}
+                    <div class="form-check form-check-inline">
+                      {{ option(class="form-check-input") }}
+                      {{ option.label(class="form-check-label small mb-0") }}
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% else %}
+                  <p class="text-muted small mb-0">Nenhum setor cadastrado.</p>
+                  {% endif %}
+                  {% for error in form.target_tag_ids.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              <div class="d-grid gap-2">
                     <span class="form-label text-uppercase text-muted fw-semibold small mb-0">Anexos</span>
                     {{ form.attachments.label(class="visually-hidden") }}
                     <label class="upload-dropzone{% if form.attachments.errors %} is-invalid{% endif %}" for="{{ form.attachments.id }}" role="button" tabindex="0" data-dropzone>
@@ -2525,6 +2600,23 @@
       });
     });
 
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('select[name="tag_id"]').forEach((select) => {
+      select.addEventListener('change', () => {
+        const form = select.form;
+        if (!form) {
+          return;
+        }
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      });
+    });
   });
 </script>
 {% endblock %}
