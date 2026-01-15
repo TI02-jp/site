@@ -511,6 +511,37 @@ def _render_pdf_fallback(
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
+    # Try to extract and add header image from template
+    try:
+        template_path = Path(current_app.root_path) / "static" / "models" / "doc.docx"
+        if template_path.exists():
+            from zipfile import ZipFile
+            import tempfile
+
+            # Extract header image from DOCX (DOCX is a ZIP file)
+            with ZipFile(template_path, 'r') as docx_zip:
+                # Look for images in word/media/
+                image_files = [f for f in docx_zip.namelist() if f.startswith('word/media/')]
+                if image_files:
+                    # Extract first image to temp location
+                    first_image = image_files[0]
+                    image_data = docx_zip.read(first_image)
+
+                    # Save to temp file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(first_image).suffix) as tmp_img:
+                        tmp_img.write(image_data)
+                        tmp_img_path = tmp_img.name
+
+                    try:
+                        # Add image as header (top of page)
+                        pdf.image(tmp_img_path, x=10, y=8, w=190)
+                        pdf.ln(40)  # Space after header image
+                    finally:
+                        Path(tmp_img_path).unlink(missing_ok=True)
+    except Exception as img_error:
+        current_app.logger.warning(f"Could not extract header image from template: {img_error}")
+        # Continue without header image
+
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, "ATA DE REUNIÃO", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(4)
