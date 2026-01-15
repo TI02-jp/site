@@ -302,21 +302,21 @@ def _resolve_participantes_labels(participantes_raw: Iterable | None) -> list[st
 def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     """Render decisions into the timbrado template and return PDF bytes + filename."""
     # Get template path with absolute resolution for service compatibility
-    template_filename = "timbrado - retrato.dotx"
+    template_filename = "doc.docx"
     template_path = Path(current_app.root_path) / "static" / "models" / template_filename
-    
+
     # Verify template exists
     if not template_path.exists():
         current_app.logger.error(f"Template file not found: {template_path}")
         raise FileNotFoundError(f"Modelo timbrado não encontrado: {template_path}")
-    
+
     # Ensure we have read permissions
     if not os.access(template_path, os.R_OK):
         current_app.logger.error(f"No read permission for template: {template_path}")
         raise PermissionError(f"Sem permissão de leitura no modelo: {template_path}")
 
-    base_docx_path = _materialize_docx_from_template(template_path)
-    doc = Document(str(base_docx_path))
+    # Load DOCX directly (no need to materialize from DOTX)
+    doc = Document(str(template_path))
 
     empresa_nome = getattr(reuniao.empresa, "nome_empresa", "") or "Empresa"
     data_str = reuniao.data.strftime("%d/%m/%Y") if getattr(reuniao, "data", None) else "Não informado"
@@ -479,11 +479,6 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
                 tmp_docx_path.unlink(missing_ok=True)
             except Exception as e:
                 current_app.logger.debug(f"Não foi possível remover arquivo temporário DOCX: {e}")
-        if base_docx_path:
-            try:
-                base_docx_path.unlink(missing_ok=True)
-            except Exception as e:
-                current_app.logger.debug(f"Não foi possível remover arquivo de base DOCX: {e}")
         if tmp_pdf_path:
             try:
                 tmp_pdf_path.unlink(missing_ok=True)
