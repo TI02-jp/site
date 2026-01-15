@@ -321,7 +321,6 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     empresa_nome = getattr(reuniao.empresa, "nome_empresa", "") or "Empresa"
     data_str = reuniao.data.strftime("%d/%m/%Y") if getattr(reuniao, "data", None) else "Não informado"
     setor_nome = getattr(getattr(reuniao, "setor", None), "nome", None) or "Não informado"
-    acompanhar_ate_str = reuniao.acompanhar_ate.strftime("%d/%m/%Y") if getattr(reuniao, "acompanhar_ate", None) else "Não informado"
 
     # ==== TÍTULO PRINCIPAL ====
     titulo = doc.add_heading("ATA DE REUNIÃO", level=1)
@@ -456,7 +455,6 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
                 empresa_nome=empresa_nome,
                 data_str=data_str,
                 setor_nome=setor_nome,
-                acompanhar_ate_str=acompanhar_ate_str,
                 participantes=participantes_labels,
                 decisoes_html=decisoes_html,
             )
@@ -509,7 +507,6 @@ def _render_pdf_fallback(
     empresa_nome: str,
     data_str: str,
     setor_nome: str,
-    acompanhar_ate_str: str,
     participantes: list[str],
     decisoes_html: str,
 ) -> bytes:
@@ -528,8 +525,7 @@ def _render_pdf_fallback(
         "<h3>Identificação</h3>"
         f"<p><b>Empresa:</b> {empresa_nome}<br>"
         f"<b>Data:</b> {data_str}<br>"
-        f"<b>Setor:</b> {setor_nome}<br>"
-        f"<b>Acompanhar até:</b> {acompanhar_ate_str}</p>"
+        f"<b>Setor:</b> {setor_nome}</p>"
     )
     pdf.write_html(meta_html)
 
