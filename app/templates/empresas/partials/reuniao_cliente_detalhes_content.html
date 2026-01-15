@@ -49,17 +49,170 @@
     {% endif %}
 </div>
 
-<div>
-    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 flex-wrap gap-2">
-        <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>ASSUNTOS</h6>
+<style>
+    .decisoes-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 2px solid #e9ecef;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        transition: all 0.3s ease;
+    }
+    .decisoes-container:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #dee2e6;
+    }
+    .decisoes-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #0d6efd;
+    }
+    .decisoes-header h6 {
+        margin: 0;
+        color: #0d6efd;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+    }
+    .decisoes-header .btn {
+        margin-left: auto;
+    }
+    .decisoes-content {
+        line-height: 1.8;
+        color: #333;
+        font-size: 0.95rem;
+    }
+    .decisoes-content h1,
+    .decisoes-content h2,
+    .decisoes-content h3,
+    .decisoes-content h4,
+    .decisoes-content h5,
+    .decisoes-content h6 {
+        color: #0b288b;
+        margin: 1rem 0 0.5rem 0;
+        font-weight: 600;
+    }
+    .decisoes-content h1 { font-size: 1.4rem; }
+    .decisoes-content h2 { font-size: 1.25rem; }
+    .decisoes-content h3 { font-size: 1.1rem; }
+    .decisoes-content h4 { font-size: 1rem; }
+    .decisoes-content p {
+        margin-bottom: 0.75rem;
+    }
+    .decisoes-content ul,
+    .decisoes-content ol {
+        margin-left: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .decisoes-content li {
+        margin-bottom: 0.5rem;
+    }
+    .decisoes-content a {
+        color: #0d6efd;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .decisoes-content a:hover {
+        color: #0b5ed7;
+        border-bottom-color: #0b5ed7;
+    }
+    .decisoes-content strong {
+        color: #0b288b;
+        font-weight: 600;
+    }
+    .decisoes-content em {
+        font-style: italic;
+        color: #495057;
+    }
+    .decisoes-content code {
+        background-color: #f1f3f5;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.25rem;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.9rem;
+        color: #d63384;
+    }
+    .decisoes-content blockquote {
+        border-left: 4px solid #0d6efd;
+        margin: 1rem 0;
+        padding-left: 1rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    .decisoes-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+    }
+    .decisoes-content table th {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        border: 1px solid #dee2e6;
+    }
+    .decisoes-content table td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    .decisoes-content table tbody tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    .decisoes-content table tbody tr:hover {
+        background-color: #e7f1ff;
+    }
+    .decisoes-empty {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    .decisoes-empty i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+        display: block;
+    }
+    .decisoes-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    @media (max-width: 576px) {
+        .decisoes-header {
+            flex-wrap: wrap;
+        }
+        .decisoes-header .btn {
+            margin-left: 0;
+            margin-top: 0.5rem;
+        }
+        .decisoes-container {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<div class="decisoes-container">
+    <div class="decisoes-header">
+        <h6><i class="bi bi-journal-text"></i>ASSUNTOS E DECISÕES</h6>
         <a class="btn btn-outline-success btn-sm"
            href="{{ url_for('empresas.reuniao_cliente_pdf', empresa_id=empresa.id, reuniao_id=reuniao.id) }}">
             <i class="bi bi-filetype-pdf me-1"></i>Exportar PDF
         </a>
     </div>
     {% if reuniao.decisoes %}
-        <div class="border rounded p-3 bg-light editor-content">{{ reuniao.decisoes|sanitize }}</div>
+        <div class="decisoes-content editor-content">{{ reuniao.decisoes|sanitize }}</div>
     {% else %}
-        <p class="text-muted mb-0">Nenhuma decisão registrada.</p>
+        <div class="decisoes-empty">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">Nenhuma decisão registrada.</p>
+        </div>
     {% endif %}
 </div>

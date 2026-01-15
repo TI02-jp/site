@@ -27,7 +27,11 @@ from werkzeug.utils import secure_filename
 
 from app import db
 from app.controllers.routes import utc3_now
-from app.controllers.routes._decorators import has_report_access, meeting_only_access_check
+from app.controllers.routes._decorators import (
+    get_accessible_tag_ids,
+    has_report_access,
+    meeting_only_access_check,
+)
 from app.controllers.routes.blueprints.notifications import _invalidate_notification_cache
 from app.forms import AnnouncementForm
 from app.models.tables import (
@@ -35,6 +39,7 @@ from app.models.tables import (
     AnnouncementAttachment,
     NotificationType,
     TaskNotification,
+    Tag,
     User,
 )
 from app.utils.permissions import is_user_admin
@@ -161,11 +166,21 @@ def _collect_uploaded_files(form: AnnouncementForm) -> list:
 def _broadcast_announcement_notification(announcement: Announcement) -> None:
     """Emit a notification about ``announcement`` for every active user."""
 
-    active_user_rows = (
-        User.query.with_entities(User.id)
-        .filter(User.ativo.is_(True))
-        .all()
-    )
+    target_tag_ids = {
+        tag.id for tag in (announcement.target_tags or []) if tag.id
+    }
+
+    user_query = User.query.with_entities(User.id).filter(User.ativo.is_(True))
+    if target_tag_ids:
+        user_query = user_query.filter(
+            or_(
+                User.role == "admin",
+                User.is_master.is_(True),
+                User.tags.any(Tag.id.in_(target_tag_ids)),
+            )
+        )
+
+    active_user_rows = user_query.all()
     if not active_user_rows:
         return
 
@@ -209,6 +224,35 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
         pass
 
 
+def _get_tag_choices() -> list[tuple[int, str]]:
+    """Return sorted tag choices for the announcement forms."""
+
+    return [
+        (tag.id, tag.nome)
+        for tag in Tag.query.order_by(Tag.nome.asc()).all()
+    ]
+
+
+def _apply_visibility_filter(query):
+    """Filter announcements so users only see those targeting their setores."""
+
+    if is_user_admin(current_user) or getattr(current_user, "is_master", False):
+        return query
+
+    accessible_tag_ids = {
+        tag_id for tag_id in (get_accessible_tag_ids(current_user) or []) if tag_id
+    }
+    if accessible_tag_ids:
+        return query.filter(
+            or_(
+                ~Announcement.target_tags.any(),
+                Announcement.target_tags.any(Tag.id.in_(accessible_tag_ids)),
+            )
+        )
+
+    return query.filter(~Announcement.target_tags.any())
+
+
 @announcements_bp.route(
     "/announcements", methods=["GET", "POST"], endpoint="announcements"
 )
@@ -218,8 +262,12 @@ def announcements():
     """List internal announcements and allow admins to create new ones."""
 
     form = AnnouncementForm()
+    tag_choices = _get_tag_choices()
+    form.target_tag_ids.choices = tag_choices
 
     search_term = (request.args.get("q") or "").strip()
+    selected_tag_id = request.args.get("tag_id", type=int)
+    available_tags = Tag.query.order_by(Tag.nome.asc()).all()
 
     base_query = Announcement.query
 
@@ -231,6 +279,11 @@ def announcements():
                 Announcement.content.ilike(ilike_pattern),
             )
         )
+    if selected_tag_id:
+        base_query = base_query.filter(
+            Announcement.target_tags.any(Tag.id == selected_tag_id)
+        )
+    base_query = _apply_visibility_filter(base_query)
 
     total_announcements = base_query.count()
 
@@ -238,6 +291,7 @@ def announcements():
         base_query.options(
             joinedload(Announcement.created_by),
             joinedload(Announcement.attachments),
+            joinedload(Announcement.target_tags),
         )
         .order_by(Announcement.date.desc(), Announcement.created_at.desc())
     )
@@ -280,6 +334,16 @@ def announcements():
                     )
                 )
 
+            selected_tag_ids = {
+                tag_id
+                for tag_id in (form.target_tag_ids.data or [])
+                if isinstance(tag_id, int)
+            }
+            if selected_tag_ids:
+                announcement.target_tags = Tag.query.filter(Tag.id.in_(selected_tag_ids)).all()
+            else:
+                announcement.target_tags = []
+
             db.session.flush()
             announcement.sync_legacy_attachment_fields()
 
@@ -321,6 +385,8 @@ def announcements():
             edit_form.date.data = item.date
             edit_form.subject.data = item.subject
             edit_form.content.data = item.content
+            edit_form.target_tag_ids.choices = tag_choices
+            edit_form.target_tag_ids.data = [tag.id for tag in item.target_tags]
             edit_forms[item.id] = edit_form
 
     return render_template(
@@ -339,6 +405,8 @@ def announcements():
         history_link_url=url_for("announcement_history"),
         history_back_url=None,
         can_manage=_can_manage_announcements(),
+        available_tags=available_tags,
+        selected_tag_id=selected_tag_id,
     )
 
 
@@ -350,6 +418,8 @@ def announcement_history():
     """Display the backlog of announcements that fall outside the main mural."""
 
     search_term = (request.args.get("q") or "").strip()
+    selected_tag_id = request.args.get("tag_id", type=int)
+    available_tags = Tag.query.order_by(Tag.nome.asc()).all()
 
     recent_id_rows = (
         Announcement.query.with_entities(Announcement.id)
@@ -360,6 +430,7 @@ def announcement_history():
     recent_ids = [row[0] for row in recent_id_rows]
 
     base_query = Announcement.query
+    tag_choices = _get_tag_choices()
 
     if recent_ids:
         base_query = base_query.filter(Announcement.id.notin_(recent_ids))
@@ -373,6 +444,13 @@ def announcement_history():
             )
         )
 
+    if selected_tag_id:
+        base_query = base_query.filter(
+            Announcement.target_tags.any(Tag.id == selected_tag_id)
+        )
+
+    base_query = _apply_visibility_filter(base_query)
+
     total_history = base_query.count()
 
     # Add pagination to limit memory usage with concurrent users
@@ -383,6 +461,7 @@ def announcement_history():
         base_query.options(
             joinedload(Announcement.created_by),
             joinedload(Announcement.attachments),
+            joinedload(Announcement.target_tags),
         )
         .order_by(Announcement.date.desc(), Announcement.created_at.desc())
         .offset((page - 1) * per_page)
@@ -420,6 +499,8 @@ def announcement_history():
             edit_form.date.data = item.date
             edit_form.subject.data = item.subject
             edit_form.content.data = item.content
+            edit_form.target_tag_ids.choices = tag_choices
+            edit_form.target_tag_ids.data = [tag.id for tag in item.target_tags]
             edit_forms[item.id] = edit_form
 
     return render_template(
@@ -442,6 +523,8 @@ def announcement_history():
         per_page=per_page,
         total_pages=total_pages,
         can_manage=_can_manage_announcements(),
+        available_tags=available_tags,
+        selected_tag_id=selected_tag_id,
     )
 
 
@@ -505,6 +588,16 @@ def update_announcement(announcement_id: int):
         if attachments_modified:
             db.session.flush()
             announcement.sync_legacy_attachment_fields()
+
+        selected_tag_ids = {
+            tag_id
+            for tag_id in (form.target_tag_ids.data or [])
+            if isinstance(tag_id, int)
+        }
+        if selected_tag_ids:
+            announcement.target_tags = Tag.query.filter(Tag.id.in_(selected_tag_ids)).all()
+        else:
+            announcement.target_tags = []
 
         db.session.commit()
         flash("Comunicado atualizado com sucesso.", "success")

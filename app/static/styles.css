@@ -2664,6 +2664,19 @@ Responsividade
 .editor-content ul {
     padding-left: 1.35rem;
     margin: 0 0 0.75rem;
+    list-style-position: outside;
+}
+
+.editor-content ul {
+    list-style-type: disc;
+}
+
+.editor-content ol {
+    list-style-type: decimal;
+}
+
+.editor-content li {
+    display: list-item;
 }
 
 .editor-content li + li {
@@ -2671,14 +2684,14 @@ Responsividade
 }
 
 /* Support Quill indentation/align classes on view mode (e.g., decisões de reuniões) */
-.editor-content .ql-indent-1 { padding-left: 1.5em; }
-.editor-content .ql-indent-2 { padding-left: 3em; }
-.editor-content .ql-indent-3 { padding-left: 4.5em; }
-.editor-content .ql-indent-4 { padding-left: 6em; }
-.editor-content .ql-indent-5 { padding-left: 7.5em; }
-.editor-content .ql-indent-6 { padding-left: 9em; }
-.editor-content .ql-indent-7 { padding-left: 10.5em; }
-.editor-content .ql-indent-8 { padding-left: 12em; }
+.editor-content .ql-indent-1 { padding-left: 1.5em; margin-left: 1.5em; }
+.editor-content .ql-indent-2 { padding-left: 3em; margin-left: 3em; }
+.editor-content .ql-indent-3 { padding-left: 4.5em; margin-left: 4.5em; }
+.editor-content .ql-indent-4 { padding-left: 6em; margin-left: 6em; }
+.editor-content .ql-indent-5 { padding-left: 7.5em; margin-left: 7.5em; }
+.editor-content .ql-indent-6 { padding-left: 9em; margin-left: 9em; }
+.editor-content .ql-indent-7 { padding-left: 10.5em; margin-left: 10.5em; }
+.editor-content .ql-indent-8 { padding-left: 12em; margin-left: 12em; }
 .editor-content .ql-align-center { text-align: center; }
 .editor-content .ql-align-right { text-align: right; }
 .editor-content .ql-align-justify { text-align: justify; }
@@ -2693,7 +2706,6 @@ Responsividade
 .editor-content .ql-indent-8.ql-direction-rtl { padding-right: 12em; padding-left: 0; }
 .editor-content .ql-align-right.ql-direction-rtl { text-align: left; }
 .editor-content .ql-align-left.ql-direction-rtl  { text-align: right; }
-}
 
 /* Ensure images inside particularidades are responsive and clickable */
 .editor-content img {
