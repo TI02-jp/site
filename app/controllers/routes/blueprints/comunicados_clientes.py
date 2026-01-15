@@ -196,7 +196,7 @@ def comunicados_clientes():
     if end_date:
         entries_query = entries_query.filter(ClientAnnouncement.send_date <= end_date)
     entries = entries_query.order_by(
-        ClientAnnouncement.send_date.asc(),
+        ClientAnnouncement.send_date.desc(),
         ClientAnnouncement.sequence_number.desc(),
     ).all()
     edit_forms: dict[int, ClientAnnouncementForm] = {}
