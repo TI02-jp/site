@@ -143,22 +143,6 @@
                             </div>
                         </div>
 
-                        {% if is_admin %}
-                        <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-info d-inline-flex align-items-center gap-1"
-                                id="checkApiBtn" title="Testar se a API está acessível e o token é válido">
-                                <i class="bi bi-shield-check"></i>
-                                Testar Conexão API
-                            </button>
-                            <button type="button" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1"
-                                id="syncEncerramentoBtn">
-                                <i class="bi bi-cloud-arrow-down"></i>
-                                Sincronizar Encerramento (API)
-                            </button>
-                            <small class="text-muted" id="syncEncerramentoStatus"></small>
-                        </div>
-                        {% endif %}
-
                         {% if show_all %}
                         <a class="btn btn-outline-secondary btn-sm"
                             href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term) }}">
@@ -1175,8 +1159,6 @@
     const currentTributacoes = currentUrl.searchParams.getAll('tributacao');
     const currentStatus = currentUrl.searchParams.getAll('status');
     const dashboardCards = new Map();
-    const syncButton = document.getElementById('syncEncerramentoBtn');
-    const syncStatus = document.getElementById('syncEncerramentoStatus');
 
     document.querySelectorAll('.inventario-summary-card').forEach((card) => {
         const tributacao = card.dataset.tributacao;
@@ -1511,175 +1493,6 @@
     document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
         checkCFOPStatus(row);
     });
-
-    if (syncButton) {
-        const defaultLabel = syncButton.innerHTML;
-        syncButton.addEventListener('click', function () {
-            const msg = `Deseja sincronizar o Encerramento Fiscal via API da Acessorias?\n\n` +
-                `Período: 01/01/2026 a 31/01/2026\n` +
-                `Critério: Entregas de "Fechamento Fiscal" entregues\n\n` +
-                `Esta operação pode levar alguns minutos.`;
-
-            if (!window.confirm(msg)) {
-                return;
-            }
-            syncButton.disabled = true;
-            syncButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Sincronizando...';
-            if (syncStatus) {
-                syncStatus.textContent = 'Sincronizando... Isso pode levar alguns minutos.';
-                syncStatus.classList.remove('text-success', 'text-danger');
-            }
-
-            // Controller para permitir timeout customizado
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutos
-
-            fetch('/api/inventario/sync-encerramento-fiscal', {
-                signal: controller.signal,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    start_date: '2026-01-01',
-                    end_date: '2026-01-31'
-                })
-            })
-                .then(response => {
-                    console.log('Response status:', response.status, 'OK:', response.ok);
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            throw new Error(`HTTP ${response.status}: ${text}`);
-                        });
-                    }
-                    return response.json().then(data => {
-                        console.log('Response data:', data);
-                        return { ok: response.ok, data };
-                    });
-                })
-                .then(({ ok, data }) => {
-                    if (ok && data.success) {
-                        let msg = `✓ Sincronização concluída!\n\n`;
-                        msg += `Empresas verificadas: ${data.checked || 0}\n`;
-                        msg += `Atualizadas: ${data.updated || 0}\n`;
-                        msg += `  - Marcadas como SIM: ${data.set_true || 0}\n`;
-                        msg += `  - Marcadas como NÃO: ${data.set_false || 0}\n`;
-
-                        if (data.skipped_no_cnpj > 0) {
-                            msg += `\n⚠ Empresas puladas (CNPJ inválido): ${data.skipped_no_cnpj}\n`;
-                        }
-
-                        if (data.errors && data.errors.length > 0) {
-                            msg += `\nErros em ${data.errors.length} empresa(s):\n`;
-                            data.errors.slice(0, 5).forEach(err => {
-                                msg += `  - ${err.razao_social || 'ID: ' + err.empresa_id}: ${err.error}\n`;
-                            });
-                            if (data.errors.length > 5) {
-                                msg += `  ... e mais ${data.errors.length - 5} erros (veja o console)\n`;
-                            }
-                            console.error('Erros detalhados:', data.errors);
-                        }
-
-                        const statusMsg = data.message || `Atualizados: ${data.updated || 0}`;
-                        if (syncStatus) {
-                            syncStatus.textContent = statusMsg;
-                            syncStatus.classList.remove('text-danger');
-                            syncStatus.classList.add('text-success');
-                        }
-
-                        alert(msg);
-
-                        if ((data.updated || 0) > 0) {
-                            setTimeout(() => window.location.reload(), 1500);
-                        }
-                    } else {
-                        const err = data?.error || 'Erro ao sincronizar.';
-                        if (syncStatus) {
-                            syncStatus.textContent = err;
-                            syncStatus.classList.remove('text-success');
-                            syncStatus.classList.add('text-danger');
-                        }
-                        alert(err);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro completo:', error);
-                    let errMsg;
-
-                    if (error.name === 'AbortError') {
-                        errMsg = 'Timeout: A sincronização demorou mais de 10 minutos.\n\n';
-                        errMsg += 'Possíveis causas:\n';
-                        errMsg += '- Muitas empresas para sincronizar\n';
-                        errMsg += '- API da Acessorias lenta\n';
-                        errMsg += '- Problemas de rede\n\n';
-                        errMsg += 'Verifique os logs do servidor para ver se a sincronização completou.';
-                    } else {
-                        errMsg = 'Erro na chamada da API de sincronização.\n\n';
-                        if (error.message) {
-                            errMsg += `Detalhes: ${error.message}\n`;
-                        }
-                        errMsg += '\nVerifique o console do navegador (F12) para mais informações.';
-                    }
-
-                    if (syncStatus) {
-                        syncStatus.textContent = 'Erro ao sincronizar';
-                        syncStatus.classList.remove('text-success');
-                        syncStatus.classList.add('text-danger');
-                    }
-                    alert(errMsg);
-                })
-                .finally(() => {
-                    clearTimeout(timeoutId);
-                    syncButton.disabled = false;
-                    syncButton.innerHTML = defaultLabel;
-                });
-        });
-    }
-
-    // Botão de Teste de Conexão API
-    const checkApiBtn = document.getElementById('checkApiBtn');
-    if (checkApiBtn) {
-        const defaultLabel = checkApiBtn.innerHTML;
-        checkApiBtn.addEventListener('click', function () {
-            checkApiBtn.disabled = true;
-            checkApiBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Testando...';
-
-            fetch('/api/inventario/check-api-connection', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-                .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                .then(({ ok, data }) => {
-                    if (ok && data.success) {
-                        let msg = `✓ Conexão com API bem-sucedida!\n\n`;
-                        msg += `Token: Configurado e válido\n`;
-                        msg += `CNPJ de teste: ${data.test_cnpj}\n`;
-                        msg += `Empresa de teste: ${data.test_empresa?.razao_social || 'N/A'}\n`;
-                        msg += `Entregas encontradas: ${data.total_entregas || 0}\n`;
-                        alert(msg);
-                    } else {
-                        let errMsg = `❌ Erro ao conectar com API\n\n`;
-                        if (data.error) {
-                            errMsg += `Erro: ${data.error}\n`;
-                        }
-                        if (data.details) {
-                            errMsg += `Detalhes: ${data.details}\n`;
-                        }
-                        alert(errMsg);
-                    }
-                })
-                .catch(error => {
-                    console.error(error);
-                    alert('❌ Erro ao testar conexão com API. Verifique o console para mais detalhes.');
-                })
-                .finally(() => {
-                    checkApiBtn.disabled = false;
-                    checkApiBtn.innerHTML = defaultLabel;
-                });
-        });
-    }
 
     // Verificar quando mudar o encerramento fiscal
     document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {

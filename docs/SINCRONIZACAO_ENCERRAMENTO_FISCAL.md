@@ -6,7 +6,7 @@ Este documento explica como usar a funcionalidade de sincronização automática
 
 ## Como Funciona
 
-O sistema busca entregas de "Fechamento Fiscal" na API da Acessorias para o período de **01/01/2026 a 31/01/2026** (quando as entregas do fechamento de dezembro/2025 são realizadas) e marca automaticamente o campo "Encerramento Fiscal" como **"Sim"** para empresas que atendem aos seguintes critérios:
+O sistema busca entregas de "Fechamento Fiscal" na API da Acessorias para o período de **01/12/2025 a 31/12/2025** (quando as entregas do fechamento de dezembro/2025 são realizadas) e marca automaticamente o campo "Encerramento Fiscal" como **"Sim"** para empresas que atendem aos seguintes critérios:
 
 ### Critérios de Matching:
 
@@ -16,7 +16,7 @@ O sistema busca entregas de "Fechamento Fiscal" na API da Acessorias para o per�
    - Status deve conter "ent." ou "entreg" (case-insensitive)
 3. **Comentário/Protocolo**: Deve conter "OK" ou "SEM MOVIMENTO" em campos como:
    - Comentarios, ComentariosEntrega, Protocolo, EntProtocolo, EntComentarios, EntGuiaLida, Observacoes, etc.
-4. **Data de Referência**: A data da entrega deve estar entre 01/01/2026 e 31/01/2026
+4. **Data de Referência**: A data da entrega deve estar entre 01/12/2025 e 31/12/2025
 
 ### Importante:
 - A sincronização **apenas marca como "Sim"**, nunca desmarca empresas que já estão marcadas
@@ -395,7 +395,7 @@ Não implementado na UI atual, mas pode ser adicionado se necessário.
 
 **Arquivo:** `app/services/inventario_sync.py`
 
-**Linhas 22-23:**
+**Linhas 24-25:**
 ```python
 DEFAULT_PERIOD_START = date(2025, 12, 1)  # Alterar aqui
 DEFAULT_PERIOD_END = date(2025, 12, 31)   # Alterar aqui
