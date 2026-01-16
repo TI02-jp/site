@@ -1225,13 +1225,13 @@ def inventario():
     clear_tag = request.args.get("clear_tag") == "1"
     raw_tags = request.args.getlist("tag")
     if clear_tag:
-        tag_filters = ["Matriz"]
+        tag_filters = ["Matriz", "Filial"]
     elif raw_tags:
         tag_filters = [t for t in raw_tags if t in allowed_tag_filters]
     else:
-        tag_filters = saved_filters.get("tag_filters") or ["Matriz"]
+        tag_filters = saved_filters.get("tag_filters") or ["Matriz", "Filial"]
     if not tag_filters:
-        tag_filters = ["Matriz"]
+        tag_filters = ["Matriz", "Filial"]
 
     # Filtro de status
     clear_status = request.args.get("clear_status") == "1"
@@ -1243,9 +1243,9 @@ def inventario():
     else:
         status_filters = saved_filters.get("status_filters", [])
 
-    sort = sort_arg or saved_filters.get("sort") or 'codigo'
+    sort = sort_arg or saved_filters.get("sort") or 'nome'
     if sort not in ('codigo', 'nome', 'tributacao'):
-        sort = 'codigo'
+        sort = 'nome'
 
     order = order_arg or saved_filters.get("order") or 'asc'
     if order not in ('asc', 'desc'):
@@ -1261,9 +1261,9 @@ def inventario():
         "page": saved_page,
     }
 
-    all_arg = request.args.get("all")
-    show_all = all_arg in ("1", "true", "on")
-    page = saved_page
+    # Sempre mostrar todas as empresas (sem paginação)
+    show_all = True
+    page = 1
 
     # Query base - empresas ativas
     base_query = Empresa.query.filter_by(ativo=True)
@@ -1358,12 +1358,10 @@ def inventario():
     else:
         query = base_query.order_by(order_by_clause)
 
-    if show_all:
-        total = query.count()
-        per_page = total if total > 0 else 1
-        page = 1
-    else:
-        per_page = 50
+    # Sempre mostrar todas as empresas sem paginação
+    total = query.count()
+    per_page = total if total > 0 else 1
+    page = 1
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     empresas = pagination.items
     empresa_ids = [empresa.id for empresa in empresas]
