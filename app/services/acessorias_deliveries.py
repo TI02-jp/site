@@ -203,6 +203,33 @@ class AcessoriasDeliveriesClient:
         return all_entregas
 
     # -- Business helpers ---------------------------------------------
+    def _has_valid_comment(self, entrega: dict) -> bool:
+        """
+        Verifica se algum campo de comentário/protocolo contém "OK" ou "SEM MOVIMENTO".
+
+        Campos verificados: Comentarios, ComentariosEntrega, Protocolo, EntProtocolo,
+        EntComentarios, EntGuiaLida, Observacoes, etc.
+        """
+        # Campos possíveis de comentário/protocolo
+        comment_fields = [
+            "Comentarios",
+            "ComentariosEntrega",
+            "Protocolo",
+            "EntProtocolo",
+            "EntComentarios",
+            "EntGuiaLida",
+            "Observacoes",
+            "ObservacoesEntrega",
+            "EntObservacoes",
+        ]
+
+        for field in comment_fields:
+            value = (entrega.get(field) or "").strip().upper()
+            if "OK" in value or "SEM MOVIMENTO" in value:
+                return True
+
+        return False
+
     def find_encerramento_fiscal(
         self,
         entregas: Sequence[dict] | None,
@@ -213,6 +240,12 @@ class AcessoriasDeliveriesClient:
         """
         Localiza a entrega com Nome exatamente "Fechamento Fiscal" (case-insensitive)
         e verifica se esta entregue conforme regras definidas.
+
+        Critérios:
+        1. Nome exatamente "Fechamento Fiscal"
+        2. Status indica entregue OU data de entrega válida
+        3. Comentário/Protocolo contém "OK" ou "SEM MOVIMENTO"
+        4. Data no período especificado
         """
         if not entregas:
             return None
@@ -244,6 +277,20 @@ class AcessoriasDeliveriesClient:
 
             if not (entregue_por_status or entregue_por_data):
                 continue
+
+            # Verificar comentário/protocolo (OPCIONAL - apenas log de aviso)
+            has_valid_comment = self._has_valid_comment(entrega)
+            if not has_valid_comment:
+                # Log de debug para acompanhamento, mas não bloqueia
+                if self.logger:
+                    self.logger.debug(
+                        "Fechamento Fiscal sem comentário OK/SEM MOVIMENTO (aceito mesmo assim)",
+                        extra={
+                            "nome": nome,
+                            "status": status_raw,
+                            "campos_verificados": ["Comentarios", "ComentariosEntrega", "Protocolo", "EntProtocolo"],
+                        }
+                    )
 
             entrega_date = (
                 ent_dt_entrega

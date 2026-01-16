@@ -21,8 +21,8 @@ from app.services.acessorias_deliveries import (
     EntregaMatch,
 )
 
-DEFAULT_PERIOD_START = date(2026, 1, 1)
-DEFAULT_PERIOD_END = date(2026, 1, 31)
+DEFAULT_PERIOD_START = date(2025, 12, 1)
+DEFAULT_PERIOD_END = date(2025, 12, 31)
 
 # Configuração de paralelismo
 MAX_WORKERS = 10

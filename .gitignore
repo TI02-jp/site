@@ -56,3 +56,6 @@ migrations/
 
 # Ignorar diretório de instância do Flask
 instance/
+
+# Ignorar diretório de scripts personalizados
+/scripts/
