@@ -12,15 +12,23 @@ from uuid import uuid4
 
 from flask import Blueprint, flash, redirect, render_template, url_for, current_app, request
 from flask_login import current_user
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from werkzeug.utils import secure_filename
 
 from app import db
+from app.controllers.routes._base import utc3_now
 from app.controllers.routes._decorators import admin_required
 from app.forms import ClientAnnouncementForm
-from app.models.tables import ClientAnnouncement, ClientAnnouncementAttachment
+from app.models.tables import (
+    ClientAnnouncement,
+    ClientAnnouncementAttachment,
+    NotificationType,
+    TaskNotification,
+    User,
+)
+from app.utils.permissions import is_user_admin
 
 
 comunicados_clientes_bp = Blueprint("comunicados_clientes", __name__)
@@ -42,6 +50,93 @@ def _parse_date(raw_value: str | None) -> date | None:
         return datetime.strptime(raw_value, "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _client_announcement_notification_user_ids() -> list[int]:
+    users = User.query.filter(User.ativo.is_(True)).all()
+    return [user.id for user in users if user.id and is_user_admin(user)]
+
+
+def _trigger_client_announcement_notifications(reference_date: date | None = None) -> int:
+    today = reference_date or date.today()
+    user_ids = _client_announcement_notification_user_ids()
+    if not user_ids:
+        return 0
+
+    status_target = "aguardando envio"
+    pending_entries = (
+        ClientAnnouncement.query.filter(
+            ClientAnnouncement.send_date == today,
+            func.lower(ClientAnnouncement.status) == status_target,
+            or_(
+                ClientAnnouncement.last_notification_date.is_(None),
+                ClientAnnouncement.last_notification_date != today,
+            ),
+        ).all()
+    )
+    if not pending_entries:
+        return 0
+
+    now = utc3_now()
+    created_notifications: list[tuple[int, TaskNotification]] = []
+    touched_users: set[int] = set()
+
+    for entry in pending_entries:
+        subject = (entry.subject or "").strip()
+        code_value = (entry.code or "").strip()
+        message = "Enviar comunicado ao cliente"
+        if code_value:
+            message = f"{message} {code_value}"
+        if subject:
+            message = f"{message} - {subject}"
+        truncated = message[:255]
+
+        for user_id in user_ids:
+            notification = TaskNotification(
+                user_id=user_id,
+                task_id=None,
+                announcement_id=None,
+                type=NotificationType.CLIENT_ANNOUNCEMENT.value,
+                message=truncated,
+                created_at=now,
+            )
+            db.session.add(notification)
+            created_notifications.append((user_id, notification))
+            touched_users.add(user_id)
+
+        entry.last_notification_date = today
+
+    if not created_notifications:
+        return 0
+
+    db.session.commit()
+
+    from app.controllers.routes.blueprints.notifications import _invalidate_notification_cache
+    for user_id in touched_users:
+        _invalidate_notification_cache(user_id)
+
+    try:
+        from app.services.realtime import get_broadcaster
+
+        broadcaster = get_broadcaster()
+        for user_id, notification in created_notifications:
+            broadcaster.broadcast(
+                event_type="notification:created",
+                data={
+                    "id": notification.id,
+                    "type": notification.type,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat()
+                    if notification.created_at
+                    else None,
+                },
+                user_id=user_id,
+                scope="notifications",
+            )
+    except Exception:
+        pass
+
+    return len(created_notifications)
 
 
 def _remove_client_announcement_attachment(attachment_path: str | None) -> None:
@@ -124,6 +219,7 @@ def _collect_uploaded_files(form: ClientAnnouncementForm) -> list:
 @admin_required
 def comunicados_clientes():
     form = ClientAnnouncementForm()
+    _trigger_client_announcement_notifications()
     allowed_tributacoes = {value for value, _ in form.tax_regime.choices}
     start_date = _parse_date(request.args.get("start_date"))
     end_date = _parse_date(request.args.get("end_date"))
@@ -324,4 +420,57 @@ def delete_comunicado_cliente(announcement_id: int):
         _remove_client_announcement_attachments(attachment_paths)
 
     flash("Comunicado removido com sucesso.", "success")
+    return redirect(url_for("comunicados_clientes"))
+
+
+@comunicados_clientes_bp.route(
+    "/comunicados-clientes/<int:announcement_id>/clone",
+    methods=["POST"],
+    endpoint="comunicados_clientes_clone",
+)
+@admin_required
+def clone_comunicado_cliente(announcement_id: int):
+    entry = ClientAnnouncement.query.options(
+        selectinload(ClientAnnouncement.attachments)
+    ).get_or_404(announcement_id)
+
+    send_date = _parse_date(request.form.get("send_date"))
+    if not send_date:
+        flash("Informe uma data valida para clonar o comunicado.", "warning")
+        return redirect(url_for("comunicados_clientes"))
+
+    next_number = _get_next_sequence_number()
+    cloned = ClientAnnouncement(
+        sequence_number=next_number,
+        code=None,
+        status="Aguardando Envio",
+        subject=entry.subject,
+        tax_regime=entry.tax_regime,
+        send_date=send_date,
+        summary=entry.summary,
+        created_by_id=current_user.id,
+    )
+    db.session.add(cloned)
+    db.session.flush()
+
+    for attachment in entry.attachments:
+        db.session.add(
+            ClientAnnouncementAttachment(
+                client_announcement=cloned,
+                file_path=attachment.file_path,
+                original_name=attachment.original_name,
+                mime_type=attachment.mime_type,
+            )
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            "Nao foi possivel clonar o comunicado. Tente novamente.",
+            "warning",
+        )
+    else:
+        flash("Comunicado clonado com sucesso.", "success")
     return redirect(url_for("comunicados_clientes"))

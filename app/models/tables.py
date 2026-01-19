@@ -312,6 +312,7 @@ class NotificationType(str, Enum):
     TASK_RESPONSE = "task_response"
     TASK_STATUS = "task_status"
     ANNOUNCEMENT = "announcement"
+    CLIENT_ANNOUNCEMENT = "client_announcement"
     RECURRING_INVOICE = "recurring_invoice"
     INVENTARIO = "inventario"
 
@@ -447,6 +448,7 @@ class ClientAnnouncement(db.Model):
     subject = db.Column(db.String(255), nullable=False)
     tax_regime = db.Column(db.String(20), nullable=False)
     send_date = db.Column(db.Date, nullable=False, default=date.today)
+    last_notification_date = db.Column(db.Date)
     summary = db.Column(db.Text, nullable=False)
     created_by_id = db.Column(
         db.Integer,

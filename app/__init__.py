@@ -519,6 +519,13 @@ with app.app_context():
                                 "ALTER TABLE client_announcements MODIFY COLUMN send_date DATE NOT NULL"
                             )
                         )
+            if "last_notification_date" not in client_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE client_announcements ADD COLUMN last_notification_date DATE NULL"
+                        )
+                    )
 
         attachments_table_exists = inspector.has_table("announcement_attachments")
         if not attachments_table_exists and inspector.has_table("announcements"):
