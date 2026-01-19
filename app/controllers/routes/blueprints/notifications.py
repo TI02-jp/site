@@ -234,6 +234,11 @@ def _serialize_notification(notification: TaskNotification) -> dict[str, Any]:
             if not message:
                 message = "Comunicado removido."
         action_label = "Abrir comunicado" if target_url else None
+    elif notification_type is NotificationType.CLIENT_ANNOUNCEMENT:
+        if not message:
+            message = "Enviar comunicado ao cliente."
+        target_url = url_for("comunicados_clientes")
+        action_label = "Abrir comunicados de clientes"
     elif notification_type is NotificationType.RECURRING_INVOICE:
         if not message:
             message = "Emitir nota fiscal recorrente."

@@ -172,6 +172,12 @@
     border-color: rgba(11, 40, 139, 0.25);
   }
 
+  .notification-type-badge--client-announcement {
+    background: rgba(14, 116, 144, 0.12);
+    color: #0e7490;
+    border-color: rgba(14, 116, 144, 0.3);
+  }
+
   .notification-type-badge--task {
     background: rgba(14, 165, 233, 0.12);
     color: #0c85c2;
@@ -359,6 +365,12 @@
     border-color: rgba(92, 124, 250, 0.35);
   }
 
+  :root[data-theme="dark"] .notification-type-badge--client-announcement {
+    background: rgba(20, 184, 166, 0.22);
+    color: #ccfbf1;
+    border-color: rgba(20, 184, 166, 0.4);
+  }
+
   :root[data-theme="dark"] .notification-type-badge--task {
     background: rgba(14, 165, 233, 0.2);
     color: #cceeff;
@@ -499,6 +511,7 @@
 
   {% set notification_type_labels = {
     'announcement': 'Comunicado',
+    'client_announcement': 'Comunicado cliente',
     'task': 'Tarefa',
     'task_response': 'Resposta',
     'task_status': 'Status'
