@@ -15,6 +15,14 @@ from zoneinfo import ZoneInfo
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
+def _build_base_url(app) -> str:
+    scheme = app.config.get("PREFERRED_URL_SCHEME", "http")
+    server_name = app.config.get("SERVER_NAME")
+    if server_name:
+        return f"{scheme}://{server_name}"
+    return os.getenv("APP_BASE_URL", "http://localhost")
+
+
 
 def init_scheduler(app):
     """
@@ -23,25 +31,36 @@ def init_scheduler(app):
     Args:
         app: Instância da aplicação Flask
     """
+    global scheduler
+
+    # Evitar reinicialização se já estiver rodando
+    if scheduler.running:
+        logger.warning("Scheduler já está rodando, pulando inicialização")
+        return
+
     # Importar dentro da função para evitar imports circulares
     from app.controllers.routes.blueprints.empresas import send_daily_tadeu_notification
     from app.services.inventario_sync import sync_encerramento_fiscal
 
     def job_wrapper():
-        """Wrapper que executa a função dentro do contexto da aplicação Flask"""
+        """Wrapper que executa a fun????o dentro do contexto da aplica????o Flask"""
         with app.app_context():
-            try:
-                send_daily_tadeu_notification()
-            except Exception as e:
-                logger.error(f"Erro ao executar notificação diária para Tadeu: {e}", exc_info=True)
+            base_url = _build_base_url(app)
+            with app.test_request_context(base_url=base_url):
+                try:
+                    send_daily_tadeu_notification()
+                except Exception as e:
+                    logger.error(f"Erro ao executar notifica????o di??ria para Tadeu: {e}", exc_info=True)
 
     def test_cristiano_wrapper():
         """Wrapper para envio de teste do inventario apenas para Cristiano."""
         with app.app_context():
-            try:
-                send_daily_tadeu_notification(recipients=("Cristiano",), force=True)
-            except Exception as e:
-                logger.error(f"Erro ao executar teste de inventario para Cristiano: {e}", exc_info=True)
+            base_url = _build_base_url(app)
+            with app.test_request_context(base_url=base_url):
+                try:
+                    send_daily_tadeu_notification(recipients=("Cristiano",), force=True)
+                except Exception as e:
+                    logger.error(f"Erro ao executar teste de inventario para Cristiano: {e}", exc_info=True)
 
     def sync_encerramento_wrapper():
         """Wrapper para sincronização automática de encerramento fiscal."""
@@ -105,8 +124,18 @@ def init_scheduler(app):
         logger.info("🔥 Teste inventario Cristiano agendado para AGORA (5 segundos): %s", run_at.isoformat())
 
     # Iniciar o scheduler
-    scheduler.start()
-    logger.info("✓ Scheduler iniciado - Job diário configurado para 17h30 (America/Sao_Paulo)")
+    logger.info("🔄 Iniciando scheduler...")
+    if not scheduler.running:
+        scheduler.start()
+        logger.info("✓ Scheduler INICIADO com sucesso")
+    else:
+        logger.warning("⚠️ Scheduler já estava rodando")
+
+    # Listar jobs agendados
+    jobs = scheduler.get_jobs()
+    logger.info(f"📋 Jobs agendados: {len(jobs)}")
+    for job in jobs:
+        logger.info(f"  - {job.id}: {job.name} (próxima execução: {job.next_run_time})")
 
     # Desligar scheduler quando app terminar
     atexit.register(lambda: shutdown_scheduler())

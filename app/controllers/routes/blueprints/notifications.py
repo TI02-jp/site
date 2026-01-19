@@ -37,6 +37,7 @@ from flask import (
     Response,
     current_app,
     g,
+    has_request_context,
     jsonify,
     render_template,
     request,
@@ -361,7 +362,9 @@ def inject_notification_counts():
     Returns:
         dict: Dicionario com unread_notifications_count
     """
-    if not current_user.is_authenticated:
+    if not has_request_context():
+        return {"unread_notifications_count": 0}
+    if not current_user or not current_user.is_authenticated:
         return {"unread_notifications_count": 0}
     cached = getattr(g, "_cached_unread_notifications", None)
     if cached is not None:

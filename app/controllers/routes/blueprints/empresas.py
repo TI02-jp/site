@@ -1621,6 +1621,12 @@ def api_inventario_update():
                 if is_url or processed_value is None:
                     inventario.pdf_original_name = None
 
+        if field == "status" and processed_value == "AGUARDANDO TADEU":
+            _maybe_set_status_aguardando_tadeu(inventario)
+            processed_value = inventario.status
+            if inventario.status != "AGUARDANDO TADEU":
+                status_changed_to_tadeu = False
+
         commit_started = track_commit_start()
         try:
             db.session.commit()
@@ -1638,7 +1644,7 @@ def api_inventario_update():
         if field in campos_monetarios and processed_value is not None:
             response_value = f"R$ {processed_value:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
 
-        return jsonify({'success': True, 'value': response_value})
+        return jsonify({'success': True, 'value': response_value, 'status': inventario.status})
 
     except Exception as e:
         db.session.rollback()
@@ -1668,10 +1674,24 @@ def _has_file_entries(value):
     return bool(_coerce_file_entries(value))
 
 
-def _maybe_set_status_aguardando_tadeu(inventario):
+def _get_inventario_file_flags(inventario):
     has_cfop = _has_file_entries(inventario.cfop_files) or bool(inventario.pdf_path)
+    has_cfop_consolidado = _has_file_entries(inventario.cfop_consolidado_files)
     has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
-    if not (has_cfop and has_cliente):
+    return has_cfop, has_cfop_consolidado, has_cliente
+
+
+def _maybe_set_status_aguardando_tadeu(inventario):
+    # Regra: deve ter CFOP CONSOLIDADO + ARQUIVO CLIENTE para mudar para AGUARDANDO TADEU
+    has_cfop_consolidado = _has_file_entries(inventario.cfop_consolidado_files)
+    has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
+    
+    if not (has_cfop_consolidado and has_cliente):
+        # Só reverter para FALTA ARQUIVO se o status nunca foi definido
+        # Se já está em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
+        if inventario.status in (None, "", "Selecione..."):
+            inventario.status = "FALTA ARQUIVO"
+            return True
         return False
     if inventario.status == "AGUARDANDO TADEU":
         return False
@@ -1698,13 +1718,21 @@ def _find_active_user_by_name(name: str) -> User | None:
     )
 
 
-def _queue_inventario_email(*, recipient_name: str, subject: str, template_name: str, context: dict) -> None:
+def _queue_inventario_email(
+    *,
+    recipient_name: str,
+    subject: str,
+    template_name: str,
+    context: dict,
+    use_async: bool = True,
+    strict: bool = False,
+) -> None:
     user = _find_active_user_by_name(recipient_name)
     if not user or not user.email:
-        current_app.logger.warning(
-            "Inventario: usuario %s nao encontrado ou sem email para notificacao.",
-            recipient_name,
-        )
+        msg = "Inventario: usuario %s nao encontrado ou sem email para notificacao." % recipient_name
+        current_app.logger.warning(msg)
+        if strict:
+            raise EmailDeliveryError(msg)
         return
     try:
         html_body = render_template(template_name, destinatario=user, **context)
@@ -1714,20 +1742,31 @@ def _queue_inventario_email(*, recipient_name: str, subject: str, template_name:
             recipient_name,
             exc,
         )
+        if strict:
+            raise
         return
     try:
-        submit_io_task(
-            send_email,
-            subject=subject,
-            html_body=html_body,
-            recipients=[user.email],
-        )
+        if use_async:
+            submit_io_task(
+                send_email,
+                subject=subject,
+                html_body=html_body,
+                recipients=[user.email],
+            )
+        else:
+            send_email(
+                subject=subject,
+                html_body=html_body,
+                recipients=[user.email],
+            )
     except EmailDeliveryError as exc:
         current_app.logger.error(
             "Inventario: falha ao enviar email para %s: %s",
             recipient_name,
             exc,
         )
+        if strict:
+            raise
 
 
 def _build_aguardando_tadeu_groups() -> list[dict]:
@@ -1879,12 +1918,18 @@ def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
         )
 
 
-def send_daily_tadeu_notification(recipients: Iterable[str] | None = None, force: bool = False) -> None:
+def send_daily_tadeu_notification(
+    recipients: Iterable[str] | None = None,
+    force: bool = False,
+    use_async: bool = True,
+) -> None:
     """
     Job agendado: envia notifica??o di?ria para Tadeu com todas as empresas aguardando.
     Executado diariamente ?s 17h pelo scheduler.
     """
-    current_app.logger.info("Executando job di?rio de notifica??o para Tadeu")
+    current_app.logger.info("=" * 50)
+    current_app.logger.info("🚀 EXECUTANDO JOB DIÁRIO DE NOTIFICAÇÃO PARA TADEU")
+    current_app.logger.info("=" * 50)
 
     hoje = datetime.now(get_calendar_timezone()).date()
     if not force and _was_tadeu_notified_today(hoje):
@@ -1902,7 +1947,11 @@ def send_daily_tadeu_notification(recipients: Iterable[str] | None = None, force
     total_empresas = sum(len(group["empresas"]) for group in groups)
 
     # Enviar notifica??o
-    inventario_url = url_for("empresas.inventario", _external=True)
+    try:
+        inventario_url = url_for("empresas.inventario", _external=True)
+    except RuntimeError:
+        # Fallback quando executado fora de requisição (ex: script standalone)
+        inventario_url = "http://localhost:5000/inventario"
     if recipients:
         recipient_list = tuple(recipient.strip() for recipient in recipients if recipient and recipient.strip())
     else:
@@ -1916,13 +1965,17 @@ def send_daily_tadeu_notification(recipients: Iterable[str] | None = None, force
                 "grupos": groups,
                 "inventario_url": inventario_url,
             },
+            use_async=use_async,
+            strict=not use_async,
         )
 
+    current_app.logger.info("=" * 50)
     current_app.logger.info(
-        "Notifica??o di?ria enviada para Tadeu: %d empresas em %d grupos",
+        "✅ NOTIFICAÇÃO ENVIADA: %d empresas em %d grupos",
         total_empresas,
         len(groups),
     )
+    current_app.logger.info("=" * 50)
     _mark_tadeu_notified(hoje, total_empresas, len(groups))
 
 @empresas_bp.route("/inventario/test-email")
@@ -2073,6 +2126,78 @@ def api_inventario_upload_pdf(empresa_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@empresas_bp.route("/api/inventario/upload-cfop-consolidado/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_upload_cfop_consolidado(empresa_id):
+    """Upload de arquivo PDF para o CFOP consolidado (armazenado no banco)."""
+    import base64
+    from werkzeug.utils import secure_filename
+
+    try:
+        empresa = Empresa.query.get_or_404(empresa_id)
+
+        if 'pdf' not in request.files:
+            return jsonify({'success': False, 'error': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['pdf']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
+
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
+
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
+            db.session.add(inventario)
+
+        had_cfop = _has_file_entries(inventario.cfop_consolidado_files)
+        has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
+
+        filename = secure_filename(file.filename)
+
+        file_data = base64.b64encode(file.read()).decode('utf-8')
+
+        cfop_consolidado_files = inventario.cfop_consolidado_files or []
+        file_info = {
+            'filename': filename,
+            'file_data': file_data,
+            'uploaded_at': datetime.now().isoformat(),
+            'mime_type': 'application/pdf'
+        }
+        cfop_consolidado_files.append(file_info)
+        inventario.cfop_consolidado_files = cfop_consolidado_files
+        status_changed = _maybe_set_status_aguardando_tadeu(inventario)
+        notify_cassio = (not had_cfop) and (not has_cliente)
+
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cfop_consolidado_files')
+
+        db.session.commit()
+        if status_changed:
+            current_app.logger.info(
+                "Inventario: status AGUARDANDO TADEU atualizado por upload de CFOP consolidado; "
+                "email aguardara job diario das 17h"
+            )
+        elif notify_cassio:
+            _notify_cassio_sem_cliente(empresa)
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'uploaded_at': file_info['uploaded_at'],
+            'storage': 'database',
+            'status': inventario.status,
+            'file_index': len(cfop_consolidado_files) - 1
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao fazer upload do CFOP consolidado: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @empresas_bp.route("/api/inventario/delete-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_pdf(empresa_id):
@@ -2097,10 +2222,11 @@ def api_inventario_delete_pdf(empresa_id):
         # Limpar campos
         inventario.pdf_path = None
         inventario.pdf_original_name = None
+        _maybe_set_status_aguardando_tadeu(inventario)
 
         db.session.commit()
 
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'status': inventario.status})
 
     except Exception as e:
         db.session.rollback()
@@ -2194,6 +2320,8 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         # Selecionar array de arquivos correto
         if file_type == 'cfop':
             files_array = inventario.cfop_files or []
+        elif file_type == 'cfop-consolidado':
+            files_array = inventario.cfop_consolidado_files or []
         elif file_type == 'cliente':
             files_array = inventario.cliente_files or []
         else:
@@ -2257,10 +2385,11 @@ def api_inventario_delete_cliente_file(empresa_id):
         # Limpar campos
         inventario.cliente_pdf_path = None
         inventario.cliente_original_name = None
+        _maybe_set_status_aguardando_tadeu(inventario)
 
         db.session.commit()
 
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'status': inventario.status})
 
     except Exception as e:
         db.session.rollback()
@@ -2296,13 +2425,88 @@ def api_inventario_delete_cfop_file(empresa_id):
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cfop_files')
+        _maybe_set_status_aguardando_tadeu(inventario)
         db.session.commit()
 
-        return jsonify({'success': True}), 200
+        return jsonify({'success': True, 'status': inventario.status}), 200
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Erro ao deletar arquivo CFOP: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/delete-cfop-consolidado-file/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_delete_cfop_consolidado_file(empresa_id):
+    """Remove um arquivo específico do CFOP consolidado (armazenado no banco de dados)."""
+    try:
+        data = request.get_json()
+        file_index = data.get('file_index')
+
+        if file_index is None:
+            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+
+        if not inventario or not inventario.cfop_consolidado_files:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        cfop_consolidado_files = inventario.cfop_consolidado_files or []
+        if file_index < 0 or file_index >= len(cfop_consolidado_files):
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+
+        cfop_consolidado_files.pop(file_index)
+        inventario.cfop_consolidado_files = cfop_consolidado_files
+
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cfop_consolidado_files')
+        _maybe_set_status_aguardando_tadeu(inventario)
+        db.session.commit()
+
+        return jsonify({'success': True, 'status': inventario.status}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao deletar arquivo CFOP consolidado: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@empresas_bp.route("/api/inventario/move-cfop-to-consolidado/<int:empresa_id>", methods=["POST"])
+@login_required
+def api_inventario_move_cfop_to_consolidado(empresa_id):
+    """Move todos os arquivos de CFOP para CFOP consolidado."""
+    try:
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
+
+        cfop_files = _coerce_file_entries(inventario.cfop_files)
+        if not cfop_files:
+            return jsonify({'success': False, 'error': 'Nenhum arquivo CFOP para mover'}), 400
+
+        cfop_consolidado_files = _coerce_file_entries(inventario.cfop_consolidado_files)
+        cfop_consolidado_files.extend(cfop_files)
+
+        inventario.cfop_consolidado_files = cfop_consolidado_files
+        inventario.cfop_files = []
+        status_changed = _maybe_set_status_aguardando_tadeu(inventario)
+
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(inventario, 'cfop_consolidado_files')
+        flag_modified(inventario, 'cfop_files')
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'moved_count': len(cfop_files),
+            'status': inventario.status,
+            'cfop_consolidado_files': cfop_consolidado_files,
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao mover CFOP para consolidado: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2334,6 +2538,7 @@ def api_inventario_delete_cliente_file_v2(empresa_id):
         # Marcar explicitamente que o JSON foi modificado
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(inventario, 'cliente_files')
+        _maybe_set_status_aguardando_tadeu(inventario)
         db.session.commit()
 
         return jsonify({'success': True}), 200

@@ -809,6 +809,13 @@ with app.app_context():
                             "ALTER TABLE tbl_inventario ADD COLUMN cfop_files JSON NULL"
                         )
                     )
+            if "cfop_consolidado_files" not in inventario_columns:
+                with db.engine.begin() as conn:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE tbl_inventario ADD COLUMN cfop_consolidado_files JSON NULL"
+                        )
+                    )
             if "cliente_files" not in inventario_columns:
                 with db.engine.begin() as conn:
                     conn.execute(
@@ -826,8 +833,9 @@ with app.app_context():
     register_performance_middleware(app, db)
 
     # Inicializar scheduler de tarefas agendadas
-    from app.scheduler import init_scheduler
-    init_scheduler(app)
+    if os.getenv("DISABLE_SCHEDULER") != "1":
+        from app.scheduler import init_scheduler
+        init_scheduler(app)
 
 # Setup structured logging with rotation (after app context is ready)
 from app.utils.logging_config import setup_logging, log_request_info

@@ -2025,6 +2025,7 @@ class Inventario(db.Model):
 
     # Múltiplos arquivos (JSON)
     cfop_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
+    cfop_consolidado_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
     cliente_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
 
     # Auditoria
