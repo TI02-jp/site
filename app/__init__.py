@@ -344,6 +344,26 @@ def inject_versions():
     }
 
 
+@app.context_processor
+def inject_asset_helper():
+    """Provide helper function to get correct asset filename (minified or not)."""
+    def asset(filename):
+        """Return minified asset filename if USE_MINIFIED_ASSETS is enabled."""
+        use_minified = os.getenv('USE_MINIFIED_ASSETS', 'false').lower() == 'true'
+        if not use_minified:
+            return filename
+
+        # Se termina com .css ou .js, adicionar .min antes da extensão
+        if filename.endswith('.css'):
+            return filename.replace('.css', '.min.css')
+        elif filename.endswith('.js'):
+            return filename.replace('.js', '.min.js')
+
+        return filename
+
+    return {'asset': asset}
+
+
 @app.template_filter('time_since')
 def _time_since(value):
     """Return human-readable time elapsed since ``value``.

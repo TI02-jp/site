@@ -3,7 +3,7 @@
 {% block title %}Visão Geral de Tarefas{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='tasks.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename=asset('tasks.css')) }}">
 {% endblock %}
 
 {% block sidebar_nav %}
@@ -221,7 +221,7 @@
     renderChips();
   })();
 </script>
-<script src="{{ url_for('static', filename='javascript/realtime.js') }}"></script>
-<script src="{{ url_for('static', filename='javascript/tasks.js') }}"></script>
+<script src="{{ url_for('static', filename=asset('javascript/realtime.js')) }}"></script>
+<script src="{{ url_for('static', filename=asset('javascript/tasks.js')) }}"></script>
 {% endblock %}
 

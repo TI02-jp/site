@@ -327,7 +327,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='javascript/acessos.js') }}"></script>
-<script src="{{ url_for('static', filename='javascript/contatos.js') }}"></script>
+<script src="{{ url_for('static', filename=asset('javascript/contatos.js')) }}"></script>
 <script src="{{ url_for('static', filename='javascript/observacao.js') }}"></script>
 <script src="https://unpkg.com/imask"></script>
 <script>

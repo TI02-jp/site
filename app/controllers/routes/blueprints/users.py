@@ -389,10 +389,20 @@ def list_users():
             .filter(Tag.id.in_(selected_tag_ids))
             .distinct()
         )
-    users = users_query.order_by(User.ativo.desc(), User.name).all()
+
+    # Paginação (otimizado para listas grandes)
+    page = request.args.get('page', 1, type=int)
+    per_page = 50  # Limite de usuários por página
+    pagination = users_query.order_by(User.ativo.desc(), User.name).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    users = pagination.items
     return render_template(
         "list_users.html",
         users=users,
+        pagination=pagination,
         form=form,
         edit_form=edit_form,
         tag_create_form=tag_create_form,
