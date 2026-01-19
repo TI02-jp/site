@@ -1245,6 +1245,13 @@ def inventario():
     if order not in ('asc', 'desc'):
         order = 'asc'
 
+    # Paginação vs listagem completa
+    all_arg = request.args.get("all")
+    if all_arg is None:
+        show_all = saved_filters.get("show_all", True)
+    else:
+        show_all = all_arg in ("1", "on", "true", "True")
+
     session["inventario_filters"] = {
         "sort": sort,
         "order": order,
@@ -1253,11 +1260,10 @@ def inventario():
         "tag_filters": tag_filters,
         "search": search_term,
         "page": saved_page,
+        "show_all": show_all,
     }
 
-    # Sempre mostrar todas as empresas (sem paginação)
-    show_all = True
-    page = 1
+    page = saved_page if saved_page > 0 else 1
 
     # Query base - empresas ativas
     base_query = Empresa.query.filter_by(ativo=True)
@@ -1369,10 +1375,13 @@ def inventario():
     else:
         query = base_query.order_by(order_by_clause)
 
-    # Sempre mostrar todas as empresas sem paginação
-    total = query.count()
-    per_page = total if total > 0 else 1
-    page = 1
+    if show_all:
+        total = query.count()
+        per_page = total if total > 0 else 1
+        page = 1
+    else:
+        per_page = 20
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     empresas = pagination.items
     empresa_ids = [empresa.id for empresa in empresas]
@@ -1453,6 +1462,9 @@ def inventario():
     from app.models.tables import User
     usuarios = User.query.filter(User.ativo.is_(True)).order_by(User.name).all()
 
+    display_name = (current_user.username or current_user.name or "").strip().lower()
+    is_tadeu = display_name.startswith("tadeu")
+
     response = render_template(
         "empresas/inventario.html",
         items=items,
@@ -1467,10 +1479,11 @@ def inventario():
         status_filters=status_filters,
         search_term=search_term,
         show_all=show_all,
-        all_param=1 if show_all else "",
+        all_param="1" if show_all else "0",
         usuarios=usuarios,
         dashboard_cards=dashboard_cards,
         is_admin=is_user_admin(current_user),
+        is_tadeu=is_tadeu,
     )
 
     if created_inventarios:
