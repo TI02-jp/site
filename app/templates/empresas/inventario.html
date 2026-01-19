@@ -31,9 +31,7 @@
                 <form method="get" id="inventarioSearchForm">
                     <input type="hidden" name="sort" value="{{ sort }}">
                     <input type="hidden" name="order" value="{{ order }}">
-                    {% if show_all %}
-                    <input type="hidden" name="all" value="1">
-                    {% endif %}
+                    <input type="hidden" name="all" value="{{ all_param }}">
                     {% for trib in tributacao_filters %}
                     <input type="hidden" name="tributacao" value="{{ trib }}">
                     {% endfor %}
@@ -112,9 +110,7 @@
                                     <input type="hidden" name="sort" value="{{ sort }}">
                                     <input type="hidden" name="order" value="{{ order }}">
                                     <input type="hidden" name="q" value="{{ search_term }}">
-                                    {% if show_all %}
-                                    <input type="hidden" name="all" value="1">
-                                    {% endif %}
+                                    <input type="hidden" name="all" value="{{ all_param }}">
                                     {% for trib in tributacao_filters %}
                                     <input type="hidden" name="tributacao" value="{{ trib }}">
                                     {% endfor %}
@@ -145,7 +141,7 @@
 
                         {% if show_all %}
                         <a class="btn btn-outline-secondary btn-sm"
-                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term) }}">
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=0) }}">
                             Paginar resultados
                         </a>
                         {% else %}
@@ -289,9 +285,7 @@
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
                                                 <input type="hidden" name="q" value="{{ search_term }}">
-                                                {% if show_all %}
-                                                <input type="hidden" name="all" value="1">
-                                                {% endif %}
+                                                <input type="hidden" name="all" value="{{ all_param }}">
                                                 {% for tag in tag_filters %}
                                                 <input type="hidden" name="tag" value="{{ tag }}">
                                                 {% endfor %}
@@ -320,8 +314,10 @@
                                     </div>
                                 </div>
                             </th>
+                            {% if not is_tadeu %}
                             <th class="col-cfop" style="width: 130px;">CFOP</th>
                             <th class="col-cfop-move text-center" style="width: 44px;">→</th>
+                            {% endif %}
                             <th class="col-cfop" style="width: 150px;">CFOP Consolidado</th>
                             <th class="col-dief" style="width: 135px;">DIEF 2024</th>
                             <th class="col-balanco" style="width: 150px;">Balanço Cliente 2025</th>
@@ -348,9 +344,7 @@
                                                 <input type="hidden" name="sort" value="{{ sort }}">
                                                 <input type="hidden" name="order" value="{{ order }}">
                                                 <input type="hidden" name="q" value="{{ search_term }}">
-                                                {% if show_all %}
-                                                <input type="hidden" name="all" value="1">
-                                                {% endif %}
+                                                <input type="hidden" name="all" value="{{ all_param }}">
                                                 {% for tag in tag_filters %}
                                                 <input type="hidden" name="tag" value="{{ tag }}">
                                                 {% endfor %}
@@ -428,6 +422,7 @@
                                 <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
                             </td>
 
+                            {% if not is_tadeu %}
                             <!-- CFOP -->
                             <td class="col-cfop">
                                 {% set cfop_files = item.inventario.cfop_files if item.inventario and
@@ -475,6 +470,7 @@
                                 </button>
                             </td>
 
+                            {% endif %}
                             <!-- CFOP Consolidado -->
                             <td class="col-cfop">
                                 {% set cfop_consolidado_files = item.inventario.cfop_consolidado_files if item.inventario and
