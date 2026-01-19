@@ -44,6 +44,10 @@ from app.constants import EMPRESA_TAG_CHOICES
 from app.controllers.routes import decode_id, encode_id, user_has_tag
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.extensions.task_queue import submit_io_task
+from app.services.optimized_queries import (
+    get_active_users_with_tags,
+    get_inventarios_by_empresa_ids,
+)
 from app.forms import (
     ClienteReuniaoForm,
     DepartamentoAdministrativoForm,
@@ -477,9 +481,8 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     if financeiro:
         financeiro.envio_fisico = _prepare_envio_fisico(financeiro)
 
-    usuarios_responsaveis = (
-        User.query.filter(User.ativo.is_(True)).order_by(User.name.asc(), User.username.asc()).all()
-    )
+    # Otimizado: usa cache e eager loading de tags
+    usuarios_responsaveis = get_active_users_with_tags()
     responsaveis_map = {
         str(usuario.id): (usuario.name or usuario.username or f"Usuário {usuario.id}") for usuario in usuarios_responsaveis
     }
@@ -542,9 +545,10 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
     pessoal_form = DepartamentoPessoalForm(request.form, obj=pessoal)
     administrativo_form = DepartamentoAdministrativoForm(request.form, obj=administrativo)
     financeiro_form = DepartamentoFinanceiroForm(request.form, obj=financeiro) if can_access_financeiro else None
+    # Otimizado: usa cache e eager loading de tags
     usuarios_responsaveis = [
         {"id": str(usuario.id), "label": usuario.name or usuario.username or f"Usuário {usuario.id}"}
-        for usuario in User.query.filter(User.ativo.is_(True)).order_by(User.name.asc(), User.username.asc()).all()
+        for usuario in get_active_users_with_tags()
     ]
     usuarios_responsaveis_ids = [usuario["id"] for usuario in usuarios_responsaveis]
 
@@ -765,9 +769,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 def _populate_cliente_reuniao_form(form: ClienteReuniaoForm) -> None:
     """Fill dynamic choices for the client meeting form."""
 
-    usuarios = (
-        User.query.filter_by(ativo=True).order_by(User.name.asc(), User.username.asc()).all()
-    )
+    # Otimizado: usa cache e eager loading de tags
+    usuarios = get_active_users_with_tags()
     form.participantes.choices = [
         (usuario.id, (usuario.name or usuario.username or f"Usuário {usuario.id}")) for usuario in usuarios
     ]
@@ -1416,19 +1419,8 @@ def inventario():
             db.session.add_all(novos_inventarios)
             created_inventarios = True
 
-    # Buscar inventários existentes com filtro de status aplicado no SQL
-    inventarios = {}
-    if empresa_ids:
-        inventario_query = Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids))
-
-        # Aplicar filtro de status direto na query SQL (otimização crítica)
-        if status_filters:
-            inventario_query = inventario_query.filter(Inventario.status.in_(status_filters))
-
-        inventarios = {
-            inv.empresa_id: inv
-            for inv in inventario_query.all()
-        }
+    # Buscar inventários existentes com filtro de status aplicado no SQL (otimizado)
+    inventarios = get_inventarios_by_empresa_ids(empresa_ids, status_filter=status_filters) if empresa_ids else {}
 
     # Criar lista combinada garantindo que empresas sem inventário apareçam quando aplicável
     items: list[dict] = []
@@ -1458,9 +1450,9 @@ def inventario():
             'inventario': inventario
         })
 
-    # Buscar todos os usuários para o select de encerramento
+    # Buscar todos os usuários para o select de encerramento (otimizado com cache)
     from app.models.tables import User
-    usuarios = User.query.filter(User.ativo.is_(True)).order_by(User.name).all()
+    usuarios = get_active_users_with_tags()
 
     display_name = (current_user.username or current_user.name or "").strip().lower()
     is_tadeu = display_name.startswith("tadeu")

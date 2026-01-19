@@ -95,6 +95,14 @@ from app.controllers.routes._base import (
 from app.utils.performance_middleware import track_custom_span
 from app.utils.security import sanitize_html
 
+# Optimized queries with cache and eager loading
+from app.services.optimized_queries import (
+    get_active_users_with_tags,
+    get_all_tags,
+    get_tasks_with_relationships,
+    invalidate_task_caches,
+)
+
 # Other imports
 from datetime import datetime, timezone
 from typing import Iterable
@@ -443,11 +451,8 @@ def _extract_follow_up_user_ids(form: TaskForm) -> list[int]:
 def _build_follow_up_user_choices() -> list[tuple[int, str]]:
     """Return active portal users for the acompanhamento multi-select."""
     entries: dict[int, str] = {}
-    users = (
-        User.query.filter_by(ativo=True)
-        .order_by(User.name.asc(), User.username.asc())
-        .all()
-    )
+    # Otimizado: usa cache e eager loading de tags
+    users = get_active_users_with_tags()
     for user in users:
         label = (user.name or user.username or "").strip()
         if not label:
@@ -901,11 +906,8 @@ def tasks_overview():
     if due_to:
         query = query.filter(Task.due_date.isnot(None)).filter(Task.due_date <= due_to)
 
-    active_users = (
-        User.query.filter(User.ativo.is_(True))
-        .order_by(User.name.asc())
-        .all()
-    )
+    # Otimizado: usa cache e eager loading de tags
+    active_users = get_active_users_with_tags()
     if current_user.role == "admin":
         available_tags = (
             Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
@@ -1122,11 +1124,8 @@ def tasks_overview_mine():
         .limit(200)
         .all()
     )
-    active_users = (
-        User.query.filter(User.ativo.is_(True))
-        .order_by(User.name.asc())
-        .all()
-    )
+    # Otimizado: usa cache e eager loading de tags
+    active_users = get_active_users_with_tags()
     available_tags = (
         Tag.query.filter(Tag.id.in_(owned_sector_tag_ids))
         .order_by(Tag.nome.asc())
