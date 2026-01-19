@@ -321,6 +321,8 @@
                                 </div>
                             </th>
                             <th class="col-cfop" style="width: 130px;">CFOP</th>
+                            <th class="col-cfop-move text-center" style="width: 44px;">→</th>
+                            <th class="col-cfop" style="width: 150px;">CFOP Consolidado</th>
                             <th class="col-dief" style="width: 135px;">DIEF 2024</th>
                             <th class="col-balanco" style="width: 150px;">Balanço Cliente 2025</th>
                             <th class="col-fechamento" style="width: 150px;">Fechamento Tadeu 2025</th>
@@ -430,7 +432,7 @@
                             <td class="col-cfop">
                                 {% set cfop_files = item.inventario.cfop_files if item.inventario and
                                 item.inventario.cfop_files else [] %}
-                                <div class="pdf-upload-container">
+                                <div class="pdf-upload-container cfop-container">
                                     <!-- Lista de arquivos existentes -->
                                     <div class="files-list mb-1">
                                         {% for file in cfop_files %}
@@ -460,6 +462,53 @@
                                     </div>
                                     <!-- Botão de upload -->
                                     <input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf"
+                                        title="Adicionar PDF">
+                                </div>
+                            </td>
+
+                            <!-- CFOP (Mover) -->
+                            <td class="col-cfop-move text-center">
+                                <button type="button"
+                                    class="btn btn-outline-secondary btn-sm move-cfop-to-consolidado-btn"
+                                    title="Mover CFOP para CFOP Consolidado">
+                                    <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </td>
+
+                            <!-- CFOP Consolidado -->
+                            <td class="col-cfop">
+                                {% set cfop_consolidado_files = item.inventario.cfop_consolidado_files if item.inventario and
+                                item.inventario.cfop_consolidado_files else [] %}
+                                <div class="pdf-upload-container cfop-consolidado-container">
+                                    <div class="files-list mb-1">
+                                        {% for file in cfop_consolidado_files %}
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
+                                            data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;"
+                                                title="{{ file.filename }}">
+                                                {{ file.filename }}
+                                            </small>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
+                                                target="_blank" class="btn btn-outline-primary btn-sm"
+                                                title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
+                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
+                                                title="Baixar">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-cfop-consolidado-file-btn"
+                                                title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <input type="file"
+                                        class="form-control form-control-sm cfop-consolidado-upload"
+                                        accept=".pdf"
                                         title="Adicionar PDF">
                                 </div>
                             </td>
@@ -982,8 +1031,8 @@
 
     /* Garantir que a tabela não quebre e force o scroll */
     .table-wrapper .compact-table {
-        min-width: 2100px;
-        width: 2100px;
+        min-width: 2290px;
+        width: 2290px;
     }
 
     /* Garantir que todas as colunas respeitem a largura definida */
@@ -1041,6 +1090,7 @@
 
     /* Melhorar estética dos inputs de upload */
     .compact-table .pdf-upload,
+    .compact-table .cfop-consolidado-upload,
     .compact-table .cliente-upload {
         font-size: 0.68rem !important;
         padding: 0.2rem 0.3rem !important;
@@ -1050,11 +1100,13 @@
     }
 
     .compact-table .pdf-upload::-webkit-file-upload-button,
+    .compact-table .cfop-consolidado-upload::-webkit-file-upload-button,
     .compact-table .cliente-upload::-webkit-file-upload-button {
         color: initial;
     }
 
     .compact-table .pdf-upload::file-selector-button,
+    .compact-table .cfop-consolidado-upload::file-selector-button,
     .compact-table .cliente-upload::file-selector-button {
         color: initial;
     }
@@ -1467,11 +1519,11 @@
         adjustStatusFontSize(select);
     });
 
-    // Função para verificar e destacar CFOP quando encerramento fiscal = SIM e sem arquivo
-    function checkCFOPStatus(row) {
+    // Função para verificar e destacar CFOP consolidado quando encerramento fiscal = SIM e sem arquivo
+    function checkCFOPConsolidadoStatus(row) {
         const encerramentoSelect = row.querySelector('select[data-field="encerramento_fiscal"]');
         const statusSelect = row.querySelector('select[data-field="status"]');
-        const cfopContainer = row.querySelector('.pdf-upload-container');
+        const cfopContainer = row.querySelector('.cfop-consolidado-container');
 
         if (!encerramentoSelect || !cfopContainer) return;
 
@@ -1485,20 +1537,27 @@
         if (encerramentoValue === 'true' && !hasFile && !isLiberadoBalanco) {
             cfopContainer.classList.add('cfop-missing-file');
         } else {
+
+        const moveButton = row.querySelector('.move-cfop-to-consolidado-btn');
+        const cfopFilesList = row.querySelector('.cfop-container .files-list');
+        const hasCfopFiles = cfopFilesList && cfopFilesList.querySelector('.file-item') !== null;
+        if (moveButton) {
+            moveButton.disabled = !hasCfopFiles;
+        }
             cfopContainer.classList.remove('cfop-missing-file');
         }
     }
 
     // Verificar todas as linhas ao carregar
     document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
-        checkCFOPStatus(row);
+        checkCFOPConsolidadoStatus(row);
     });
 
     // Verificar quando mudar o encerramento fiscal
     document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {
         select.addEventListener('change', function () {
             const row = this.closest('tr');
-            checkCFOPStatus(row);
+            checkCFOPConsolidadoStatus(row);
         });
     });
 
@@ -1563,6 +1622,26 @@
         });
     });
 
+    // Upload de CFOP consolidado
+    document.querySelectorAll('.cfop-consolidado-upload').forEach(input => {
+        input.addEventListener('change', function () {
+            const row = this.closest('tr');
+            const empresaId = row.dataset.empresaId;
+            const file = this.files[0];
+            const isPdf = file && (
+                file.type === 'application/pdf'
+                || (file.name && file.name.toLowerCase().endsWith('.pdf'))
+            );
+
+            if (isPdf) {
+                uploadCfopConsolidado(empresaId, file, this);
+            } else if (file) {
+                alert('Por favor, selecione um arquivo PDF valido.');
+                this.value = '';
+            }
+        });
+    });
+
     function bindDeleteCFOPButton(btn) {
         btn.addEventListener('click', function () {
             window.portalConfirm({
@@ -1578,6 +1657,25 @@
                 const fileItem = this.closest('.file-item');
                 const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
                 deleteCFOPFile(empresaId, fileIndex, fileItem);
+            });
+        });
+    }
+
+    function bindDeleteCfopConsolidadoButton(btn) {
+        btn.addEventListener('click', function () {
+            window.portalConfirm({
+                title: 'Confirmar acao',
+                message: 'Deseja realmente remover este arquivo?',
+                variant: 'danger'
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const fileItem = this.closest('.file-item');
+                const fileIndex = parseInt(fileItem.dataset.fileIndex, 10);
+                deleteCfopConsolidadoFile(empresaId, fileIndex, fileItem);
             });
         });
     }
@@ -1658,6 +1756,42 @@
         filesList.appendChild(fileItem);
     }
 
+    function appendCfopConsolidadoFileItem(filesList, empresaId, fileIndex, filename) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
+        fileItem.dataset.fileIndex = fileIndex;
+
+        const nameEl = document.createElement('small');
+        nameEl.className = 'text-muted text-truncate flex-grow-1';
+        nameEl.style.maxWidth = '70px';
+        nameEl.title = filename;
+        nameEl.textContent = filename;
+
+        const viewLink = document.createElement('a');
+        viewLink.href = `/api/inventario/file/${empresaId}/cfop-consolidado/${fileIndex}`;
+        viewLink.target = '_blank';
+        viewLink.className = 'btn btn-outline-primary btn-sm';
+        viewLink.title = 'Visualizar';
+        viewLink.innerHTML = '<i class="bi bi-eye"></i>';
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = viewLink.href;
+        downloadLink.download = filename;
+        downloadLink.className = 'btn btn-outline-success btn-sm';
+        downloadLink.title = 'Baixar';
+        downloadLink.innerHTML = '<i class="bi bi-download"></i>';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-outline-danger btn-sm delete-cfop-consolidado-file-btn';
+        deleteBtn.title = 'Remover';
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        bindDeleteCfopConsolidadoButton(deleteBtn);
+
+        fileItem.append(nameEl, viewLink, downloadLink, deleteBtn);
+        filesList.appendChild(fileItem);
+    }
+
     function appendClienteFileItem(filesList, empresaId, fileIndex, filename) {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
@@ -1706,6 +1840,14 @@
 
     // Deletar arquivo CFOP
     document.querySelectorAll('.delete-cfop-file-btn').forEach(bindDeleteCFOPButton);
+    document.querySelectorAll('.delete-cfop-consolidado-file-btn').forEach(bindDeleteCfopConsolidadoButton);
+    document.querySelectorAll('.move-cfop-to-consolidado-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const empresaId = row.dataset.empresaId;
+            moveCfopToConsolidado(empresaId, row, this);
+        });
+    });
 
     // Upload de arquivo do cliente
     document.querySelectorAll('.cliente-upload').forEach(input => {
@@ -1834,6 +1976,12 @@
                     if (data.value !== undefined && data.value !== value) {
                         element.value = data.value;
                     }
+                    let resolvedStatus = null;
+                    if (data.status) {
+                        resolvedStatus = data.status;
+                        const row = element.closest('tr');
+                        updateRowStatus(row, data.status);
+                    }
                     if (field === 'pdf_path' || field === 'cliente_pdf_path') {
                         const group = element.closest('.input-group');
                         if (group) {
@@ -1860,8 +2008,9 @@
                     }
                 if (field === 'status') {
                     const row = element.closest('tr');
-                    updateDashboardForStatus(row, resolvedValue);
-                    element.dataset.prevStatus = resolvedValue;
+                    const nextStatus = resolvedStatus || resolvedValue;
+                    updateDashboardForStatus(row, nextStatus);
+                    element.dataset.prevStatus = nextStatus;
                 }
                 if (field === 'encerramento_fiscal') {
                     const row = element.closest('tr');
@@ -1926,7 +2075,95 @@
                     const filename = data.filename || (file && file.name) || 'arquivo.pdf';
                     appendCfopFileItem(filesList, empresaId, data.file_index, filename);
                     updateRowStatus(row, data.status);
-                    checkCFOPStatus(row);
+                    checkCFOPConsolidadoStatus(row);
+                    inputElement.value = '';
+                } else {
+                    alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                uploadIndicator.remove();
+                console.error('Erro:', error);
+                alert('Erro ao fazer upload. Tente novamente.');
+            });
+    }
+
+    function moveCfopToConsolidado(empresaId, row, buttonEl) {
+        const csrfToken = window.csrfToken || '';
+        buttonEl.disabled = true;
+
+        fetch(`/api/inventario/move-cfop-to-consolidado/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                buttonEl.disabled = false;
+                if (!data.success) {
+                    alert('Erro ao mover CFOP: ' + (data.error || 'Erro desconhecido'));
+                    return;
+                }
+
+                const cfopContainer = row.querySelector('.cfop-container');
+                const consolidatedContainer = row.querySelector('.cfop-consolidado-container');
+                const cfopInput = cfopContainer?.querySelector('.pdf-upload');
+                const consolidatedInput = consolidatedContainer?.querySelector('.cfop-consolidado-upload');
+
+                if (cfopContainer && cfopInput) {
+                    const filesList = ensureFilesList(cfopContainer, cfopInput);
+                    filesList.innerHTML = '';
+                }
+
+                if (consolidatedContainer && consolidatedInput) {
+                    const filesList = ensureFilesList(consolidatedContainer, consolidatedInput);
+                    filesList.innerHTML = '';
+                    (data.cfop_consolidado_files || []).forEach((file, idx) => {
+                        appendCfopConsolidadoFileItem(filesList, empresaId, idx, file.filename || 'arquivo.pdf');
+                    });
+                }
+
+                updateRowStatus(row, data.status);
+                checkCFOPConsolidadoStatus(row);
+            })
+            .catch(error => {
+                buttonEl.disabled = false;
+                console.error('Erro ao mover CFOP:', error);
+                alert('Erro ao mover CFOP. Tente novamente.');
+            });
+    }
+
+    function uploadCfopConsolidado(empresaId, file, inputElement) {
+        const formData = new FormData();
+        formData.append('pdf', file);
+        const csrfToken = window.csrfToken || '';
+
+        const container = inputElement.closest('.cfop-consolidado-container');
+
+        const uploadIndicator = document.createElement('small');
+        uploadIndicator.className = 'text-muted d-block';
+        uploadIndicator.textContent = 'Enviando...';
+        container.insertBefore(uploadIndicator, inputElement);
+
+        fetch(`/api/inventario/upload-cfop-consolidado/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                uploadIndicator.remove();
+
+                if (data.success) {
+                    const row = inputElement.closest('tr');
+                    const filesList = ensureFilesList(container, inputElement);
+                    const filename = data.filename || (file && file.name) || 'arquivo.pdf';
+                    appendCfopConsolidadoFileItem(filesList, empresaId, data.file_index, filename);
+                    updateRowStatus(row, data.status);
+                    checkCFOPConsolidadoStatus(row);
                     inputElement.value = '';
                 } else {
                     alert('Erro ao fazer upload: ' + (data.error || 'Erro desconhecido'));
@@ -1968,7 +2205,10 @@
                             updateFileListIndices(filesList, empresaId, 'cfop');
                         }
                         if (row) {
-                            checkCFOPStatus(row);
+                            if (data.status) {
+                                updateRowStatus(row, data.status);
+                            }
+                            checkCFOPConsolidadoStatus(row);
                         }
                     }
                 } else {
@@ -1977,6 +2217,51 @@
             })
             .catch(error => {
                 console.error('Erro ao deletar CFOP:', error);
+                alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
+            });
+    }
+
+    function deleteCfopConsolidadoFile(empresaId, fileIndex, fileItem) {
+        const csrfToken = window.csrfToken || '';
+
+        fetch(`/api/inventario/delete-cfop-consolidado-file/${empresaId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ file_index: fileIndex })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Erro ao remover arquivo');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (fileItem) {
+                        const row = fileItem.closest('tr');
+                        const filesList = fileItem.closest('.files-list');
+                        fileItem.remove();
+                        if (filesList) {
+                            updateFileListIndices(filesList, empresaId, 'cfop-consolidado');
+                        }
+                        if (row) {
+                            if (data.status) {
+                                updateRowStatus(row, data.status);
+                            }
+                            checkCFOPConsolidadoStatus(row);
+                        }
+                    }
+                } else {
+                    alert('Erro ao remover arquivo: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao deletar CFOP consolidado:', error);
                 alert('Erro ao remover arquivo: ' + (error.message || 'Tente novamente.'));
             });
     }
@@ -2056,6 +2341,9 @@
                             const hasLegacy = row.dataset.hasClienteLegacy === '1';
                             const hasFileNow = hasLegacy || !!(filesList && filesList.querySelector('.file-item'));
                             updateDashboardForClienteFile(row, hasFileNow);
+                            if (data.status) {
+                                updateRowStatus(row, data.status);
+                            }
                         }
                     }
                 } else {

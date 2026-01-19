@@ -386,7 +386,9 @@ def _get_cached_stats(include_admin_metrics: bool) -> dict[str, int]:
 @app.context_processor
 def inject_stats():
     """Inject global statistics into templates without hammering the DB."""
-    if not current_user.is_authenticated:
+    if not has_request_context():
+        return {}
+    if not current_user or not current_user.is_authenticated:
         return {}
     stats = _get_cached_stats(include_admin_metrics=current_user.role == "admin")
     if current_user.role != "admin":
