@@ -38,6 +38,7 @@ from flask import (
 from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.attributes import flag_modified
 
 from app import csrf, db, limiter
 from app.constants import EMPRESA_TAG_CHOICES
@@ -1982,6 +1983,120 @@ def send_daily_tadeu_notification(
     )
     current_app.logger.info("=" * 50)
     _mark_tadeu_notified(hoje, total_empresas, len(groups))
+
+
+# ============================================
+# INVENTARIO COLUMN PREFERENCES API
+# ============================================
+
+@empresas_bp.route("/api/inventario/preferences", methods=["GET"])
+@login_required
+def api_inventario_get_preferences():
+    """Retorna as preferências de colunas do usuário."""
+    from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
+
+    user_prefs = current_user.preferences or {}
+    table_prefs = user_prefs.get('inventario_table', {})
+    columns = table_prefs.get('columns', {})
+
+    # Criar defaults simplificados
+    defaults = {
+        col_id: {
+            'visible': col_config['visible'],
+            'order': col_config['order'],
+            'width': col_config['width']
+        }
+        for col_id, col_config in INVENTARIO_DEFAULT_COLUMNS.items()
+    }
+
+    # Merge user preferences com defaults
+    merged = defaults.copy()
+    for col_id, prefs in columns.items():
+        if col_id in merged:
+            merged[col_id].update(prefs)
+
+    return jsonify({
+        'success': True,
+        'preferences': merged,
+        'defaults': defaults
+    })
+
+
+@empresas_bp.route("/api/inventario/preferences", methods=["POST"])
+@login_required
+def api_inventario_save_preferences():
+    """Salva as preferências de colunas do usuário."""
+    try:
+        data = request.get_json()
+        preferences = data.get('preferences', {})
+
+        if not isinstance(preferences, dict):
+            return jsonify({'success': False, 'error': 'Formato inválido'}), 400
+
+        # Get or create user preferences
+        user_prefs = current_user.preferences or {}
+
+        if 'inventario_table' not in user_prefs:
+            user_prefs['inventario_table'] = {}
+
+        user_prefs['inventario_table']['columns'] = preferences
+        user_prefs['inventario_table']['version'] = 1
+
+        # Usar flag para forçar atualização JSON
+        flag_modified(current_user, 'preferences')
+        current_user.preferences = user_prefs
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Preferências salvas com sucesso'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@empresas_bp.route("/api/inventario/preferences/reset", methods=["POST"])
+@login_required
+def api_inventario_reset_preferences():
+    """Reseta preferências para o padrão."""
+    try:
+        from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
+
+        # Limpar preferências do inventario
+        user_prefs = current_user.preferences or {}
+        if 'inventario_table' in user_prefs:
+            del user_prefs['inventario_table']
+
+        flag_modified(current_user, 'preferences')
+        current_user.preferences = user_prefs if user_prefs else None
+        db.session.commit()
+
+        # Retornar defaults
+        defaults = {
+            col_id: {
+                'visible': col_config['visible'],
+                'order': col_config['order'],
+                'width': col_config['width']
+            }
+            for col_id, col_config in INVENTARIO_DEFAULT_COLUMNS.items()
+        }
+
+        return jsonify({
+            'success': True,
+            'message': 'Preferências resetadas',
+            'defaults': defaults
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 
 @empresas_bp.route("/inventario/test-email")
 @login_required

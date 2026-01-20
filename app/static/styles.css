@@ -3794,3 +3794,163 @@ Breakpoints Intermediários para Responsividade
 .sidebar .collapsing {
     height: auto !important;
 }
+
+/* ========================================
+   COLUMN CUSTOMIZATION SYSTEM
+   ======================================== */
+
+/* Botão de Configuração de Colunas */
+.column-config-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 0.5rem 1rem;
+}
+
+.column-config-btn:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transform: translateY(-2px);
+}
+
+.column-config-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.column-config-btn i {
+    font-size: 1.1em;
+    animation: spin-slow 3s linear infinite;
+}
+
+.column-config-btn:hover i {
+    animation: spin-fast 0.5s linear infinite;
+}
+
+@keyframes spin-slow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-fast {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modal de Configuração */
+.column-settings-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.column-setting-item {
+    padding: 0.75rem;
+    border: 1px solid var(--card-border-color);
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    background: var(--card-bg);
+    transition: all 0.2s ease;
+}
+
+.column-setting-item:hover {
+    background: var(--table-hover-bg);
+    border-color: var(--primary);
+}
+
+.column-setting-item.dragging {
+    opacity: 0.5;
+    cursor: move;
+}
+
+/* Drag & Drop */
+.sortable-list .column-setting-item {
+    cursor: move;
+    user-select: none;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    margin-right: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Width Slider */
+.width-slider {
+    width: 100%;
+    max-width: 300px;
+}
+
+.width-value {
+    min-width: 60px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.875rem;
+}
+
+/* Column Resizing no Header */
+#inventarioTable th {
+    position: relative;
+    user-select: none;
+}
+
+#inventarioTable th.resizable {
+    border-right: 2px solid transparent;
+    transition: border-right-color 0.2s;
+}
+
+#inventarioTable th.resizable:hover {
+    border-right-color: var(--primary);
+}
+
+.column-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 10;
+}
+
+.column-resizer:hover,
+.column-resizer.resizing {
+    background-color: var(--primary);
+    opacity: 0.5;
+}
+
+/* Hidden Columns */
+#inventarioTable th.column-hidden,
+#inventarioTable td.column-hidden {
+    display: none !important;
+}
+
+/* Scrollbar personalizada para lista de configurações */
+.column-settings-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.column-settings-list::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.column-settings-list::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+
+.column-settings-list::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
