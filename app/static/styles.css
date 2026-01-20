@@ -3899,6 +3899,11 @@ Breakpoints Intermediários para Responsividade
 }
 
 /* Column Resizing no Header */
+#inventarioTable {
+    display: inline-table;
+    width: max-content;
+}
+
 #inventarioTable th {
     position: relative;
     user-select: none;

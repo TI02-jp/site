@@ -2491,6 +2491,7 @@
         applyColumnVisibility();
         applyColumnOrder();
         applyColumnWidths();
+        updateTableWidth();
     }
 
     function applyColumnVisibility() {
@@ -2515,6 +2516,7 @@
                 });
             }
         });
+        updateTableWidth();
     }
 
     function applyColumnOrder() {
@@ -2575,6 +2577,30 @@
                 .filter(([_, prefs]) => prefs.width)
                 .map(([id, prefs]) => [id, prefs.width])
         ));
+        updateTableWidth();
+    }
+
+    function updateTableWidth() {
+        const table = document.getElementById('inventarioTable');
+        if (!table) return;
+
+        let totalWidth = 0;
+        Object.entries(columnMetadata).forEach(([colId, meta]) => {
+            const prefs = currentPreferences[colId] || {};
+            if (prefs.visible === false) return;
+            const width = parseInt(meta.element.style.width) || Math.round(meta.element.getBoundingClientRect().width);
+            if (width) {
+                totalWidth += width;
+            }
+        });
+
+        if (totalWidth > 0) {
+            table.style.width = totalWidth + 'px';
+            table.style.minWidth = totalWidth + 'px';
+        } else {
+            table.style.width = '';
+            table.style.minWidth = '';
+        }
     }
 
     // FASE 3: UI do Modal
@@ -2767,6 +2793,7 @@
                         td.style.minWidth = newWidth + 'px';
                     }
                 });
+                updateTableWidth();
             };
 
             const onMouseUp = () => {
