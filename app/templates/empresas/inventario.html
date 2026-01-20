@@ -701,6 +701,11 @@
 </div>
 
 <style>
+    /* Colunas ocultas */
+    .column-hidden {
+        display: none !important;
+    }
+
     /* Remover scroll do content-wrapper na página de inventário */
     .content-wrapper {
         overflow: hidden !important;
@@ -2434,6 +2439,12 @@
             .then(() => {
                 applyPreferences();
                 initializeUI();
+
+                // Reaplicar larguras após um pequeno delay para garantir que a tabela foi renderizada
+                setTimeout(() => {
+                    applyColumnWidths();
+                    console.log('Larguras reaplicadas após carregamento da tabela');
+                }, 100);
             })
             .catch(err => {
                 console.error('Falha ao carregar preferências:', err);
@@ -2464,6 +2475,14 @@
         if (data.success) {
             currentPreferences = data.preferences || {};
             defaultPreferences = data.defaults || {};
+
+            console.log('Preferências carregadas do banco:', {
+                larguras: Object.fromEntries(
+                    Object.entries(currentPreferences)
+                        .filter(([_, prefs]) => prefs.width)
+                        .map(([id, prefs]) => [id, prefs.width])
+                )
+            });
         }
     }
 
@@ -2530,18 +2549,32 @@
     function applyColumnWidths() {
         Object.entries(currentPreferences).forEach(([colId, prefs]) => {
             const meta = columnMetadata[colId];
-            if (!meta || !prefs.width) return;
+            if (!meta) return;
+
+            // Se não houver largura definida nas preferências, usar a largura padrão do elemento
+            const width = prefs.width || parseInt(getComputedStyle(meta.element).width);
+            if (!width) return;
 
             const th = meta.element;
             const colIndex = meta.index;
 
-            th.style.width = prefs.width + 'px';
+            th.style.width = width + 'px';
+            th.style.minWidth = width + 'px';
 
             document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
                 const td = row.children[colIndex];
-                if (td) td.style.width = prefs.width + 'px';
+                if (td) {
+                    td.style.width = width + 'px';
+                    td.style.minWidth = width + 'px';
+                }
             });
         });
+
+        console.log('Larguras aplicadas:', Object.fromEntries(
+            Object.entries(currentPreferences)
+                .filter(([_, prefs]) => prefs.width)
+                .map(([id, prefs]) => [id, prefs.width])
+        ));
     }
 
     // FASE 3: UI do Modal
@@ -2724,11 +2757,15 @@
                 const diff = e.pageX - startX;
                 const newWidth = Math.max(40, Math.min(500, startWidth + diff));
                 th.style.width = newWidth + 'px';
+                th.style.minWidth = newWidth + 'px';
 
                 const colIndex = Array.from(th.parentElement.children).indexOf(th);
                 document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
                     const td = row.children[colIndex];
-                    if (td) td.style.width = newWidth + 'px';
+                    if (td) {
+                        td.style.width = newWidth + 'px';
+                        td.style.minWidth = newWidth + 'px';
+                    }
                 });
             };
 
@@ -2754,8 +2791,25 @@
                     const width = parseInt(meta.element.style.width);
                     if (!currentPreferences[colId]) currentPreferences[colId] = {};
                     currentPreferences[colId].width = width;
+
+                    // Sincronizar com o slider no painel de configuração
+                    const slider = document.querySelector(`.width-slider[data-column-id="${colId}"]`);
+                    const valueDisplay = document.getElementById(`width_val_${colId}`);
+                    if (slider) {
+                        slider.value = width;
+                    }
+                    if (valueDisplay) {
+                        valueDisplay.textContent = width + 'px';
+                    }
                 }
             });
+
+            console.log('Salvando larguras após redimensionamento:', Object.fromEntries(
+                Object.entries(currentPreferences)
+                    .filter(([_, prefs]) => prefs.width)
+                    .map(([id, prefs]) => [id, prefs.width])
+            ));
+
             savePreferences(true);
         }, 1000);
     }
@@ -2793,6 +2847,16 @@
                 if (!currentPreferences[colId]) currentPreferences[colId] = {};
                 currentPreferences[colId].width = parseInt(slider.value);
             });
+
+            if (!silent) {
+                console.log('Salvando preferências:', {
+                    larguras: Object.fromEntries(
+                        Object.entries(currentPreferences)
+                            .filter(([_, prefs]) => prefs.width)
+                            .map(([id, prefs]) => [id, prefs.width])
+                    )
+                });
+            }
 
             const response = await fetch(API_ENDPOINTS.SAVE, {
                 method: 'POST',

@@ -364,6 +364,7 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
 
     # Adiciona espaço entre seções
     doc.add_paragraph()
+    doc.add_paragraph()  # Espaço extra entre Participantes e Assuntos Tratados
 
     # ==== SEÇÃO: ASSUNTOS TRATADOS ====
     assuntos_heading = doc.add_heading("ASSUNTOS TRATADOS", level=2)
@@ -561,7 +562,6 @@ def _render_pdf_fallback(
     pdf.set_font("Helvetica", "", 12)
 
     meta_html = (
-        "<h3>Identificação</h3>"
         f"<p><b>Empresa:</b> {empresa_nome}<br>"
         f"<b>Data:</b> {data_str}<br>"
         f"<b>Setor:</b> {setor_nome}</p>"
@@ -575,7 +575,10 @@ def _render_pdf_fallback(
         participantes_html += "<p>Não informado.</p>"
     pdf.write_html(participantes_html)
 
-    decisoes_section = "<h3>Assuntos tratados</h3>" + (decisoes_html or "<p>Sem assuntos registrados.</p>")
+    # Adiciona espaço extra entre Participantes e Assuntos Tratados
+    pdf.ln(8)
+
+    decisoes_section = "<h3></h3>" + (decisoes_html or "<p>Sem assuntos registrados.</p>")
     pdf.write_html(decisoes_section)
 
     # pdf.output() retorna bytes diretamente no fpdf2 moderno
