@@ -139,6 +139,16 @@
                             </div>
                         </div>
 
+                        <!-- Botão de Configuração de Colunas -->
+                        <button type="button"
+                                class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 column-config-btn"
+                                data-bs-toggle="modal"
+                                data-bs-target="#columnSettingsModal"
+                                title="Configurar colunas da tabela">
+                            <i class="bi bi-gear-fill"></i>
+                            <span>Configurar Colunas</span>
+                        </button>
+
                         {% if show_all %}
                         <a class="btn btn-outline-secondary btn-sm"
                             href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=0) }}">
@@ -232,7 +242,10 @@
                     <thead class="table-light sticky-top">
                         <tr>
 
-                            <th class="col-id" style="width: 65px;">
+                            <th class="col-id" style="width: 65px;"
+                                data-column-id="col_id"
+                                data-hideable="false"
+                                data-resizable="true">
                                 <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                     class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
@@ -243,7 +256,10 @@
                                     {% endif %}
                                 </a>
                             </th>
-                            <th class="col-razao" style="width: 220px;">
+                            <th class="col-razao" style="width: 220px;"
+                                data-column-id="col_razao"
+                                data-hideable="false"
+                                data-resizable="true">
                                 <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                     class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
@@ -255,7 +271,10 @@
                                     {% endif %}
                                 </a>
                             </th>
-                            <th class="col-tributacao" style="width: 130px;">
+                            <th class="col-tributacao" style="width: 130px;"
+                                data-column-id="col_tributacao"
+                                data-hideable="true"
+                                data-resizable="true">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
@@ -315,15 +334,39 @@
                                 </div>
                             </th>
                             {% if not is_tadeu %}
-                            <th class="col-cfop" style="width: 130px;">CFOP</th>
-                            <th class="col-cfop-move text-center" style="width: 44px;">→</th>
+                            <th class="col-cfop" style="width: 130px;"
+                                data-column-id="col_cfop"
+                                data-hideable="true"
+                                data-resizable="true">CFOP</th>
+                            <th class="col-cfop-move text-center" style="width: 44px;"
+                                data-column-id="col_cfop_move"
+                                data-hideable="false"
+                                data-resizable="false">→</th>
                             {% endif %}
-                            <th class="col-cfop" style="width: 150px;">CFOP Consolidado</th>
-                            <th class="col-dief" style="width: 135px;">DIEF 2024</th>
-                            <th class="col-balanco" style="width: 150px;">Balanço Cliente 2025</th>
-                            <th class="col-fechamento" style="width: 150px;">Fechamento Tadeu 2025</th>
-                            <th class="col-obs" style="width: 175px;">Observação Tadeu</th>
-                            <th class="col-status" style="width: 195px;">
+                            <th class="col-cfop" style="width: 150px;"
+                                data-column-id="col_cfop_consolidado"
+                                data-hideable="true"
+                                data-resizable="true">CFOP Consolidado</th>
+                            <th class="col-dief" style="width: 135px;"
+                                data-column-id="col_dief"
+                                data-hideable="true"
+                                data-resizable="true">DIEF 2024</th>
+                            <th class="col-balanco" style="width: 150px;"
+                                data-column-id="col_balanco"
+                                data-hideable="true"
+                                data-resizable="true">Balanço Cliente 2025</th>
+                            <th class="col-fechamento" style="width: 150px;"
+                                data-column-id="col_fechamento"
+                                data-hideable="true"
+                                data-resizable="true">Fechamento Tadeu 2025</th>
+                            <th class="col-obs" style="width: 175px;"
+                                data-column-id="col_obs"
+                                data-hideable="true"
+                                data-resizable="true">Observação Tadeu</th>
+                            <th class="col-status" style="width: 195px;"
+                                data-column-id="col_status"
+                                data-hideable="true"
+                                data-resizable="true">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span>Status</span>
                                     <div class="dropdown" data-bs-auto-close="outside">
@@ -377,12 +420,27 @@
                             </th>
 
 
-                            <th class="col-valor text-start" style="width: 175px;">Valor Enviado SPED Fiscal 02/2025
+                            <th class="col-valor text-start" style="width: 175px;"
+                                data-column-id="col_valor"
+                                data-hideable="true"
+                                data-resizable="true">Valor Enviado SPED Fiscal 02/2025
                             </th>
-                            <th class="text-start" style="width: 125px;">Encerramento Fiscal</th>
-                            <th class="text-start" style="width: 160px;">Arquivo Cliente</th>
-                            <th class="text-start" style="width: 135px;">Data Encerramento</th>
-                            <th class="text-start" style="width: 175px;">Usuário Encerramento</th>
+                            <th class="text-start" style="width: 125px;"
+                                data-column-id="col_encerramento_fiscal"
+                                data-hideable="true"
+                                data-resizable="true">Encerramento Fiscal</th>
+                            <th class="text-start" style="width: 160px;"
+                                data-column-id="col_arquivo_cliente"
+                                data-hideable="true"
+                                data-resizable="true">Arquivo Cliente</th>
+                            <th class="text-start" style="width: 135px;"
+                                data-column-id="col_data_encerramento"
+                                data-hideable="true"
+                                data-resizable="true">Data Encerramento</th>
+                            <th class="text-start" style="width: 175px;"
+                                data-column-id="col_usuario_encerramento"
+                                data-hideable="true"
+                                data-resizable="true">Usuário Encerramento</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2352,5 +2410,539 @@
             });
     }
 });
+
+// ============================================
+// COLUMN CUSTOMIZATION MODULE
+// ============================================
+(function() {
+    'use strict';
+
+    const API_ENDPOINTS = {
+        GET: '/api/inventario/preferences',
+        SAVE: '/api/inventario/preferences',
+        RESET: '/api/inventario/preferences/reset'
+    };
+
+    let currentPreferences = {};
+    let defaultPreferences = {};
+    let columnMetadata = {};
+
+    // FASE 1: Inicialização
+    function initColumnCustomization() {
+        loadColumnMetadata();
+        loadPreferences()
+            .then(() => {
+                applyPreferences();
+                initializeUI();
+            })
+            .catch(err => {
+                console.error('Falha ao carregar preferências:', err);
+            });
+    }
+
+    // Extrai metadados das colunas do DOM
+    function loadColumnMetadata() {
+        const headers = document.querySelectorAll('#inventarioTable thead th');
+        headers.forEach((th, index) => {
+            const colId = th.dataset.columnId;
+            if (!colId) return;
+
+            columnMetadata[colId] = {
+                label: th.textContent.trim(),
+                index: index,
+                hideable: th.dataset.hideable !== 'false',
+                resizable: th.dataset.resizable !== 'false',
+                element: th
+            };
+        });
+    }
+
+    // Carrega preferências do servidor
+    async function loadPreferences() {
+        const response = await fetch(API_ENDPOINTS.GET);
+        const data = await response.json();
+        if (data.success) {
+            currentPreferences = data.preferences || {};
+            defaultPreferences = data.defaults || {};
+        }
+    }
+
+    // FASE 2: Aplicar Preferências
+    function applyPreferences() {
+        applyColumnVisibility();
+        applyColumnOrder();
+        applyColumnWidths();
+    }
+
+    function applyColumnVisibility() {
+        Object.entries(currentPreferences).forEach(([colId, prefs]) => {
+            const meta = columnMetadata[colId];
+            if (!meta) return;
+
+            const th = meta.element;
+            const colIndex = meta.index;
+
+            if (prefs.visible === false) {
+                th.classList.add('column-hidden');
+                document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
+                    const td = row.children[colIndex];
+                    if (td) td.classList.add('column-hidden');
+                });
+            } else {
+                th.classList.remove('column-hidden');
+                document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
+                    const td = row.children[colIndex];
+                    if (td) td.classList.remove('column-hidden');
+                });
+            }
+        });
+    }
+
+    function applyColumnOrder() {
+        const table = document.getElementById('inventarioTable');
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+
+        const orderedCols = Object.entries(currentPreferences)
+            .sort((a, b) => (a[1].order || 0) - (b[1].order || 0))
+            .map(([colId]) => colId);
+
+        orderedCols.forEach((colId, targetIndex) => {
+            const meta = columnMetadata[colId];
+            if (!meta) return;
+
+            const th = meta.element;
+            const currentIndex = Array.from(thead.children).indexOf(th);
+
+            if (currentIndex !== targetIndex && targetIndex < thead.children.length) {
+                thead.insertBefore(th, thead.children[targetIndex]);
+
+                Array.from(tbody.children).forEach(row => {
+                    const td = row.children[currentIndex];
+                    if (td && targetIndex < row.children.length) {
+                        row.insertBefore(td, row.children[targetIndex]);
+                    }
+                });
+            }
+        });
+    }
+
+    function applyColumnWidths() {
+        Object.entries(currentPreferences).forEach(([colId, prefs]) => {
+            const meta = columnMetadata[colId];
+            if (!meta || !prefs.width) return;
+
+            const th = meta.element;
+            const colIndex = meta.index;
+
+            th.style.width = prefs.width + 'px';
+
+            document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
+                const td = row.children[colIndex];
+                if (td) td.style.width = prefs.width + 'px';
+            });
+        });
+    }
+
+    // FASE 3: UI do Modal
+    function initializeUI() {
+        initializeVisibilityPanel();
+        initializeOrderPanel();
+        initializeWidthPanel();
+        initializeModalEvents();
+        initializeColumnResizing();
+    }
+
+    function initializeVisibilityPanel() {
+        const container = document.getElementById('column-visibility-list');
+        container.innerHTML = '';
+
+        Object.entries(columnMetadata)
+            .sort((a, b) => (currentPreferences[a[0]]?.order || 0) - (currentPreferences[b[0]]?.order || 0))
+            .forEach(([colId, meta]) => {
+                if (!meta.hideable) return;
+
+                const prefs = currentPreferences[colId] || {};
+                const isVisible = prefs.visible !== false;
+
+                const item = document.createElement('div');
+                item.className = 'column-setting-item';
+                item.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               id="vis_${colId}" data-column-id="${colId}"
+                               ${isVisible ? 'checked' : ''}>
+                        <label class="form-check-label" for="vis_${colId}">
+                            ${meta.label}
+                        </label>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+    }
+
+    function initializeOrderPanel() {
+        const container = document.getElementById('column-order-list');
+        container.innerHTML = '';
+
+        const sorted = Object.entries(currentPreferences)
+            .sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+
+        sorted.forEach(([colId], index) => {
+            const meta = columnMetadata[colId];
+            if (!meta) return;
+
+            const item = document.createElement('div');
+            item.className = 'column-setting-item';
+            item.draggable = true;
+            item.dataset.columnId = colId;
+            item.dataset.order = index;
+            item.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-grip-vertical drag-handle"></i>
+                    <span>${meta.label}</span>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+
+        initializeDragAndDrop();
+    }
+
+    function initializeWidthPanel() {
+        const container = document.getElementById('column-width-list');
+        container.innerHTML = '';
+
+        Object.entries(columnMetadata)
+            .sort((a, b) => (currentPreferences[a[0]]?.order || 0) - (currentPreferences[b[0]]?.order || 0))
+            .forEach(([colId, meta]) => {
+                if (!meta.resizable) return;
+
+                const prefs = currentPreferences[colId] || {};
+                const width = prefs.width || 100;
+
+                const item = document.createElement('div');
+                item.className = 'column-setting-item';
+                item.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="form-label mb-0">${meta.label}</label>
+                        <span class="width-value" id="width_val_${colId}">${width}px</span>
+                    </div>
+                    <input type="range" class="form-range width-slider"
+                           min="40" max="500" step="5" value="${width}"
+                           data-column-id="${colId}">
+                `;
+
+                const slider = item.querySelector('.width-slider');
+                slider.addEventListener('input', (e) => {
+                    document.getElementById(`width_val_${colId}`).textContent = e.target.value + 'px';
+                });
+
+                container.appendChild(item);
+            });
+    }
+
+    // Drag & Drop HTML5 API
+    function initializeDragAndDrop() {
+        const container = document.getElementById('column-order-list');
+        let draggedItem = null;
+
+        container.addEventListener('dragstart', (e) => {
+            draggedItem = e.target.closest('.column-setting-item');
+            if (draggedItem) {
+                draggedItem.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(container, e.clientY);
+            const dragging = document.querySelector('.dragging');
+            if (afterElement == null) {
+                container.appendChild(dragging);
+            } else {
+                container.insertBefore(dragging, afterElement);
+            }
+        });
+
+        container.addEventListener('dragend', () => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                updateOrderIndices();
+                draggedItem = null;
+            }
+        });
+    }
+
+    function getDragAfterElement(container, y) {
+        const items = [...container.querySelectorAll('.column-setting-item:not(.dragging)')];
+
+        return items.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function updateOrderIndices() {
+        const items = document.querySelectorAll('#column-order-list .column-setting-item');
+        items.forEach((item, index) => {
+            item.dataset.order = index;
+        });
+    }
+
+    // Resize de colunas arrastando bordas
+    function initializeColumnResizing() {
+        const headers = document.querySelectorAll('#inventarioTable thead th[data-resizable="true"]');
+
+        headers.forEach(th => {
+            const resizer = document.createElement('div');
+            resizer.className = 'column-resizer';
+            th.appendChild(resizer);
+            th.classList.add('resizable');
+
+            let startX, startWidth;
+
+            const onMouseDown = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startX = e.pageX;
+                startWidth = th.offsetWidth;
+                resizer.classList.add('resizing');
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+
+            const onMouseMove = (e) => {
+                const diff = e.pageX - startX;
+                const newWidth = Math.max(40, Math.min(500, startWidth + diff));
+                th.style.width = newWidth + 'px';
+
+                const colIndex = Array.from(th.parentElement.children).indexOf(th);
+                document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
+                    const td = row.children[colIndex];
+                    if (td) td.style.width = newWidth + 'px';
+                });
+            };
+
+            const onMouseUp = () => {
+                resizer.classList.remove('resizing');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+
+                debouncedSaveWidths();
+            };
+
+            resizer.addEventListener('mousedown', onMouseDown);
+        });
+    }
+
+    let widthSaveTimer;
+    function debouncedSaveWidths() {
+        clearTimeout(widthSaveTimer);
+        widthSaveTimer = setTimeout(() => {
+            Object.keys(columnMetadata).forEach(colId => {
+                const meta = columnMetadata[colId];
+                if (meta.element.style.width) {
+                    const width = parseInt(meta.element.style.width);
+                    if (!currentPreferences[colId]) currentPreferences[colId] = {};
+                    currentPreferences[colId].width = width;
+                }
+            });
+            savePreferences(true);
+        }, 1000);
+    }
+
+    // Eventos do Modal
+    function initializeModalEvents() {
+        document.getElementById('saveColumnsBtn').addEventListener('click', () => savePreferences(false));
+        document.getElementById('resetColumnsBtn').addEventListener('click', resetPreferences);
+    }
+
+    // Salvar Preferências
+    async function savePreferences(silent = false) {
+        const btn = document.getElementById('saveColumnsBtn');
+
+        if (!silent) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+        }
+
+        try {
+            document.querySelectorAll('#column-visibility-list input[type="checkbox"]').forEach(cb => {
+                const colId = cb.dataset.columnId;
+                if (!currentPreferences[colId]) currentPreferences[colId] = {};
+                currentPreferences[colId].visible = cb.checked;
+            });
+
+            document.querySelectorAll('#column-order-list .column-setting-item').forEach((item, index) => {
+                const colId = item.dataset.columnId;
+                if (!currentPreferences[colId]) currentPreferences[colId] = {};
+                currentPreferences[colId].order = index;
+            });
+
+            document.querySelectorAll('#column-width-list .width-slider').forEach(slider => {
+                const colId = slider.dataset.columnId;
+                if (!currentPreferences[colId]) currentPreferences[colId] = {};
+                currentPreferences[colId].width = parseInt(slider.value);
+            });
+
+            const response = await fetch(API_ENDPOINTS.SAVE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken || ''
+                },
+                body: JSON.stringify({ preferences: currentPreferences })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (!silent) {
+                    applyPreferences();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
+                    modal.hide();
+                    console.log('Preferências salvas com sucesso!');
+                }
+            } else {
+                throw new Error(data.error || 'Erro ao salvar');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            if (!silent) {
+                alert('Erro ao salvar preferências: ' + error.message);
+            }
+        } finally {
+            if (!silent) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Salvar';
+            }
+        }
+    }
+
+    // Resetar Preferências
+    async function resetPreferences() {
+        if (!confirm('Resetar todas as configurações de colunas para o padrão?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(API_ENDPOINTS.RESET, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken || ''
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentPreferences = data.defaults || {};
+                applyPreferences();
+
+                initializeVisibilityPanel();
+                initializeOrderPanel();
+                initializeWidthPanel();
+
+                console.log('Configurações resetadas!');
+            }
+        } catch (error) {
+            console.error('Erro ao resetar:', error);
+            alert('Erro ao resetar preferências: ' + error.message);
+        }
+    }
+
+    // Inicializar quando DOM estiver pronto
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initColumnCustomization);
+    } else {
+        initColumnCustomization();
+    }
+})();
 </script>
+
+<!-- Modal de Configuração de Colunas -->
+<div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnSettingsLabel">
+                    <i class="bi bi-gear me-2"></i>Configurações de Colunas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs de Navegação -->
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="visibility-tab" data-bs-toggle="tab"
+                                data-bs-target="#visibility-panel" type="button" role="tab">
+                            <i class="bi bi-eye me-1"></i>Visibilidade
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="order-tab" data-bs-toggle="tab"
+                                data-bs-target="#order-panel" type="button" role="tab">
+                            <i class="bi bi-arrow-down-up me-1"></i>Ordem
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="width-tab" data-bs-toggle="tab"
+                                data-bs-target="#width-panel" type="button" role="tab">
+                            <i class="bi bi-arrows-expand me-1"></i>Largura
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Conteúdo das Tabs -->
+                <div class="tab-content">
+                    <!-- Painel de Visibilidade -->
+                    <div class="tab-pane fade show active" id="visibility-panel" role="tabpanel">
+                        <p class="text-muted small mb-3">Selecione quais colunas deseja exibir:</p>
+                        <div id="column-visibility-list" class="column-settings-list">
+                            <!-- Preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Painel de Ordem -->
+                    <div class="tab-pane fade" id="order-panel" role="tabpanel">
+                        <p class="text-muted small mb-3">Arraste as colunas para reordená-las:</p>
+                        <div id="column-order-list" class="column-settings-list sortable-list">
+                            <!-- Preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Painel de Largura -->
+                    <div class="tab-pane fade" id="width-panel" role="tabpanel">
+                        <p class="text-muted small mb-3">Ajuste a largura de cada coluna:</p>
+                        <div id="column-width-list" class="column-settings-list">
+                            <!-- Preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-danger" id="resetColumnsBtn">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Resetar Padrão
+                </button>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveColumnsBtn">
+                        <i class="bi bi-check-lg me-1"></i>Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

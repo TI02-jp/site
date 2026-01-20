@@ -245,6 +245,7 @@ class User(db.Model, UserMixin):
     tags = db.relationship('Tag', secondary=user_tags, backref=db.backref('users', lazy=True))
     google_id = db.Column(db.String(255), unique=True)
     google_refresh_token = db.Column(db.String(255))
+    preferences = db.Column(db.JSON, nullable=True)
 
     def set_password(self, password):
         """Hash and store the user's password."""
@@ -2164,3 +2165,139 @@ def _record_task_updates(mapper, connection, target):
         new_value = next((v for v in history.added if v is not None), None)
 
         _record_task_change(connection, target, field_name, old_value, new_value, changed_by)
+
+
+# ============================================
+# INVENTARIO TABLE COLUMN CONFIGURATION
+# ============================================
+
+INVENTARIO_DEFAULT_COLUMNS = {
+    'col_id': {
+        'visible': True,
+        'order': 0,
+        'width': 65,
+        'label': 'ID',
+        'hideable': False,
+        'resizable': True
+    },
+    'col_razao': {
+        'visible': True,
+        'order': 1,
+        'width': 220,
+        'label': 'Razão Social',
+        'hideable': False,
+        'resizable': True
+    },
+    'col_tributacao': {
+        'visible': True,
+        'order': 2,
+        'width': 130,
+        'label': 'Tributação',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_cfop': {
+        'visible': True,
+        'order': 3,
+        'width': 130,
+        'label': 'CFOP',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_cfop_move': {
+        'visible': True,
+        'order': 4,
+        'width': 44,
+        'label': '→',
+        'hideable': False,
+        'resizable': False
+    },
+    'col_cfop_consolidado': {
+        'visible': True,
+        'order': 5,
+        'width': 150,
+        'label': 'CFOP Consolidado',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_dief': {
+        'visible': True,
+        'order': 6,
+        'width': 135,
+        'label': 'DIEF 2024',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_balanco': {
+        'visible': True,
+        'order': 7,
+        'width': 150,
+        'label': 'Balanço Cliente 2025',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_fechamento': {
+        'visible': True,
+        'order': 8,
+        'width': 150,
+        'label': 'Fechamento Tadeu 2025',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_obs': {
+        'visible': True,
+        'order': 9,
+        'width': 175,
+        'label': 'Observação Tadeu',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_status': {
+        'visible': True,
+        'order': 10,
+        'width': 195,
+        'label': 'Status',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_valor': {
+        'visible': True,
+        'order': 11,
+        'width': 175,
+        'label': 'Valor Enviado SPED Fiscal 02/2025',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_encerramento_fiscal': {
+        'visible': True,
+        'order': 12,
+        'width': 125,
+        'label': 'Encerramento Fiscal',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_arquivo_cliente': {
+        'visible': True,
+        'order': 13,
+        'width': 160,
+        'label': 'Arquivo Cliente',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_data_encerramento': {
+        'visible': True,
+        'order': 14,
+        'width': 135,
+        'label': 'Data Encerramento',
+        'hideable': True,
+        'resizable': True
+    },
+    'col_usuario_encerramento': {
+        'visible': True,
+        'order': 15,
+        'width': 175,
+        'label': 'Usuário Encerramento',
+        'hideable': True,
+        'resizable': True
+    }
+}
