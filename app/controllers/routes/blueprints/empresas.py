@@ -1220,6 +1220,16 @@ def inventario():
     else:
         tributacao_filters = saved_filters.get("tributacao_filters", [])
 
+    # Filtro de Encerramento Fiscal
+    clear_encerramento = request.args.get("clear_encerramento") == "1"
+    raw_encerramento = request.args.getlist('encerramento')
+    if clear_encerramento:
+        encerramento_filters = []
+    elif raw_encerramento:
+        encerramento_filters = [e for e in raw_encerramento if e in ["true", "false"]]
+    else:
+        encerramento_filters = saved_filters.get("encerramento_filters", [])
+
     clear_tag = request.args.get("clear_tag") == "1"
     raw_tags = request.args.getlist("tag")
     if clear_tag:
@@ -1260,6 +1270,7 @@ def inventario():
         "sort": sort,
         "order": order,
         "tributacao_filters": tributacao_filters,
+        "encerramento_filters": encerramento_filters,
         "status_filters": status_filters,
         "tag_filters": tag_filters,
         "search": search_term,
@@ -1295,6 +1306,22 @@ def inventario():
         valid_filters = [t for t in tributacao_filters if t in allowed_tributacoes]
         if valid_filters:
             base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
+
+    # Aplicar filtro de Encerramento Fiscal
+    if encerramento_filters:
+        # Converter strings "true"/"false" para booleanos
+        bool_filters = []
+        for e in encerramento_filters:
+            if e == "true":
+                bool_filters.append(True)
+            elif e == "false":
+                bool_filters.append(False)
+
+        if bool_filters:
+            # Fazer join com Inventario se ainda não foi feito
+            base_query = base_query.outerjoin(Inventario).filter(
+                Inventario.encerramento_fiscal.in_(bool_filters)
+            )
 
     dashboard_stats = {
         trib: {
@@ -1341,8 +1368,8 @@ def inventario():
         stats["total"] += 1
         if status == "ENCERRADO":
             stats["concluida"] += 1
-        has_cliente_file = _has_file_entries(cliente_files) or bool(cliente_pdf_path)
-        if not has_cliente_file:
+        # Contar apenas empresas com status "FALTA ARQUIVO"
+        if status == "FALTA ARQUIVO":
             stats["aguardando_arquivo"] += 1
         if encerramento_fiscal is True:
             stats["fechamento_fiscal"] += 1
@@ -1467,6 +1494,7 @@ def inventario():
         order=order,
         tributacao_filters=tributacao_filters,
         allowed_tributacoes=allowed_tributacoes,
+        encerramento_filters=encerramento_filters,
         tag_filters=tag_filters,
         allowed_tag_filters=allowed_tag_filters,
         status_filters=status_filters,
@@ -1677,7 +1705,21 @@ def _coerce_file_entries(value):
 
 
 def _has_file_entries(value):
-    return bool(_coerce_file_entries(value))
+    """Verifica se há arquivos VÁLIDOS na lista."""
+    entries = _coerce_file_entries(value)
+    if not entries:
+        return False
+
+    # Verificar se há pelo menos um arquivo válido
+    # Um arquivo válido deve ter 'filename' E 'file_data' não vazios
+    for entry in entries:
+        if isinstance(entry, dict):
+            filename = entry.get('filename', '').strip()
+            file_data = entry.get('file_data', '').strip()
+            if filename and file_data:
+                return True
+
+    return False
 
 
 def _get_inventario_file_flags(inventario):
