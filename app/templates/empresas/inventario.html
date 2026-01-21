@@ -48,7 +48,7 @@
                         <input type="text" class="form-control" id="searchInput" name="q" value="{{ search_term }}"
                             placeholder="Pesquisar por ID ou Razão Social...">
                         <a class="btn btn-outline-secondary" id="clearSearch"
-                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, all=all_param) }}"
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, all=all_param) }}"
                             title="Limpar pesquisa">
                             <i class="bi bi-x"></i>
                         </a>
@@ -131,7 +131,7 @@
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <a class="btn btn-link btn-sm text-decoration-none px-0 tag-filter-clear"
-                                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, q=search_term, all=all_param, clear_tag=1) }}">Limpar</a>
+                                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, q=search_term, all=all_param, clear_tag=1) }}">Limpar</a>
                                         <button type="submit"
                                             class="btn btn-primary btn-sm tag-filter-apply">Aplicar</button>
                                     </div>
@@ -151,12 +151,12 @@
 
                         {% if show_all %}
                         <a class="btn btn-outline-secondary btn-sm"
-                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=0) }}">
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=0) }}">
                             Paginar resultados
                         </a>
                         {% else %}
                         <a class="btn btn-outline-primary btn-sm"
-                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=1) }}">
+                            href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=1) }}">
                             Listar tudo
                         </a>
                         {% endif %}
@@ -170,7 +170,7 @@
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="text-muted small">Filtros:</span>
                 {% set show_tag_filter = tag_filters and (tag_filters|length != 1 or 'Matriz' not in tag_filters) %}
-                {% if tributacao_filters or status_filters or show_tag_filter %}
+                {% if tributacao_filters or encerramento_filters or status_filters or show_tag_filter %}
                 {% if show_tag_filter %}
                 <span class="text-muted small">Tag:</span>
                 {% for tag in tag_filters %}
@@ -183,13 +183,19 @@
                 <span class="badge bg-primary">{{ trib }}</span>
                 {% endfor %}
                 {% endif %}
+                {% if encerramento_filters %}
+                <span class="text-muted small">Encerramento:</span>
+                {% for enc in encerramento_filters %}
+                <span class="badge bg-success">{{ 'Sim' if enc == 'true' else 'Não' }}</span>
+                {% endfor %}
+                {% endif %}
                 {% if status_filters %}
                 <span class="text-muted small">Status:</span>
                 {% for st in status_filters %}
                 <span class="badge bg-info">{{ st }}</span>
                 {% endfor %}
                 {% endif %}
-                <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_status=1, clear_tag=1, q=search_term, all=all_param) }}"
+                <a href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, clear_encerramento=1, clear_status=1, clear_tag=1, q=search_term, all=all_param) }}"
                     class="btn btn-sm btn-outline-danger">
                     <i class="bi bi-x-circle"></i> Limpar Tudo
                 </a>
@@ -204,7 +210,7 @@
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
                             <a class="page-link"
-                                href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
+                                href="{% if pagination.has_prev %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.prev_num) }}{% else %}#{% endif %}"
                                 {% if not pagination.has_prev %}tabindex="-1" aria-disabled="true" {% endif %}>
                                 Anterior
                             </a>
@@ -213,7 +219,7 @@
                         {% if p %}
                         <li class="page-item{% if p == pagination.page %} active{% endif %}">
                             <a class="page-link"
-                                href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=p) }}">{{
+                                href="{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=p) }}">{{
                                 p }}</a>
                         </li>
                         {% else %}
@@ -222,7 +228,7 @@
                         {% endfor %}
                         <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
                             <a class="page-link"
-                                href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
+                                href="{% if pagination.has_next %}{{ url_for('empresas.inventario', sort=sort, order=order, tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.next_num) }}{% else %}#{% endif %}"
                                 {% if not pagination.has_next %}tabindex="-1" aria-disabled="true" {% endif %}>
                                 Próximo
                             </a>
@@ -246,7 +252,7 @@
                                 data-column-id="col_id"
                                 data-hideable="false"
                                 data-resizable="true">
-                                <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                <a href="{{ url_for('empresas.inventario', sort='codigo', order='desc' if sort == 'codigo' and order == 'asc' else 'asc', tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                     class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     ID
                                     {% if sort == 'codigo' %}
@@ -260,7 +266,7 @@
                                 data-column-id="col_razao"
                                 data-hideable="false"
                                 data-resizable="true">
-                                <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                <a href="{{ url_for('empresas.inventario', sort='nome', order='desc' if sort == 'nome' and order == 'asc' else 'asc', tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                     class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     Razão Social
                                     {% if sort == 'nome' %}
@@ -278,7 +284,7 @@
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-1">
                                         <span>Tributação</span>
-                                        <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
+                                        <a href="{{ url_for('empresas.inventario', sort='tributacao', order='desc' if sort == 'tributacao' and order == 'asc' else 'asc', tributacao=tributacao_filters, encerramento=encerramento_filters, status=status_filters, tag=tag_filters, q=search_term, all=all_param, page=pagination.page) }}"
                                             class="text-decoration-none text-dark">
                                             {% if sort == 'tributacao' %}
                                             <i
@@ -324,7 +330,7 @@
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <a class="btn btn-link btn-sm text-decoration-none px-0 tributacao-filter-clear"
-                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_tributacao=1, encerramento=encerramento_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit"
                                                         class="btn btn-primary btn-sm tributacao-filter-apply">Aplicar</button>
                                                 </div>
@@ -409,7 +415,7 @@
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <a class="btn btn-link btn-sm text-decoration-none px-0 status-filter-clear"
-                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_status=1, tributacao=tributacao_filters, encerramento=encerramento_filters, tag=tag_filters, q=search_term, all=all_param) }}">Limpar</a>
                                                     <button type="submit"
                                                         class="btn btn-info btn-sm status-filter-apply">Aplicar</button>
                                                 </div>
@@ -428,7 +434,70 @@
                             <th class="text-start" style="width: 125px;"
                                 data-column-id="col_encerramento_fiscal"
                                 data-hideable="true"
-                                data-resizable="true">Encerramento Fiscal</th>
+                                data-resizable="true">
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="flex-grow-1">
+                                        <span>Encerramento Fiscal</span>
+                                    </div>
+                                    <div class="dropdown" data-bs-auto-close="outside">
+                                        <button
+                                            class="btn btn-icon-xs {% if encerramento_filters %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                            type="button" id="encerramentoFilterDropdown" data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Filtrar por encerramento fiscal">
+                                            <i
+                                                class="bi {% if encerramento_filters %}bi-funnel-fill{% else %}bi-funnel{% endif %}"></i>
+                                            {% if encerramento_filters %}
+                                            <span class="badge bg-light text-dark ms-1">{{ encerramento_filters|length
+                                                }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end p-3 shadow-sm"
+                                            aria-labelledby="encerramentoFilterDropdown" style="min-width: 200px;">
+                                            <form method="GET" class="encerramento-filter-form">
+                                                <input type="hidden" name="sort" value="{{ sort }}">
+                                                <input type="hidden" name="order" value="{{ order }}">
+                                                <input type="hidden" name="q" value="{{ search_term }}">
+                                                <input type="hidden" name="all" value="{{ all_param }}">
+                                                {% for trib in tributacao_filters %}
+                                                <input type="hidden" name="tributacao" value="{{ trib }}">
+                                                {% endfor %}
+                                                {% for tag in tag_filters %}
+                                                <input type="hidden" name="tag" value="{{ tag }}">
+                                                {% endfor %}
+                                                {% for status in status_filters %}
+                                                <input type="hidden" name="status" value="{{ status }}">
+                                                {% endfor %}
+                                                <p class="text-uppercase text-muted fw-semibold small mb-2">Filtrar por
+                                                    encerramento</p>
+                                                <div class="d-flex flex-column gap-1 mb-3">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="encerramento" id="encerramentoFilterSim"
+                                                            value="true" {% if "true" in encerramento_filters
+                                                            %}checked{% endif %}>
+                                                        <label class="form-check-label"
+                                                            for="encerramentoFilterSim">Sim</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="encerramento" id="encerramentoFilterNao"
+                                                            value="false" {% if "false" in encerramento_filters
+                                                            %}checked{% endif %}>
+                                                        <label class="form-check-label"
+                                                            for="encerramentoFilterNao">Não</label>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <a class="btn btn-link btn-sm text-decoration-none px-0 encerramento-filter-clear"
+                                                        href="{{ url_for('empresas.inventario', sort=sort, order=order, clear_encerramento=1, tributacao=tributacao_filters, tag=tag_filters, status=status_filters, q=search_term, all=all_param) }}">Limpar</a>
+                                                    <button type="submit"
+                                                        class="btn btn-primary btn-sm encerramento-filter-apply">Aplicar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
                             <th class="text-start" style="width: 160px;"
                                 data-column-id="col_arquivo_cliente"
                                 data-hideable="true"
