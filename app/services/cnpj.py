@@ -80,6 +80,8 @@ def regime_to_tributacao(value) -> str:
         i = int(s)
     except ValueError:
         sl = s.lower()
+        if "mei" in sl:
+            return "MEI"
         if "simples" in sl:
             return "Simples Nacional"
         if "presum" in sl:

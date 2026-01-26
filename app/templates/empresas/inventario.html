@@ -537,8 +537,7 @@
                                     {{ item.empresa.nome_empresa }}
                                 </a>
                                 {% set tipo_tag = item.empresa.tipo_empresa or 'Matriz' %}
-                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else
-                                'bg-warning-subtle text-warning' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else ('bg-info-subtle text-info' if tipo_tag == 'MEI' else 'bg-warning-subtle text-warning') %}
                                 <div class="mt-1">
                                     <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
                                 </div>

@@ -245,6 +245,7 @@ REGIME_LANCAMENTO_CHOICES = [
 # =============================================================================
 
 EMPRESA_TAG_CHOICES = [
+    ("MEI", "MEI"),
     ("Matriz", "Matriz"),
     ("Filial", "Filial"),
 ]
