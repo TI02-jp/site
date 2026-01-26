@@ -217,7 +217,7 @@ def listar_empresas():
         page = page_arg
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
-    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
     allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     sort_arg = request.args.get("sort")
     order_arg = request.args.get("order")
@@ -1209,7 +1209,7 @@ def inventario():
     order_arg = request.args.get('order')
 
     # Filtros
-    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
     allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     clear_tributacao = request.args.get("clear_tributacao") == "1"
     raw_tributacoes = request.args.getlist('tributacao')
@@ -1818,7 +1818,7 @@ def _queue_inventario_email(
 
 
 def _build_aguardando_tadeu_groups() -> list[dict]:
-    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
     grouped = {trib: [] for trib in allowed_tributacoes}
     outros: list[Empresa] = []
     empresas = (

@@ -31,7 +31,7 @@
                     <tr>
                         <th style="width: 90px;">Código</th>
                         <th>Nome</th>
-                        <th style="width: 170px;">CNPJ</th>
+                        <th style="width: 170px;">CPF/CNPJ</th>
                         <th style="width: 110px;">Ações</th>
                     </tr>
                 </thead>
@@ -161,11 +161,16 @@
     const tributacaoCompanies = {{ tributacao_companies|tojson }};
     let currentTributacaoLabel = null;
 
-    function formatCNPJ(cnpj) {
-        if (!cnpj) return '';
-        const digits = cnpj.replace(/\D/g, '');
-        if (digits.length !== 14) return cnpj;
-        return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    function formatCpfCnpj(value) {
+        if (!value) return '';
+        const digits = value.replace(/\D/g, '');
+        if (digits.length === 11) {
+            return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+        if (digits.length === 14) {
+            return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+        }
+        return value;
     }
 
     function renderTributacaoList(label) {
@@ -185,7 +190,7 @@
             tr.innerHTML = `
                 <td><span class="badge bg-primary-subtle text-primary fw-semibold">${company.codigo || ''}</span></td>
                 <td>${company.nome || ''}</td>
-                <td class="font-monospace">${formatCNPJ(company.cnpj || '')}</td>
+                <td class="font-monospace">${formatCpfCnpj(company.cnpj || '')}</td>
                 <td>
                     <button type="button" class="btn btn-sm btn-outline-primary company-view-btn" data-view-url="/empresa/visualizar/${company.token}?hide_actions=1" title="Visualizar empresa">
                         <i class="bi bi-eye"></i>
@@ -219,7 +224,7 @@
             <tr>
                 <td style="width: 90px;">${company.codigo || ''}</td>
                 <td>${company.nome || ''}</td>
-                <td style="width: 170px;">${formatCNPJ(company.cnpj || '')}</td>
+                <td style="width: 170px;">${formatCpfCnpj(company.cnpj || '')}</td>
             </tr>
         `).join('');
     }
@@ -256,7 +261,7 @@
                         <tr>
                             <th style="width: 90px;">Código</th>
                             <th>Nome</th>
-                            <th style="width: 170px;">CNPJ</th>
+                            <th style="width: 170px;">CPF/CNPJ</th>
                         </tr>
                     </thead>
                     <tbody>${printableRows}</tbody>

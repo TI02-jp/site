@@ -73,7 +73,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            {{ empresa_form.cnpj(class="form-control", placeholder="CNPJ", id="cnpj") }}
+                            {{ empresa_form.cnpj(class="form-control", placeholder="CPF ou CNPJ", id="cnpj") }}
                             {{ empresa_form.cnpj.label(class="form-label") }}
                             {% if empresa_form.cnpj.errors %}
                                 <div class="text-danger mt-1">
@@ -334,11 +334,18 @@
 document.addEventListener("DOMContentLoaded", function () {
     setupAcessos('acessos-container', 'add-acesso', 'acessos_json');
     setupContatos('contatos-container', 'add-contato', 'contatos_json');
-    // Máscara para CNPJ
+    // Máscara para CPF/CNPJ
     const cnpjField = document.querySelector('#cnpj');
     if (cnpjField) {
         IMask(cnpjField, {
-            mask: '00.000.000/0000-00',
+            mask: [
+                { mask: '000.000.000-00' },
+                { mask: '00.000.000/0000-00' }
+            ],
+            dispatch: function (appended, dynamicMasked) {
+                const number = (dynamicMasked.value + appended).replace(/\D/g, '');
+                return dynamicMasked.compiledMasks[number.length > 11 ? 1 : 0];
+            },
             lazy: false  // Aplica a máscara imediatamente ao valor existente
         });
     }

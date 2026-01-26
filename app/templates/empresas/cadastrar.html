@@ -67,10 +67,10 @@
                     <div class="col-md-6">
                         <div class="input-group">
                             <div class="form-floating flex-grow-1">
-                                {{ form.cnpj(class='form-control', id='cnpj', placeholder='00.000.000/0000-00', **{'aria-describedby': 'cnpjHelp'}) }}
+                                {{ form.cnpj(class='form-control', id='cnpj', placeholder='000.000.000-00 ou 00.000.000/0000-00', **{'aria-describedby': 'cnpjHelp'}) }}
                                 {{ form.cnpj.label(class='form-label') }}
                             </div>
-                            <button type='button' class='btn btn-outline-secondary' id='buscar-cnpj' title='Consultar CNPJ'>
+                            <button type='button' class='btn btn-outline-secondary' id='buscar-cnpj' title='Consultar CNPJ (apenas CNPJ)'>
                                 <i class='bi bi-search'></i>
                             </button>
                         </div>
@@ -81,7 +81,7 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                             <div id="cnpjHelp" class="form-text">O CNPJ será formatado automaticamente.</div>
+                             <div id="cnpjHelp" class="form-text">CPF ou CNPJ será formatado automaticamente.</div>
                         {% endif %}
                     </div>
 
@@ -335,7 +335,7 @@ document.addEventListener("DOMContentLoaded", function () {
         autoDismiss(alertDiv);
     }
 
-    // Máscara para CNPJ
+    // Máscara para CPF/CNPJ
     const cnpjField = document.querySelector('#cnpj');
     const buscarCnpjBtn = document.getElementById('buscar-cnpj');
     if (cnpjField) {
@@ -344,22 +344,34 @@ document.addEventListener("DOMContentLoaded", function () {
             if (value.length > 14) { // Limita a 14 dígitos para evitar máscara incorreta com excesso
                 value = value.substring(0, 14);
             }
-            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            if (value.length <= 11) {
+                value = value.replace(/^(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            }
             e.target.value = value;
             // Trigger validation on input as well
             validateField(e.target);
         });
 
-        // Pre-fill CNPJ with mask if data exists (for edit scenarios)
+        // Pre-fill CPF/CNPJ with mask if data exists (for edit scenarios)
         if (cnpjField.value) {
             let initialValue = cnpjField.value.replace(/\D/g, '');
-            initialValue = initialValue.replace(/^(\d{2})(\d)/, '$1.$2');
-            initialValue = initialValue.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-            initialValue = initialValue.replace(/\.(\d{3})(\d)/, '.$1/$2');
-            initialValue = initialValue.replace(/(\d{4})(\d)/, '$1-$2');
+            if (initialValue.length <= 11) {
+                initialValue = initialValue.replace(/^(\d{3})(\d)/, '$1.$2');
+                initialValue = initialValue.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+                initialValue = initialValue.replace(/\.(\d{3})(\d)/, '.$1-$2');
+            } else {
+                initialValue = initialValue.replace(/^(\d{2})(\d)/, '$1.$2');
+                initialValue = initialValue.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                initialValue = initialValue.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                initialValue = initialValue.replace(/(\d{4})(\d)/, '$1-$2');
+            }
             cnpjField.value = initialValue;
             validateField(cnpjField); // Validate on load if pre-filled
         }
@@ -384,7 +396,7 @@ document.addEventListener("DOMContentLoaded", function () {
             buscarCnpjBtn.addEventListener('click', function () {
                 const cnpj = cnpjField.value.replace(/\D/g, '');
                 if (cnpj.length !== 14) {
-                    showFlashMessage('Informe um CNPJ válido.');
+                    showFlashMessage('Informe um CNPJ válido (apenas CNPJ para consulta).');
                     clearCnpjFields();
                     return;
                 }
@@ -447,27 +459,35 @@ document.addEventListener("DOMContentLoaded", function () {
             parentDiv.appendChild(feedbackDiv);
         }
 
-        // Validação específica para CNPJ (comprimento)
-        if (field.id === 'cnpj') {
-            const cleanCnpj = value.replace(/\D/g, '');
-            if (cleanCnpj.length === 14) {
-                field.classList.add('is-valid');
-                field.classList.remove('is-invalid');
-                if (feedbackDiv) feedbackDiv.remove(); // Remove feedback se CNPJ válido
-            } else if (cleanCnpj.length > 0 && cleanCnpj.length < 14) {
-                field.classList.add('is-invalid');
-                field.classList.remove('is-valid');
-                if (feedbackDiv) feedbackDiv.remove(); // Remove feedback padrão antes de adicionar o específico
-                feedbackDiv = document.createElement('div');
-                feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
-                feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>CNPJ inválido (deve ter 14 dígitos).';
-                parentDiv.appendChild(feedbackDiv);
-            }
+    // Validação específica para CPF/CNPJ (comprimento)
+    if (field.id === 'cnpj') {
+        const cleanCnpj = value.replace(/\D/g, '');
+        if (cleanCnpj.length === 11 || cleanCnpj.length === 14) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+                if (feedbackDiv) feedbackDiv.remove(); // Remove feedback se CPF/CNPJ válido
+        } else if (cleanCnpj.length > 0 && cleanCnpj.length < 11) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            if (feedbackDiv) feedbackDiv.remove(); // Remove feedback padrão antes de adicionar o específico
+            feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
+            feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>CPF/CNPJ inválido (deve ter 11 ou 14 dígitos).';
+            parentDiv.appendChild(feedbackDiv);
+        } else if (cleanCnpj.length > 11 && cleanCnpj.length < 14) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            if (feedbackDiv) feedbackDiv.remove();
+            feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'invalid-feedback d-block js-validation-feedback';
+            feedbackDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>CPF/CNPJ inválido (deve ter 11 ou 14 dígitos).';
+            parentDiv.appendChild(feedbackDiv);
         }
+    }
     }
 
     // Aplica validação em tempo real aos campos
-    const fieldsToValidate = document.querySelectorAll('#codigo_empresa, #nome_empresa, #cnpj, #data_abertura, #socio_administrador, #atividade_principal, #sistema_utilizado');
+    const fieldsToValidate = document.querySelectorAll('#codigo_empresa, #nome_empresa, #cnpj, #data_abertura, #socio_administrador, #atividade_principal');
     fieldsToValidate.forEach(field => {
         field.addEventListener('blur', () => validateField(field));
         field.addEventListener('input', () => validateField(field)); // Validate on input for immediate feedback

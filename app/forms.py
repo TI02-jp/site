@@ -109,6 +109,27 @@ class RegistrationForm(FlaskForm):
 
 # --- Formulários da Aplicação ---
 
+def validar_cpf(form, field):
+    """Valida um CPF utilizando os dígitos verificadores."""
+    cpf = re.sub(r"\D", "", field.data or "")
+
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        raise ValidationError("CPF inválido")
+
+    soma1 = sum(int(num) * peso for num, peso in zip(cpf[:9], range(10, 1, -1)))
+    digito1 = 11 - (soma1 % 11)
+    digito1 = 0 if digito1 >= 10 else digito1
+
+    soma2 = sum(int(num) * peso for num, peso in zip(cpf[:10], range(11, 1, -1)))
+    digito2 = 11 - (soma2 % 11)
+    digito2 = 0 if digito2 >= 10 else digito2
+
+    if cpf[-2:] != f"{digito1}{digito2}":
+        raise ValidationError("CPF inválido")
+
+    field.data = cpf
+
+
 def validar_cnpj(form, field):
     """Valida um CNPJ utilizando os dígitos verificadores."""
     cnpj = re.sub(r"\D", "", field.data or "")
@@ -131,11 +152,23 @@ def validar_cnpj(form, field):
 
     field.data = cnpj
 
+
+def validar_cpf_cnpj(form, field):
+    """Valida CPF ou CNPJ conforme a quantidade de dígitos."""
+    digits = re.sub(r"\D", "", field.data or "")
+
+    if len(digits) == 11:
+        validar_cpf(form, field)
+    elif len(digits) == 14:
+        validar_cnpj(form, field)
+    else:
+        raise ValidationError("CPF/CNPJ inválido")
+
 class EmpresaForm(FlaskForm):
     """Formulário para cadastrar ou editar uma empresa."""
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
-    cnpj = StringField('CNPJ', validators=[DataRequired(), validar_cnpj])
+    cnpj = StringField('CPF/CNPJ', validators=[DataRequired(), validar_cpf_cnpj])
     data_abertura = DateField('Data de Abertura', format='%Y-%m-%d', validators=[DataRequired()])
     tipo_empresa = RadioField(
         'Tag do Cliente',
@@ -149,6 +182,7 @@ class EmpresaForm(FlaskForm):
         validators=[Optional(), Length(max=200, message="Atividade principal deve ter no maximo 200 caracteres.")],
     )
     tributacao = RadioField('Tributação', choices=[
+        ('MEI', 'MEI'),
         ('Simples Nacional', 'Simples Nacional'),
         ('Lucro Presumido', 'Lucro Presumido'),
         ('Lucro Real', 'Lucro Real')], validators=[DataRequired()])

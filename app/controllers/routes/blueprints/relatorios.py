@@ -131,7 +131,7 @@ def relatorio_empresas():
         Empresa.sistema_utilizado,
     ).all()
 
-    categorias = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    categorias = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
     grouped = {cat: [] for cat in categorias}
     grouped_sistemas = {}
 

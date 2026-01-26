@@ -128,12 +128,12 @@
                             <label class="info-label">Tag do Cliente</label>
                             <div class="info-value">
                                 {% set tipo_tag = empresa.tipo_empresa or 'Matriz' %}
-                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else 'bg-warning-subtle text-warning' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else ('bg-info-subtle text-info' if tipo_tag == 'MEI' else 'bg-warning-subtle text-warning') %}
                                 <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
                             </div>
                         </div>
                         <div class="info-item">
-                            <label class="info-label">CNPJ</label>
+                            <label class="info-label">CPF/CNPJ</label>
                             <div class="info-value font-monospace clickable-copy">
                                 {% if empresa.cnpj %}<span class="cnpj-formatted">{{ empresa.cnpj }}</span>{% else %}<span class="text-muted">Nao informado</span>{% endif %}
                             </div>
@@ -1025,20 +1025,22 @@
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Formatar CNPJ
-    function formatCNPJ(cnpj) {
-        cnpj = cnpj.replace(/\D/g, '');
-
-        if (cnpj.length === 14) {
-            return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    // Formatar CPF/CNPJ
+    function formatCpfCnpj(value) {
+        const digits = value.replace(/\D/g, '');
+        if (digits.length === 11) {
+            return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         }
-        return cnpj;
+        if (digits.length === 14) {
+            return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+        }
+        return value;
     }
 
     document.querySelectorAll('.cnpj-formatted').forEach(function(element) {
         const cnpjText = element.textContent.trim();
         if (cnpjText) {
-            element.textContent = formatCNPJ(cnpjText);
+            element.textContent = formatCpfCnpj(cnpjText);
         }
     });
 
