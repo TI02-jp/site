@@ -59,6 +59,7 @@
                 <div class="d-flex align-items-start gap-2 flex-wrap inventario-toolbar">
                     <div class="inventario-dashboard-inline d-flex flex-wrap gap-2 justify-content-start">
                         {% for card in dashboard_cards %}
+                        {% if card.tributacao != "MEI" %}
                         <div class="inventario-summary-card" data-tributacao="{{ card.tributacao }}"
                             data-total="{{ card.total }}" data-concluida="{{ card.concluida }}"
                             data-aguardando="{{ card.aguardando_arquivo }}" data-faltantes="{{ card.faltantes }}"
@@ -89,6 +90,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     <div class="inventario-action ms-auto d-flex align-items-center gap-2">

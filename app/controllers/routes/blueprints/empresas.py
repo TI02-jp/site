@@ -217,7 +217,7 @@ def listar_empresas():
         page = page_arg
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
-    allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
     allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     sort_arg = request.args.get("sort")
     order_arg = request.args.get("order")
@@ -1308,6 +1308,7 @@ def inventario():
             base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
 
     # Aplicar filtro de Encerramento Fiscal
+    inventario_joined = False
     if encerramento_filters:
         # Converter strings "true"/"false" para booleanos
         bool_filters = []
@@ -1322,6 +1323,7 @@ def inventario():
             base_query = base_query.outerjoin(Inventario).filter(
                 Inventario.encerramento_fiscal.in_(bool_filters)
             )
+            inventario_joined = True
 
     dashboard_stats = {
         trib: {
@@ -1337,18 +1339,23 @@ def inventario():
     stats_query = base_query
     if status_filters:
         if "FALTA ARQUIVO" in status_filters:
-            stats_query = stats_query.outerjoin(Inventario).filter(
+            if not inventario_joined:
+                stats_query = stats_query.outerjoin(Inventario)
+            stats_query = stats_query.filter(
                 sa.or_(
                     Inventario.status.in_(status_filters),
                     Inventario.id.is_(None),
                 )
             )
         else:
-            stats_query = stats_query.join(Inventario).filter(
+            if not inventario_joined:
+                stats_query = stats_query.join(Inventario)
+            stats_query = stats_query.filter(
                 Inventario.status.in_(status_filters)
             )
     else:
-        stats_query = stats_query.outerjoin(Inventario)
+        if not inventario_joined:
+            stats_query = stats_query.outerjoin(Inventario)
 
     summary_rows = (
         stats_query
@@ -1394,14 +1401,22 @@ def inventario():
 
     if status_filters:
         if "FALTA ARQUIVO" in status_filters:
-            query = base_query.outerjoin(Inventario).filter(
+            if not inventario_joined:
+                query = base_query.outerjoin(Inventario)
+            else:
+                query = base_query
+            query = query.filter(
                 sa.or_(
                     Inventario.status.in_(status_filters),
                     Inventario.id.is_(None),
                 )
             )
         else:
-            query = base_query.join(Inventario).filter(Inventario.status.in_(status_filters))
+            if not inventario_joined:
+                query = base_query.join(Inventario)
+            else:
+                query = base_query
+            query = query.filter(Inventario.status.in_(status_filters))
         query = query.order_by(order_by_clause)
     else:
         query = base_query.order_by(order_by_clause)
