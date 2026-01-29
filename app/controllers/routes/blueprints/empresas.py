@@ -37,7 +37,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.attributes import flag_modified
 
 from app import csrf, db, limiter
@@ -45,6 +45,7 @@ from app.constants import EMPRESA_TAG_CHOICES
 from app.controllers.routes import decode_id, encode_id, user_has_tag
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.extensions.task_queue import submit_io_task
+from app.extensions.cache import cache, get_cache_timeout
 from app.services.optimized_queries import (
     get_active_users_with_tags,
     get_inventarios_by_empresa_ids,
@@ -1325,64 +1326,83 @@ def inventario():
             )
             inventario_joined = True
 
-    dashboard_stats = {
-        trib: {
-            "tributacao": trib,
-            "total": 0,
-            "concluida": 0,
-            "aguardando_arquivo": 0,
-            "fechamento_fiscal": 0,
-        }
-        for trib in allowed_tributacoes
+    cache_timeout = get_cache_timeout("INVENTARIO_DASHBOARD_CACHE_SECONDS", 60)
+    cache_key_payload = {
+        "tributacao": tributacao_filters,
+        "encerramento": encerramento_filters,
+        "status": status_filters,
+        "tag": tag_filters,
+        "search": search_term,
     }
-    # Aplicar o mesmo filtro de status usado na query de listagem
-    stats_query = base_query
-    if status_filters:
-        if "FALTA ARQUIVO" in status_filters:
-            if not inventario_joined:
-                stats_query = stats_query.outerjoin(Inventario)
-            stats_query = stats_query.filter(
-                sa.or_(
-                    Inventario.status.in_(status_filters),
-                    Inventario.id.is_(None),
+    cache_key = f"inventario:dashboard:{current_user.id}:{json.dumps(cache_key_payload, sort_keys=True)}"
+    dashboard_cards = cache.get(cache_key)
+    if dashboard_cards is None:
+        dashboard_stats = {
+            trib: {
+                "tributacao": trib,
+                "total": 0,
+                "concluida": 0,
+                "aguardando_arquivo": 0,
+                "fechamento_fiscal": 0,
+            }
+            for trib in allowed_tributacoes
+        }
+        # Aplicar o mesmo filtro de status usado na query de listagem
+        stats_query = base_query
+        if status_filters:
+            if "FALTA ARQUIVO" in status_filters:
+                if not inventario_joined:
+                    stats_query = stats_query.outerjoin(Inventario)
+                stats_query = stats_query.filter(
+                    sa.or_(
+                        Inventario.status.in_(status_filters),
+                        Inventario.id.is_(None),
+                    )
                 )
-            )
+            else:
+                if not inventario_joined:
+                    stats_query = stats_query.join(Inventario)
+                stats_query = stats_query.filter(
+                    Inventario.status.in_(status_filters)
+                )
         else:
             if not inventario_joined:
-                stats_query = stats_query.join(Inventario)
-            stats_query = stats_query.filter(
-                Inventario.status.in_(status_filters)
-            )
-    else:
-        if not inventario_joined:
-            stats_query = stats_query.outerjoin(Inventario)
+                stats_query = stats_query.outerjoin(Inventario)
 
-    summary_rows = (
-        stats_query
-        .with_entities(
-            Empresa.tributacao,
-            Inventario.status,
-            Inventario.cliente_files,
-            Inventario.cliente_pdf_path,
-            Inventario.encerramento_fiscal,
+        stats_rows = (
+            stats_query
+            .with_entities(
+                Empresa.tributacao.label("tributacao"),
+                sa.func.count(Empresa.id).label("total"),
+                sa.func.coalesce(
+                    sa.func.sum(sa.case((Inventario.status == "ENCERRADO", 1), else_=0)),
+                    0,
+                ).label("concluida"),
+                sa.func.coalesce(
+                    sa.func.sum(sa.case((Inventario.status == "FALTA ARQUIVO", 1), else_=0)),
+                    0,
+                ).label("aguardando_arquivo"),
+                sa.func.coalesce(
+                    sa.func.sum(sa.case((Inventario.encerramento_fiscal.is_(True), 1), else_=0)),
+                    0,
+                ).label("fechamento_fiscal"),
+            )
+            .group_by(Empresa.tributacao)
+            .all()
         )
-        .all()
-    )
-    for tributacao, status, cliente_files, cliente_pdf_path, encerramento_fiscal in summary_rows:
-        if tributacao not in dashboard_stats:
-            continue
-        stats = dashboard_stats[tributacao]
-        stats["total"] += 1
-        if status == "ENCERRADO":
-            stats["concluida"] += 1
-        # Contar apenas empresas com status "FALTA ARQUIVO"
-        if status == "FALTA ARQUIVO":
-            stats["aguardando_arquivo"] += 1
-        if encerramento_fiscal is True:
-            stats["fechamento_fiscal"] += 1
-    for stats in dashboard_stats.values():
-        stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
-    dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
+        for row in stats_rows:
+            tributacao = row.tributacao
+            if tributacao not in dashboard_stats:
+                continue
+            stats = dashboard_stats[tributacao]
+            stats["total"] = int(row.total or 0)
+            stats["concluida"] = int(row.concluida or 0)
+            stats["aguardando_arquivo"] = int(row.aguardando_arquivo or 0)
+            stats["fechamento_fiscal"] = int(row.fechamento_fiscal or 0)
+        for stats in dashboard_stats.values():
+            stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
+        dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
+        cache.set(cache_key, dashboard_cards, timeout=cache_timeout)
 
     # Aplicar ordenação
     if sort == 'codigo':
@@ -1421,15 +1441,85 @@ def inventario():
     else:
         query = base_query.order_by(order_by_clause)
 
+    query = query.options(
+        load_only(
+            Empresa.id,
+            Empresa.codigo_empresa,
+            Empresa.nome_empresa,
+            Empresa.tributacao,
+            Empresa.tipo_empresa,
+        )
+    )
+
+    list_cache_timeout = get_cache_timeout("INVENTARIO_LISTALL_CACHE_SECONDS", 30)
+    list_cache_key_payload = {
+        "sort": sort,
+        "order": order,
+        "tributacao": tributacao_filters,
+        "encerramento": encerramento_filters,
+        "status": status_filters,
+        "tag": tag_filters,
+        "search": search_term,
+    }
+    list_cache_key = (
+        f"inventario:listall:{current_user.id}:"
+        f"{json.dumps(list_cache_key_payload, sort_keys=True)}"
+    )
     if show_all:
-        total = query.count()
+        cached_listall = cache.get(list_cache_key)
+        if cached_listall is not None:
+            empresa_ids = cached_listall.get("empresa_ids", [])
+            should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
+            if should_create and empresa_ids:
+                existing_inventario_ids = {
+                    row[0]
+                    for row in db.session.query(Inventario.empresa_id)
+                    .filter(Inventario.empresa_id.in_(empresa_ids))
+                    .all()
+                }
+                missing_ids = [eid for eid in empresa_ids if eid not in existing_inventario_ids]
+                if missing_ids:
+                    novos_inventarios = [
+                        Inventario(
+                            empresa_id=eid,
+                            status='FALTA ARQUIVO',
+                            encerramento_fiscal=False
+                        )
+                        for eid in missing_ids
+                    ]
+                    db.session.add_all(novos_inventarios)
+                    db.session.commit()
+            return cached_listall.get("html", "")
+
+    if show_all:
+        empresas = query.all()
+        total = len(empresas)
         per_page = total if total > 0 else 1
         page = 1
+
+        def _iter_pages(**kwargs):
+            return []
+
+        pagination = type(
+            "ListAllPagination",
+            (),
+            {
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "pages": 1 if total > 0 else 0,
+                "has_prev": False,
+                "has_next": False,
+                "prev_num": None,
+                "next_num": None,
+                "iter_pages": staticmethod(_iter_pages),
+                "items": empresas,
+            },
+        )()
     else:
         per_page = 20
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    empresas = pagination.items
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        empresas = pagination.items
     empresa_ids = [empresa.id for empresa in empresas]
 
     # Identificar empresas sem inventário (sem considerar filtro de status)
@@ -1494,7 +1584,6 @@ def inventario():
         })
 
     # Buscar todos os usuários para o select de encerramento (otimizado com cache)
-    from app.models.tables import User
     usuarios = get_active_users_with_tags()
 
     display_name = (current_user.username or current_user.name or "").strip().lower()
@@ -1524,6 +1613,13 @@ def inventario():
 
     if created_inventarios:
         db.session.commit()
+
+    if show_all:
+        cache.set(
+            list_cache_key,
+            {"html": response, "empresa_ids": empresa_ids},
+            timeout=list_cache_timeout,
+        )
 
     return response
 
