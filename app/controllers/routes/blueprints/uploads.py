@@ -203,7 +203,7 @@ def upload_file():
             }
         )
 
-        return jsonify({"file_url": file_url})
+        return jsonify({"file_url": file_url, "filename": filename})
 
     except Exception as exc:
         current_app.logger.exception("Falha ao salvar upload de arquivo", exc_info=exc)

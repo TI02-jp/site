@@ -4,11 +4,8 @@ Este módulo fornece sanitização HTML robusta usando a biblioteca bleach
 para proteger contra ataques XSS (Cross-Site Scripting).
 """
 
-import re
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
-from bleach.linkifier import LinkifyFilter
-from markupsafe import Markup
 
 # Tags HTML permitidas para conteúdo rico
 ALLOWED_TAGS = [
@@ -43,41 +40,6 @@ ALLOWED_CSS_PROPERTIES = [
 ]
 
 CSS_SANITIZER = CSSSanitizer(allowed_css_properties=ALLOWED_CSS_PROPERTIES)
-
-# Regex para detectar URLs bare (mantida para compatibilidade)
-_BARE_URL_RE = re.compile(
-    r'(?<!["\'=])(?P<url>(?:https?://|www\.)[^\s<]+)',
-    re.IGNORECASE,
-)
-_TRAILING_PUNCTUATION = re.compile(r'([.,!?;:]+)$')
-
-
-def _linkify(text: str) -> str:
-    """Wrap bare URLs in clickable anchor tags.
-
-    DEPRECATED: Use bleach's linkify filter instead.
-    Mantido para compatibilidade com código existente.
-    """
-    def _replace(match: re.Match[str]) -> str:
-        raw_url = match.group("url")
-        before = match.string[: match.start()]
-        last_anchor_open = before.lower().rfind("<a")
-        last_anchor_close = before.lower().rfind("</a")
-        if last_anchor_open != -1 and (last_anchor_close == -1 or last_anchor_close < last_anchor_open):
-            # Already inside an anchor tag; leave untouched
-            return raw_url
-
-        # Remove trailing punctuation to avoid broken links
-        trailing = ""
-        punct_match = _TRAILING_PUNCTUATION.search(raw_url)
-        if punct_match:
-            trailing = punct_match.group(1)
-            raw_url = raw_url[: -len(trailing)]
-
-        href = raw_url if raw_url.lower().startswith(("http://", "https://")) else f"https://{raw_url}"
-        return f'<a href="{href}" target="_blank" rel="noopener noreferrer">{raw_url}</a>{trailing}'
-
-    return _BARE_URL_RE.sub(_replace, text)
 
 
 def _build_attribute_filter(allow_data_images: bool):
@@ -165,31 +127,9 @@ def sanitize_html(
             cleaned,
             callbacks=[
                 # Adiciona target=_blank e rel=noopener noreferrer
-                lambda attrs, new: {**attrs, **{(None, 'target'): '_blank', (None, 'rel'): 'noopener noreferrer'}}
+                lambda attrs, _new: {**attrs, **{(None, 'target'): '_blank', (None, 'rel'): 'noopener noreferrer'}}
             ],
             skip_tags=['pre', 'code']  # Não linkificar dentro de code blocks
         )
 
     return cleaned
-
-
-def escape_html(value: str | None) -> str:
-    """Escapa completamente HTML para exibição como texto plano.
-
-    Use esta função quando você quer exibir HTML literalmente,
-    não permitindo nenhuma formatação HTML.
-
-    Args:
-        value: Texto a ser escapado
-
-    Returns:
-        str: Texto com caracteres HTML escapados
-
-    Example:
-        >>> escape_html('<script>alert("XSS")</script>')
-        '&lt;script&gt;alert("XSS")&lt;/script&gt;'
-    """
-    if not value:
-        return ""
-    # bleach.clean com tags=[] e strip=False escapa todo HTML
-    return bleach.clean(value, tags=[], attributes={}, strip=False)

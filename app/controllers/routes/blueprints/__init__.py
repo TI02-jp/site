@@ -146,11 +146,6 @@ def register_all_blueprints(app: Flask) -> None:
     from app.controllers.routes.blueprints.manual import manual_bp
     app.register_blueprint(manual_bp)
 
-    # Empresas - gestao de empresas
-    # TODO: Migrar rotas do __init__.py para este blueprint
-    # from app.controllers.routes.blueprints.empresas import empresas_bp
-    # app.register_blueprint(empresas_bp)
-
     # Adiciona aliases legados para manter compatibilidade com templates
     _add_legacy_endpoint_aliases(app)
 

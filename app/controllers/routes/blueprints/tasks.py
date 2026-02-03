@@ -98,9 +98,6 @@ from app.utils.security import sanitize_html
 # Optimized queries with cache and eager loading
 from app.services.optimized_queries import (
     get_active_users_with_tags,
-    get_all_tags,
-    get_tasks_with_relationships,
-    invalidate_task_caches,
 )
 
 # Other imports

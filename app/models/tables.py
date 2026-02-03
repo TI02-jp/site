@@ -1421,12 +1421,12 @@ class Task(db.Model):
                 
 @event.listens_for(Task, 'after_insert')
 @event.listens_for(Task, 'after_update')
-def task_after_insert_or_update(mapper, connection, target):
+def task_after_insert_or_update(_mapper, _connection, target):
     """Update parent has_children after task insert or update."""
     target.update_parent_has_children()
 
 @event.listens_for(Task, 'after_delete')
-def task_after_delete(mapper, connection, target):
+def task_after_delete(_mapper, _connection, target):
     """Update parent has_children after task deletion."""
     target.update_parent_has_children()
 
@@ -1759,7 +1759,7 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
 
 
 @event.listens_for(Task, "after_insert")
-def _task_assignment_after_insert(mapper, connection, target):
+def _task_assignment_after_insert(_mapper, _connection, target):
     """Emit a notification when a new task is created with an assignee."""
 
     if target.assigned_to:
@@ -1767,7 +1767,7 @@ def _task_assignment_after_insert(mapper, connection, target):
 
 
 @event.listens_for(Task, "after_update")
-def _task_assignment_after_update(mapper, connection, target):
+def _task_assignment_after_update(_mapper, _connection, target):
     """Emit notifications whenever a task is reassigned to a user."""
 
     state = inspect(target)
@@ -1871,7 +1871,7 @@ def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> 
 
 
 @event.listens_for(Task, "after_update")
-def _task_completion_notification(mapper, connection, target):
+def _task_completion_notification(_mapper, _connection, target):
     """Notify task creator when task is marked as completed."""
 
     state = inspect(target)
@@ -2102,7 +2102,7 @@ def _record_task_change(connection, task: Task, field_name: str, old_value, new_
 
 
 @event.listens_for(Task, "after_insert")
-def _record_task_creation(mapper, connection, target):
+def _record_task_creation(_mapper, _connection, target):
     """Record task creation in history."""
     from flask import has_request_context
     from flask_login import current_user
@@ -2129,7 +2129,7 @@ def _record_task_creation(mapper, connection, target):
 
 
 @event.listens_for(Task, "after_update")
-def _record_task_updates(mapper, connection, target):
+def _record_task_updates(_mapper, _connection, target):
     """Record all field changes in task history."""
     from flask import has_request_context
     from flask_login import current_user

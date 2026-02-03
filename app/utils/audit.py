@@ -1,7 +1,6 @@
 """User action auditing module for compliance and security."""
 
 import logging
-from functools import wraps
 from typing import Optional, Dict, Any
 
 from flask import request, g
@@ -139,48 +138,3 @@ def log_user_action(
             'new_values': new_values,
         }
     )
-
-
-def audit_action(action_type: str, resource_type: str, description_template: Optional[str] = None):
-    """Decorator to automatically log user actions.
-
-    Args:
-        action_type: Type of action (use ActionType constants)
-        resource_type: Type of resource (use ResourceType constants)
-        description_template: Optional template for description (e.g., "Created user {username}")
-
-    Example:
-        @audit_action(ActionType.CREATE, ResourceType.USER, "Created user {username}")
-        def create_user():
-            ...
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # Execute the function
-            result = f(*args, **kwargs)
-
-            # Log after success
-            try:
-                resource_id = kwargs.get('id') or kwargs.get('user_id') or kwargs.get('task_id')
-                description = description_template or f"{action_type.title()} {resource_type}"
-
-                # Try to format description with kwargs
-                if description_template:
-                    try:
-                        description = description_template.format(**kwargs)
-                    except (KeyError, ValueError):
-                        pass  # Use template as-is if formatting fails
-
-                log_user_action(
-                    action_type=action_type,
-                    resource_type=resource_type,
-                    action_description=description,
-                    resource_id=resource_id,
-                )
-            except Exception as e:
-                user_actions_logger.error(f"Failed to log user action in decorator: {e}")
-
-            return result
-        return decorated_function
-    return decorator
