@@ -24,7 +24,6 @@ from app.controllers.routes._base import (
     PDF_MIME_TYPES,
     VIDEO_EXTENSIONS,
     VIDEO_MIME_TYPES,
-    VIDEO_SIGNATURES,
     peek_stream,
 )
 

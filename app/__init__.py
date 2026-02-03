@@ -943,7 +943,7 @@ def _ensure_utf8_charset(response):
     return response
 
 @app.teardown_appcontext
-def _commit_session_updates(exception=None):
+def _commit_session_updates(_exception=None):
     """Commit session updates after request completes (non-blocking optimization)."""
     # Commit session updates (if any)
     if hasattr(g, 'session_updated') and g.session_updated:

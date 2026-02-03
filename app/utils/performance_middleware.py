@@ -187,11 +187,11 @@ def _instrument_templates(app: Flask) -> None:
 
 def _install_sql_listeners(engine: Engine) -> None:
     @event.listens_for(engine, "before_cursor_execute")
-    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    def _before_cursor_execute(_conn, _cursor, _statement, _parameters, context, _executemany):
         context._perf_start_time = time.perf_counter()
 
     @event.listens_for(engine, "after_cursor_execute")
-    def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    def _after_cursor_execute(_conn, _cursor, statement, parameters, context, _executemany):
         start_time = getattr(context, "_perf_start_time", None)
         if start_time is None:
             return

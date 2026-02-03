@@ -18,7 +18,6 @@ from app.models.tables import (
     ReuniaoRecorrenciaTipo,
     default_meet_settings,
 )
-from app.utils.permissions import is_user_admin
 from app.services.meeting_recurrence import (
     generate_recurrence_dates,
     generate_recurrence_group_id,

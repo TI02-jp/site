@@ -1497,7 +1497,7 @@ def inventario():
         per_page = total if total > 0 else 1
         page = 1
 
-        def _iter_pages(**kwargs):
+        def _iter_pages(**_kwargs):
             return []
 
         pagination = type(

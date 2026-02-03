@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+import html as html_lib
 from datetime import datetime
 from typing import Iterable
 from pathlib import Path
@@ -16,6 +17,7 @@ from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx2pdf import convert as docx2pdf_convert
@@ -225,6 +227,22 @@ def _add_html_to_docx(doc: Document, html_content: str) -> None:
             process_element(child)
 
 
+
+def _truncate_decisoes_html(html_content: str, max_chars: int) -> tuple[str, bool]:
+    """Return sanitized HTML truncated by plain-text length when needed."""
+    if max_chars <= 0:
+        return html_content, False
+    try:
+        text_only = BeautifulSoup(html_content or "", "html.parser").get_text("\n")
+    except Exception:
+        text_only = str(html_content or "")
+    if len(text_only) <= max_chars:
+        return html_content, False
+    trimmed = text_only[:max_chars].rstrip()
+    safe_text = html_lib.escape(trimmed)
+    notice = "<p><em>Conteudo truncado por limite de tamanho.</em></p>"
+    return f"<p>{safe_text}...</p>{notice}", True
+
 def _resolve_participantes_labels(participantes_raw: Iterable | None) -> list[str]:
     """Return all participant names (users + guests) without duplicates."""
 
@@ -292,18 +310,23 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
     template_filename = "ata-template.docx"
     template_path = Path(current_app.root_path) / "static" / "models" / template_filename
 
-    # Verify template exists
-    if not template_path.exists():
-        current_app.logger.error(f"Template file not found: {template_path}")
-        raise FileNotFoundError(f"Modelo timbrado não encontrado: {template_path}")
+    template_available = True
 
-    # Ensure we have read permissions
-    if not os.access(template_path, os.R_OK):
-        current_app.logger.error(f"No read permission for template: {template_path}")
-        raise PermissionError(f"Sem permissão de leitura no modelo: {template_path}")
+    # Verify template exists + is readable (do not hard-fail; fallback will be used)
+    if not template_path.exists():
+        template_available = False
+        current_app.logger.warning(f"Template file not found: {template_path} (using fallback)")
+    elif not os.access(template_path, os.R_OK):
+        template_available = False
+        current_app.logger.warning(f"No read permission for template: {template_path} (using fallback)")
 
     # Load DOCX directly (no need to materialize from DOTX)
-    doc = Document(str(template_path))
+    try:
+        doc = Document(str(template_path)) if template_available else Document()
+    except PackageNotFoundError as exc:
+        template_available = False
+        current_app.logger.warning(f"Template file could not be opened: {template_path} ({exc}); using fallback")
+        doc = Document()
 
     empresa_nome = getattr(reuniao.empresa, "nome_empresa", "") or "Empresa"
     data_str = reuniao.data.strftime("%d/%m/%Y") if getattr(reuniao, "data", None) else "Não informado"
@@ -373,8 +396,19 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
 
     decisoes_html = reuniao.decisoes or "<p>Sem assuntos registrados.</p>"
 
+    max_chars = int(os.getenv("PDF_DECISOES_MAX_CHARS", "100000"))
+    decisoes_html, was_truncated = _truncate_decisoes_html(decisoes_html, max_chars)
+    if was_truncated:
+        current_app.logger.warning(f"[PDF Export] Decisoes truncadas para {max_chars} caracteres")
+
     # Usa a função que preserva a formatação do Quill
-    _add_html_to_docx(doc, decisoes_html)
+    try:
+        _add_html_to_docx(doc, decisoes_html)
+    except Exception as exc:
+        current_app.logger.warning(f"Falha ao renderizar HTML no DOCX (fallback texto simples): {exc}")
+        plain_text = BeautifulSoup(decisoes_html, "html.parser").get_text("\n").strip()
+        if plain_text:
+            doc.add_paragraph(plain_text)
 
     # Initialize variables for cleanup in finally block
     pdf_bytes: bytes | None = None
@@ -386,6 +420,9 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
 
     # Wrap all temp file operations in try-except to trigger fallback on permission errors
     try:
+        if os.getenv("PDF_SKIP_DOCX2PDF", "0") == "1":
+            current_app.logger.info("[PDF Export] docx2pdf skipped by PDF_SKIP_DOCX2PDF=1 (using fallback)")
+            raise RuntimeError("docx2pdf skipped by PDF_SKIP_DOCX2PDF=1")
         temp_dir = _get_temp_dir()
         current_app.logger.info(f"[PDF Export] Using temp directory: {temp_dir}")
 
@@ -445,6 +482,7 @@ def export_reuniao_decisoes_pdf(reuniao: ClienteReuniao) -> tuple[bytes, str]:
                 setor_nome=setor_nome,
                 participantes=participantes_labels,
                 decisoes_html=decisoes_html,
+                template_available=template_available,
             )
             pdf_size_kb = len(pdf_bytes) / 1024
             current_app.logger.warning(f"[PDF Export] ✓ PDF generated using FALLBACK renderer ({pdf_size_kb:.1f} KB) - Template header/logo NOT included")
@@ -492,45 +530,96 @@ def _render_pdf_fallback(
     setor_nome: str,
     participantes: list[str],
     decisoes_html: str,
+    template_available: bool = True,
 ) -> bytes:
     """Generate a lightweight PDF using fpdf2 when docx2pdf/Word is unavailable."""
 
     pdf = _HTMLPDF()
+    unicode_font_loaded = False
+
+    def _try_load_unicode_font() -> None:
+        nonlocal unicode_font_loaded
+        # Prefer a known Unicode font if available in the venv
+        dejavu_path = Path(current_app.root_path) / "venv" / "Lib" / "site-packages" / "matplotlib" / "mpl-data" / "fonts" / "ttf" / "DejaVuSans.ttf"
+        if dejavu_path.exists():
+            try:
+                pdf.add_font("DejaVuSans", "", str(dejavu_path), uni=True)
+                pdf.set_font("DejaVuSans", "", 12)
+                unicode_font_loaded = True
+                current_app.logger.info(f"[PDF Export] Unicode font loaded for fallback: {dejavu_path}")
+                return
+            except Exception as exc:
+                current_app.logger.warning(f"[PDF Export] Failed to load Unicode font {dejavu_path}: {exc}")
+
+        # Keep default Helvetica if no Unicode font is available
+        try:
+            pdf.set_font("Helvetica", "", 12)
+        except Exception:
+            pass
+
+    def _sanitize_text(text: str) -> str:
+        # Remove BOM and unsupported characters when not using a Unicode font
+        if not text:
+            return text
+        cleaned = text.replace("\ufeff", "")
+        if unicode_font_loaded:
+            return cleaned
+        try:
+            return cleaned.encode("latin-1").decode("latin-1")
+        except UnicodeEncodeError:
+            return cleaned.encode("latin-1", errors="replace").decode("latin-1")
+
+    def _safe_write_html(html: str, fallback_text: str | None = None) -> None:
+        try:
+            safe_html = _sanitize_text(html)
+            pdf.write_html(safe_html)
+        except Exception as exc:
+            current_app.logger.warning(f"Fallback HTML rendering failed (plain text used): {exc}")
+            text_content = BeautifulSoup(html or "", "html.parser").get_text("\n").strip()
+            final_text = text_content or (fallback_text or "")
+            final_text = _sanitize_text(final_text)
+            if final_text:
+                if pdf.page == 0:
+                    pdf.add_page()
+                pdf.multi_cell(0, 6, final_text)
 
     # Extract header and footer images from template
     header_img_path = None
     footer_img_path = None
 
-    try:
-        template_path = Path(current_app.root_path) / "static" / "models" / "ata-template.docx"
-        if template_path.exists():
-            from zipfile import ZipFile
-            import tempfile
+    if template_available:
+        try:
+            template_path = Path(current_app.root_path) / "static" / "models" / "ata-template.docx"
+            if template_path.exists():
+                from zipfile import ZipFile
+                import tempfile
 
-            # Extract images from DOCX (DOCX is a ZIP file)
-            with ZipFile(template_path, 'r') as docx_zip:
-                # Look for images in word/media/
-                image_files = [f for f in docx_zip.namelist() if f.startswith('word/media/')]
+                # Extract images from DOCX (DOCX is a ZIP file)
+                with ZipFile(template_path, 'r') as docx_zip:
+                    # Look for images in word/media/
+                    image_files = [f for f in docx_zip.namelist() if f.startswith('word/media/')]
 
-                if len(image_files) >= 1:
-                    # Extract header image (first image)
-                    header_image = image_files[0]
-                    header_data = docx_zip.read(header_image)
+                    if len(image_files) >= 1:
+                        # Extract header image (first image)
+                        header_image = image_files[0]
+                        header_data = docx_zip.read(header_image)
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(header_image).suffix) as tmp_img:
-                        tmp_img.write(header_data)
-                        header_img_path = tmp_img.name
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(header_image).suffix) as tmp_img:
+                            tmp_img.write(header_data)
+                            header_img_path = tmp_img.name
 
-                if len(image_files) >= 2:
-                    # Extract footer image (second image)
-                    footer_image = image_files[1]
-                    footer_data = docx_zip.read(footer_image)
+                    if len(image_files) >= 2:
+                        # Extract footer image (second image)
+                        footer_image = image_files[1]
+                        footer_data = docx_zip.read(footer_image)
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(footer_image).suffix) as tmp_img:
-                        tmp_img.write(footer_data)
-                        footer_img_path = tmp_img.name
-    except Exception as img_error:
-        current_app.logger.warning(f"Could not extract images from template: {img_error}")
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(footer_image).suffix) as tmp_img:
+                            tmp_img.write(footer_data)
+                            footer_img_path = tmp_img.name
+        except Exception as img_error:
+            current_app.logger.warning(f"Could not extract images from template: {img_error}")
+
+    _try_load_unicode_font()
 
     # Set auto page break with margin for footer
     pdf.set_auto_page_break(auto=True, margin=40)  # Space for footer
@@ -556,30 +645,36 @@ def _render_pdf_fallback(
         # Override footer method
         pdf.footer = footer_with_image
 
-    pdf.set_font("Helvetica", "B", 16)
+    if unicode_font_loaded:
+        pdf.set_font("DejaVuSans", "B", 16)
+    else:
+        pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, "REUNIÃO DE ALINHAMENTO", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(4)
-    pdf.set_font("Helvetica", "", 12)
+    if unicode_font_loaded:
+        pdf.set_font("DejaVuSans", "", 12)
+    else:
+        pdf.set_font("Helvetica", "", 12)
 
     meta_html = (
         f"<p><b>Empresa:</b> {empresa_nome}<br>"
         f"<b>Data:</b> {data_str}<br>"
         f"<b>Setor:</b> {setor_nome}</p>"
     )
-    pdf.write_html(meta_html)
+    _safe_write_html(meta_html)
 
     participantes_html = "<h3>Participantes</h3>"
     if participantes:
         participantes_html += "<ul>" + "".join(f"<li>{p}</li>" for p in participantes) + "</ul>"
     else:
         participantes_html += "<p>Não informado.</p>"
-    pdf.write_html(participantes_html)
+    _safe_write_html(participantes_html, fallback_text="Participantes")
 
     # Adiciona espaço extra entre Participantes e Assuntos Tratados
     pdf.ln(8)
 
     decisoes_section = "<h3></h3>" + (decisoes_html or "<p>Sem assuntos registrados.</p>")
-    pdf.write_html(decisoes_section)
+    _safe_write_html(decisoes_section, fallback_text="Assuntos e decisoes")
 
     # pdf.output() retorna bytes diretamente no fpdf2 moderno
     pdf_output = pdf.output()

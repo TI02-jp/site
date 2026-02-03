@@ -108,11 +108,11 @@ def _register_slow_query_listener(engine, slow_query_logger: logging.Logger, thr
     """Attach SQLAlchemy event listeners to emit slow queries to the dedicated logger."""
 
     @event.listens_for(engine, "before_cursor_execute")
-    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    def _before_cursor_execute(_conn, _cursor, _statement, _parameters, context, _executemany):
         context._query_start_time = perf_counter()
 
     @event.listens_for(engine, "after_cursor_execute")
-    def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    def _after_cursor_execute(_conn, _cursor, statement, parameters, context, _executemany):
         start = getattr(context, "_query_start_time", None)
         if start is None:
             return

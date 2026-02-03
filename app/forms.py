@@ -10,14 +10,12 @@ from wtforms import (
     SubmitField,
     DateField,
     TimeField,
-    DateTimeLocalField,
     SelectMultipleField,
     SelectField,
     TextAreaField,
     PasswordField,
     BooleanField,
     HiddenField,
-    FieldList,
     IntegerField,
     widgets
 )
