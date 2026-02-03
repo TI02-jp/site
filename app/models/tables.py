@@ -1763,7 +1763,7 @@ def _task_assignment_after_insert(_mapper, _connection, target):
     """Emit a notification when a new task is created with an assignee."""
 
     if target.assigned_to:
-        _create_task_assignment_notification(connection, target, target.assigned_to)
+        _create_task_assignment_notification(_connection, target, target.assigned_to)
 
 
 @event.listens_for(Task, "after_update")
@@ -1783,7 +1783,7 @@ def _task_assignment_after_update(_mapper, _connection, target):
             delattr(target, "_skip_assignment_notification")
         return
 
-    _create_task_assignment_notification(connection, target, new_assignee)
+    _create_task_assignment_notification(_connection, target, new_assignee)
 
 
 @event.listens_for(db.session, "after_commit")
@@ -1893,7 +1893,7 @@ def _task_completion_notification(_mapper, _connection, target):
 
     # Notify creator
     if target.completed_by:
-        _notify_creator_on_completion(connection, target, target.completed_by)
+        _notify_creator_on_completion(_connection, target, target.completed_by)
 
 
 def _format_value_for_history(value) -> str | None:
@@ -2115,7 +2115,7 @@ def _record_task_creation(_mapper, _connection, target):
         except Exception:
             pass
 
-    connection.execute(
+    _connection.execute(
         TaskHistory.__table__.insert().values(
             task_id=target.id,
             changed_at=sao_paulo_now_naive(),
@@ -2164,7 +2164,7 @@ def _record_task_updates(_mapper, _connection, target):
         old_value = next((v for v in history.deleted if v is not None), None)
         new_value = next((v for v in history.added if v is not None), None)
 
-        _record_task_change(connection, target, field_name, old_value, new_value, changed_by)
+        _record_task_change(_connection, target, field_name, old_value, new_value, changed_by)
 
 
 # ============================================
