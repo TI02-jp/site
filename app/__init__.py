@@ -301,20 +301,22 @@ def _set_security_headers(response):
     response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
     response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-origin')
 
-    csp = (
-        "default-src 'self'; "
-        "base-uri 'self'; "
-        "form-action 'self'; "
-        "img-src 'self' data: https:; "
-        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.quilljs.com https://cdn.jsdelivr.net; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.quilljs.com https://cdn.plot.ly https://accounts.google.com https://apis.google.com; "
-        "connect-src 'self' https://www.googleapis.com https://accounts.google.com; "
-        f"frame-ancestors {frame_ancestors}; "
-        "object-src 'none'; "
-        "worker-src 'self' blob:; "
-        "upgrade-insecure-requests"
-    )
+    csp_parts = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "img-src 'self' data: https:",
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.quilljs.com https://cdn.jsdelivr.net",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.quilljs.com https://cdn.plot.ly https://accounts.google.com https://apis.google.com",
+        "connect-src 'self' https://www.googleapis.com https://accounts.google.com",
+        f"frame-ancestors {frame_ancestors}",
+        "object-src 'none'",
+        "worker-src 'self' blob:",
+    ]
+    if app.config['ENFORCE_HTTPS']:
+        csp_parts.append("upgrade-insecure-requests")
+    csp = "; ".join(csp_parts)
     response.headers['Content-Security-Policy'] = csp
     return response
 

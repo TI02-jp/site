@@ -60,51 +60,40 @@
 
 
 <div class="container-fluid text-uppercase" style="max-width: 1400px;">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="text-dept-blue mb-2">
-                        <i class="bi bi-building-gear me-3"></i>{{ empresa.nome_empresa }}
-                        {% if not empresa.ativo %}
-                            <span class="badge bg-secondary ms-2">Inativa</span>
-                        {% endif %}
-                    </h1>
-                    <p class="text-muted mb-0">Visualização completa de todos os dados cadastrados</p>
-                </div>
-                <div class="text-end">
-                    <div class="badge bg-dept-blue-subtle px-3 py-2 mb-2">
-                        Código: {{ empresa.codigo_empresa or 'N/A' }}
-                    </div>
-                    <div class="d-block">
-                        <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom btn-sm embed-hide">
-                            <i class="bi bi-pencil me-1"></i>Editar
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm company-nav">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-center flex-wrap gap-2">
-                        <a href="#dados-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-building me-1"></i>Dados do Cliente</a>
-                        <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
-                        <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contábil</a>
-                        <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
-                        <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
-                        <a href="#notas-fiscais" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt-cutoff me-1"></i>Notas Fiscais</a>
-                        <a href="#reunioes-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-people-fill me-1"></i>Reuniões</a>
-                        {% if can_access_financeiro %}
-                        <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
-                        {% endif %}
-                    </div>
-                </div>
+    <div class="company-sticky-stack mb-4">
+        <form method="GET" action="{{ url_for('empresas.visualizar_empresa_por_codigo') }}" class="company-quick-switch">
+            <input
+                type="text"
+                name="codigo"
+                class="company-quick-switch__code"
+                value="{{ empresa.codigo_empresa or '' }}"
+                placeholder="CODIGO"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Codigo da empresa"
+                title="Digite o codigo da empresa e pressione Enter"
+                required
+            >
+            <div class="company-quick-switch__name">
+                {{ empresa.nome_empresa }}{% if empresa.tipo_empresa %} - {{ empresa.tipo_empresa }}{% endif %}
             </div>
-        </div>
+            <div class="company-nav company-quick-switch__nav d-flex flex-wrap gap-2">
+                <a href="#dados-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-building me-1"></i>Dados do Cliente</a>
+                <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
+                <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contabil</a>
+                <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
+                <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
+                <a href="#notas-fiscais" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt-cutoff me-1"></i>Notas Fiscais</a>
+                <a href="#reunioes-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-people-fill me-1"></i>Reunioes</a>
+                {% if can_access_financeiro %}
+                <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('editar_empresa', id=empresa.id) }}" class="btn btn-custom btn-sm company-quick-switch__edit embed-hide">
+                <i class="bi bi-pencil me-1"></i>Editar
+            </a>
+        </form>
     </div>
 
     <div class="card shadow-lg mb-5 section-anchor" id="dados-cliente">
@@ -1018,6 +1007,140 @@
         color: #0d6efd;
         margin-top: 0.1rem;
     }
+    .company-sticky-stack.fixed {
+        position: fixed;
+        top: 0;
+        z-index: 1021;
+    }
+    .company-sticky-stack.fixed .company-nav {
+        margin-bottom: 0;
+    }
+    .company-quick-switch {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        background: linear-gradient(135deg, #0b288b 0%, #123eb0 100%);
+        border: 1px solid #4b73d0;
+        box-shadow: 0 4px 12px rgba(11, 40, 139, 0.24);
+    }
+    .company-quick-switch__code {
+        width: 74px;
+        min-width: 74px;
+        max-width: 74px;
+        flex: 0 0 74px;
+        height: 30px;
+        border: 1px solid #ffffff;
+        border-radius: 0.2rem;
+        background-color: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        line-height: 1;
+        text-align: center;
+        text-transform: uppercase;
+        padding: 0 0.35rem;
+    }
+    .company-quick-switch__code::placeholder {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .company-quick-switch__code:focus {
+        outline: none;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.18rem rgba(255, 255, 255, 0.2);
+    }
+    .company-quick-switch__name {
+        flex: 0 1 auto;
+        min-width: 220px;
+        color: #ffffff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+    }
+    .company-quick-switch__nav {
+        flex: 1 1 420px;
+        min-width: 260px;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+        justify-content: flex-start;
+    }
+    .company-quick-switch__nav .btn-company-nav {
+        padding: 0.26rem 0.55rem;
+        font-size: 0.62rem;
+    }
+    .company-quick-switch__edit {
+        flex: 0 0 auto;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    .company-sticky-stack.fixed .company-quick-switch {
+        gap: 0.5rem;
+        padding: 0.25rem 0.4rem;
+        border-radius: 0;
+        box-shadow: 0 2px 6px rgba(11, 40, 139, 0.28);
+    }
+    .company-sticky-stack.fixed .company-quick-switch__code {
+        width: 66px;
+        min-width: 66px;
+        max-width: 66px;
+        flex: 0 0 66px;
+        height: 24px;
+        font-size: 0.72rem;
+    }
+    .company-sticky-stack.fixed .company-quick-switch__name {
+        font-size: 1rem;
+        line-height: 1.1;
+    }
+    .company-sticky-stack.fixed .company-quick-switch__edit {
+        font-size: 0.72rem;
+        padding: 0.2rem 0.46rem;
+    }
+    .company-sticky-stack.fixed .company-quick-switch__nav {
+        gap: 0.35rem !important;
+    }
+    .company-sticky-stack.fixed .company-quick-switch__nav .btn-company-nav {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.61rem;
+    }
+    .section-anchor {
+        scroll-margin-top: 110px;
+    }
+    @media (max-width: 991.98px) {
+        .company-quick-switch {
+            align-items: center;
+        }
+        .company-quick-switch__code {
+            width: 74px;
+            min-width: 74px;
+        }
+        .company-quick-switch__name {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-size: 1rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .company-quick-switch__nav {
+            flex-basis: 100%;
+            justify-content: center;
+        }
+        .company-quick-switch__edit {
+            margin-left: 0;
+        }
+        .company-sticky-stack.fixed .company-quick-switch__name {
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    }
     </style>
 </div>
 {% endblock %}
@@ -1044,35 +1167,49 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Fixa a barra de navegação quando alcança o topo
-    const companyNav = document.querySelector('.company-nav');
-    if (companyNav) {
-        const navOffset = companyNav.getBoundingClientRect().top + window.scrollY;
+    // Fixa as barras de troca de empresa + departamentos quando alcancam o topo
+    const companyStickyStack = document.querySelector('.company-sticky-stack');
+    if (companyStickyStack) {
         const placeholder = document.createElement('div');
-        placeholder.style.height = `${companyNav.offsetHeight}px`;
+        let stackOffset = companyStickyStack.getBoundingClientRect().top + window.scrollY;
 
-        const updateNav = () => {
-            const contentRect = document.querySelector('.content-area').getBoundingClientRect();
-            if (window.scrollY >= navOffset) {
-                if (!companyNav.classList.contains('fixed')) {
-                    companyNav.classList.add('fixed');
-                    companyNav.parentNode.insertBefore(placeholder, companyNav);
+        const recalcOffset = () => {
+            if (!companyStickyStack.classList.contains('fixed')) {
+                stackOffset = companyStickyStack.getBoundingClientRect().top + window.scrollY;
+            }
+            placeholder.style.height = `${companyStickyStack.offsetHeight}px`;
+        };
+
+        const updateStickyStack = () => {
+            const contentArea = document.querySelector('.content-area');
+            if (!contentArea) return;
+            const contentRect = contentArea.getBoundingClientRect();
+
+            if (window.scrollY >= stackOffset) {
+                if (!companyStickyStack.classList.contains('fixed')) {
+                    companyStickyStack.classList.add('fixed');
+                    companyStickyStack.parentNode.insertBefore(placeholder, companyStickyStack);
                 }
-                companyNav.style.left = `${contentRect.left}px`;
-                companyNav.style.width = `${contentRect.width}px`;
+                placeholder.style.height = `${companyStickyStack.offsetHeight}px`;
+                companyStickyStack.style.left = `${contentRect.left}px`;
+                companyStickyStack.style.width = `${contentRect.width}px`;
             } else {
-                if (companyNav.classList.contains('fixed')) {
-                    companyNav.classList.remove('fixed');
+                if (companyStickyStack.classList.contains('fixed')) {
+                    companyStickyStack.classList.remove('fixed');
                     if (placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
                 }
-                companyNav.style.left = '';
-                companyNav.style.width = '';
+                companyStickyStack.style.left = '';
+                companyStickyStack.style.width = '';
             }
         };
 
-        window.addEventListener('scroll', updateNav);
-        window.addEventListener('resize', updateNav);
-        updateNav();
+        window.addEventListener('scroll', updateStickyStack);
+        window.addEventListener('resize', () => {
+            recalcOffset();
+            updateStickyStack();
+        });
+        recalcOffset();
+        updateStickyStack();
     }
     // Smooth scroll para navegação com offset para o cabeçalho
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1081,7 +1218,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const targetId = this.getAttribute('href');
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                const offset = 80; 
+                const offset = 120; 
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 
