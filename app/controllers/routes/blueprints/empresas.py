@@ -39,6 +39,7 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.attributes import flag_modified
+from werkzeug.exceptions import NotFound
 
 from app import csrf, db, limiter
 from app.constants import EMPRESA_TAG_CHOICES
@@ -382,9 +383,18 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     embed_mode = request.args.get("hide_actions") == "1"
     raw_empresa = empresa_id if empresa_id is not None else id
-    resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
+    try:
+        resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
+    except NotFound:
+        flash("Empresa não encontrada.", "warning")
+        return redirect(url_for("empresas.listar_empresas"))
+
+    empresa = Empresa.query.get(resolved_empresa_id)
+    if empresa is None:
+        flash("Empresa não encontrada.", "warning")
+        return redirect(url_for("empresas.listar_empresas"))
+
     empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
-    empresa = Empresa.query.get_or_404(resolved_empresa_id)
 
     if request.endpoint == "empresas.visualizar_empresa_embed" and not embed_mode:
         return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token))
@@ -505,6 +515,57 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
         empresa_token=empresa_token,
         embed_mode=embed_mode,
     )
+
+
+@empresas_bp.route("/empresa/visualizar_por_codigo")
+@login_required
+def visualizar_empresa_por_codigo():
+    """Redirect to company details page based on company code."""
+    def _codigo_base(valor: str | None) -> str:
+        texto = (valor or "").strip()
+        if not texto:
+            return ""
+        # Quando houver DV separado (ex.: 123-4), considera apenas o codigo base.
+        match = re.match(r"^(\d+)\s*[-/]\s*[\dxX]+$", texto)
+        if match:
+            return match.group(1)
+        return re.sub(r"\D", "", texto)
+
+    codigo = (request.args.get("codigo") or "").strip()
+    fallback_url = url_for("empresas.listar_empresas")
+    if request.referrer and request.referrer.startswith(request.host_url):
+        fallback_url = request.referrer
+
+    if not codigo:
+        flash("Informe o codigo da empresa.", "warning")
+        return redirect(fallback_url)
+
+    empresa = (
+        Empresa.query.filter(sa.func.lower(sa.func.trim(Empresa.codigo_empresa)) == codigo.lower())
+        .order_by(Empresa.ativo.desc(), Empresa.id.asc())
+        .first()
+    )
+    if empresa is None:
+        codigo_base = _codigo_base(codigo)
+        if codigo_base:
+            candidatas = (
+                Empresa.query.options(load_only(Empresa.id, Empresa.codigo_empresa, Empresa.ativo))
+                .all()
+            )
+            compativeis = [
+                e for e in candidatas
+                if _codigo_base(e.codigo_empresa) == codigo_base
+            ]
+            if compativeis:
+                compativeis.sort(key=lambda e: (not bool(e.ativo), e.id))
+                empresa = compativeis[0]
+
+    if empresa is None:
+        flash(f"Empresa com codigo {codigo} nao encontrada.", "warning")
+        return redirect(fallback_url)
+
+    empresa_token = encode_id(empresa.id, namespace="empresa")
+    return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token))
 
 
 @empresas_bp.route("/empresa/<empresa_id>/departamentos", methods=["GET", "POST"])
