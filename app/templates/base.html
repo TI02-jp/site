@@ -1198,6 +1198,67 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     });
 
+    function addRequiredAsterisk(labelEl) {
+        if (!labelEl) return;
+        if (labelEl.querySelector('.required-asterisk')) return;
+        if (labelEl.textContent && labelEl.textContent.includes('*')) return;
+        const asterisk = document.createElement('span');
+        asterisk.className = 'required-asterisk text-danger ms-1';
+        asterisk.textContent = '*';
+        labelEl.appendChild(asterisk);
+    }
+
+    function findLabelForField(field) {
+        if (!field) return null;
+        const ariaLabelledBy = field.getAttribute('aria-labelledby');
+        if (ariaLabelledBy) {
+            const label = document.getElementById(ariaLabelledBy);
+            if (label) return label;
+        }
+        if (field.id) {
+            const label = document.querySelector(`label[for="${field.id}"]`);
+            if (label) return label;
+        }
+        const floating = field.closest('.form-floating');
+        if (floating) {
+            const label = floating.querySelector('label');
+            if (label) return label;
+        }
+        return null;
+    }
+
+    function findGroupLabel(container) {
+        let sibling = container ? container.previousElementSibling : null;
+        while (sibling) {
+            if (sibling.tagName === 'LABEL') return sibling;
+            sibling = sibling.previousElementSibling;
+        }
+        if (!container) return null;
+        const parent = container.parentElement;
+        if (!parent) return null;
+        const label = parent.querySelector('label.form-label, label.fw-semibold, label.form-check-label');
+        return label || null;
+    }
+
+    function markRequiredLabels() {
+        const requiredFields = document.querySelectorAll(
+            'input[data-required="true"], select[data-required="true"], textarea[data-required="true"], input[required], select[required], textarea[required]'
+        );
+
+        requiredFields.forEach(field => {
+            if (field.type === 'radio' || field.type === 'checkbox') {
+                const groupContainer = field.closest('.radio-group-container, .checkbox-group-container, .courses-checkbox-list');
+                if (groupContainer) {
+                    addRequiredAsterisk(findGroupLabel(groupContainer));
+                    return;
+                }
+            }
+            addRequiredAsterisk(findLabelForField(field));
+        });
+    }
+
+    markRequiredLabels();
+
     // Fechar sidebar ao redimensionar para desktop
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {

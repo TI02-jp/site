@@ -32,7 +32,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ form.codigo_empresa(class="form-control", placeholder="Código da empresa", **{'aria-describedby': 'codigoEmpresaHelp'}) }}
-                            {{ form.codigo_empresa.label(class="form-label") }}
+                            <label class="form-label" for="{{ form.codigo_empresa.id }}">
+                                {{ form.codigo_empresa.label.text }} <span class="text-danger">*</span>
+                            </label>
                         </div>
                         {# Exibe erros de validação do lado do servidor #}
                         {% if form.codigo_empresa.errors %}
@@ -49,7 +51,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ form.nome_empresa(class="form-control", placeholder="Nome da empresa", **{'aria-describedby': 'nomeEmpresaHelp'}) }}
-                            {{ form.nome_empresa.label(class="form-label") }}
+                            <label class="form-label" for="{{ form.nome_empresa.id }}">
+                                {{ form.nome_empresa.label.text }} <span class="text-danger">*</span>
+                            </label>
                         </div>
                         {% if form.nome_empresa.errors %}
                             {% for error in form.nome_empresa.errors %}
@@ -68,7 +72,9 @@
                         <div class="input-group">
                             <div class="form-floating flex-grow-1">
                                 {{ form.cnpj(class='form-control', id='cnpj', placeholder='000.000.000-00 ou 00.000.000/0000-00', **{'aria-describedby': 'cnpjHelp'}) }}
-                                {{ form.cnpj.label(class='form-label') }}
+                                <label class="form-label" for="{{ form.cnpj.id }}">
+                                    {{ form.cnpj.label.text }} <span class="text-danger">*</span>
+                                </label>
                             </div>
                             <button type='button' class='btn btn-outline-secondary' id='buscar-cnpj' title='Consultar CNPJ (apenas CNPJ)'>
                                 <i class='bi bi-search'></i>
@@ -88,7 +94,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ form.data_abertura(class="form-control", id="data_abertura", type="date", placeholder="Data de Abertura", **{'aria-describedby': 'dataAberturaHelp'}) }}
-                            {{ form.data_abertura.label(class="form-label") }}
+                            <label class="form-label" for="{{ form.data_abertura.id }}">
+                                {{ form.data_abertura.label.text }} <span class="text-danger">*</span>
+                            </label>
                         </div>
                         {% if form.data_abertura.errors %}
                             {% for error in form.data_abertura.errors %}
@@ -104,11 +112,13 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.tipo_empresa.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ form.tipo_empresa.id }}">
+                            {{ form.tipo_empresa.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tipo_empresa">
                             {% for value, label in form.tipo_empresa.choices %}
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="tipo_empresa" value="{{ value }}" id="tipo-{{ loop.index }}" {% if form.tipo_empresa.data == value %}checked{% endif %}>
+                                    <input class="form-check-input" type="radio" name="tipo_empresa" value="{{ value }}" id="tipo-{{ loop.index }}" {% if form.tipo_empresa.data == value %}checked{% endif %} {% if form.tipo_empresa.flags.required %}data-required="true"{% endif %}>
                                     <label class="form-check-label" for="tipo-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
@@ -175,11 +185,13 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.tributacao.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ form.tributacao.id }}">
+                            {{ form.tributacao.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tributacao">
                             {% for value, label in form.tributacao.choices %}
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="tributacao" value="{{ value }}" id="tributacao-{{ loop.index }}" {% if form.tributacao.data == value %}checked{% endif %}>
+                                    <input class="form-check-input" type="radio" name="tributacao" value="{{ value }}" id="tributacao-{{ loop.index }}" {% if form.tributacao.data == value %}checked{% endif %} {% if form.tributacao.flags.required %}data-required="true"{% endif %}>
                                     <label class="form-check-label" for="tributacao-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
@@ -194,11 +206,13 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ form.regime_lancamento.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ form.regime_lancamento.id }}">
+                            {{ form.regime_lancamento.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container checkbox-group-container" data-field-name="regime_lancamento">
                             {% for value, label in form.regime_lancamento.choices %}
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if value in (form.regime_lancamento.data or []) %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if value in (form.regime_lancamento.data or []) %}checked{% endif %} {% if form.regime_lancamento.flags.required %}data-required="true"{% endif %}>
                                     <label class="form-check-label" for="regime-{{ loop.index }}">{{ label }}</label>
                                 </div>
                             {% endfor %}
