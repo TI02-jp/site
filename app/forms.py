@@ -66,7 +66,38 @@ REGIME_LANCAMENTO_CHOICES = [
     ('Competência', 'Competência')
 ]
 
-class LoginForm(FlaskForm):
+class BaseForm(FlaskForm):
+    """Base form that flags required fields for UI rendering."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self._fields.values():
+            if self._is_required_field(field):
+                render_kw = field.render_kw or {}
+                render_kw.setdefault("data-required", "true")
+                render_kw.setdefault("aria-required", "true")
+                field.render_kw = render_kw
+
+    @staticmethod
+    def _is_required_field(field) -> bool:
+        if getattr(field.flags, "required", False):
+            return True
+
+        has_optional = any(isinstance(v, Optional) for v in field.validators)
+        if has_optional:
+            return False
+
+        for validator in field.validators:
+            if isinstance(validator, Length) and (validator.min or 0) > 0:
+                return True
+            if isinstance(validator, NumberRange):
+                return True
+            if isinstance(validator, (Email, URL)):
+                return True
+        return False
+
+
+class LoginForm(BaseForm):
     """Formulário para login de usuários."""
     # Nome de usuário para autenticação
     username = StringField("Usuário", validators=[DataRequired()])
@@ -77,7 +108,7 @@ class LoginForm(FlaskForm):
     # Botão de envio do formulário
     submit = SubmitField("Entrar")
 
-class RegistrationForm(FlaskForm):
+class RegistrationForm(BaseForm):
     """Formulário para registrar novos usuários."""
     # Usuário para login; entre 3 e 20 caracteres
     username = StringField('Usuário', validators=[DataRequired(), Length(min=3, max=20)])
@@ -162,7 +193,7 @@ def validar_cpf_cnpj(form, field):
     else:
         raise ValidationError("CPF/CNPJ inválido")
 
-class EmpresaForm(FlaskForm):
+class EmpresaForm(BaseForm):
     """Formulário para cadastrar ou editar uma empresa."""
     codigo_empresa = StringField('Código da Empresa', validators=[DataRequired()])
     nome_empresa = StringField('Nome da Empresa', validators=[DataRequired()])
@@ -200,7 +231,7 @@ class EmpresaForm(FlaskForm):
     ativo = BooleanField('Empresa Ativa')
     submit = SubmitField('Cadastrar Empresa')
 
-class EditUserForm(FlaskForm):
+class EditUserForm(BaseForm):
     """Formulário para editar um usuário existente."""
     username = StringField('Usuário', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -215,7 +246,7 @@ class EditUserForm(FlaskForm):
     )
     ativo = BooleanField('Usuário Ativo')
 
-class DepartamentoForm(FlaskForm):
+class DepartamentoForm(BaseForm):
     """Formulário base para departamentos."""
     responsavel = StringField('Responsável', validators=[Optional()])
     descricao = StringField('Descrição', validators=[Optional()])
@@ -250,7 +281,7 @@ class DepartamentoFiscalForm(DepartamentoForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
-class AccessLinkForm(FlaskForm):
+class AccessLinkForm(BaseForm):
     """Formulário para criar novos atalhos na central de acessos."""
 
     category = SelectField(
@@ -276,7 +307,7 @@ class AccessLinkForm(FlaskForm):
     submit = SubmitField("Criar atalho")
 
 
-class AnnouncementForm(FlaskForm):
+class AnnouncementForm(BaseForm):
     """Formulário para criação de comunicados internos."""
 
     date = DateField(
@@ -313,7 +344,7 @@ class AnnouncementForm(FlaskForm):
     submit = SubmitField("Salvar")
 
 
-class ClientAnnouncementForm(FlaskForm):
+class ClientAnnouncementForm(BaseForm):
     """Formulário para acompanhar comunicados enviados a clientes."""
 
     code = StringField(
@@ -360,7 +391,7 @@ class ClientAnnouncementForm(FlaskForm):
     submit = SubmitField("Registrar comunicado")
 
 
-class OperationalProcedureForm(FlaskForm):
+class OperationalProcedureForm(BaseForm):
     """Formulário para cadastrar/editar procedimentos operacionais."""
 
     title = StringField(
@@ -372,7 +403,7 @@ class OperationalProcedureForm(FlaskForm):
     submit = SubmitField("Salvar procedimento")
 
 
-class DiretoriaAcordoForm(FlaskForm):
+class DiretoriaAcordoForm(BaseForm):
     """Formulário para registrar acordos individuais da Diretoria JP."""
 
     title = StringField(
@@ -422,7 +453,7 @@ class DiretoriaAcordoForm(FlaskForm):
         return True
 
 
-class DiretoriaFeedbackForm(FlaskForm):
+class DiretoriaFeedbackForm(BaseForm):
     """Formulário para registrar feedbacks individuais da Diretoria JP."""
 
     title = StringField(
@@ -472,7 +503,7 @@ class DiretoriaFeedbackForm(FlaskForm):
         return True
 
 
-class CourseForm(FlaskForm):
+class CourseForm(BaseForm):
     """Formulário para cadastrar cursos internos."""
 
     course_id = HiddenField()
@@ -549,7 +580,7 @@ class CourseForm(FlaskForm):
     submit_delete = SubmitField("Excluir curso")
 
 
-class CourseTagForm(FlaskForm):
+class CourseTagForm(BaseForm):
     """Formulário para cadastrar novas tags de cursos."""
 
     name = StringField(
@@ -606,7 +637,7 @@ class DepartamentoFinanceiroForm(DepartamentoForm):
     particularidades_texto = TextAreaField('Particularidades', validators=[Optional()])
 
 
-class ClienteReuniaoForm(FlaskForm):
+class ClienteReuniaoForm(BaseForm):
     """Formulário para registrar reuniões com clientes."""
 
     data = DateField("Data da reunião", format="%Y-%m-%d", validators=[Optional()])
@@ -625,7 +656,7 @@ class ClienteReuniaoForm(FlaskForm):
     submit = SubmitField("Salvar reunião")
 
 
-class ConsultoriaForm(FlaskForm):
+class ConsultoriaForm(BaseForm):
     """Formulário para cadastro de consultorias."""
     nome = StringField('Nome da Consultoria', validators=[DataRequired()])
     usuario = StringField('Usuário na Consultoria', validators=[DataRequired()])
@@ -633,7 +664,7 @@ class ConsultoriaForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
-class SetorForm(FlaskForm):
+class SetorForm(BaseForm):
     """Formulário para cadastro de setores."""
     nome = StringField('Setor', validators=[DataRequired()])
     submit = SubmitField('Salvar')
@@ -657,7 +688,7 @@ ACORDO_CHOICES = [
 ]
 
 
-class NotaDebitoForm(FlaskForm):
+class NotaDebitoForm(BaseForm):
     """Formulário para cadastro de notas para débito."""
     data_emissao = DateField('Data de Emissão', validators=[Optional()])
     empresa = StringField('Empresa', validators=[Optional()])
@@ -672,7 +703,7 @@ class NotaDebitoForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
-class CadastroNotaForm(FlaskForm):
+class CadastroNotaForm(BaseForm):
     """Formulário para cadastro de notas."""
     cadastro = StringField('Cadastro', validators=[Optional()])
     valor = StringField('Valor', validators=[Optional()])
@@ -682,7 +713,7 @@ class CadastroNotaForm(FlaskForm):
     submit = SubmitField('Salvar')
 
 
-class NotaRecorrenteForm(FlaskForm):
+class NotaRecorrenteForm(BaseForm):
     """Formulário para notas fiscais emitidas de forma recorrente."""
 
     empresa = StringField('Empresa', validators=[DataRequired(), Length(max=255)])
@@ -705,20 +736,20 @@ class NotaRecorrenteForm(FlaskForm):
     submit = SubmitField('Salvar nota recorrente')
 
 
-class TagForm(FlaskForm):
+class TagForm(BaseForm):
     """Formulário para cadastro de tags."""
     nome = StringField('Tag', validators=[DataRequired()])
     submit = SubmitField('Salvar')
 
 
-class TagDeleteForm(FlaskForm):
+class TagDeleteForm(BaseForm):
     """Formulário para exclusão de tags."""
 
     tag_id = HiddenField(validators=[DataRequired()])
     submit = SubmitField('Excluir')
 
 
-class MeetingForm(FlaskForm):
+class MeetingForm(BaseForm):
     """Formulário para agendamento de reuniões."""
     participants = SelectMultipleField(
         "Participantes",
@@ -797,7 +828,7 @@ class MeetingForm(FlaskForm):
         return True
 
 
-class MeetConfigurationForm(FlaskForm):
+class MeetConfigurationForm(BaseForm):
     """Formulário para configurar opções da sala do Google Meet."""
 
     meeting_id = HiddenField(validators=[DataRequired()])
@@ -816,7 +847,7 @@ class MeetConfigurationForm(FlaskForm):
     submit = SubmitField("Salvar configurações")
 
 
-class GeneralCalendarEventForm(FlaskForm):
+class GeneralCalendarEventForm(BaseForm):
     """Formulário para eventos do calendário interno."""
 
     participants = SelectMultipleField(
@@ -957,7 +988,7 @@ class GeneralCalendarEventForm(FlaskForm):
         return True
 
 
-class TaskForm(FlaskForm):
+class TaskForm(BaseForm):
     """Formulário para criação de tarefas."""
 
     title = StringField("Título", validators=[DataRequired()])
@@ -1002,7 +1033,7 @@ class TaskForm(FlaskForm):
     submit = SubmitField("Salvar")
 
 
-class ManualCategoryForm(FlaskForm):
+class ManualCategoryForm(BaseForm):
     """Formulário para CRUD de categorias do manual."""
 
     name = StringField(
@@ -1016,7 +1047,7 @@ class ManualCategoryForm(FlaskForm):
     submit = SubmitField("Salvar categoria")
 
 
-class ManualVideoForm(FlaskForm):
+class ManualVideoForm(BaseForm):
     """Formulário para upload e edição de vídeos do manual."""
 
     title = StringField(
@@ -1045,3 +1076,7 @@ class ManualVideoForm(FlaskForm):
         render_kw={"accept": "image/*"}
     )
     submit = SubmitField("Salvar vídeo")
+
+
+
+

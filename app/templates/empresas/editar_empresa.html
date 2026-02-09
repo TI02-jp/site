@@ -45,7 +45,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.codigo_empresa(class="form-control", placeholder="Código") }}
-                            {{ empresa_form.codigo_empresa.label(class="form-label") }}
+                            <label class="form-label" for="{{ empresa_form.codigo_empresa.id }}">
+                                {{ empresa_form.codigo_empresa.label.text }} <span class="text-danger">*</span>
+                            </label>
                             {% if empresa_form.codigo_empresa.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in empresa_form.codigo_empresa.errors %}
@@ -58,7 +60,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.nome_empresa(class="form-control", placeholder="Nome") }}
-                            {{ empresa_form.nome_empresa.label(class="form-label") }}
+                            <label class="form-label" for="{{ empresa_form.nome_empresa.id }}">
+                                {{ empresa_form.nome_empresa.label.text }} <span class="text-danger">*</span>
+                            </label>
                             {% if empresa_form.nome_empresa.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in empresa_form.nome_empresa.errors %}
@@ -74,7 +78,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.cnpj(class="form-control", placeholder="CPF ou CNPJ", id="cnpj") }}
-                            {{ empresa_form.cnpj.label(class="form-label") }}
+                            <label class="form-label" for="{{ empresa_form.cnpj.id }}">
+                                {{ empresa_form.cnpj.label.text }} <span class="text-danger">*</span>
+                            </label>
                             {% if empresa_form.cnpj.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in empresa_form.cnpj.errors %}
@@ -87,7 +93,9 @@
                     <div class="col-md-6">
                         <div class="form-floating">
                             {{ empresa_form.data_abertura(class="form-control", type="date", placeholder="Data de Abertura") }}
-                            {{ empresa_form.data_abertura.label(class="form-label") }}
+                            <label class="form-label" for="{{ empresa_form.data_abertura.id }}">
+                                {{ empresa_form.data_abertura.label.text }} <span class="text-danger">*</span>
+                            </label>
                             {% if empresa_form.data_abertura.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in empresa_form.data_abertura.errors %}
@@ -101,7 +109,9 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ empresa_form.tipo_empresa.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ empresa_form.tipo_empresa.id }}">
+                            {{ empresa_form.tipo_empresa.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tipo_empresa">
                             {% for subfield in empresa_form.tipo_empresa %}
                             <div class="form-check mb-2">
@@ -169,7 +179,9 @@
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ empresa_form.tributacao.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ empresa_form.tributacao.id }}">
+                            {{ empresa_form.tributacao.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container" data-field-name="tributacao">
                             {# Este loop simples resolve tudo! #}
                             {% for subfield in empresa_form.tributacao %}
@@ -182,11 +194,13 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">{{ empresa_form.regime_lancamento.label.text }}</label>
+                        <label class="form-label fw-semibold" for="{{ empresa_form.regime_lancamento.id }}">
+                            {{ empresa_form.regime_lancamento.label.text }} <span class="text-danger">*</span>
+                        </label>
                         <div class="border rounded p-3 bg-light radio-group-container checkbox-group-container" data-field-name="regime_lancamento">
                             {% for value, label in empresa_form.regime_lancamento.choices %}
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if value in (empresa_form.regime_lancamento.data or []) %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" name="regime_lancamento" value="{{ value }}" id="regime-{{ loop.index }}" {% if value in (empresa_form.regime_lancamento.data or []) %}checked{% endif %} {% if empresa_form.regime_lancamento.flags.required %}data-required="true"{% endif %}>
                                 <label class="form-check-label" for="regime-{{ loop.index }}">{{ label }}</label>
                             </div>
                             {% endfor %}
