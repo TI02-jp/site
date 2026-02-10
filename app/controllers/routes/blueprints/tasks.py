@@ -324,18 +324,88 @@ def _group_root_tasks_by_status(
     return buckets
 
 
+def _collect_task_tree_ids(task_id: int) -> list[int]:
+    """
+    Coleta todos IDs da árvore de tasks usando CTE recursivo.
+
+    Retorna lista de IDs incluindo a task raiz e todas subtasks recursivamente.
+    Performance: 1 query ao invés de N queries recursivas.
+    """
+    from sqlalchemy import text
+
+    query = text("""
+        WITH RECURSIVE task_tree AS (
+            SELECT id FROM tasks WHERE id = :task_id
+            UNION ALL
+            SELECT t.id FROM tasks t
+            INNER JOIN task_tree tt ON t.parent_id = tt.id
+        )
+        SELECT id FROM task_tree
+    """)
+
+    result = db.session.execute(query, {"task_id": task_id})
+    return [row[0] for row in result]
+
+
+def _delete_task_tree_bulk(task_id: int) -> None:
+    """
+    Deleta árvore de tasks eficientemente usando bulk deletes.
+
+    Performance: 6 queries ao invés de potencialmente centenas.
+    Usa CTE recursivo para coletar IDs, depois bulk delete de todos relacionamentos.
+    """
+    task_ids = _collect_task_tree_ids(task_id)
+
+    if not task_ids:
+        return
+
+    # Bulk delete de todos relacionamentos
+    # Nota: ordem importa - deletar relacionamentos antes das tasks
+    TaskResponseParticipant.query.filter(
+        TaskResponseParticipant.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskResponse.query.filter(
+        TaskResponse.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskAttachment.query.filter(
+        TaskAttachment.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskHistory.query.filter(
+        TaskHistory.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskStatusHistory.query.filter(
+        TaskStatusHistory.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskNotification.query.filter(
+        TaskNotification.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    TaskFollower.query.filter(
+        TaskFollower.task_id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    # Por último, deleta as tasks
+    Task.query.filter(
+        Task.id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    db.session.commit()
+
+
 def _delete_task_recursive(task: Task) -> None:
-    """Delete a task and all of its subtasks recursively."""
+    """
+    Delete a task and all of its subtasks recursively.
 
-    for child in list(task.children or []):
-        _delete_task_recursive(child)
-
-    for history in TaskStatusHistory.query.filter_by(task_id=task.id).all():
-        db.session.delete(history)
-    for notification in TaskNotification.query.filter_by(task_id=task.id).all():
-        db.session.delete(notification)
-
-    db.session.delete(task)
+    DEPRECATED: Use _delete_task_tree_bulk() instead for better performance.
+    Mantido por compatibilidade durante transição.
+    """
+    # Usar nova implementação otimizada
+    _delete_task_tree_bulk(task.id)
 
 
 # ============================================================================

@@ -1,4 +1,4 @@
-{% if is_meeting_only_user() %}
+﻿{% if is_meeting_only_user() %}
 {# Usuários com apenas a tag "reunião" veem somente a sala de reuniões #}
 <div class="nav-section">
     <div class="nav-section-title">PRINCIPAL</div>
@@ -62,6 +62,15 @@
                 CONSULTORIAS
             </a>
         </li>
+        {% set societario_user = ((current_user.name or current_user.username or '')|lower) %}
+        {% if current_user.is_master or 'juliane' in societario_user or 'tadeu' in societario_user or 'leticia' in societario_user %}
+        <li class="nav-item">
+            <a class="nav-link{% if request.endpoint in ['societario', 'core.societario', 'societario.societario'] %} active{% endif %}" href="{{ url_for('societario') }}">
+                <i class="bi bi-bank"></i>
+                SOCIETÁRIO
+            </a>
+        </li>
+        {% endif %}
         <li class="nav-item">
             <a class="nav-link{% if request.endpoint in ['acessos', 'acessos_categoria_novo'] %} active{% endif %}" href="{{ url_for('acessos') }}">
                 <i class="bi bi-grid-3x3-gap"></i>
@@ -282,3 +291,4 @@
     });
   })();
 </script>
+

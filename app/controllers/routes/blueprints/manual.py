@@ -365,7 +365,9 @@ def listar_videos():
     else:
         query = query.order_by(ManualVideo.created_at.desc())
 
-    videos = query.all()
+    # Limitar a 200 vídeos por consulta para evitar sobrecarga
+    # Usuários podem refinar com filtros de categoria/busca
+    videos = query.limit(200).all()
     categories = _get_categories_catalog()
 
     # Backfill de metadados (thumbnail/duração) para vídeos sem informação
