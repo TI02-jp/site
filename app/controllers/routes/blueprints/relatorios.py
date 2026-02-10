@@ -1248,13 +1248,16 @@ def report_permissions():
 
     _require_master_admin()
 
-    tags = Tag.query.order_by(sa.func.lower(Tag.nome)).all()
-    users = (
-        User.query.filter(User.ativo.is_(True))
-        .order_by(User.name.asc(), User.username.asc())
-        .all()
-    )
-    existing_permissions = ReportPermission.query.all()
+    from app.services.optimized_queries import get_all_tags, get_active_users_with_tags
+    from app.extensions.cache import cached_query
+
+    @cached_query(timeout=600, key_prefix='report_permissions')
+    def _get_all_report_permissions():
+        return ReportPermission.query.all()
+
+    tags = get_all_tags()
+    users = get_active_users_with_tags()
+    existing_permissions = _get_all_report_permissions()
 
     permitted_tags: dict[str, set[int]] = {code: set() for code in ALL_PERMISSION_DEFINITIONS}
     permitted_users: dict[str, set[int]] = {code: set() for code in ALL_PERMISSION_DEFINITIONS}

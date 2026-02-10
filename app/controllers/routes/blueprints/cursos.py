@@ -99,6 +99,7 @@ def cursos():
 
     # Usar Tags de usuarios no campo "Setores Participantes"
     from app.services.cache_service import get_all_tags_cached
+    from app.services.optimized_queries import get_active_users_with_tags
 
     sector_choices = [
         (tag.id, tag.nome)
@@ -106,7 +107,7 @@ def cursos():
     ]
     participant_choices = [
         (user.id, user.name)
-        for user in User.query.filter_by(ativo=True).order_by(User.name.asc()).all()
+        for user in get_active_users_with_tags()
     ]
     form.sectors.choices = sector_choices
     form.participants.choices = participant_choices

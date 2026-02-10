@@ -10,6 +10,7 @@ from flask import Blueprint, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
 from app.controllers.routes._decorators import meeting_only_access_check
+from app.controllers.routes.blueprints.societario import can_access_societario
 from app.utils.performance_middleware import track_custom_span
 
 core_bp = Blueprint("core", __name__)
@@ -19,6 +20,9 @@ core_bp = Blueprint("core", __name__)
 def index():
     """Redirect users to the appropriate first page."""
     if current_user.is_authenticated:
+        user_name = (current_user.name or current_user.username or "").strip().lower()
+        if can_access_societario(current_user) and "tadeu" in user_name:
+            return redirect(url_for("societario.societario"))
         if current_user.role == "admin":
             return redirect(url_for("tasks_overview"))
         first_tag = current_user.tags[0] if current_user.tags else None

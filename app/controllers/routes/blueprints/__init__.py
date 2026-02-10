@@ -23,6 +23,7 @@ Blueprints Disponiveis:
     - tasks_bp: Gestao de tarefas
     - empresas_bp: Gestao de empresas
     - comunicados_clientes_bp: Comunicados enviados aos clientes (admin)
+    - societario_bp: Processos societarios
 
 Uso:
     from app.controllers.routes.blueprints import register_all_blueprints
@@ -107,6 +108,12 @@ def register_all_blueprints(app: Flask) -> None:
     from app.controllers.routes.blueprints.notas import notas_bp
     app.register_blueprint(notas_bp)
 
+    # Societario - processos societarios
+    from app.controllers.routes.blueprints.societario import societario_bp
+    app.register_blueprint(societario_bp)
+    from app.controllers.routes.blueprints.societario_api import societario_api_bp
+    app.register_blueprint(societario_api_bp)
+
     # Users - gestao de usuarios (MIGRADO - 2024-12)
     from app.controllers.routes.blueprints.users import users_bp
     app.register_blueprint(users_bp)
@@ -167,7 +174,7 @@ def _add_legacy_endpoint_aliases(app: Flask) -> None:
         'diretoria.', 'notifications.', 'notas.',
         'reunioes.', 'relatorios.', 'users.',
         'tasks.', 'empresas.', 'core.', 'manual.',
-        'comunicados_clientes.',
+        'comunicados_clientes.', 'societario.', 'societario_api.',
     ]
 
     for rule in list(app.url_map.iter_rules()):

@@ -1,0 +1,971 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Societário{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+.soc-card {
+    border-radius: 14px;
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
+}
+
+.soc-card .card-body {
+    background: var(--card-bg);
+}
+
+.soc-header h1 {
+    font-size: 1.35rem;
+    margin: 0;
+}
+
+.soc-table thead {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #dee2e6;
+}
+
+.soc-table thead th {
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #495057;
+    padding: 1rem 0.75rem;
+    border: none;
+}
+
+.soc-table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.15s ease;
+}
+
+.soc-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.soc-table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+    white-space: nowrap;
+}
+
+.soc-table th {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.soc-table .form-control,
+.soc-table .form-select {
+    min-width: 170px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.soc-table th.col-empresa,
+.soc-table td.col-empresa {
+    min-width: 250px;
+    width: 250px;
+}
+
+.soc-table th.col-tipo,
+.soc-table td.col-tipo {
+    min-width: 190px;
+    width: 190px;
+}
+
+.soc-table th.col-data,
+.soc-table td.col-data {
+    min-width: 145px;
+    width: 145px;
+}
+
+.soc-table th.col-status,
+.soc-table td.col-status {
+    min-width: 185px;
+    width: 185px;
+}
+
+.soc-table .obs-field {
+    min-width: 230px;
+    width: 230px;
+    white-space: normal;
+}
+
+.soc-table .obs-field textarea {
+    border-radius: 8px;
+    resize: vertical;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.soc-log {
+    min-width: 150px;
+    width: 150px;
+    white-space: normal;
+    font-size: 0.78rem;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 0.4rem 0.6rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.soc-table th.col-acoes,
+.soc-table td.col-acoes {
+    min-width: 105px;
+    width: 105px;
+}
+
+.soc-table td.col-empresa input {
+    min-width: 220px;
+}
+
+.soc-table .empresa-readonly {
+    min-width: 220px;
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.92rem;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(135deg, rgba(0, 64, 128, 0.04) 0%, rgba(0, 64, 128, 0.01) 100%);
+    border-radius: 8px;
+    border-left: 3px solid #004080;
+}
+
+.soc-table td.col-data input {
+    min-width: 130px;
+}
+
+.soc-table td.col-status select {
+    min-width: 165px;
+}
+
+.save-feedback {
+    font-size: 0.72rem;
+    min-width: 78px;
+    font-weight: 600;
+}
+
+.soc-table .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.soc-table .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.soc-table .btn-outline-secondary {
+    border-width: 1.5px;
+}
+
+.soc-table .btn-outline-danger {
+    border-width: 1.5px;
+}
+
+.status-dash-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.status-dash-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.status-dash-item {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.status-dash {
+    position: relative;
+    border-radius: 14px;
+    background: var(--card-bg);
+    padding: 0.7rem 0.75rem;
+    min-height: 84px;
+    height: 100%;
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.status-dash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--dash-color, #dee2e6);
+    transition: height 0.2s ease;
+}
+
+.status-dash:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.status-dash:hover::before {
+    height: 6px;
+}
+
+.status-dash.active {
+    border-color: var(--dash-color, var(--primary));
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(var(--dash-color-rgb, 13, 110, 253), 0.08) 100%);
+    box-shadow: 0 8px 16px rgba(var(--dash-color-rgb, 0, 0, 0), 0.15);
+}
+
+.status-dash.active::before {
+    height: 5px;
+}
+
+.status-dash .dash-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+}
+
+.status-dash .dash-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--dash-color, var(--primary));
+    line-height: 1;
+    margin-top: 0.3rem;
+}
+
+/* Cores por status - Paleta reduzida com tons escuros */
+.status-dash[data-status="all"] {
+    --dash-color: #495057;
+    --dash-color-rgb: 73, 80, 87;
+}
+
+.status-dash[data-status="VIABILIDADE"] {
+    --dash-color: #0066cc;
+    --dash-color-rgb: 0, 102, 204;
+}
+
+.status-dash[data-status="DIGITACAO"] {
+    --dash-color: #cc8800;
+    --dash-color-rgb: 204, 136, 0;
+}
+
+.status-dash[data-status="CORRECAO"] {
+    --dash-color: #cc5500;
+    --dash-color-rgb: 204, 85, 0;
+}
+
+.status-dash[data-status="ASSINATURA"] {
+    --dash-color: #6c3fb3;
+    --dash-color-rgb: 108, 63, 179;
+}
+
+.status-dash[data-status="JUCESC"] {
+    --dash-color: #004080;
+    --dash-color-rgb: 0, 64, 128;
+}
+
+.status-dash[data-status="FINALIZADA"] {
+    --dash-color: #0d6832;
+    --dash-color-rgb: 13, 104, 50;
+}
+
+.status-dash[data-status="PARALISADA"] {
+    --dash-color: #495057;
+    --dash-color-rgb: 73, 80, 87;
+}
+
+.status-dash[data-status="DEFERIDO"] {
+    --dash-color: #0d7a5c;
+    --dash-color-rgb: 13, 122, 92;
+}
+
+.status-dash[data-status="REGISTRADA"] {
+    --dash-color: #0a5129;
+    --dash-color-rgb: 10, 81, 41;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 55vh;
+    overflow: auto;
+}
+
+.history-item {
+    border: 1px solid var(--card-border-color);
+    border-radius: 10px;
+    padding: 0.65rem 0.75rem;
+    background: var(--card-bg);
+}
+
+.history-item .meta {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.history-item .change {
+    font-size: 0.84rem;
+}
+
+.new-process-grid {
+    display: grid;
+    grid-template-columns: 2.1fr 1.35fr 1.15fr 1.35fr 1.35fr 0.55fr;
+    gap: 0.55rem;
+    align-items: end;
+}
+
+.new-process-grid .new-process-field {
+    min-width: 0;
+}
+
+.new-process-grid .form-control,
+.new-process-grid .form-select {
+    height: 40px;
+}
+
+.new-process-grid .new-process-action .btn {
+    height: 40px;
+    width: 100%;
+}
+
+@media (max-width: 1200px) {
+    .new-process-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .new-process-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilização dos selects de status com degradês */
+.soc-table select[data-field="status"] {
+    font-weight: 600;
+    border-width: 2px;
+    padding: 0.4rem 0.6rem;
+    border-left-width: 4px;
+}
+
+.soc-table select[data-field="status"][value="VIABILIDADE"] {
+    border-color: #0066cc;
+    color: #004d99;
+    background: linear-gradient(135deg, rgba(0, 102, 204, 0.12) 0%, rgba(0, 102, 204, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="DIGITACAO"] {
+    border-color: #cc8800;
+    color: #996600;
+    background: linear-gradient(135deg, rgba(204, 136, 0, 0.12) 0%, rgba(204, 136, 0, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="CORRECAO"] {
+    border-color: #cc5500;
+    color: #994000;
+    background: linear-gradient(135deg, rgba(204, 85, 0, 0.12) 0%, rgba(204, 85, 0, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="ASSINATURA"] {
+    border-color: #6c3fb3;
+    color: #512e87;
+    background: linear-gradient(135deg, rgba(108, 63, 179, 0.12) 0%, rgba(108, 63, 179, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="JUCESC"] {
+    border-color: #004080;
+    color: #003060;
+    background: linear-gradient(135deg, rgba(0, 64, 128, 0.12) 0%, rgba(0, 64, 128, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="FINALIZADA"] {
+    border-color: #0d6832;
+    color: #0a4f26;
+    background: linear-gradient(135deg, rgba(13, 104, 50, 0.12) 0%, rgba(13, 104, 50, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="PARALISADA"] {
+    border-color: #495057;
+    color: #343a40;
+    background: linear-gradient(135deg, rgba(73, 80, 87, 0.12) 0%, rgba(73, 80, 87, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="DEFERIDO"] {
+    border-color: #0d7a5c;
+    color: #095c45;
+    background: linear-gradient(135deg, rgba(13, 122, 92, 0.12) 0%, rgba(13, 122, 92, 0.05) 100%);
+}
+
+.soc-table select[data-field="status"][value="REGISTRADA"] {
+    border-color: #0a5129;
+    color: #073d1f;
+    background: linear-gradient(135deg, rgba(10, 81, 41, 0.12) 0%, rgba(10, 81, 41, 0.05) 100%);
+}
+
+/* Estilização dos selects de tipo */
+.soc-table select[data-field="tipo_processo"] {
+    font-weight: 500;
+    border-width: 2px;
+    border-left-width: 4px;
+    border-color: #004080;
+    color: #003060;
+    background: linear-gradient(135deg, rgba(0, 64, 128, 0.1) 0%, rgba(0, 64, 128, 0.04) 100%);
+}
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'sidebar_home.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 1600px;">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-3 soc-header">
+        <h1 class="text-primary">Processos Societários <span class="badge bg-primary" data-process-count>{{ processos|length }}</span></h1>
+    </div>
+
+    <div class="card soc-card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                <div>
+                    <h2 class="h5 mb-1">Visão Geral por Status</h2>
+                    <p class="text-muted mb-0" style="font-size: 0.85rem;">Clique em um card para filtrar os processos</p>
+                </div>
+                <a class="btn btn-outline-secondary btn-sm{% if not active_status %} d-none{% endif %}" href="{{ url_for('societario.societario') }}" data-dashboard-clear>
+                    <i class="bi bi-x-circle"></i> Limpar filtro
+                </a>
+            </div>
+            <div class="status-dash-row">
+                <div class="status-dash-item">
+                    <a class="status-dash-link" href="{{ url_for('societario.societario') }}" data-dashboard-filter="">
+                        <div class="status-dash{% if not active_status %} active{% endif %}" data-status="all">
+                            <div class="dash-label">Todos</div>
+                            <div class="dash-value">{{ total_processos }}</div>
+                        </div>
+                    </a>
+                </div>
+                {% for value, label in status_choices %}
+                <div class="status-dash-item">
+                    <a class="status-dash-link" href="{{ url_for('societario.societario', status=value) }}" data-dashboard-filter="{{ value }}">
+                        <div class="status-dash{% if active_status == value %} active{% endif %}" data-status="{{ value }}">
+                            <div class="dash-label">{{ label }}</div>
+                            <div class="dash-value">{{ status_counts.get(value, 0) }}</div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card soc-card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Novo Processo</h2>
+            <form method="POST" action="{{ url_for('societario_create') }}" class="new-process-grid">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="new-process-field">
+                    <label class="form-label mb-1">Empresa</label>
+                    <input
+                        type="text"
+                        name="nome_empresa"
+                        list="empresasList"
+                        class="form-control"
+                        placeholder="Empresa existente ou nova"
+                        required
+                    >
+                </div>
+
+                <div class="new-process-field">
+                    <label class="form-label mb-1">Tipo</label>
+                    <select name="tipo_processo" class="form-select" required>
+                        <option value="">Selecione</option>
+                        {% for value, label in tipo_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="new-process-field">
+                    <label class="form-label mb-1">Data Início</label>
+                    <input type="date" name="data_inicio" class="form-control" required>
+                </div>
+
+                <div class="new-process-field">
+                    <label class="form-label mb-1">Status</label>
+                    <select name="status" class="form-select" required>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if value == 'VIABILIDADE' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="new-process-field">
+                    <label class="form-label mb-1">Observação</label>
+                    <input type="text" name="observacao" class="form-control" placeholder="Opcional">
+                </div>
+
+                <div class="new-process-field new-process-action">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <datalist id="empresasList">
+        {% for empresa in empresas %}
+        <option value="{{ empresa.nome_empresa }}"></option>
+        {% endfor %}
+    </datalist>
+
+    <div class="card soc-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 soc-table">
+                    <thead>
+                        <tr>
+                            <th class="col-empresa">Empresa</th>
+                            <th class="col-tipo">Tipo</th>
+                            <th class="col-data">Data Início</th>
+                            <th class="col-status">Status</th>
+                            <th>Observação</th>
+                            <th>Última Alteração</th>
+                            <th class="text-end pe-3 col-acoes">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if processos %}
+                            {% for processo in processos %}
+                            <tr data-processo-row="{{ processo.id }}" data-row-status="{{ processo.status.value }}">
+                                <td class="col-empresa">
+                                    <div class="empresa-readonly">{{ processo.nome_empresa }}</div>
+                                </td>
+                                <td class="col-tipo">
+                                    <select class="form-select form-select-sm" data-field="tipo_processo" data-id="{{ processo.id }}">
+                                        {% for value, label in tipo_choices %}
+                                        <option value="{{ value }}" {% if processo.tipo_processo.value == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="col-data">
+                                    <input
+                                        type="date"
+                                        class="form-control form-control-sm"
+                                        value="{{ processo.data_inicio.strftime('%Y-%m-%d') if processo.data_inicio else '' }}"
+                                        data-field="data_inicio"
+                                        data-id="{{ processo.id }}"
+                                    >
+                                </td>
+                                <td class="col-status">
+                                    <select class="form-select form-select-sm" data-field="status" data-id="{{ processo.id }}">
+                                        {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if processo.status.value == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="obs-field">
+                                    <textarea
+                                        class="form-control form-control-sm"
+                                        rows="2"
+                                        data-field="observacao"
+                                        data-id="{{ processo.id }}"
+                                    >{{ processo.observacao or '' }}</textarea>
+                                </td>
+                                <td class="soc-log" data-conclusao="{{ processo.id }}">{{ processo.conclusao or '-' }}</td>
+                                <td class="text-end pe-3 col-acoes">
+                                    <div class="d-inline-flex align-items-center gap-2">
+                                        <span class="save-feedback text-muted" data-feedback="{{ processo.id }}"></span>
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            data-history-open="1"
+                                            data-processo-id="{{ processo.id }}"
+                                            data-processo-nome="{{ processo.nome_empresa }}"
+                                            title="Ver histórico de alterações"
+                                        >
+                                            <i class="bi bi-clock-history"></i>
+                                            <span class="ms-1" data-history-count="{{ processo.id }}">{{ history_counts.get(processo.id, 0) }}</span>
+                                        </button>
+                                        <form method="POST" action="{{ url_for('societario_delete', processo_id=processo.id) }}" onsubmit="return confirm('Excluir processo?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {% endfor %}
+                            <tr class="d-none" data-filter-empty-row>
+                                <td colspan="7" class="text-center text-muted py-4">Nenhum processo para este status.</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">Nenhum processo cadastrado.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="societarioHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="societarioHistoryTitle">Histórico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="history-list" data-history-modal-list></div>
+                <div class="text-muted d-none" data-history-modal-empty>Sem histórico para este processo.</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    // Constrói o endpoint base manualmente
+    const endpointBase = '/societario/processos/';
+    const initialFilter = "{{ active_status }}";
+    const debounceTimers = new Map();
+    const historyModalEl = document.getElementById('societarioHistoryModal');
+    const historyModal = historyModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(historyModalEl) : null;
+    const historyTitleNode = document.getElementById('societarioHistoryTitle');
+    const historyListNode = document.querySelector('[data-history-modal-list]');
+    const historyEmptyNode = document.querySelector('[data-history-modal-empty]');
+    const dashboardLinks = Array.from(document.querySelectorAll('[data-dashboard-filter]'));
+    const clearFilterButton = document.querySelector('[data-dashboard-clear]');
+    const processCountBadge = document.querySelector('[data-process-count]');
+    const processRows = Array.from(document.querySelectorAll('tr[data-processo-row]'));
+    const emptyFilterRow = document.querySelector('[data-filter-empty-row]');
+    let openedProcessId = null;
+    let activeFilter = initialFilter || '';
+
+    function setFeedback(id, message, isError) {
+        const node = document.querySelector('[data-feedback="' + id + '"]');
+        if (!node) return;
+        node.textContent = message;
+        node.classList.toggle('text-danger', !!isError);
+        node.classList.toggle('text-muted', !isError);
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function refreshHistoryUI(id, data) {
+        const countNode = document.querySelector('[data-history-count="' + id + '"]');
+        if (countNode && Object.prototype.hasOwnProperty.call(data, 'history_count')) {
+            countNode.textContent = String(data.history_count);
+        }
+
+        const entry = data.history_entry;
+        if (!entry) return;
+        if (String(openedProcessId || '') !== String(id)) return;
+        if (!historyListNode) return;
+        if (historyEmptyNode) historyEmptyNode.classList.add('d-none');
+
+        const metaParts = [entry.changed_at || ''];
+        if (entry.changed_by) {
+            metaParts.push(entry.changed_by);
+        } else if (entry.changed_by_id) {
+            metaParts.push('Usuário #' + entry.changed_by_id);
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'history-item';
+        wrapper.innerHTML = `
+            <div class="meta">${escapeHtml(metaParts.filter(Boolean).join(' | '))}</div>
+            <div class="change">${escapeHtml(entry.alteracao || '')}</div>
+        `;
+        historyListNode.prepend(wrapper);
+    }
+
+    function renderHistoryItems(items) {
+        if (!historyListNode) return;
+        historyListNode.innerHTML = '';
+        if (!items || !items.length) {
+            if (historyEmptyNode) historyEmptyNode.classList.remove('d-none');
+            return;
+        }
+        if (historyEmptyNode) historyEmptyNode.classList.add('d-none');
+        items.forEach(function (entry) {
+            const metaParts = [entry.changed_at || ''];
+            if (entry.changed_by) {
+                metaParts.push(entry.changed_by);
+            } else if (entry.changed_by_id) {
+                metaParts.push('Usuário #' + entry.changed_by_id);
+            }
+            const wrapper = document.createElement('div');
+            wrapper.className = 'history-item';
+            wrapper.innerHTML = `
+                <div class="meta">${escapeHtml(metaParts.filter(Boolean).join(' | '))}</div>
+                <div class="change">${escapeHtml(entry.alteracao || '')}</div>
+            `;
+            historyListNode.appendChild(wrapper);
+        });
+    }
+
+    function updateDashboardCountsFromRows() {
+        if (!processRows.length) return;
+        const counts = {};
+        processRows.forEach(function (row) {
+            const status = row.getAttribute('data-row-status') || '';
+            counts[status] = (counts[status] || 0) + 1;
+        });
+        const allNode = document.querySelector('.status-dash[data-status="all"] .dash-value');
+        if (allNode) {
+            const allVisibleCount = processRows.length - (counts.FINALIZADA || 0);
+            allNode.textContent = String(allVisibleCount);
+        }
+        document.querySelectorAll('.status-dash[data-status]').forEach(function (card) {
+            const status = card.getAttribute('data-status');
+            if (!status || status === 'all') return;
+            const valueNode = card.querySelector('.dash-value');
+            if (valueNode) valueNode.textContent = String(counts[status] || 0);
+        });
+    }
+
+    function applyDashboardFilter(statusValue, updateUrl) {
+        activeFilter = statusValue || '';
+        let visibleCount = 0;
+
+        processRows.forEach(function (row) {
+            const rowStatus = row.getAttribute('data-row-status') || '';
+            let visible = false;
+            if (!activeFilter) {
+                visible = rowStatus !== 'FINALIZADA';
+            } else {
+                visible = rowStatus === activeFilter;
+            }
+            row.classList.toggle('d-none', !visible);
+            if (visible) visibleCount += 1;
+        });
+
+        if (processCountBadge) {
+            processCountBadge.textContent = String(visibleCount);
+        }
+
+        if (emptyFilterRow) {
+            emptyFilterRow.classList.toggle('d-none', visibleCount > 0 || !processRows.length);
+        }
+
+        document.querySelectorAll('.status-dash[data-status]').forEach(function (card) {
+            const status = card.getAttribute('data-status') || '';
+            const isActive = (!activeFilter && status === 'all') || (activeFilter && status === activeFilter);
+            card.classList.toggle('active', isActive);
+        });
+
+        if (clearFilterButton) {
+            clearFilterButton.classList.toggle('d-none', !activeFilter);
+        }
+
+        if (updateUrl && window.history && window.history.replaceState) {
+            const url = new URL(window.location.href);
+            if (activeFilter) {
+                url.searchParams.set('status', activeFilter);
+            } else {
+                url.searchParams.delete('status');
+            }
+            window.history.replaceState({}, '', url.toString());
+        }
+    }
+
+    async function openHistoryModal(processId, processName) {
+        openedProcessId = processId;
+        if (historyTitleNode) {
+            historyTitleNode.textContent = 'Histórico - ' + (processName || ('Processo #' + processId));
+        }
+        renderHistoryItems([]);
+        if (historyModal) historyModal.show();
+
+        try {
+            const response = await fetch(endpointBase + processId + '/historico', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Falha ao carregar histórico.');
+            }
+            renderHistoryItems(data.items || []);
+        } catch (error) {
+            renderHistoryItems([]);
+            if (historyEmptyNode) {
+                historyEmptyNode.textContent = error.message || 'Erro ao carregar histórico.';
+                historyEmptyNode.classList.remove('d-none');
+            }
+        }
+    }
+
+    async function saveField(id, payload) {
+        try {
+            const url = endpointBase + id;
+
+            const body = new URLSearchParams();
+            // Adiciona o CSRF token ao corpo da requisição
+            body.append('csrf_token', window.csrfToken || '');
+            Object.keys(payload || {}).forEach(function (key) {
+                body.append(key, payload[key] == null ? '' : String(payload[key]));
+            });
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-CSRFToken': window.csrfToken || ''
+                },
+                body: body.toString()
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Falha ao salvar.');
+            }
+
+            if (Object.prototype.hasOwnProperty.call(data, 'conclusao')) {
+                const target = document.querySelector('[data-conclusao="' + id + '"]');
+                if (target) target.textContent = data.conclusao || '-';
+            }
+            if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
+                const row = document.querySelector('tr[data-processo-row="' + id + '"]');
+                if (row) row.setAttribute('data-row-status', payload.status);
+            }
+            refreshHistoryUI(id, data);
+            updateDashboardCountsFromRows();
+            applyDashboardFilter(activeFilter, false);
+
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            setFeedback(id, 'Salvo ' + hh + ':' + mm, false);
+        } catch (error) {
+            console.error('[SOCIETARIO] Erro ao salvar:', error);
+            setFeedback(id, error.message || 'Erro ao salvar', true);
+        }
+    }
+
+    function debounceSave(id, payload, waitMs) {
+        const key = String(id);
+        const existing = debounceTimers.get(key);
+        if (existing) {
+            clearTimeout(existing);
+        }
+        const timer = setTimeout(function () {
+            saveField(id, payload);
+            debounceTimers.delete(key);
+        }, waitMs);
+        debounceTimers.set(key, timer);
+    }
+
+    function bindAutosave(selector, eventName, extractor) {
+        document.querySelectorAll(selector).forEach(function (el) {
+            el.addEventListener(eventName, function () {
+                const id = el.getAttribute('data-id');
+                const payload = extractor(el);
+                saveField(id, payload);
+            });
+        });
+    }
+
+    function bindAutosaveDebounced(selector, eventName, extractor, waitMs) {
+        document.querySelectorAll(selector).forEach(function (el) {
+            el.addEventListener(eventName, function () {
+                const id = el.getAttribute('data-id');
+                const payload = extractor(el);
+                debounceSave(id, payload, waitMs);
+            });
+        });
+    }
+
+    bindAutosave('select[data-field="tipo_processo"]', 'change', function (el) {
+        return { tipo_processo: el.value };
+    });
+
+    bindAutosave('select[data-field="status"]', 'change', function (el) {
+        el.setAttribute('value', el.value);
+        return { status: el.value };
+    });
+
+    bindAutosave('input[data-field="data_inicio"]', 'change', function (el) {
+        return { data_inicio: el.value };
+    });
+
+    bindAutosave('textarea[data-field="observacao"]', 'blur', function (el) {
+        return { observacao: el.value };
+    });
+
+    bindAutosaveDebounced('textarea[data-field="observacao"]', 'input', function (el) {
+        return { observacao: el.value };
+    }, 800);
+
+    // Aplica cores iniciais aos selects de status
+    document.querySelectorAll('select[data-field="status"]').forEach(function (select) {
+        select.setAttribute('value', select.value);
+    });
+
+    document.querySelectorAll('[data-history-open="1"]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const processId = button.getAttribute('data-processo-id');
+            const processName = button.getAttribute('data-processo-nome') || '';
+            if (!processId) return;
+            openHistoryModal(processId, processName);
+        });
+    });
+
+    dashboardLinks.forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            const status = link.getAttribute('data-dashboard-filter') || '';
+            const mustLoadFromServer = status === 'FINALIZADA' || activeFilter === 'FINALIZADA';
+            if (mustLoadFromServer) {
+                return;
+            }
+            event.preventDefault();
+            applyDashboardFilter(status, true);
+        });
+    });
+
+    if (clearFilterButton) {
+        clearFilterButton.addEventListener('click', function (event) {
+            if (activeFilter === 'FINALIZADA') {
+                return;
+            }
+            event.preventDefault();
+            applyDashboardFilter('', true);
+        });
+    }
+
+    updateDashboardCountsFromRows();
+    applyDashboardFilter(activeFilter, false);
+})();
+</script>
+{% endblock %}

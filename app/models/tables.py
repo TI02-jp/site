@@ -795,6 +795,107 @@ class Setor(db.Model):
         return f"<Setor {self.nome}>"
 
 
+class ProcessoSocietarioTipo(str, Enum):
+    """Tipos permitidos para processos societarios."""
+
+    ALTERACAO = "ALTERACAO"
+    RERATIFICACAO = "RERATIFICACAO"
+    TRANSFORMACAO = "TRANSFORMACAO"
+    BAIXA = "BAIXA"
+    CONSTITUICAO = "CONSTITUICAO"
+    ATUALIZACAO_CNPJ_RECEITA = "ATUALIZACAO_CNPJ_RECEITA"
+    CRIACAO_FILIAL = "CRIACAO_FILIAL"
+    CLIENTE_TRANSFERIDO = "CLIENTE_TRANSFERIDO"
+
+
+class ProcessoSocietarioStatus(str, Enum):
+    """Status permitidos para processos societarios."""
+
+    VIABILIDADE = "VIABILIDADE"
+    DIGITACAO = "DIGITACAO"
+    CORRECAO = "CORRECAO"
+    ASSINATURA = "ASSINATURA"
+    JUCESC = "JUCESC"
+    FINALIZADA = "FINALIZADA"
+    PARALISADA = "PARALISADA"
+    DEFERIDO = "DEFERIDO"
+    REGISTRADA = "REGISTRADA"
+
+
+class ProcessoSocietario(db.Model):
+    """Processo do modulo societario."""
+
+    __tablename__ = "societario_processos"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome_empresa = db.Column(db.String(255), nullable=False, index=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey("tbl_empresas.id"), nullable=True, index=True)
+    tipo_processo = db.Column(
+        db.Enum(ProcessoSocietarioTipo, name="societario_tipo_processo"),
+        nullable=False,
+    )
+    data_inicio = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(
+        db.Enum(ProcessoSocietarioStatus, name="societario_status_processo"),
+        nullable=False,
+        default=ProcessoSocietarioStatus.VIABILIDADE,
+        index=True,
+    )
+    observacao = db.Column(db.Text, nullable=True)
+    conclusao = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=sao_paulo_now_naive,
+        onupdate=sao_paulo_now_naive,
+        nullable=False,
+    )
+    updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    empresa = db.relationship("Empresa", backref=db.backref("processos_societarios", lazy=True))
+    updated_by = db.relationship("User", backref=db.backref("processos_societarios_editados", lazy=True))
+    historico = db.relationship(
+        "ProcessoSocietarioHistorico",
+        backref=db.backref("processo", lazy=True),
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="ProcessoSocietarioHistorico.changed_at.desc()",
+    )
+
+    @property
+    def data_inicio_formatada(self) -> str:
+        return self.data_inicio.strftime("%d/%m/%Y") if self.data_inicio else ""
+
+    def __repr__(self) -> str:
+        return f"<ProcessoSocietario {self.nome_empresa} - {self.status}>"
+
+
+class ProcessoSocietarioHistorico(db.Model):
+    """Historico de alteracoes dos processos societarios."""
+
+    __tablename__ = "societario_processos_historico"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    processo_id = db.Column(
+        db.Integer,
+        db.ForeignKey("societario_processos.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    changed_at = db.Column(db.DateTime, default=sao_paulo_now_naive, nullable=False, index=True)
+    changed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    alteracao = db.Column(db.Text, nullable=False)
+
+    changed_by = db.relationship("User", backref=db.backref("societario_historico", lazy="dynamic"))
+
+    @property
+    def changed_at_formatado(self) -> str:
+        return self.changed_at.strftime("%d/%m/%Y %H:%M") if self.changed_at else ""
+
+    def __repr__(self) -> str:
+        return f"<ProcessoSocietarioHistorico processo={self.processo_id} em {self.changed_at}>"
+
+
 class NotaDebito(db.Model):
     """Stores invoice notes for debit control."""
     __tablename__ = 'notas_debito'

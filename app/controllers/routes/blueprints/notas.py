@@ -567,7 +567,9 @@ def cadastro_notas():
             NotaDebito.data_emissao >= data_inicial,
             NotaDebito.data_emissao <= data_final,
         )
-    notas_registradas = notas_query.order_by(NotaDebito.data_emissao.desc()).all()
+    # Limitar a 1000 notas mais recentes para evitar sobrecarga de memória
+    # Nota: Se necessário visualizar mais, usar filtro de data específico
+    notas_registradas = notas_query.order_by(NotaDebito.data_emissao.desc()).limit(1000).all()
 
     open_cadastro_modal = request.args.get("open_cadastro_modal") in ("1", "true", "True")
     open_nota_modal = request.args.get("open_nota_modal") in ("1", "true", "True")

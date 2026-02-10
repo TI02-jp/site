@@ -157,6 +157,12 @@ def _determine_post_login_redirect(user: User) -> str:
     Returns:
         str: URL para redirecionamento
     """
+    from app.controllers.routes.blueprints.societario import can_access_societario
+
+    user_name = (getattr(user, "name", "") or getattr(user, "username", "") or "").strip().lower()
+    if can_access_societario(user) and "tadeu" in user_name:
+        return url_for("societario.societario")
+
     if user.role == "admin":
         return url_for("tasks_overview")
 
