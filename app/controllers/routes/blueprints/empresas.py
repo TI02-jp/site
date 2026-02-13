@@ -1502,25 +1502,30 @@ def inventario():
     inv_ids = [e.inventario.id for e in empresas if e.inventario]
     file_meta = {}
     if inv_ids:
-        # Usamos JSON_REMOVE para obter a estrutura JSON sem o campo 'file_data' que contém o base64
+        # Otimização Crítica: MySQL não suporta wildcards no JSON_REMOVE para remover campos de todos os objetos.
+        # Em vez disso, extraímos apenas os nomes dos arquivos. Isso reduz o payload em ~99% ao ignorar base64.
+        # JSON_EXTRACT(..., '$[*].filename') retorna uma array de strings: ["arq1.pdf", "arq2.pdf"]
         meta_rows = db.session.query(
             Inventario.id,
-            sa.func.json_remove(Inventario.cfop_files, '$[*].file_data').label('cfop'),
-            sa.func.json_remove(Inventario.cfop_consolidado_files, '$[*].file_data').label('cfop_cons'),
-            sa.func.json_remove(Inventario.cliente_files, '$[*].file_data').label('cliente')
+            sa.func.json_extract(Inventario.cfop_files, '$[*].filename').label('cfop'),
+            sa.func.json_extract(Inventario.cfop_consolidado_files, '$[*].filename').label('cfop_cons'),
+            sa.func.json_extract(Inventario.cliente_files, '$[*].filename').label('cliente')
         ).filter(Inventario.id.in_(inv_ids)).all()
 
-        for r in meta_rows:
-            # MySQL retorna o JSON como string ou objeto dependendo do driver
-            def _parse_json(val):
-                if not val: return []
-                try: return json.loads(val) if isinstance(val, str) else val
-                except: return []
+        def _reconstruct_metadata(val):
+            if not val: return []
+            try:
+                # O driver pode retornar string JSON ou objeto Python (list)
+                names = json.loads(val) if isinstance(val, str) else val
+                if not isinstance(names, list): return []
+                return [{'filename': name} for name in names]
+            except: return []
 
+        for r in meta_rows:
             file_meta[r.id] = {
-                'cfop_files': _parse_json(r.cfop),
-                'cfop_consolidado_files': _parse_json(r.cfop_cons),
-                'cliente_files': _parse_json(r.cliente)
+                'cfop_files': _reconstruct_metadata(r.cfop),
+                'cfop_consolidado_files': _reconstruct_metadata(r.cfop_cons),
+                'cliente_files': _reconstruct_metadata(r.cliente)
             }
 
     # 6. Formatar itens para o template
