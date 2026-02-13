@@ -307,28 +307,20 @@ def _serialize_empresa(
 ) -> dict:
     """Return a concise company payload.
 
-    ``include_sensitive`` controls fields that may contain credentials or other
-    sensitive data and should be restricted to admins.
+    ``include_sensitive`` is kept for backward compatibility but ignored to
+    avoid exposing access credentials in API responses.
     """
 
     payload = {
         "id": empresa.id,
         "nome": empresa.nome_empresa,
         "cnpj": empresa.cnpj,
-        "atividade_principal": empresa.atividade_principal,
         "data_abertura": empresa.data_abertura.isoformat() if empresa.data_abertura else None,
         "socio_administrador": empresa.socio_administrador,
         "tributacao": empresa.tributacao,
-        "regime_lancamento": empresa.regime_lancamento,
-        "sistemas_consultorias": empresa.sistemas_consultorias,
-        "sistema_utilizado": empresa.sistema_utilizado,
         "codigo_empresa": empresa.codigo_empresa,
-        "contatos": empresa.contatos,
         "ativo": empresa.ativo,
     }
-    if include_sensitive:
-        payload["acessos"] = empresa.acessos
-        payload["observacao_acessos"] = empresa.observacao_acessos
     if include_departments:
         payload["departamentos"] = [
             _serialize_department(dept) for dept in getattr(empresa, "departamentos", []) or []
@@ -1326,6 +1318,7 @@ def api_empresas():
     """List companies."""
 
     q = (request.args.get("q") or "").strip()
+    fields_raw = (request.args.get("fields") or "").strip()
     limit = request.args.get("limit", type=int, default=100) or 100
     limit = min(max(limit, 1), 300)
 
@@ -1336,10 +1329,39 @@ def api_empresas():
 
     empresas = query.order_by(Empresa.nome_empresa.asc()).limit(limit).all()
     include_sensitive = is_user_admin(g.api_user)
+    items = [
+        _serialize_empresa(e, include_departments=False, include_sensitive=include_sensitive)
+        for e in empresas
+    ]
+
+    if not fields_raw:
+        return jsonify(items)
+
+    allowed_fields = set(items[0].keys()) if items else {
+        "id",
+        "nome",
+        "cnpj",
+        "data_abertura",
+        "socio_administrador",
+        "tributacao",
+        "codigo_empresa",
+        "ativo",
+    }
+    requested_fields = [field.strip() for field in fields_raw.split(",") if field.strip()]
+    invalid_fields = [field for field in requested_fields if field not in allowed_fields]
+    if invalid_fields:
+        return jsonify(
+            {
+                "error": "invalid_fields",
+                "invalid_fields": invalid_fields,
+                "allowed_fields": sorted(allowed_fields),
+            }
+        ), 400
+
     return jsonify(
         [
-            _serialize_empresa(e, include_departments=False, include_sensitive=include_sensitive)
-            for e in empresas
+            {field: item.get(field) for field in requested_fields}
+            for item in items
         ]
     )
 

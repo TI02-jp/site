@@ -1,0 +1,3796 @@
+openapi: 3.0.3
+info:
+  title: JP Contábil Portal - API
+  description: |
+    API RESTful do Portal JP Contábil para integração com aplicativos mobile e clientes terceiros.
+
+    ## Autenticação
+    A API utiliza **Bearer Token** via header `Authorization`.
+    Faça login em `/api/v1/auth/login` para obter o token.
+
+    ```
+    Authorization: Bearer <seu_token>
+    ```
+
+    O token expira em **24 horas** (86400 segundos) por padrão.
+
+    ## Respostas de Erro
+    Todos os erros seguem o formato:
+    ```json
+    {
+      "error": "codigo_do_erro"
+    }
+    ```
+
+    ## Rate Limiting
+    - Login: 10 requisições por minuto
+    - Demais endpoints: limite configurável por IP
+  version: 1.0.0
+  contact:
+    name: JP Contábil
+  license:
+    name: Privado
+
+servers:
+  - url: /api/v1
+    description: API v1 Principal
+
+tags:
+  - name: Autenticação
+    description: Login, refresh de token e dados do usuário
+  - name: Tags
+    description: Gerenciamento de tags/setores
+  - name: Usuários
+    description: Listagem de usuários
+  - name: Tarefas
+    description: CRUD completo de tarefas
+  - name: Tarefas - Seguidores
+    description: Gerenciamento de seguidores de tarefas
+  - name: Tarefas - Histórico
+    description: Histórico de alterações de status
+  - name: Tarefas - Comentários
+    description: Comentários e respostas em tarefas
+  - name: Tarefas - Anexos
+    description: Upload de arquivos em tarefas
+  - name: Notificações
+    description: Listagem e marcação de notificações
+  - name: Comunicados
+    description: CRUD de comunicados internos
+  - name: Reuniões
+    description: Listagem de reuniões e eventos de calendário
+  - name: Empresas
+    description: CRUD de empresas cadastradas
+  - name: Departamentos
+    description: CRUD de departamentos de empresas
+  - name: Procedimentos
+    description: CRUD de procedimentos operacionais
+  - name: Notas de Débito
+    description: CRUD de notas de débito
+  - name: Cadastro de Notas
+    description: CRUD de cadastro de notas (admin)
+  - name: Notas Recorrentes
+    description: CRUD de notas recorrentes (admin)
+  - name: Cursos
+    description: CRUD de cursos de capacitação
+  - name: Categorias de Cursos
+    description: Gerenciamento de categorias de cursos
+  - name: Links de Acesso
+    description: CRUD de links de acesso rápido
+  - name: FAQ / Inclusões
+    description: CRUD de itens de FAQ
+  - name: Diretoria - Eventos
+    description: CRUD de eventos da diretoria
+  - name: Diretoria - Acordos
+    description: CRUD de acordos da diretoria
+  - name: Diretoria - Feedbacks
+    description: CRUD de feedbacks da diretoria
+  - name: Permissões de Relatórios
+    description: Gerenciamento de permissões de acesso a relatórios (admin)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Token obtido via `/auth/login`
+
+  schemas:
+    # ── Erro ──
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Código do erro
+          example: not_found
+      required:
+        - error
+
+    # ── Autenticação ──
+    LoginRequest:
+      type: object
+      required:
+        - password
+      properties:
+        username:
+          type: string
+          description: Username ou email do usuário
+          example: usuario@jpcontabil.com
+        email:
+          type: string
+          description: Alternativa ao username
+          example: usuario@jpcontabil.com
+        password:
+          type: string
+          format: password
+          description: Senha do usuário
+          example: "senha123"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Bearer token assinado
+          example: "eyJhbGciOiJIUzI1..."
+        token_type:
+          type: string
+          enum: [bearer]
+          example: bearer
+        expires_in:
+          type: integer
+          description: TTL do token em segundos
+          example: 86400
+        user:
+          $ref: '#/components/schemas/User'
+
+    # ── Usuário ──
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: joao.silva
+        name:
+          type: string
+          example: João Silva
+        email:
+          type: string
+          format: email
+          example: joao@jpcontabil.com
+        role:
+          type: string
+          enum: [admin, user]
+          example: admin
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagSimple'
+
+    UserSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: João Silva
+        username:
+          type: string
+          example: joao.silva
+        email:
+          type: string
+          format: email
+          example: joao@jpcontabil.com
+
+    # ── Tag ──
+    TagSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Fiscal
+
+    # ── Tarefa ──
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: Revisar apuração fiscal
+        description:
+          type: string
+          nullable: true
+          example: Verificar os lançamentos do mês de janeiro
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+          example: pending
+        priority:
+          type: string
+          enum: [low, medium, high]
+          example: medium
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-03-15"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-10T14:30:00"
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-01-12T09:00:00"
+        tag:
+          $ref: '#/components/schemas/TagSimple'
+        created_by:
+          type: integer
+          example: 1
+        assigned_to:
+          type: integer
+          nullable: true
+          example: 2
+        assignee_name:
+          type: string
+          nullable: true
+          example: Maria Santos
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+
+    TaskCreate:
+      type: object
+      required:
+        - title
+        - tag_id
+      properties:
+        title:
+          type: string
+          example: Revisar apuração fiscal
+        description:
+          type: string
+          nullable: true
+          example: Verificar os lançamentos do mês
+        tag_id:
+          type: integer
+          example: 1
+        assigned_to:
+          type: integer
+          nullable: true
+          example: 2
+        priority:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+          example: high
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-03-15"
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Título atualizado
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        due_date:
+          type: string
+          format: date
+          nullable: true
+
+    TaskStatusUpdate:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+          example: completed
+
+    # ── Anexo ──
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: documento.pdf
+        mime_type:
+          type: string
+          example: application/pdf
+        url:
+          type: string
+          example: /static/uploads/tasks/abc123.pdf
+
+    # ── Seguidor ──
+    Follower:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Carlos Oliveira
+        username:
+          type: string
+          example: carlos.oliveira
+
+    FollowerAdd:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: integer
+          example: 3
+
+    # ── Histórico de Status ──
+    StatusHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        task_id:
+          type: integer
+          example: 42
+        from_status:
+          type: string
+          nullable: true
+          enum: [pending, in_progress, completed, cancelled]
+        to_status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        changed_at:
+          type: string
+          format: date-time
+        changed_by:
+          type: integer
+          example: 1
+
+    # ── Comentário ──
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        task_id:
+          type: integer
+          example: 42
+        author_id:
+          type: integer
+          example: 1
+        author_name:
+          type: string
+          example: João Silva
+        body:
+          type: string
+          example: Tarefa revisada e aprovada.
+        created_at:
+          type: string
+          format: date-time
+
+    CommentCreate:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          example: Verificar pendências antes de finalizar.
+
+    # ── Notificação ──
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 100
+        type:
+          type: string
+          example: task
+        message:
+          type: string
+          example: Nova tarefa atribuída a você
+        task_id:
+          type: integer
+          nullable: true
+        announcement_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        is_read:
+          type: boolean
+          example: false
+
+    NotificationsList:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        unread:
+          type: integer
+          example: 5
+
+    MarkNotificationRead:
+      type: object
+      properties:
+        notification_id:
+          type: integer
+          nullable: true
+          description: ID específico ou null para marcar todas
+          example: 100
+
+    # ── Comunicado ──
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        date:
+          type: string
+          format: date
+          example: "2026-02-01"
+        subject:
+          type: string
+          example: Comunicado importante sobre prazos
+        content:
+          type: string
+          example: "<p>Informamos que os prazos foram alterados...</p>"
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    AnnouncementCreate:
+      type: object
+      required:
+        - subject
+        - content
+        - date
+      properties:
+        subject:
+          type: string
+          example: Novo comunicado
+        content:
+          type: string
+          example: Conteúdo do comunicado em HTML
+        date:
+          type: string
+          format: date
+          example: "2026-02-13"
+
+    AnnouncementUpdate:
+      type: object
+      properties:
+        subject:
+          type: string
+        content:
+          type: string
+        date:
+          type: string
+          format: date
+
+    # ── Empresa ──
+    Empresa:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Empresa Exemplo LTDA
+        cnpj:
+          type: string
+          example: "12345678000199"
+        data_abertura:
+          type: string
+          format: date
+          nullable: true
+          example: "2020-01-15"
+        socio_administrador:
+          type: string
+          nullable: true
+          example: José da Silva
+        tributacao:
+          type: string
+          nullable: true
+          example: Lucro Presumido
+        codigo_empresa:
+          type: string
+          example: "001"
+        ativo:
+          type: boolean
+          example: true
+        departamentos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Departamento'
+          description: Incluído apenas em detalhes
+
+    EmpresaCreate:
+      type: object
+      required:
+        - nome
+        - cnpj
+        - data_abertura
+        - codigo_empresa
+      properties:
+        nome:
+          type: string
+          example: Nova Empresa LTDA
+        cnpj:
+          type: string
+          example: "98765432000111"
+        data_abertura:
+          type: string
+          format: date
+          example: "2025-06-01"
+        codigo_empresa:
+          type: string
+          example: "042"
+        atividade_principal:
+          type: string
+          nullable: true
+        socio_administrador:
+          type: string
+          nullable: true
+        tributacao:
+          type: string
+          nullable: true
+        regime_lancamento:
+          type: string
+          nullable: true
+        sistemas_consultorias:
+          type: string
+          nullable: true
+        sistema_utilizado:
+          type: string
+          nullable: true
+        acessos:
+          type: string
+          nullable: true
+        observacao_acessos:
+          type: string
+          nullable: true
+        contatos:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+          default: true
+
+    EmpresaUpdate:
+      type: object
+      properties:
+        nome_empresa:
+          type: string
+        cnpj:
+          type: string
+        data_abertura:
+          type: string
+          format: date
+        codigo_empresa:
+          type: string
+        atividade_principal:
+          type: string
+          nullable: true
+        socio_administrador:
+          type: string
+          nullable: true
+        tributacao:
+          type: string
+          nullable: true
+        regime_lancamento:
+          type: string
+          nullable: true
+        sistemas_consultorias:
+          type: string
+          nullable: true
+        sistema_utilizado:
+          type: string
+          nullable: true
+        acessos:
+          type: string
+          nullable: true
+        observacao_acessos:
+          type: string
+          nullable: true
+        contatos:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+
+    # ── Departamento ──
+    Departamento:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        empresa_id:
+          type: integer
+          example: 1
+        tipo:
+          type: string
+          example: fiscal
+        responsavel:
+          type: string
+          nullable: true
+          example: Maria Santos
+        descricao:
+          type: string
+          nullable: true
+        formas_importacao:
+          type: string
+          nullable: true
+        forma_movimento:
+          type: string
+          nullable: true
+        envio_digital:
+          type: string
+          nullable: true
+        envio_fisico:
+          type: string
+          nullable: true
+        malote_coleta:
+          type: string
+          nullable: true
+        observacao_movimento:
+          type: string
+          nullable: true
+        observacao_importacao:
+          type: string
+          nullable: true
+        observacao_contato:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DepartamentoCreate:
+      type: object
+      required:
+        - empresa_id
+        - tipo
+      properties:
+        empresa_id:
+          type: integer
+          example: 1
+        tipo:
+          type: string
+          enum: [fiscal, contabil, financeiro, pessoal, administrativo]
+          example: fiscal
+        responsavel:
+          type: string
+          nullable: true
+        descricao:
+          type: string
+          nullable: true
+        formas_importacao:
+          type: string
+          nullable: true
+        forma_movimento:
+          type: string
+          nullable: true
+        envio_digital:
+          type: string
+          nullable: true
+        envio_fisico:
+          type: string
+          nullable: true
+        malote_coleta:
+          type: string
+          nullable: true
+        observacao_movimento:
+          type: string
+          nullable: true
+        observacao_importacao:
+          type: string
+          nullable: true
+        observacao_contato:
+          type: string
+          nullable: true
+
+    DepartamentoUpdate:
+      type: object
+      properties:
+        tipo:
+          type: string
+        responsavel:
+          type: string
+          nullable: true
+        descricao:
+          type: string
+          nullable: true
+        formas_importacao:
+          type: string
+          nullable: true
+        forma_movimento:
+          type: string
+          nullable: true
+        envio_digital:
+          type: string
+          nullable: true
+        envio_fisico:
+          type: string
+          nullable: true
+        malote_coleta:
+          type: string
+          nullable: true
+        observacao_movimento:
+          type: string
+          nullable: true
+        observacao_importacao:
+          type: string
+          nullable: true
+        observacao_contato:
+          type: string
+          nullable: true
+
+    # ── Procedimento Operacional ──
+    Procedure:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Procedimento de Apuração
+        descricao:
+          type: string
+          nullable: true
+          example: Passo a passo da apuração fiscal
+        created_by:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ProcedureCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: Novo procedimento
+        descricao:
+          type: string
+          nullable: true
+
+    ProcedureUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+
+    # ── Nota de Débito ──
+    NotaDebito:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        data_emissao:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-01-15"
+        empresa:
+          type: string
+          nullable: true
+          example: Empresa ABC
+        notas:
+          type: string
+          nullable: true
+          example: NF 12345
+        qtde_itens:
+          type: integer
+          nullable: true
+          example: 5
+        valor_un:
+          type: number
+          format: float
+          nullable: true
+          example: 150.00
+        total:
+          type: number
+          format: float
+          nullable: true
+          example: 750.00
+        acordo:
+          type: string
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+          example: PIX
+        observacao:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    NotaDebitoCreate:
+      type: object
+      properties:
+        data_emissao:
+          type: string
+          format: date
+          example: "2026-02-01"
+        empresa:
+          type: string
+          example: Empresa XYZ
+        notas:
+          type: string
+        qtde_itens:
+          type: integer
+        valor_un:
+          type: number
+          format: float
+        acordo:
+          type: string
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+        observacao:
+          type: string
+          nullable: true
+
+    NotaDebitoUpdate:
+      type: object
+      properties:
+        data_emissao:
+          type: string
+          format: date
+        empresa:
+          type: string
+        notas:
+          type: string
+        qtde_itens:
+          type: integer
+        valor_un:
+          type: number
+          format: float
+        acordo:
+          type: string
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+        observacao:
+          type: string
+          nullable: true
+
+    # ── Cadastro Nota ──
+    CadastroNota:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        pix:
+          type: string
+          nullable: true
+        cadastro:
+          type: string
+          nullable: true
+        valor:
+          type: number
+          format: float
+          nullable: true
+          example: 500.00
+        acordo:
+          type: string
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+        usuario:
+          type: string
+          nullable: true
+        senha:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+
+    CadastroNotaCreate:
+      type: object
+      properties:
+        pix:
+          type: string
+          nullable: true
+        cadastro:
+          type: string
+          nullable: true
+        valor:
+          type: number
+          format: float
+        acordo:
+          type: string
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+        usuario:
+          type: string
+          nullable: true
+        senha:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+          default: true
+
+    # ── Nota Recorrente ──
+    NotaRecorrente:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        empresa:
+          type: string
+          nullable: true
+          example: Empresa Mensal LTDA
+        descricao:
+          type: string
+          nullable: true
+        valor:
+          type: number
+          format: float
+          nullable: true
+          example: 1200.00
+        periodo_inicio:
+          type: string
+          nullable: true
+        periodo_fim:
+          type: string
+          nullable: true
+        dia_emissao:
+          type: integer
+          nullable: true
+          example: 15
+        forma_pagamento:
+          type: string
+          nullable: true
+        observacao:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    NotaRecorrenteCreate:
+      type: object
+      properties:
+        empresa:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        valor:
+          type: number
+          format: float
+        periodo_inicio:
+          type: string
+          nullable: true
+        periodo_fim:
+          type: string
+          nullable: true
+        dia_emissao:
+          type: integer
+          nullable: true
+        forma_pagamento:
+          type: string
+          nullable: true
+        observacao:
+          type: string
+          nullable: true
+
+    # ── Curso ──
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: IRPF 2026
+        instructor:
+          type: string
+          nullable: true
+          example: Dr. Carlos
+        sectors:
+          type: string
+          nullable: true
+        participants:
+          type: string
+          nullable: true
+        workload:
+          type: string
+          nullable: true
+          example: "08:00:00"
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        schedule_start:
+          type: string
+          nullable: true
+        schedule_end:
+          type: string
+          nullable: true
+        completion_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        observation:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+
+    CourseCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Novo Curso de Capacitação
+        instructor:
+          type: string
+          nullable: true
+        sectors:
+          type: string
+          nullable: true
+        participants:
+          type: string
+          nullable: true
+        workload:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        schedule_start:
+          type: string
+          nullable: true
+        schedule_end:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        observation:
+          type: string
+          nullable: true
+
+    # ── Categoria de Curso ──
+    CourseTag:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Tributário
+
+    CourseTagCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Contabilidade
+
+    # ── Link de Acesso ──
+    AccessLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        category:
+          type: string
+          example: Sistemas
+        label:
+          type: string
+          example: Portal e-CAC
+        url:
+          type: string
+          format: uri
+          example: https://cav.receita.fazenda.gov.br
+        description:
+          type: string
+          nullable: true
+        created_by_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    AccessLinkCreate:
+      type: object
+      required:
+        - label
+        - url
+      properties:
+        category:
+          type: string
+          example: Sistemas
+        label:
+          type: string
+          example: Novo Link
+        url:
+          type: string
+          format: uri
+        description:
+          type: string
+          nullable: true
+
+    AccessLinkUpdate:
+      type: object
+      properties:
+        category:
+          type: string
+        label:
+          type: string
+        url:
+          type: string
+          format: uri
+        description:
+          type: string
+          nullable: true
+
+    # ── FAQ / Inclusão ──
+    FAQ:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        data:
+          type: string
+          format: date
+          nullable: true
+        usuario:
+          type: string
+          nullable: true
+        setor:
+          type: string
+          nullable: true
+        consultoria:
+          type: string
+          nullable: true
+        assunto:
+          type: string
+          nullable: true
+          example: Como emitir NF-e?
+        pergunta:
+          type: string
+          nullable: true
+        resposta:
+          type: string
+          nullable: true
+
+    FAQCreate:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        usuario:
+          type: string
+          nullable: true
+        setor:
+          type: string
+          nullable: true
+        consultoria:
+          type: string
+          nullable: true
+        assunto:
+          type: string
+        pergunta:
+          type: string
+        resposta:
+          type: string
+          nullable: true
+
+    FAQUpdate:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        usuario:
+          type: string
+        setor:
+          type: string
+        consultoria:
+          type: string
+        assunto:
+          type: string
+        pergunta:
+          type: string
+        resposta:
+          type: string
+
+    # ── Diretoria - Evento ──
+    DiretoriaEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Confraternização de Fim de Ano
+        event_type:
+          type: string
+          nullable: true
+          example: Confraternização
+        event_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        audience:
+          type: string
+          nullable: true
+        participants:
+          type: string
+          nullable: true
+        services:
+          type: string
+          nullable: true
+        total_cost:
+          type: number
+          format: float
+          nullable: true
+          example: 5000.00
+        photos:
+          type: string
+          nullable: true
+        created_by_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DiretoriaEventCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Evento Corporativo
+        event_type:
+          type: string
+          nullable: true
+        event_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        audience:
+          type: string
+          nullable: true
+        participants:
+          type: string
+          nullable: true
+        services:
+          type: string
+          nullable: true
+        total_cost:
+          type: number
+          format: float
+          nullable: true
+
+    DiretoriaEventUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        event_type:
+          type: string
+        event_date:
+          type: string
+          format: date
+        description:
+          type: string
+        audience:
+          type: string
+        participants:
+          type: string
+        services:
+          type: string
+        total_cost:
+          type: number
+          format: float
+
+    # ── Diretoria - Acordo ──
+    DiretoriaAgreement:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+        title:
+          type: string
+          example: Acordo de participação nos lucros
+        agreement_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DiretoriaAgreementCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: Novo acordo
+        agreement_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    DiretoriaAgreementUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        agreement_date:
+          type: string
+          format: date
+        description:
+          type: string
+
+    # ── Diretoria - Feedback ──
+    DiretoriaFeedback:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+        title:
+          type: string
+          nullable: true
+          example: Feedback sobre desempenho
+        feedback_type:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
+        feedback_date:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DiretoriaFeedbackCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: Feedback mensal
+        description:
+          type: string
+          nullable: true
+        feedback_date:
+          type: string
+          format: date
+          nullable: true
+
+    # ── Permissão de Relatório ──
+    ReportPermission:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        report_code:
+          type: string
+          example: relatorio_fiscal
+        tag_id:
+          type: integer
+          nullable: true
+        user_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReportPermissionCreate:
+      type: object
+      required:
+        - report_code
+      properties:
+        report_code:
+          type: string
+          example: relatorio_empresas
+        tag_id:
+          type: integer
+          nullable: true
+        user_id:
+          type: integer
+          nullable: true
+
+  responses:
+    Unauthorized:
+      description: Token ausente, inválido ou expirado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missing:
+              value: { "error": "missing_token" }
+            expired:
+              value: { "error": "token_expired" }
+            invalid:
+              value: { "error": "invalid_token" }
+    Forbidden:
+      description: Usuário sem permissão
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example: { "error": "forbidden" }
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example: { "error": "not_found" }
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+security:
+  - BearerAuth: []
+
+# ═══════════════════════════════════════════════════════════════
+#                         PATHS
+# ═══════════════════════════════════════════════════════════════
+
+paths:
+
+  # ────────────────────── AUTENTICAÇÃO ──────────────────────
+
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      summary: Login do usuário
+      description: |
+        Autentica com username/email e senha. Retorna um Bearer Token válido por 24h.
+        **Rate limit: 10 req/min**
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "username_or_email_and_password_required" }
+        '401':
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "invalid_credentials" }
+        '403':
+          description: Usuário inativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "inactive_user" }
+        '429':
+          description: Rate limit excedido
+
+  /auth/refresh:
+    post:
+      tags: [Autenticação]
+      summary: Renovar token
+      description: Re-emite um novo token para o usuário autenticado.
+      responses:
+        '200':
+          description: Token renovado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me:
+    get:
+      tags: [Autenticação]
+      summary: Dados do usuário autenticado
+      description: Retorna os dados do perfil do usuário logado.
+      responses:
+        '200':
+          description: Perfil do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── TAGS ──────────────────────
+
+  /tags:
+    get:
+      tags: [Tags]
+      summary: Listar tags
+      description: |
+        Retorna as tags acessíveis ao usuário.
+        Admins veem todas; usuários comuns veem apenas suas tags.
+      responses:
+        '200':
+          description: Lista de tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagSimple'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── USUÁRIOS ──────────────────────
+
+  /users:
+    get:
+      tags: [Usuários]
+      summary: Listar usuários ativos
+      description: |
+        Retorna usuários ativos para atribuição de tarefas.
+        Não-admins veem apenas usuários com tags compartilhadas (limite: 200).
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSimple'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── TAREFAS ──────────────────────
+
+  /tasks:
+    get:
+      tags: [Tarefas]
+      summary: Listar tarefas
+      description: |
+        Lista tarefas do usuário autenticado (limite: 200).
+        Admins veem todas; não-admins veem apenas criadas ou atribuídas a si.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+          description: Filtrar por status
+      responses:
+        '200':
+          description: Lista de tarefas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '400':
+          description: Status inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "invalid_status" }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Tarefas]
+      summary: Criar tarefa
+      description: Cria uma nova tarefa vinculada a uma tag e opcionalmente a um usuário.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Tarefa criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tag ou assignee não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /tasks/{taskId}:
+    get:
+      tags: [Tarefas]
+      summary: Obter tarefa
+      description: Retorna detalhes de uma tarefa específica.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da tarefa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Tarefas]
+      summary: Atualizar tarefa
+      description: Atualiza campos da tarefa (title, description, status, priority, due_date).
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Tarefa atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags: [Tarefas]
+      summary: Excluir tarefa
+      description: Remove uma tarefa. Permitido para admin, criador ou assignee.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tarefa excluída com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /tasks/{taskId}/status:
+    post:
+      tags: [Tarefas]
+      summary: Atualizar status da tarefa
+      description: Atualiza apenas o status de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskStatusUpdate'
+      responses:
+        '200':
+          description: Status atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── TAREFAS - SEGUIDORES ──────────────────────
+
+  /tasks/{taskId}/followers:
+    get:
+      tags: [Tarefas - Seguidores]
+      summary: Listar seguidores
+      description: Retorna todos os seguidores de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de seguidores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Follower'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Tarefas - Seguidores]
+      summary: Adicionar seguidor
+      description: Adiciona um usuário como seguidor de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FollowerAdd'
+      responses:
+        '200':
+          description: Seguidor adicionado ou já seguindo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [added, already_following]
+                  user_id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/{taskId}/followers/{userId}:
+    delete:
+      tags: [Tarefas - Seguidores]
+      summary: Remover seguidor
+      description: Remove um seguidor de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Seguidor removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: integer
+                    description: Número de registros removidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── TAREFAS - HISTÓRICO ──────────────────────
+
+  /tasks/{taskId}/history:
+    get:
+      tags: [Tarefas - Histórico]
+      summary: Histórico de status
+      description: Retorna o histórico de alterações de status de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Histórico de status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatusHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── TAREFAS - COMENTÁRIOS ──────────────────────
+
+  /tasks/{taskId}/comments:
+    get:
+      tags: [Tarefas - Comentários]
+      summary: Listar comentários
+      description: Retorna os comentários/respostas de uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de comentários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Tarefas - Comentários]
+      summary: Adicionar comentário
+      description: Adiciona um comentário a uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+      responses:
+        '201':
+          description: Comentário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Campo body obrigatório
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "body_required" }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── TAREFAS - ANEXOS ──────────────────────
+
+  /tasks/{taskId}/attachments:
+    post:
+      tags: [Tarefas - Anexos]
+      summary: Upload de anexo
+      description: Faz upload de um arquivo e anexa a uma tarefa.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo a ser anexado
+      responses:
+        '201':
+          description: Anexo criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          description: Arquivo obrigatório
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: { "error": "file_required" }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── NOTIFICAÇÕES ──────────────────────
+
+  /notifications:
+    get:
+      tags: [Notificações]
+      summary: Listar notificações
+      description: Retorna notificações recentes do usuário com contagem de não lidas.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+          description: Quantidade máxima de notificações
+      responses:
+        '200':
+          description: Lista de notificações
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/read:
+    post:
+      tags: [Notificações]
+      summary: Marcar como lida
+      description: |
+        Marca uma notificação específica (por ID) ou todas as notificações como lidas.
+        Omita `notification_id` para marcar todas.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkNotificationRead'
+      responses:
+        '200':
+          description: Notificações atualizadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+                    description: Quantidade de notificações marcadas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── COMUNICADOS ──────────────────────
+
+  /announcements:
+    get:
+      tags: [Comunicados]
+      summary: Listar comunicados
+      description: Retorna comunicados ordenados por data (mais recentes primeiro).
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Quantidade máxima
+      responses:
+        '200':
+          description: Lista de comunicados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Announcement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Comunicados]
+      summary: Criar comunicado
+      description: Cria um novo comunicado. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementCreate'
+      responses:
+        '201':
+          description: Comunicado criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /announcements/{announcementId}:
+    get:
+      tags: [Comunicados]
+      summary: Obter comunicado
+      description: Retorna detalhes de um comunicado específico.
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do comunicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Comunicados]
+      summary: Atualizar comunicado
+      description: Atualiza um comunicado existente. **Requer permissão de admin.**
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementUpdate'
+      responses:
+        '200':
+          description: Comunicado atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Comunicados]
+      summary: Excluir comunicado
+      description: Exclui um comunicado. **Requer permissão de admin.**
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Comunicado excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /announcements/{announcementId}/read:
+    post:
+      tags: [Comunicados]
+      summary: Marcar comunicado como lido
+      description: Marca as notificações do comunicado como lidas para o usuário atual.
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marcado como lido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── REUNIÕES ──────────────────────
+
+  /reunioes:
+    get:
+      tags: [Reuniões]
+      summary: Listar reuniões
+      description: |
+        Retorna reuniões da sala com status atualizado via Google Calendar.
+        Header `X-Calendar-Fallback` pode indicar uso de cache.
+      responses:
+        '200':
+          description: Lista de eventos de reunião
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  description: Evento de reunião combinado
+          headers:
+            X-Calendar-Fallback:
+              schema:
+                type: string
+                enum: [primary-cache, stale-cache]
+              description: Indica se dados vieram de cache
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /calendario-eventos:
+    get:
+      tags: [Reuniões]
+      summary: Eventos do calendário de colaboradores
+      description: Retorna eventos do calendário geral de colaboradores.
+      responses:
+        '200':
+          description: Eventos do calendário
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  description: Evento do calendário
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────── EMPRESAS ──────────────────────
+
+  /empresas:
+    get:
+      tags: [Empresas]
+      summary: Listar empresas
+      description: |
+        Lista empresas cadastradas com busca por nome ou CNPJ.
+        Suporta filtro de campos via `fields`.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Busca por nome ou CNPJ (LIKE)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 300
+          description: Limite de resultados
+        - name: fields
+          in: query
+          schema:
+            type: string
+          description: |
+            Campos para retornar (separados por vírgula).
+            Ex: `id,nome,cnpj`
+      responses:
+        '200':
+          description: Lista de empresas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Empresa'
+        '400':
+          description: Campo inválido solicitado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: invalid_fields
+                  invalid_fields:
+                    type: array
+                    items:
+                      type: string
+                  allowed_fields:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Empresas]
+      summary: Criar empresa
+      description: Cria uma nova empresa. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaCreate'
+      responses:
+        '201':
+          description: Empresa criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empresa'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /empresas/{empresaId}:
+    get:
+      tags: [Empresas]
+      summary: Detalhes da empresa
+      description: Retorna detalhes de uma empresa incluindo departamentos.
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da empresa com departamentos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empresa'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Empresas]
+      summary: Atualizar empresa
+      description: Atualiza dados de uma empresa. **Requer permissão de admin.**
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaUpdate'
+      responses:
+        '200':
+          description: Empresa atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empresa'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags: [Empresas]
+      summary: Excluir empresa
+      description: Exclui uma empresa. **Requer permissão de admin.**
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Empresa excluída
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /empresas/{empresaId}/departamentos:
+    get:
+      tags: [Departamentos]
+      summary: Listar departamentos de uma empresa
+      description: Retorna todos os departamentos de uma empresa.
+      parameters:
+        - name: empresaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de departamentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Departamento'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── DEPARTAMENTOS ──────────────────────
+
+  /departamentos:
+    post:
+      tags: [Departamentos]
+      summary: Criar departamento
+      description: Cria um novo departamento para uma empresa. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartamentoCreate'
+      responses:
+        '201':
+          description: Departamento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Departamento'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /departamentos/{departamentoId}:
+    patch:
+      tags: [Departamentos]
+      summary: Atualizar departamento
+      description: Atualiza dados de um departamento. **Requer permissão de admin.**
+      parameters:
+        - name: departamentoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartamentoUpdate'
+      responses:
+        '200':
+          description: Departamento atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Departamento'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Departamentos]
+      summary: Excluir departamento
+      description: Exclui um departamento. **Requer permissão de admin.**
+      parameters:
+        - name: departamentoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Departamento excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── PROCEDIMENTOS ──────────────────────
+
+  /procedimentos:
+    get:
+      tags: [Procedimentos]
+      summary: Listar procedimentos
+      description: Retorna a lista de procedimentos operacionais.
+      responses:
+        '200':
+          description: Lista de procedimentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Procedure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Procedimentos]
+      summary: Criar procedimento
+      description: Cria um novo procedimento operacional.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcedureCreate'
+      responses:
+        '201':
+          description: Procedimento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Procedure'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /procedimentos/{procedimentoId}:
+    get:
+      tags: [Procedimentos]
+      summary: Obter procedimento
+      description: Retorna detalhes de um procedimento.
+      parameters:
+        - name: procedimentoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do procedimento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Procedure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Procedimentos]
+      summary: Atualizar procedimento
+      description: Atualiza um procedimento operacional.
+      parameters:
+        - name: procedimentoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcedureUpdate'
+      responses:
+        '200':
+          description: Procedimento atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Procedure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Procedimentos]
+      summary: Excluir procedimento
+      description: Exclui um procedimento operacional.
+      parameters:
+        - name: procedimentoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Procedimento excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── NOTAS DE DÉBITO ──────────────────────
+
+  /notas/debito:
+    get:
+      tags: [Notas de Débito]
+      summary: Listar notas de débito
+      description: Retorna a lista de notas de débito.
+      responses:
+        '200':
+          description: Lista de notas de débito
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotaDebito'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Notas de Débito]
+      summary: Criar nota de débito
+      description: Cria uma nova nota de débito.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaDebitoCreate'
+      responses:
+        '201':
+          description: Nota de débito criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaDebito'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notas/debito/{notaId}:
+    get:
+      tags: [Notas de Débito]
+      summary: Obter nota de débito
+      description: Retorna detalhes de uma nota de débito.
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da nota de débito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaDebito'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Notas de Débito]
+      summary: Atualizar nota de débito
+      description: Atualiza uma nota de débito existente.
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaDebitoUpdate'
+      responses:
+        '200':
+          description: Nota atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaDebito'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Notas de Débito]
+      summary: Excluir nota de débito
+      description: Exclui uma nota de débito.
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Nota excluída
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── CADASTRO DE NOTAS (ADMIN) ──────────────────────
+
+  /notas/cadastro:
+    get:
+      tags: [Cadastro de Notas]
+      summary: Listar cadastro de notas
+      description: Retorna a lista de cadastros de notas. **Requer permissão de admin.**
+      responses:
+        '200':
+          description: Lista de cadastros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CadastroNota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Cadastro de Notas]
+      summary: Criar cadastro de nota
+      description: Cria um novo cadastro de nota. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroNotaCreate'
+      responses:
+        '201':
+          description: Cadastro criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CadastroNota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /notas/cadastro/{cadastroId}:
+    get:
+      tags: [Cadastro de Notas]
+      summary: Obter cadastro de nota
+      description: Retorna detalhes de um cadastro. **Requer permissão de admin.**
+      parameters:
+        - name: cadastroId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do cadastro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CadastroNota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Cadastro de Notas]
+      summary: Atualizar cadastro de nota
+      description: Atualiza um cadastro de nota. **Requer permissão de admin.**
+      parameters:
+        - name: cadastroId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroNotaCreate'
+      responses:
+        '200':
+          description: Cadastro atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CadastroNota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Cadastro de Notas]
+      summary: Excluir cadastro de nota
+      description: Exclui um cadastro de nota. **Requer permissão de admin.**
+      parameters:
+        - name: cadastroId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Cadastro excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── NOTAS RECORRENTES (ADMIN) ──────────────────────
+
+  /notas/recorrentes:
+    get:
+      tags: [Notas Recorrentes]
+      summary: Listar notas recorrentes
+      description: Retorna a lista de notas recorrentes. **Requer permissão de admin.**
+      responses:
+        '200':
+          description: Lista de notas recorrentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotaRecorrente'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Notas Recorrentes]
+      summary: Criar nota recorrente
+      description: Cria uma nova nota recorrente. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaRecorrenteCreate'
+      responses:
+        '201':
+          description: Nota recorrente criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaRecorrente'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /notas/recorrentes/{notaId}:
+    get:
+      tags: [Notas Recorrentes]
+      summary: Obter nota recorrente
+      description: Retorna detalhes de uma nota recorrente. **Requer permissão de admin.**
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da nota recorrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaRecorrente'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Notas Recorrentes]
+      summary: Atualizar nota recorrente
+      description: Atualiza uma nota recorrente. **Requer permissão de admin.**
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaRecorrenteCreate'
+      responses:
+        '200':
+          description: Nota recorrente atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotaRecorrente'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Notas Recorrentes]
+      summary: Excluir nota recorrente
+      description: Exclui uma nota recorrente. **Requer permissão de admin.**
+      parameters:
+        - name: notaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Nota recorrente excluída
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── CURSOS ──────────────────────
+
+  /courses:
+    get:
+      tags: [Cursos]
+      summary: Listar cursos
+      description: Retorna a lista de cursos de capacitação.
+      responses:
+        '200':
+          description: Lista de cursos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Cursos]
+      summary: Criar curso
+      description: Cria um novo curso de capacitação.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+      responses:
+        '201':
+          description: Curso criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /courses/{courseId}:
+    patch:
+      tags: [Cursos]
+      summary: Atualizar curso
+      description: Atualiza dados de um curso.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+      responses:
+        '200':
+          description: Curso atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Cursos]
+      summary: Excluir curso
+      description: Exclui um curso de capacitação.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Curso excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── CATEGORIAS DE CURSOS ──────────────────────
+
+  /course-tags:
+    get:
+      tags: [Categorias de Cursos]
+      summary: Listar categorias de cursos
+      description: Retorna as categorias disponíveis para cursos.
+      responses:
+        '200':
+          description: Lista de categorias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CourseTag'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Categorias de Cursos]
+      summary: Criar categoria de curso
+      description: Cria uma nova categoria para cursos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseTagCreate'
+      responses:
+        '201':
+          description: Categoria criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseTag'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /course-tags/{tagId}:
+    delete:
+      tags: [Categorias de Cursos]
+      summary: Excluir categoria de curso
+      description: Exclui uma categoria de cursos.
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Categoria excluída
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── LINKS DE ACESSO ──────────────────────
+
+  /acessos:
+    get:
+      tags: [Links de Acesso]
+      summary: Listar links de acesso
+      description: Retorna todos os links de acesso rápido.
+      responses:
+        '200':
+          description: Lista de links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Links de Acesso]
+      summary: Criar link de acesso
+      description: Cria um novo link de acesso rápido.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessLinkCreate'
+      responses:
+        '201':
+          description: Link criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /acessos/{acessoId}:
+    patch:
+      tags: [Links de Acesso]
+      summary: Atualizar link de acesso
+      description: Atualiza um link de acesso existente.
+      parameters:
+        - name: acessoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessLinkUpdate'
+      responses:
+        '200':
+          description: Link atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Links de Acesso]
+      summary: Excluir link de acesso
+      description: Exclui um link de acesso.
+      parameters:
+        - name: acessoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Link excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── FAQ / INCLUSÕES ──────────────────────
+
+  /faq:
+    get:
+      tags: [FAQ / Inclusões]
+      summary: Listar FAQs
+      description: Retorna a lista de itens de FAQ/inclusões.
+      responses:
+        '200':
+          description: Lista de FAQs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FAQ'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [FAQ / Inclusões]
+      summary: Criar FAQ
+      description: Cria um novo item de FAQ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAQCreate'
+      responses:
+        '201':
+          description: FAQ criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAQ'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /faq/{faqId}:
+    get:
+      tags: [FAQ / Inclusões]
+      summary: Obter FAQ
+      description: Retorna detalhes de um item de FAQ.
+      parameters:
+        - name: faqId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do FAQ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAQ'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [FAQ / Inclusões]
+      summary: Atualizar FAQ
+      description: Atualiza um item de FAQ.
+      parameters:
+        - name: faqId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAQUpdate'
+      responses:
+        '200':
+          description: FAQ atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAQ'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [FAQ / Inclusões]
+      summary: Excluir FAQ
+      description: Exclui um item de FAQ.
+      parameters:
+        - name: faqId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: FAQ excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── DIRETORIA - EVENTOS ──────────────────────
+
+  /diretoria/eventos:
+    get:
+      tags: [Diretoria - Eventos]
+      summary: Listar eventos da diretoria
+      description: Retorna eventos cadastrados pela diretoria.
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiretoriaEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Diretoria - Eventos]
+      summary: Criar evento da diretoria
+      description: Cria um novo evento da diretoria.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiretoriaEventCreate'
+      responses:
+        '201':
+          description: Evento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /diretoria/eventos/{eventoId}:
+    get:
+      tags: [Diretoria - Eventos]
+      summary: Obter evento da diretoria
+      description: Retorna detalhes de um evento.
+      parameters:
+        - name: eventoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do evento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Diretoria - Eventos]
+      summary: Atualizar evento da diretoria
+      description: Atualiza um evento da diretoria.
+      parameters:
+        - name: eventoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiretoriaEventUpdate'
+      responses:
+        '200':
+          description: Evento atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Diretoria - Eventos]
+      summary: Excluir evento da diretoria
+      description: Exclui um evento da diretoria.
+      parameters:
+        - name: eventoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Evento excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── DIRETORIA - ACORDOS ──────────────────────
+
+  /diretoria/acordos:
+    get:
+      tags: [Diretoria - Acordos]
+      summary: Listar acordos da diretoria
+      description: Retorna a lista de acordos da diretoria.
+      responses:
+        '200':
+          description: Lista de acordos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiretoriaAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Diretoria - Acordos]
+      summary: Criar acordo da diretoria
+      description: Cria um novo acordo da diretoria.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiretoriaAgreementCreate'
+      responses:
+        '201':
+          description: Acordo criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /diretoria/acordos/{acordoId}:
+    get:
+      tags: [Diretoria - Acordos]
+      summary: Obter acordo da diretoria
+      description: Retorna detalhes de um acordo.
+      parameters:
+        - name: acordoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do acordo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Diretoria - Acordos]
+      summary: Atualizar acordo da diretoria
+      description: Atualiza um acordo da diretoria.
+      parameters:
+        - name: acordoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiretoriaAgreementUpdate'
+      responses:
+        '200':
+          description: Acordo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Diretoria - Acordos]
+      summary: Excluir acordo da diretoria
+      description: Exclui um acordo da diretoria.
+      parameters:
+        - name: acordoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Acordo excluído
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── DIRETORIA - FEEDBACKS ──────────────────────
+
+  /diretoria/feedbacks:
+    get:
+      tags: [Diretoria - Feedbacks]
+      summary: Listar feedbacks da diretoria
+      description: Retorna a lista de feedbacks da diretoria.
+      responses:
+        '200':
+          description: Lista de feedbacks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiretoriaFeedback'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Diretoria - Feedbacks]
+      summary: Criar feedback da diretoria
+      description: Cria um novo feedback da diretoria.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiretoriaFeedbackCreate'
+      responses:
+        '201':
+          description: Feedback criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaFeedback'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /diretoria/feedbacks/{feedbackId}:
+    get:
+      tags: [Diretoria - Feedbacks]
+      summary: Obter feedback da diretoria
+      description: Retorna detalhes de um feedback.
+      parameters:
+        - name: feedbackId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do feedback
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiretoriaFeedback'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────────────────── PERMISSÕES DE RELATÓRIOS ──────────────────────
+
+  /reports/permissions:
+    get:
+      tags: [Permissões de Relatórios]
+      summary: Listar permissões de relatórios
+      description: Retorna as permissões de acesso a relatórios. **Requer permissão de admin.**
+      responses:
+        '200':
+          description: Lista de permissões
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportPermission'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Permissões de Relatórios]
+      summary: Conceder permissão de relatório
+      description: Concede acesso a um relatório para tag ou usuário. **Requer permissão de admin.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportPermissionCreate'
+      responses:
+        '201':
+          description: Permissão criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportPermission'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reports/permissions/{permissionId}:
+    delete:
+      tags: [Permissões de Relatórios]
+      summary: Revogar permissão de relatório
+      description: Revoga acesso a um relatório. **Requer permissão de admin.**
+      parameters:
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Permissão revogada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
