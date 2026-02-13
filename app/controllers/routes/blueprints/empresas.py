@@ -85,12 +85,12 @@ INVENTARIO_STATUS_CHOICES = [
     "FALTA ARQUIVO",
     "AGUARDANDO FECHAMENTO FISCAL",
     "AGUARDANDO TADEU",
-    "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O",
+    "LIBERADO PARA IMPORTAÇÃO",
     "IMPORTADO",
-    "LIBERADO PARA BALANÃƒâ€¡O",
+    "LIBERADO PARA BALANÇO",
     "ENCERRADO",
     "ECD-ECF ENCERRADO",
-    "JULIANA IRÃƒÂ IMPORTAR",
+    "JULIANA IRÁ IMPORTAR",
     "AGUARDANDO HELENA",
 ]
 
@@ -1721,72 +1721,68 @@ def inventario():
     listall_total_rows = 0
     initial_batch_size = int(current_app.config.get("INVENTARIO_LISTALL_INITIAL_BATCH", 100))
     if show_all:
-        # Guardrail para evitar resposta HTML gigante quando hÃƒÂ¡ muitos registros.
+        # Guardrail para evitar resposta HTML gigante quando ha muitos registros.
         limited_ids_rows = query.with_entities(Empresa.id).limit(listall_max_rows + 1).all()
-        if len(limited_ids_rows) > listall_max_rows:
-            show_all = False
-            page = 1
-            per_page = 20
-            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-            empresas = pagination.items
+        ordered_empresa_ids = [int(row.id) for row in limited_ids_rows]
+        if len(ordered_empresa_ids) > listall_max_rows:
+            ordered_empresa_ids = ordered_empresa_ids[:listall_max_rows]
             flash(
-                f"Listagem completa limitada a {listall_max_rows} registros. "
-                "Aplique filtros para reduzir o volume e tentar novamente.",
+                f"Listagem completa limitada aos primeiros {listall_max_rows} registros. "
+                "Aplique filtros para reduzir o volume e carregar menos empresas por vez.",
                 "warning",
             )
-        else:
-            ordered_empresa_ids = [int(row.id) for row in limited_ids_rows]
-            listall_total_rows = len(ordered_empresa_ids)
-            listall_token = uuid4().hex
-            cache.set(
-                f"inventario:listall:token:{listall_token}",
-                {
-                    "empresa_ids": ordered_empresa_ids,
-                    "status_filters": status_filters,
-                    "user_id": current_user.id,
-                    "usuarios_name_by_id": usuarios_name_by_id,
-                },
-                timeout=300,
-            )
-            first_empresa_ids = ordered_empresa_ids[:initial_batch_size]
-            empresas_map = (
-                Empresa.query.filter(Empresa.id.in_(first_empresa_ids))
-                .options(
-                    load_only(
-                        Empresa.id,
-                        Empresa.codigo_empresa,
-                        Empresa.nome_empresa,
-                        Empresa.tributacao,
-                        Empresa.tipo_empresa,
-                    )
+
+        listall_total_rows = len(ordered_empresa_ids)
+        listall_token = uuid4().hex
+        cache.set(
+            f"inventario:listall:token:{listall_token}",
+            {
+                "empresa_ids": ordered_empresa_ids,
+                "status_filters": status_filters,
+                "user_id": current_user.id,
+                "usuarios_name_by_id": usuarios_name_by_id,
+            },
+            timeout=300,
+        )
+        first_empresa_ids = ordered_empresa_ids[:initial_batch_size]
+        empresas_map = (
+            Empresa.query.filter(Empresa.id.in_(first_empresa_ids))
+            .options(
+                load_only(
+                    Empresa.id,
+                    Empresa.codigo_empresa,
+                    Empresa.nome_empresa,
+                    Empresa.tributacao,
+                    Empresa.tipo_empresa,
                 )
-                .all()
             )
-            empresa_by_id = {empresa.id: empresa for empresa in empresas_map}
-            empresas = [empresa_by_id[eid] for eid in first_empresa_ids if eid in empresa_by_id]
-            total = listall_total_rows
-            per_page = total if total > 0 else 1
-            page = 1
+            .all()
+        )
+        empresa_by_id = {empresa.id: empresa for empresa in empresas_map}
+        empresas = [empresa_by_id[eid] for eid in first_empresa_ids if eid in empresa_by_id]
+        total = listall_total_rows
+        per_page = total if total > 0 else 1
+        page = 1
 
-            def _iter_pages(**_kwargs):
-                return []
+        def _iter_pages(**_kwargs):
+            return []
 
-            pagination = type(
-                "ListAllPagination",
-                (),
-                {
-                    "total": total,
-                    "page": page,
-                    "per_page": per_page,
-                    "pages": 1 if total > 0 else 0,
-                    "has_prev": False,
-                    "has_next": False,
-                    "prev_num": None,
-                    "next_num": None,
-                    "iter_pages": staticmethod(_iter_pages),
-                    "items": empresas,
-                },
-            )()
+        pagination = type(
+            "ListAllPagination",
+            (),
+            {
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "pages": 1 if total > 0 else 0,
+                "has_prev": False,
+                "has_next": False,
+                "prev_num": None,
+                "next_num": None,
+                "iter_pages": staticmethod(_iter_pages),
+                "items": empresas,
+            },
+        )()
     else:
         per_page = 20
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -2115,8 +2111,8 @@ def api_inventario_update():
         )
         notify_cristiano = (
             field == "status"
-            and processed_value == "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O"
-            and previous_status != "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O"
+            and processed_value == "LIBERADO PARA IMPORTAÇÃO"
+            and previous_status != "LIBERADO PARA IMPORTAÇÃO"
         )
         if field == "pdf_path":
             with track_custom_span("inventario_update", "cleanup_pdf"):

@@ -932,6 +932,9 @@
         position: relative;
         width: 100%;
         max-width: 100%;
+        scrollbar-gutter: stable both-edges;
+        scrollbar-width: auto;
+        scrollbar-color: #2563eb #bfdbfe;
         /* Altura equilibrada para criar o container de scroll */
         max-height: calc(100vh - 290px);
         min-height: 400px;
@@ -972,29 +975,34 @@
 
     /* Estilizar scrollbar horizontal e vertical */
     .table-wrapper::-webkit-scrollbar {
-        height: 12px;
-        width: 12px;
+        height: 18px;
+        width: 14px;
+    }
+
+    .table-wrapper::-webkit-scrollbar:horizontal {
+        height: 18px;
     }
 
     .table-wrapper::-webkit-scrollbar-track {
-        background: var(--muted-surface, #f1f1f1);
-        border-radius: 6px;
+        background: linear-gradient(180deg, #dbeafe 0%, #bfdbfe 100%);
+        border-radius: 999px;
+        border: 1px solid rgba(11, 94, 215, 0.3);
     }
 
     .table-wrapper::-webkit-scrollbar-thumb {
-        background: var(--primary, #4a6cf7);
-        border-radius: 6px;
-        border: 2px solid var(--muted-surface, #f1f1f1);
+        background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 999px;
+        border: 2px solid #bfdbfe;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
     }
 
     .table-wrapper::-webkit-scrollbar-thumb:hover {
-        background: var(--primary-hover, #3a5bd7);
+        background: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
     }
 
     .table-wrapper::-webkit-scrollbar-corner {
-        background: var(--muted-surface, #f1f1f1);
+        background: #bfdbfe;
     }
-
 
     /* Inputs de upload compactos */
     .compact-table .pdf-upload-container,
