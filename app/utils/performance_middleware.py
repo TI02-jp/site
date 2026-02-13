@@ -42,9 +42,14 @@ class PerformanceTracker:
             self.total_duration_ms = (self.completed_at - self.started_at) * 1000.0
 
     def record_query(self, statement: str, duration_ms: float, parameters: Any) -> None:
-        normalized_statement = " ".join(statement.split())
-        if len(normalized_statement) > 200:
-            normalized_statement = f"{normalized_statement[:200]}..."
+        # Otimização: Apenas normalizar se o request for considerado lento ou estiver em debug
+        # para economizar CPU em requests rápidos.
+        if duration_ms < 50 and not current_app.debug:
+            normalized_statement = statement[:200] + "..." if len(statement) > 200 else statement
+        else:
+            normalized_statement = " ".join(statement.split())
+            if len(normalized_statement) > 200:
+                normalized_statement = f"{normalized_statement[:200]}..."
         with self._lock:
             self.sql_time_ms += duration_ms
             self.sql_queries.append(

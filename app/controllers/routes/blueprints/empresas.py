@@ -1744,7 +1744,6 @@ def inventario():
                     "empresa_ids": ordered_empresa_ids,
                     "status_filters": status_filters,
                     "user_id": current_user.id,
-                    "usuarios_name_by_id": usuarios_name_by_id,
                 },
                 timeout=300,
             )

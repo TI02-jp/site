@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, Iterable
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, defer
 
 from app import db
 from app.models.tables import Empresa, Inventario
@@ -203,7 +203,12 @@ def sync_encerramento_fiscal(
     inventarios: list[Inventario] = (
         Inventario.query.join(Empresa)
         .filter(Empresa.ativo.is_(True))
-        .options(joinedload(Inventario.empresa))
+        .options(
+            joinedload(Inventario.empresa),
+            defer(Inventario.cfop_files),
+            defer(Inventario.cfop_consolidado_files),
+            defer(Inventario.cliente_files)
+        )
         .all()
     )
 

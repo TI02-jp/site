@@ -1387,6 +1387,13 @@ class TaskPriority(Enum):
 class Task(db.Model):
     """Represents a task assigned to a specific tag/sector."""
     __tablename__ = "tasks"
+    __table_args__ = (
+        db.Index('idx_tasks_tag_id', 'tag_id'),
+        db.Index('idx_tasks_parent_id', 'parent_id'),
+        db.Index('idx_tasks_assigned_to_status', 'assigned_to', 'status'),
+        db.Index('idx_tasks_created_by', 'created_by'),
+        db.Index('idx_tasks_due_date', 'due_date'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     is_private = db.Column(
@@ -1709,6 +1716,10 @@ class TaskNotification(db.Model):
     """Notification emitted for tasks or announcements."""
 
     __tablename__ = "task_notifications"
+    __table_args__ = (
+        db.Index('idx_notifications_user_unread', 'user_id', 'read_at'),
+        db.Index('idx_notifications_created_at', 'created_at'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
@@ -1890,8 +1901,9 @@ def _task_assignment_after_update(_mapper, _connection, target):
 
 @event.listens_for(db.session, "after_commit")
 def _send_push_notifications_after_commit(session):
-    """Send push notifications after database commit."""
+    """Send push notifications after database commit using background task queue."""
     from app.services.push_notifications import send_push_notification
+    from app.extensions.task_queue import submit_io_task
 
     # Collect all pending push notifications from committed objects
     push_queue = []
@@ -1901,15 +1913,14 @@ def _send_push_notifications_after_commit(session):
             push_queue.extend(obj._pending_push_notifications)
             delattr(obj, "_pending_push_notifications")
 
-    # Send push notifications asynchronously (in background)
+    # Send push notifications via background thread pool to avoid blocking the request thread.
     for push_data in push_queue:
         try:
-            send_push_notification(**push_data)
+            submit_io_task(send_push_notification, **push_data)
         except Exception as e:
-            # Log error but don't fail the request
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send push notification: {e}")
+            logger.error(f"Failed to submit push notification task: {e}")
 
 
 def _build_completion_message(title: str, completer_name: str, tag_name: str | None) -> str:

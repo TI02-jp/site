@@ -358,9 +358,12 @@ routes.register_blueprints(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Load a :class:`User` instance for Flask-Login."""
-    from app.models.tables import User  # importa aqui para evitar circular import
-    return User.query.get(int(user_id))
+    """Load a :class:`User` instance for Flask-Login with caching."""
+    from app.services.optimized_queries import get_user_by_id_with_tags
+    try:
+        return get_user_by_id_with_tags(int(user_id))
+    except (TypeError, ValueError):
+        return None
 
 @app.context_processor
 def inject_now():
@@ -929,6 +932,45 @@ with app.app_context():
                 if index_name not in empresa_indexes:
                     with db.engine.begin() as conn:
                         conn.execute(sa.text(ddl))
+
+        if inspector.has_table("tasks"):
+            tasks_indexes = {
+                idx.get("name")
+                for idx in inspector.get_indexes("tasks")
+                if idx.get("name")
+            }
+            tasks_index_ddl = {
+                "idx_tasks_tag_id": "CREATE INDEX idx_tasks_tag_id ON tasks (tag_id)",
+                "idx_tasks_parent_id": "CREATE INDEX idx_tasks_parent_id ON tasks (parent_id)",
+                "idx_tasks_assigned_to_status": "CREATE INDEX idx_tasks_assigned_to_status ON tasks (assigned_to, status)",
+                "idx_tasks_created_by": "CREATE INDEX idx_tasks_created_by ON tasks (created_by)",
+                "idx_tasks_due_date": "CREATE INDEX idx_tasks_due_date ON tasks (due_date)",
+            }
+            for index_name, ddl in tasks_index_ddl.items():
+                if index_name not in tasks_indexes:
+                    try:
+                        with db.engine.begin() as conn:
+                            conn.execute(sa.text(ddl))
+                    except SQLAlchemyError as exc:
+                        app.logger.warning("Erro ao criar indice %s: %s", index_name, exc)
+
+        if inspector.has_table("task_notifications"):
+            notif_indexes = {
+                idx.get("name")
+                for idx in inspector.get_indexes("task_notifications")
+                if idx.get("name")
+            }
+            notif_index_ddl = {
+                "idx_notifications_user_unread": "CREATE INDEX idx_notifications_user_unread ON task_notifications (user_id, read_at)",
+                "idx_notifications_created_at": "CREATE INDEX idx_notifications_created_at ON task_notifications (created_at)",
+            }
+            for index_name, ddl in notif_index_ddl.items():
+                if index_name not in notif_indexes:
+                    try:
+                        with db.engine.begin() as conn:
+                            conn.execute(sa.text(ddl))
+                    except SQLAlchemyError as exc:
+                        app.logger.warning("Erro ao criar indice %s: %s", index_name, exc)
 
     except SQLAlchemyError as exc:
         app.logger.warning(

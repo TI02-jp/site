@@ -53,7 +53,7 @@ from flask_login import login_required, current_user
 # Database & SQLAlchemy
 from app import db
 import sqlalchemy as sa
-from sqlalchemy.orm import joinedload, aliased
+from sqlalchemy.orm import joinedload, aliased, selectinload
 
 # Models
 from app.models.tables import (
@@ -753,18 +753,27 @@ def _load_task_response_summaries(
     if not normalized_ids:
         return {}
 
-    response_counts = dict(
-        db.session.query(TaskResponse.task_id, sa.func.count(TaskResponse.id))
-        .filter(TaskResponse.task_id.in_(normalized_ids))
-        .group_by(TaskResponse.task_id)
-        .all()
-    )
-
+    # Combined query for total and unread counts
     participant_alias = aliased(TaskResponseParticipant)
-    unread_rows = (
+    counts_query = (
         db.session.query(
             TaskResponse.task_id,
-            sa.func.count(TaskResponse.id),
+            sa.func.count(TaskResponse.id).label("total_count"),
+            sa.func.sum(
+                sa.case(
+                    (
+                        sa.and_(
+                            TaskResponse.author_id != viewer_id,
+                            sa.or_(
+                                participant_alias.last_read_at.is_(None),
+                                TaskResponse.created_at > participant_alias.last_read_at
+                            )
+                        ),
+                        1
+                    ),
+                    else_=0
+                )
+            ).label("unread_count")
         )
         .outerjoin(
             participant_alias,
@@ -774,17 +783,12 @@ def _load_task_response_summaries(
             ),
         )
         .filter(TaskResponse.task_id.in_(normalized_ids))
-        .filter(
-            sa.or_(
-                participant_alias.last_read_at.is_(None),
-                TaskResponse.created_at > participant_alias.last_read_at,
-            )
-        )
-        .filter(TaskResponse.author_id != viewer_id)
         .group_by(TaskResponse.task_id)
         .all()
     )
-    unread_counts = {task_id: count for task_id, count in unread_rows}
+
+    response_counts = {row.task_id: row.total_count for row in counts_query}
+    unread_counts = {row.task_id: int(row.unread_count or 0) for row in counts_query}
 
     latest_subquery = (
         db.session.query(
@@ -991,10 +995,12 @@ def tasks_overview():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).options(
+                joinedload(Task.assignee),
+                joinedload(Task.finisher),
+                joinedload(Task.tag),
+                joinedload(Task.creator)
+            )
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1175,10 +1181,12 @@ def tasks_overview_mine():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).options(
+                joinedload(Task.assignee),
+                joinedload(Task.finisher),
+                joinedload(Task.tag),
+                joinedload(Task.creator)
+            )
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1248,10 +1256,12 @@ def tasks_overview_personal():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).options(
+                joinedload(Task.assignee),
+                joinedload(Task.finisher),
+                joinedload(Task.tag),
+                joinedload(Task.creator)
+            )
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1331,13 +1341,13 @@ def tasks_sector(tag_id):
             joinedload(Task.tag),
             joinedload(Task.assignee),
             joinedload(Task.finisher),
-            joinedload(Task.creator),  # NOVO: Eager load creator to prevent N+1
-            # Removed status_history and attachments eager loading to reduce Cartesian product
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),  # NOVO: Eager load creator for children
-            # Removed children's status_history and attachments for same reason
+            joinedload(Task.creator),
+            selectinload(Task.children).options(
+                joinedload(Task.assignee),
+                joinedload(Task.finisher),
+                joinedload(Task.tag),
+                joinedload(Task.creator)
+            )
         )
         .order_by(Task.due_date)
         .limit(200)  # Added limit to prevent loading too many tasks at once

@@ -94,3 +94,16 @@ As seguintes melhorias de performance foram implementadas com sucesso:
 3.  **Índices Compostos:** Criados novos índices no MySQL para otimizar filtros de `status`, `tributacao`, `ativo` e `codigo_empresa`.
 4.  **Otimização de Update:** A rota de atualização inline agora evita o carregamento de binários ao modificar campos simples.
 5.  **Resiliência na Contagem:** A função de contagem de arquivos foi otimizada para ser mais cirúrgica mesmo em cenários de fallback.
+
+---
+
+## 7. Otimizações Globais do Sistema
+
+Além da rota de inventário, as seguintes melhorias estruturais foram aplicadas para reduzir o consumo de CPU e RAM em todo o portal:
+
+1.  **Carregamento de Usuário Cacheado:** O Flask-Login agora utiliza um cache de 5 minutos para carregar os dados do usuário atual, economizando uma consulta ao banco de dados por requisição em todo o sistema.
+2.  **Notificações Push em Segundo Plano:** O envio de Web Push foi movido para uma fila de tarefas em background. Anteriormente, a requisição do usuário ficava travada aguardando a resposta dos servidores do Google/Mozilla, o que bloqueava threads do servidor.
+3.  **Otimização de Consultas de Tarefas:** Substituição de `joinedload` por `selectinload` no sistema de tarefas, evitando o "Produto Cartesiano" no SQL, o que reduzia a velocidade de carregamento da Central de Tarefas.
+4.  **Índices Adicionais:** Criados índices nas tabelas de `tasks`, `task_notifications` e `audit_logs` para acelerar contagens e filtros de interface.
+5.  **Otimização de Middleware:** Reduzido o processamento de CPU no rastreador de performance para consultas rápidas.
+6.  **Redução de Pegada de Memória no Background:** O job diário de sincronização agora evita carregar binários pesados, processando centenas de empresas com uma fração da memória anterior.
