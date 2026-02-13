@@ -1,4 +1,4 @@
-﻿"""
+"""
 Blueprint para gestao de empresas.
 
 Rotas:
@@ -44,7 +44,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.exceptions import NotFound
 
 from app import csrf, db, limiter
-from app.constants import EMPRESA_TAG_CHOICES
+from app.constants import EMPRESA_TAG_CHOICES, INVENTARIO_UPLOAD_SUBDIR
 from app.controllers.routes import decode_id, encode_id, user_has_tag
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.extensions.task_queue import submit_io_task
@@ -1791,13 +1791,14 @@ def inventario():
         per_page = 20
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         empresas = pagination.items
-    display_name = (current_user.username or current_user.name or "").strip().lower()
-    is_tadeu = display_name.startswith("tadeu")
+    # Otimização: Nunca carregar colunas pesadas de arquivos no carregamento inicial da lista.
+    # O front-end carrega os metadados sob demanda quando o usuário clica no botão.
     items, file_counts_by_empresa = _build_inventario_items_for_empresas(
         empresas,
         status_filters,
-        include_file_columns=is_tadeu,
+        include_file_columns=False,
     )
+    is_tadeu = (current_user.username or "").strip().lower().startswith("tadeu")
 
     # Buscar todos os usuÃƒÂ¡rios para o select de encerramento (otimizado com cache)
     dashboard_query_params = urlencode(
@@ -1956,13 +1957,13 @@ def api_inventario_chunk():
     )
     empresa_by_id = {empresa.id: empresa for empresa in empresas_map}
     empresas = [empresa_by_id[eid] for eid in chunk_ids if eid in empresa_by_id]
-    display_name = (current_user.username or current_user.name or "").strip().lower()
-    is_tadeu = display_name.startswith("tadeu")
+    # Otimização: Nunca carregar colunas pesadas em chunks de listagem.
     items, file_counts_by_empresa = _build_inventario_items_for_empresas(
         empresas,
         status_filters,
-        include_file_columns=is_tadeu,
+        include_file_columns=False,
     )
+    is_tadeu = (current_user.username or "").strip().lower().startswith("tadeu")
 
     if not usuarios_name_by_id:
         usuarios = get_active_users_with_tags()
@@ -2011,9 +2012,18 @@ def api_inventario_update():
         if not empresa:
             return jsonify({'success': False, 'error': 'Empresa nÃƒÂ£o encontrada'}), 404
 
-        # Buscar ou criar inventÃƒÂ¡rio
+        # Buscar ou criar inventário
         with track_custom_span("inventario_update", "load_inventario"):
-            inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+            # Otimização: Adiar o carregamento de colunas JSON pesadas durante atualização de campos simples.
+            inventario = (
+                Inventario.query.filter_by(empresa_id=empresa_id)
+                .options(
+                    defer(Inventario.cfop_files),
+                    defer(Inventario.cfop_consolidado_files),
+                    defer(Inventario.cliente_files)
+                )
+                .first()
+            )
             if not inventario:
                 inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
                 db.session.add(inventario)
@@ -2181,18 +2191,19 @@ def _coerce_file_entries(value):
 
 
 def _has_file_entries(value):
-    """Verifica se hÃƒÂ¡ arquivos VÃƒÂLIDOS na lista."""
+    """Verifica se há arquivos VÁLIDOS na lista (suporta database e disk storage)."""
     entries = _coerce_file_entries(value)
     if not entries:
         return False
 
-    # Verificar se hÃƒÂ¡ pelo menos um arquivo vÃƒÂ¡lido
-    # Um arquivo vÃƒÂ¡lido deve ter 'filename' E 'file_data' nÃƒÂ£o vazios
+    # Verificar se há pelo menos um arquivo válido
+    # Um arquivo válido deve ter 'filename' E ('file_data' codificado ou 'path' no disco) não vazios
     for entry in entries:
         if isinstance(entry, dict):
             filename = entry.get('filename', '').strip()
             file_data = entry.get('file_data', '').strip()
-            if filename and file_data:
+            path = entry.get('path', '').strip()
+            if filename and (file_data or path):
                 return True
 
     return False
@@ -2209,7 +2220,7 @@ def _maybe_set_status_aguardando_tadeu(inventario):
     # Regra: deve ter CFOP CONSOLIDADO + ARQUIVO CLIENTE para mudar para AGUARDANDO TADEU
     has_cfop_consolidado = _has_file_entries(inventario.cfop_consolidado_files)
     has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
-    
+
     if not (has_cfop_consolidado and has_cliente):
         # SÃƒÂ³ reverter para FALTA ARQUIVO se o status nunca foi definido
         # Se jÃƒÂ¡ estÃƒÂ¡ em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
@@ -2720,19 +2731,11 @@ def api_inventario_upload_pdf(empresa_id):
         had_cfop = _has_file_entries(inventario.cfop_files) or bool(inventario.pdf_path)
         has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
 
-        filename = secure_filename(file.filename)
-
-        # Ler arquivo e converter para base64
-        file_data = base64.b64encode(file.read()).decode('utf-8')
+        # Salvar no disco ao invés de base64 no banco
+        file_info = _save_inventario_disk_file(file, empresa_id, "cfop")
 
         # Atualizar array de arquivos
         cfop_files = inventario.cfop_files or []
-        file_info = {
-            'filename': filename,
-            'file_data': file_data,
-            'uploaded_at': datetime.now().isoformat(),
-            'mime_type': 'application/pdf'
-        }
         cfop_files.append(file_info)
         inventario.cfop_files = cfop_files
         status_changed = _maybe_set_status_aguardando_tadeu(inventario)
@@ -2793,17 +2796,10 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
         had_cfop = _has_file_entries(inventario.cfop_consolidado_files)
         has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
 
-        filename = secure_filename(file.filename)
-
-        file_data = base64.b64encode(file.read()).decode('utf-8')
+        # Salvar no disco ao invés de base64 no banco
+        file_info = _save_inventario_disk_file(file, empresa_id, "cfop-consolidado")
 
         cfop_consolidado_files = inventario.cfop_consolidado_files or []
-        file_info = {
-            'filename': filename,
-            'file_data': file_data,
-            'uploaded_at': datetime.now().isoformat(),
-            'mime_type': 'application/pdf'
-        }
         cfop_consolidado_files.append(file_info)
         inventario.cfop_consolidado_files = cfop_consolidado_files
         status_changed = _maybe_set_status_aguardando_tadeu(inventario)
@@ -2897,22 +2893,11 @@ def api_inventario_upload_cliente_file(empresa_id):
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
             db.session.add(inventario)
 
-        filename = secure_filename(file.filename)
-
-        # Detectar tipo MIME
-        mime_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-
-        # Ler arquivo e converter para base64
-        file_data = base64.b64encode(file.read()).decode('utf-8')
+        # Salvar no disco ao invés de base64 no banco
+        file_info = _save_inventario_disk_file(file, empresa_id, "cliente")
 
         # Atualizar array de arquivos
         cliente_files = inventario.cliente_files or []
-        file_info = {
-            'filename': filename,
-            'file_data': file_data,
-            'uploaded_at': datetime.now().isoformat(),
-            'mime_type': mime_type
-        }
         cliente_files.append(file_info)
         inventario.cliente_files = cliente_files
         status_changed = _maybe_set_status_aguardando_tadeu(inventario)
@@ -2944,7 +2929,7 @@ def api_inventario_upload_cliente_file(empresa_id):
 @empresas_bp.route("/api/inventario/file/<int:empresa_id>/<file_type>/<int:file_index>", methods=["GET"])
 @login_required
 def api_inventario_get_file(empresa_id, file_type, file_index):
-    """Serve arquivo do inventÃƒÂ¡rio armazenado no banco de dados."""
+    """Serve arquivo do inventário armazenado no banco de dados ou disco."""
     import base64
     from flask import send_file
     import io
@@ -2970,25 +2955,26 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
             return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         file_info = files_array[file_index]
-
-        # Verificar se tem dados do arquivo
-        if 'file_data' not in file_info:
-            return jsonify({'success': False, 'error': 'Dados do arquivo nÃƒÂ£o encontrados'}), 404
-
-        # Decodificar base64
-        file_data = base64.b64decode(file_info['file_data'])
-
-        # Criar buffer de memÃƒÂ³ria
-        file_buffer = io.BytesIO(file_data)
-        file_buffer.seek(0)
-
-        # Obter informaÃƒÂ§ÃƒÂµes do arquivo
+        storage = file_info.get("storage", "database")
         filename = file_info.get('filename', 'arquivo')
         mime_type = file_info.get('mime_type', 'application/octet-stream')
 
-        # Enviar arquivo
+        if storage == "disk":
+            relative_path = file_info.get("path")
+            if not relative_path:
+                return jsonify({'success': False, 'error': 'Caminho não encontrado'}), 404
+            absolute_path = os.path.join(current_app.root_path, "static", relative_path)
+            if not os.path.exists(absolute_path):
+                return jsonify({'success': False, 'error': 'Arquivo físico não encontrado'}), 404
+            return send_file(absolute_path, mimetype=mime_type, as_attachment=False, download_name=filename)
+
+        # Fallback: Database (Legacy)
+        if 'file_data' not in file_info:
+            return jsonify({'success': False, 'error': 'Dados do arquivo nÃƒÂ£o encontrados'}), 404
+
+        file_data = base64.b64decode(file_info['file_data'])
         return send_file(
-            file_buffer,
+            io.BytesIO(file_data),
             mimetype=mime_type,
             as_attachment=False,
             download_name=filename
@@ -2997,6 +2983,35 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
     except Exception as e:
         current_app.logger.exception("Erro ao servir arquivo do inventÃƒÂ¡rio: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def _save_inventario_disk_file(uploaded_file, empresa_id: int, subdir_name: str) -> dict:
+    """Salva arquivo de inventário no disco e retorna metadados."""
+    from werkzeug.utils import secure_filename
+    from mimetypes import guess_type
+
+    original_name = secure_filename(uploaded_file.filename or "arquivo.pdf")
+    extension = os.path.splitext(original_name)[1].lower()
+    unique_name = f"{uuid4().hex}{extension}"
+
+    # Caminho relativo: uploads/inventario/<empresa_id>/<subdir>/<uuid>.<ext>
+    relative_dir = os.path.join(INVENTARIO_UPLOAD_SUBDIR, str(empresa_id), subdir_name).replace("\\", "/")
+    absolute_dir = os.path.join(current_app.root_path, "static", relative_dir)
+    os.makedirs(absolute_dir, exist_ok=True)
+
+    absolute_path = os.path.join(absolute_dir, unique_name)
+    uploaded_file.save(absolute_path)
+
+    relative_path = os.path.join(relative_dir, unique_name).replace("\\", "/")
+    mime_type = uploaded_file.mimetype or guess_type(original_name)[0] or "application/octet-stream"
+
+    return {
+        "filename": original_name,
+        "path": relative_path,
+        "uploaded_at": datetime.now().isoformat(),
+        "mime_type": mime_type,
+        "storage": "disk"
+    }
 
 
 def _serialize_inventario_file_metadata(files_array: list[dict]) -> list[dict]:
@@ -3011,6 +3026,7 @@ def _serialize_inventario_file_metadata(files_array: list[dict]) -> list[dict]:
                 "filename": file_info.get("filename") or "arquivo",
                 "uploaded_at": file_info.get("uploaded_at"),
                 "mime_type": file_info.get("mime_type", "application/octet-stream"),
+                "storage": file_info.get("storage", "database"),
             }
         )
     return items
@@ -3233,4 +3249,3 @@ def api_inventario_delete_cliente_file_v2(empresa_id):
         db.session.rollback()
         current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
-

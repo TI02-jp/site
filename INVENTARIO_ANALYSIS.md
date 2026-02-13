@@ -82,3 +82,15 @@ def get_file_content(file_id):
 
 **Risco Técnico:** Baixo (requer migração de dados existentes para arquivos físicos).
 **Impacto Final:** Extremo.
+
+---
+
+## 6. Alterações Aplicadas
+
+As seguintes melhorias de performance foram implementadas com sucesso:
+
+1.  **Storage Híbrido (Disco + DB):** Novos uploads são salvos em `static/uploads/inventario/`, reduzindo drasticamente o tamanho das linhas no banco de dados. O sistema mantém compatibilidade com arquivos legados no banco.
+2.  **Carregamento Diferido (Defer):** A aplicação agora utiliza `defer()` do SQLAlchemy para evitar o carregamento de colunas JSON pesadas em todas as listagens (incluindo o "Modo Tadeu" e chunks de carregamento progressivo).
+3.  **Índices Compostos:** Criados novos índices no MySQL para otimizar filtros de `status`, `tributacao`, `ativo` e `codigo_empresa`.
+4.  **Otimização de Update:** A rota de atualização inline agora evita o carregamento de binários ao modificar campos simples.
+5.  **Resiliência na Contagem:** A função de contagem de arquivos foi otimizada para ser mais cirúrgica mesmo em cenários de fallback.
