@@ -225,7 +225,7 @@
                                 p }}</a>
                         </li>
                         {% else %}
-                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                        <li class="page-item disabled"><span class="page-link">?</span></li>
                         {% endif %}
                         {% endfor %}
                         <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
@@ -349,7 +349,7 @@
                             <th class="col-cfop-move text-center" style="width: 44px;"
                                 data-column-id="col_cfop_move"
                                 data-hideable="false"
-                                data-resizable="false">→</th>
+                                data-resizable="false">?</th>
                             {% endif %}
                             <th class="col-cfop" style="width: 150px;"
                                 data-column-id="col_cfop_consolidado"
@@ -515,257 +515,21 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in items %}
-                        {% set cliente_files = item.inventario.cliente_files if item.inventario and
-                        item.inventario.cliente_files else [] %}
-                        {% set has_cliente_file = cliente_files|length > 0 or (item.inventario and
-                        item.inventario.cliente_pdf_path) %}
-                        <tr data-empresa-id="{{ item.empresa.id }}"
-                            data-tributacao="{{ item.empresa.tributacao or '' }}"
-                            data-status="{{ item.inventario.status if item.inventario else '' }}"
-                            data-encerramento-fiscal="{{ 1 if item.inventario and item.inventario.encerramento_fiscal else 0 }}"
-                            data-has-cliente-file="{{ 1 if has_cliente_file else 0 }}"
-                            data-has-cliente-legacy="{{ 1 if item.inventario and item.inventario.cliente_pdf_path else 0 }}">
+                        {% include 'empresas/_inventario_rows.html' %}
 
-                            <!-- ID -->
-                            <td class="col-id text-center">
-                                <strong>{{ item.empresa.codigo_empresa }}</strong>
-                            </td>
-
-                            <!-- Razão Social -->
-                            <td class="col-razao">
-                                <a href="{{ url_for('empresas.visualizar_empresa', empresa_id=item.empresa.id) }}"
-                                    class="text-decoration-none" target="_blank">
-                                    {{ item.empresa.nome_empresa }}
-                                </a>
-                                {% set tipo_tag = item.empresa.tipo_empresa or 'Matriz' %}
-                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else ('bg-info-subtle text-info' if tipo_tag == 'MEI' else 'bg-warning-subtle text-warning') %}
-                                <div class="mt-1">
-                                    <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
-                                </div>
-                            </td>
-
-                            <!-- Tributação -->
-                            <td class="col-tributacao">
-                                <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
-                            </td>
-
-                            {% if not is_tadeu %}
-                            <!-- CFOP -->
-                            <td class="col-cfop">
-                                {% set cfop_files = item.inventario.cfop_files if item.inventario and
-                                item.inventario.cfop_files else [] %}
-                                <div class="pdf-upload-container cfop-container">
-                                    <!-- Lista de arquivos existentes -->
-                                    <div class="files-list mb-1">
-                                        {% for file in cfop_files %}
-                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
-                                            data-file-index="{{ loop.index0 }}">
-                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;"
-                                                title="{{ file.filename }}">
-                                                {{ file.filename }}
-                                            </small>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
-                                                target="_blank" class="btn btn-outline-primary btn-sm"
-                                                title="Visualizar">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
-                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
-                                                title="Baixar">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                            <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-cfop-file-btn"
-                                                title="Remover">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    <!-- Botão de upload -->
-                                    <input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf"
-                                        title="Adicionar PDF">
-                                </div>
-                            </td>
-
-                            <!-- CFOP (Mover) -->
-                            <td class="col-cfop-move text-center">
-                                <button type="button"
-                                    class="btn btn-outline-secondary btn-sm move-cfop-to-consolidado-btn"
-                                    title="Mover CFOP para CFOP Consolidado">
-                                    <i class="bi bi-arrow-right"></i>
-                                </button>
-                            </td>
-
-                            {% endif %}
-                            <!-- CFOP Consolidado -->
-                            <td class="col-cfop">
-                                {% set cfop_consolidado_files = item.inventario.cfop_consolidado_files if item.inventario and
-                                item.inventario.cfop_consolidado_files else [] %}
-                                <div class="pdf-upload-container cfop-consolidado-container">
-                                    <div class="files-list mb-1">
-                                        {% for file in cfop_consolidado_files %}
-                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
-                                            data-file-index="{{ loop.index0 }}">
-                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 70px;"
-                                                title="{{ file.filename }}">
-                                                {{ file.filename }}
-                                            </small>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
-                                                target="_blank" class="btn btn-outline-primary btn-sm"
-                                                title="Visualizar">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
-                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
-                                                title="Baixar">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                            <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-cfop-consolidado-file-btn"
-                                                title="Remover">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    <input type="file"
-                                        class="form-control form-control-sm cfop-consolidado-upload"
-                                        accept=".pdf"
-                                        title="Adicionar PDF">
-                                </div>
-                            </td>
-
-                            <!-- DIEF 2024 -->
-                            <td class="col-dief">
-                                <input type="text" class="form-control form-control-sm editable-field money-field"
-                                    data-field="dief_2024"
-                                    value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
-                                    placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Balanço Cliente 2025 -->
-                            <td class="col-balanco">
-                                <input type="text" class="form-control form-control-sm editable-field money-field"
-                                    data-field="balanco_2025_cliente"
-                                    value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
-                                    placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Fechamento Tadeu 2025 -->
-                            <td class="col-fechamento">
-                                <input type="text" class="form-control form-control-sm editable-field money-field"
-                                    data-field="fechamento_tadeu_2025"
-                                    value="{{ item.inventario.fechamento_tadeu_2025_formatado if item.inventario else '' }}"
-                                    placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Observação Tadeu -->
-                            <td class="col-obs">
-                                <textarea class="form-control form-control-sm editable-field"
-                                    data-field="observacoes_tadeu" rows="2"
-                                    placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
-                            </td>
-
-                            <!-- Status -->
-                            <td class="col-status">
-                                <select class="form-select form-select-sm editable-field" data-field="status"
-                                    data-prev-status="{{ item.inventario.status if item.inventario else '' }}">
-                                    <option value="">Selecione...</option>
-                                    {% for status_opt in status_choices %}
-                                    <option value="{{ status_opt }}" {% if item.inventario and
-                                        item.inventario.status==status_opt %}selected{% endif %}>
-                                        {{ status_opt }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-
-
-                            <!-- Valor Enviado SPED Fiscal 02/2025 -->
-                            <td class="col-valor">
-                                <input type="text" class="form-control form-control-sm editable-field money-field"
-                                    data-field="valor_enviado_sped"
-                                    value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
-                                    placeholder="R$ 0,00">
-                            </td>
-
-                            <!-- Encerramento Fiscal -->
-                            <td>
-                                <select class="form-select form-select-sm editable-field"
-                                    data-field="encerramento_fiscal">
-                                    <option value="">Selecione...</option>
-                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal
-                                        is true %}selected{% endif %}>Sim</option>
-                                    <option value="false" {% if not item.inventario or
-                                        item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não
-                                    </option>
-                                </select>
-                            </td>
-
-                            <!-- Arquivo Cliente -->
-                            <td>
-                                <div class="cliente-upload-container">
-                                    <!-- Lista de arquivos existentes -->
-                                    <div class="files-list mb-1">
-                                        {% for file in cliente_files %}
-                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
-                                            data-file-index="{{ loop.index0 }}">
-                                            <small class="text-muted text-truncate flex-grow-1" style="max-width: 60px;"
-                                                title="{{ file.filename }}">
-                                                {{ file.filename }}
-                                            </small>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
-                                                target="_blank" class="btn btn-outline-primary btn-sm"
-                                                title="Visualizar">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cliente/{{ loop.index0 }}"
-                                                download="{{ file.filename }}" class="btn btn-outline-success btn-sm"
-                                                title="Baixar">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                            <button type="button"
-                                                class="btn btn-outline-danger btn-sm delete-cliente-file-btn"
-                                                title="Remover">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    <!-- Botão de upload -->
-                                    <input type="file" class="form-control form-control-sm cliente-upload"
-                                        title="Adicionar arquivo">
-                                </div>
-                            </td>
-
-                            <!-- Data Encerramento -->
-                            <td>
-                                <input type="date" class="form-control form-control-sm editable-field"
-                                    data-field="encerramento_balanco_data"
-                                    value="{{ item.inventario.encerramento_balanco_data.strftime('%Y-%m-%d') if item.inventario and item.inventario.encerramento_balanco_data else '' }}">
-                            </td>
-
-                            <!-- Usuário Encerramento -->
-                            <td>
-                                <select class="form-select form-select-sm editable-field"
-                                    data-field="encerramento_balanco_usuario_id">
-                                    <option value="">Selecione...</option>
-                                    {% for usuario in usuarios %}
-                                    <option value="{{ usuario.id }}" {% if item.inventario and
-                                        item.inventario.encerramento_balanco_usuario_id==usuario.id %}selected{% endif
-                                        %}>
-                                        {{ usuario.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% if show_all and listall_token and listall_total_rows > listall_initial_loaded %}
+            <div class="p-2 border-top d-flex justify-content-center align-items-center gap-2" id="listallLoadMoreWrap">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="listallLoadMoreBtn">
+                    Carregar mais
+                </button>
+                <small class="text-muted" id="listallProgressText">
+                    {{ listall_initial_loaded }} / {{ listall_total_rows }}
+                </small>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -998,9 +762,20 @@
         line-height: 1.2;
     }
 
-    .compact-table tbody td {
+.compact-table tbody td {
         padding: 0.28rem 0.3rem;
         vertical-align: middle;
+    }
+
+    tr.virtual-spacer td {
+        padding: 0 !important;
+        border: 0 !important;
+        height: 0;
+        background: transparent !important;
+    }
+
+    tr.virtual-hidden {
+        display: none !important;
     }
 
     /* Campos editáveis mais compactos */
@@ -1019,6 +794,21 @@
     .compact-table .btn-sm {
         padding: 0.2rem 0.35rem;
         font-size: 0.64rem;
+    }
+
+    .compact-table .load-files-btn-readable {
+        font-size: 0.69rem !important;
+        font-weight: 600;
+        min-height: 22px;
+        padding: 0.1rem 0.4rem !important;
+        line-height: 1.1;
+        border-width: 1px;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+    }
+
+    .compact-table .load-files-btn-readable .bi {
+        font-size: 0.74rem;
     }
 
     .editable-field {
@@ -1332,6 +1122,15 @@
         const allowedTributacoes = {{ allowed_tributacoes | tojson
     }};
     const statusChoices = {{ status_choices | tojson }};
+    const usuariosSelectOptions = {{ usuarios_select_options | tojson }};
+    const dashboardAsync = {{ 'true' if dashboard_async else 'false' }};
+    const dashboardApiUrl = {{ dashboard_api_url | tojson }};
+    const dashboardQueryParams = {{ dashboard_query_params | tojson }};
+    const listAllProgressive = {{ 'true' if show_all and listall_token else 'false' }};
+    const listAllToken = {{ (listall_token or '') | tojson }};
+    const listAllChunkSize = {{ listall_initial_batch or 0 }};
+    let listAllLoaded = {{ listall_initial_loaded or 0 }};
+    const listAllTotal = {{ listall_total_rows or 0 }};
     const tributacaoStorageKey = 'inventario-tributacao-filters';
     const statusStorageKey = 'inventario-status-filters';
     const currentUrl = new URL(window.location.href);
@@ -1356,7 +1155,87 @@
 
     function parseCount(value) {
         const parsed = Number.parseInt(value, 10);
-        return Number.isFinite(parsed) ? parsed : 0;
+        return Number.isFinite(parsed) ?parsed : 0;
+    }
+
+    function setDashboardCardValues(cardData, totals) {
+        if (!cardData || !cardData.card) return;
+        const total = parseCount(totals.total);
+        const concluida = parseCount(totals.concluida);
+        const aguardando = parseCount(totals.aguardando_arquivo);
+        const faltantes = parseCount(totals.faltantes);
+        const fechamento = parseCount(totals.fechamento_fiscal);
+
+        cardData.card.dataset.total = String(total);
+        cardData.card.dataset.concluida = String(concluida);
+        cardData.card.dataset.aguardando = String(aguardando);
+        cardData.card.dataset.faltantes = String(faltantes);
+        cardData.card.dataset.fechamento = String(fechamento);
+
+        if (cardData.totalEl) cardData.totalEl.textContent = total;
+        if (cardData.concluidaEl) cardData.concluidaEl.textContent = concluida;
+        if (cardData.aguardandoEl) cardData.aguardandoEl.textContent = aguardando;
+        if (cardData.faltantesEl) cardData.faltantesEl.textContent = faltantes;
+        if (cardData.fechamentoEl) cardData.fechamentoEl.textContent = fechamento;
+    }
+
+    async function loadDashboardCardsAsync() {
+        if (!dashboardAsync) return;
+        try {
+            const url = dashboardQueryParams ? `${dashboardApiUrl}?${dashboardQueryParams}` : dashboardApiUrl;
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) return;
+            const payload = await response.json();
+            if (!payload || payload.success !== true || !Array.isArray(payload.cards)) return;
+            payload.cards.forEach((card) => {
+                if (!card || !card.tributacao) return;
+                const cardData = dashboardCards.get(String(card.tributacao));
+                if (!cardData) return;
+                setDashboardCardValues(cardData, card);
+            });
+        } catch (_error) {
+            // Fallback silencioso: mantem placeholders quando dashboard async falhar.
+        }
+    }
+    loadDashboardCardsAsync();
+
+    function hydrateLazySelectOptions(selectElement) {
+        if (!selectElement || selectElement.dataset.hydrated === '1') return;
+        const optionsType = selectElement.dataset.optionsType || '';
+        const currentValue = (selectElement.dataset.currentValue || '').trim();
+        const currentLabel = (selectElement.options[selectElement.selectedIndex]?.text || '').trim();
+
+        const options = [{ value: '', label: 'Selecione...' }];
+        if (optionsType === 'status') {
+            statusChoices.forEach((status) => {
+                options.push({ value: String(status), label: String(status) });
+            });
+        } else if (optionsType === 'usuarios') {
+            usuariosSelectOptions.forEach((usuario) => {
+                options.push({ value: String(usuario.id), label: String(usuario.name || '') });
+            });
+        } else {
+            return;
+        }
+
+        if (currentValue && !options.some((item) => item.value === currentValue)) {
+            options.push({ value: currentValue, label: currentLabel || currentValue });
+        }
+
+        const previousValue = selectElement.value || currentValue;
+        selectElement.innerHTML = '';
+        options.forEach((item) => {
+            const option = document.createElement('option');
+            option.value = item.value;
+            option.textContent = item.label;
+            selectElement.appendChild(option);
+        });
+        if (previousValue) {
+            selectElement.value = previousValue;
+        }
+        selectElement.dataset.hydrated = '1';
     }
 
     function adjustDashboardConcluida(tributacao, delta) {
@@ -1408,7 +1287,7 @@
             const wasConcluida = prevStatus === 'ENCERRADO';
             const isConcluida = nextStatus === 'ENCERRADO';
             if (wasConcluida !== isConcluida) {
-                adjustDashboardConcluida(tributacao, isConcluida ? 1 : -1);
+                adjustDashboardConcluida(tributacao, isConcluida ?1 : -1);
             }
         }
         row.dataset.status = nextStatus;
@@ -1420,9 +1299,9 @@
         const hadFile = row.dataset.hasClienteFile === '1';
         if (hadFile === hasFileNow) return;
         if (tributacao) {
-            adjustDashboardAguardando(tributacao, hasFileNow ? -1 : 1);
+            adjustDashboardAguardando(tributacao, hasFileNow ?-1 : 1);
         }
-        row.dataset.hasClienteFile = hasFileNow ? '1' : '0';
+        row.dataset.hasClienteFile = hasFileNow ?'1' : '0';
     }
 
     function updateDashboardForEncerramento(row, value) {
@@ -1432,9 +1311,9 @@
         const nextValue = value === true || value === 'true' || value === 'True' || value === '1';
         if (prevValue === nextValue) return;
         if (tributacao) {
-            adjustDashboardFechamento(tributacao, nextValue ? 1 : -1);
+            adjustDashboardFechamento(tributacao, nextValue ?1 : -1);
         }
-        row.dataset.encerramentoFiscal = nextValue ? '1' : '0';
+        row.dataset.encerramentoFiscal = nextValue ?'1' : '0';
     }
 
     // Garantir que dropdowns dos filtros sobreponham a tabela (sem corte por scroll)
@@ -1541,7 +1420,7 @@
         } catch (_) {
             savedTributacoes = [];
         }
-        const sanitized = sanitizeTributacoes(Array.isArray(savedTributacoes) ? savedTributacoes : []);
+        const sanitized = sanitizeTributacoes(Array.isArray(savedTributacoes) ?savedTributacoes : []);
         if (sanitized.length) {
             sanitized.forEach((value) => currentUrl.searchParams.append('tributacao', value));
             window.location.replace(currentUrl.toString());
@@ -1570,7 +1449,7 @@
         } catch (_) {
             savedStatus = [];
         }
-        const sanitized = sanitizeStatus(Array.isArray(savedStatus) ? savedStatus : []);
+        const sanitized = sanitizeStatus(Array.isArray(savedStatus) ?savedStatus : []);
         if (sanitized.length) {
             sanitized.forEach((value) => currentUrl.searchParams.append('status', value));
             window.location.replace(currentUrl.toString());
@@ -1627,7 +1506,7 @@
     // Função para ajustar tamanho da fonte do status
     function adjustStatusFontSize(selectElement) {
         const selectedOption = selectElement.options[selectElement.selectedIndex];
-        const text = selectedOption ? selectedOption.text : '';
+        const text = selectedOption ?selectedOption.text : '';
         const length = text.length;
 
         selectElement.classList.remove('status-short', 'status-medium', 'status-long');
@@ -1648,7 +1527,26 @@
         adjustStatusFontSize(select);
     });
 
+    document.querySelectorAll('.lazy-options-select').forEach((select) => {
+        const hydrate = () => hydrateLazySelectOptions(select);
+        select.addEventListener('focus', hydrate, { once: true });
+        select.addEventListener('mousedown', hydrate, { once: true });
+        select.addEventListener('touchstart', hydrate, { once: true });
+    });
+
     // Função para verificar e destacar CFOP consolidado quando encerramento fiscal = SIM e sem arquivo
+    function parseRowFileCount(row, key) {
+        const raw = row?.dataset?.[key] || '0';
+        const value = parseInt(raw, 10);
+        return Number.isNaN(value) ?0 : Math.max(value, 0);
+    }
+
+    function setRowFileCount(row, key, value) {
+        if (!row || !row.dataset) return;
+        row.dataset[key] = String(Math.max(0, Number(value) || 0));
+    }
+
+    // Verifica destaque do CFOP consolidado e disponibilidade do botao de mover
     function checkCFOPConsolidadoStatus(row) {
         const encerramentoSelect = row.querySelector('select[data-field="encerramento_fiscal"]');
         const statusSelect = row.querySelector('select[data-field="status"]');
@@ -1657,121 +1555,27 @@
         if (!encerramentoSelect || !cfopContainer) return;
 
         const encerramentoValue = encerramentoSelect.value;
-        const statusValue = (statusSelect && statusSelect.value ? statusSelect.value : '').trim();
-        const filesList = cfopContainer.querySelector('.files-list');
-        const hasFile = filesList && filesList.querySelector('.file-item') !== null;
+        const statusValue = (statusSelect && statusSelect.value ?statusSelect.value : '').trim();
+        const hasConsolidadoFile = parseRowFileCount(row, 'cfopConsolidadoCount') > 0;
         const isLiberadoBalanco = statusValue === 'LIBERADO PARA BALANÇO';
 
-        // Se encerramento = true (Sim) e não tem arquivo, marcar em vermelho
-        if (encerramentoValue === 'true' && !hasFile && !isLiberadoBalanco) {
+        if (encerramentoValue === 'true' && !hasConsolidadoFile && !isLiberadoBalanco) {
             cfopContainer.classList.add('cfop-missing-file');
         } else {
+            cfopContainer.classList.remove('cfop-missing-file');
+        }
 
         const moveButton = row.querySelector('.move-cfop-to-consolidado-btn');
-        const cfopFilesList = row.querySelector('.cfop-container .files-list');
-        const hasCfopFiles = cfopFilesList && cfopFilesList.querySelector('.file-item') !== null;
         if (moveButton) {
-            moveButton.disabled = !hasCfopFiles;
-        }
-            cfopContainer.classList.remove('cfop-missing-file');
+            moveButton.disabled = parseRowFileCount(row, 'cfopCount') <= 0;
         }
     }
 
-    // Verificar todas as linhas ao carregar
-    document.querySelectorAll('#inventarioTable tbody tr').forEach(row => {
-        checkCFOPConsolidadoStatus(row);
-    });
-
-    // Verificar quando mudar o encerramento fiscal
-    document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {
-        select.addEventListener('change', function () {
-            const row = this.closest('tr');
-            checkCFOPConsolidadoStatus(row);
-        });
-    });
-
-    // Atualizar campo editável
-    document.querySelectorAll('.editable-field').forEach(field => {
-        field.addEventListener('change', function () {
-            const row = this.closest('tr');
-            const empresaId = row.dataset.empresaId;
-            const fieldName = this.dataset.field;
-            const value = this.value;
-
-            // Ajustar fonte do status quando mudar
-            if (fieldName === 'status') {
-                const prevStatus = this.dataset.prevStatus || row.dataset.status || '';
-                adjustStatusFontSize(this);
-                updateDashboardForStatus(row, value);
-                this.dataset.prevStatus = prevStatus;
-            }
-
-            updateInventario(empresaId, fieldName, value, this);
-        });
-
-        // Para inputs de texto (não monetários), usar debounce
-        if (field.tagName === 'INPUT' && field.type === 'text' && !field.classList.contains('money-field')) {
-            field.addEventListener('input', function () {
-                const row = this.closest('tr');
-                const empresaId = row.dataset.empresaId;
-                const fieldName = this.dataset.field;
-                const value = this.value;
-                const element = this;
-
-                // Limpar timer anterior
-                if (debounceTimers[fieldName + empresaId]) {
-                    clearTimeout(debounceTimers[fieldName + empresaId]);
-                }
-
-                // Criar novo timer
-                debounceTimers[fieldName + empresaId] = setTimeout(() => {
-                    updateInventario(empresaId, fieldName, value, element);
-                }, 1000); // 1 segundo de delay
-            });
-        }
-    });
-
-    // Upload de PDF
-    document.querySelectorAll('.pdf-upload').forEach(input => {
-        input.addEventListener('change', function () {
-            const row = this.closest('tr');
-            const empresaId = row.dataset.empresaId;
-            const file = this.files[0];
-            const isPdf = file && (
-                file.type === 'application/pdf'
-                || (file.name && file.name.toLowerCase().endsWith('.pdf'))
-            );
-
-            if (isPdf) {
-                uploadPDF(empresaId, file, this);
-            } else if (file) {
-                alert('Por favor, selecione um arquivo PDF válido.');
-                this.value = '';
-            }
-        });
-    });
-
-    // Upload de CFOP consolidado
-    document.querySelectorAll('.cfop-consolidado-upload').forEach(input => {
-        input.addEventListener('change', function () {
-            const row = this.closest('tr');
-            const empresaId = row.dataset.empresaId;
-            const file = this.files[0];
-            const isPdf = file && (
-                file.type === 'application/pdf'
-                || (file.name && file.name.toLowerCase().endsWith('.pdf'))
-            );
-
-            if (isPdf) {
-                uploadCfopConsolidado(empresaId, file, this);
-            } else if (file) {
-                alert('Por favor, selecione um arquivo PDF valido.');
-                this.value = '';
-            }
-        });
-    });
+    // Listeners de linha e uploads s?o aplicados por bindRowHandlers para evitar duplicidade.
 
     function bindDeleteCFOPButton(btn) {
+        if (!btn || btn.dataset.boundDelete === '1') return;
+        btn.dataset.boundDelete = '1';
         btn.addEventListener('click', function () {
             window.portalConfirm({
                 title: 'Confirmar acao',
@@ -1791,6 +1595,8 @@
     }
 
     function bindDeleteCfopConsolidadoButton(btn) {
+        if (!btn || btn.dataset.boundDelete === '1') return;
+        btn.dataset.boundDelete = '1';
         btn.addEventListener('click', function () {
             window.portalConfirm({
                 title: 'Confirmar acao',
@@ -1810,6 +1616,8 @@
     }
 
     function bindDeleteClienteButton(btn) {
+        if (!btn || btn.dataset.boundDelete === '1') return;
+        btn.dataset.boundDelete = '1';
         btn.addEventListener('click', function () {
             window.portalConfirm({
                 title: 'Confirmar acao',
@@ -1833,6 +1641,7 @@
         if (!filesList) {
             filesList = document.createElement('div');
             filesList.className = 'files-list mb-1';
+            filesList.dataset.loaded = '0';
             container.insertBefore(filesList, inputElement);
         }
         return filesList;
@@ -1842,14 +1651,35 @@
         if (!row || statusValue === undefined || statusValue === null) return;
         const statusSelect = row.querySelector('select[data-field="status"]');
         if (statusSelect) {
+            if (statusSelect.dataset.hydrated !== '1') {
+                hydrateLazySelectOptions(statusSelect);
+            }
+            if (!Array.from(statusSelect.options).some((opt) => opt.value === String(statusValue))) {
+                const dynamicOption = document.createElement('option');
+                dynamicOption.value = String(statusValue);
+                dynamicOption.textContent = String(statusValue);
+                statusSelect.appendChild(dynamicOption);
+            }
             statusSelect.value = statusValue;
             adjustStatusFontSize(statusSelect);
             statusSelect.dataset.prevStatus = statusValue;
+            statusSelect.dataset.currentValue = statusValue;
         }
         updateDashboardForStatus(row, statusValue);
     }
 
+    function clearFilesPlaceholders(filesList) {
+        if (!filesList) return;
+        filesList.querySelectorAll('.files-placeholder').forEach(el => el.remove());
+        filesList.querySelectorAll('small.text-muted').forEach(el => {
+            if ((el.textContent || '').trim() === 'Nenhum arquivo') {
+                el.remove();
+            }
+        });
+    }
+
     function appendCfopFileItem(filesList, empresaId, fileIndex, filename) {
+        clearFilesPlaceholders(filesList);
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
         fileItem.dataset.fileIndex = fileIndex;
@@ -1886,6 +1716,7 @@
     }
 
     function appendCfopConsolidadoFileItem(filesList, empresaId, fileIndex, filename) {
+        clearFilesPlaceholders(filesList);
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
         fileItem.dataset.fileIndex = fileIndex;
@@ -1922,6 +1753,7 @@
     }
 
     function appendClienteFileItem(filesList, empresaId, fileIndex, filename) {
+        clearFilesPlaceholders(filesList);
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item d-flex gap-1 align-items-center mb-1';
         fileItem.dataset.fileIndex = fileIndex;
@@ -1967,32 +1799,415 @@
         });
     }
 
-    // Deletar arquivo CFOP
-    document.querySelectorAll('.delete-cfop-file-btn').forEach(bindDeleteCFOPButton);
-    document.querySelectorAll('.delete-cfop-consolidado-file-btn').forEach(bindDeleteCfopConsolidadoButton);
-    document.querySelectorAll('.move-cfop-to-consolidado-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const row = this.closest('tr');
-            const empresaId = row.dataset.empresaId;
-            moveCfopToConsolidado(empresaId, row, this);
+    function getAppendFnByType(fileType) {
+        if (fileType === 'cfop') return appendCfopFileItem;
+        if (fileType === 'cfop-consolidado') return appendCfopConsolidadoFileItem;
+        return appendClienteFileItem;
+    }
+
+    function getRowCountKeyByType(fileType) {
+        if (fileType === 'cfop') return 'cfopCount';
+        if (fileType === 'cfop-consolidado') return 'cfopConsolidadoCount';
+        return 'clienteCount';
+    }
+
+    function getApiPayloadKey(fileType) {
+        if (fileType === 'cfop-consolidado') return 'cfop_consolidado';
+        return fileType;
+    }
+
+    function updateLoadButtonLabel(row, fileType) {
+        const container = fileType === 'cfop'
+            ?row.querySelector('.cfop-container')
+            : fileType === 'cfop-consolidado'
+                ?row.querySelector('.cfop-consolidado-container')
+                : row.querySelector('.cliente-upload-container');
+        if (!container) return;
+        const button = container.querySelector(`.load-files-btn[data-file-type="${fileType}"]`);
+        if (!button) return;
+        const count = parseRowFileCount(row, getRowCountKeyByType(fileType));
+        button.textContent = `Carregar (${count})`;
+    }
+
+    function setRowFileCountByType(row, fileType, count) {
+        const key = getRowCountKeyByType(fileType);
+        setRowFileCount(row, key, count);
+        updateLoadButtonLabel(row, fileType);
+        if (fileType === 'cliente') {
+            const hasLegacy = row.dataset.hasClienteLegacy === '1';
+            updateDashboardForClienteFile(row, hasLegacy || (count > 0));
+        }
+        checkCFOPConsolidadoStatus(row);
+    }
+
+    function loadFilesOnDemand(row, fileType, forceRefresh = false) {
+        const empresaId = row.dataset.empresaId;
+        const container = fileType === 'cfop'
+            ?row.querySelector('.cfop-container')
+            : fileType === 'cfop-consolidado'
+                ?row.querySelector('.cfop-consolidado-container')
+                : row.querySelector('.cliente-upload-container');
+        if (!container) return Promise.resolve();
+
+        const filesList = container.querySelector('.files-list');
+        const inputElement = container.querySelector('.pdf-upload, .cfop-consolidado-upload, .cliente-upload');
+        if (!filesList || !inputElement) return Promise.resolve();
+
+        const alreadyLoaded = filesList.dataset.loaded === '1';
+        if (alreadyLoaded && !forceRefresh) return Promise.resolve();
+
+        filesList.dataset.loaded = 'loading';
+        filesList.innerHTML = '<small class="text-muted">Carregando...</small>';
+
+        return fetch(`/api/inventario/files/${empresaId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro ao carregar arquivos');
+                }
+                const payloadKey = getApiPayloadKey(fileType);
+                const files = Array.isArray(data[payloadKey]) ?data[payloadKey] : [];
+                const appendFn = getAppendFnByType(fileType);
+                const ensuredList = ensureFilesList(container, inputElement);
+                ensuredList.innerHTML = '';
+                files.forEach(file => {
+                    appendFn(ensuredList, empresaId, file.index, file.filename || 'arquivo');
+                });
+                ensuredList.dataset.loaded = '1';
+                setRowFileCountByType(row, fileType, files.length);
+                if (files.length === 0) {
+                    ensuredList.innerHTML = '<small class="text-muted">Nenhum arquivo</small>';
+                }
+            })
+            .catch(error => {
+                filesList.dataset.loaded = '0';
+                filesList.innerHTML = '<small class="text-danger">Falha ao carregar</small>';
+                console.error('Erro ao carregar arquivos sob demanda:', error);
+            });
+    }
+
+    function bindRowHandlers(scope = document) {
+        scope.querySelectorAll('.load-files-btn').forEach(btn => {
+            if (btn.dataset.boundClick === '1') return;
+            btn.dataset.boundClick = '1';
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const fileType = this.dataset.fileType;
+                loadFilesOnDemand(row, fileType);
+            });
         });
-    });
-
-    // Upload de arquivo do cliente
-    document.querySelectorAll('.cliente-upload').forEach(input => {
-        input.addEventListener('change', function () {
-            const row = this.closest('tr');
-            const empresaId = row.dataset.empresaId;
-            const file = this.files[0];
-
-            if (file) {
-                uploadClienteFile(empresaId, file, this);
+        scope.querySelectorAll('.delete-cfop-file-btn').forEach(bindDeleteCFOPButton);
+        scope.querySelectorAll('.delete-cfop-consolidado-file-btn').forEach(bindDeleteCfopConsolidadoButton);
+        scope.querySelectorAll('.delete-cliente-file-btn').forEach(bindDeleteClienteButton);
+        scope.querySelectorAll('.move-cfop-to-consolidado-btn').forEach(btn => {
+            if (btn.dataset.boundClick === '1') return;
+            btn.dataset.boundClick = '1';
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                moveCfopToConsolidado(empresaId, row, this);
+            });
+        });
+        scope.querySelectorAll('.cliente-upload').forEach(input => {
+            if (input.dataset.boundChange === '1') return;
+            input.dataset.boundChange = '1';
+            input.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const file = this.files[0];
+                if (file) {
+                    uploadClienteFile(empresaId, file, this);
+                }
+            });
+        });
+        scope.querySelectorAll('.pdf-upload').forEach(input => {
+            if (input.dataset.boundChange === '1') return;
+            input.dataset.boundChange = '1';
+            input.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const file = this.files[0];
+                const isPdf = file && (
+                    file.type === 'application/pdf'
+                    || (file.name && file.name.toLowerCase().endsWith('.pdf'))
+                );
+                if (isPdf) {
+                    uploadPDF(empresaId, file, this);
+                } else if (file) {
+                    alert('Por favor, selecione um arquivo PDF válido.');
+                    this.value = '';
+                }
+            });
+        });
+        scope.querySelectorAll('.cfop-consolidado-upload').forEach(input => {
+            if (input.dataset.boundChange === '1') return;
+            input.dataset.boundChange = '1';
+            input.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const file = this.files[0];
+                const isPdf = file && (
+                    file.type === 'application/pdf'
+                    || (file.name && file.name.toLowerCase().endsWith('.pdf'))
+                );
+                if (isPdf) {
+                    uploadCfopConsolidado(empresaId, file, this);
+                } else if (file) {
+                    alert('Por favor, selecione um arquivo PDF válido.');
+                    this.value = '';
+                }
+            });
+        });
+        scope.querySelectorAll('.editable-field').forEach(field => {
+            if (field.dataset.boundChange === '1') return;
+            field.dataset.boundChange = '1';
+            field.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const empresaId = row.dataset.empresaId;
+                const fieldName = this.dataset.field;
+                const value = this.value;
+                if (fieldName === 'status') {
+                    const prevStatus = this.dataset.prevStatus || row.dataset.status || '';
+                    adjustStatusFontSize(this);
+                    updateDashboardForStatus(row, value);
+                    this.dataset.prevStatus = prevStatus;
+                }
+                const shouldDebounceShort =
+                    this.tagName === 'SELECT' ||
+                    (this.tagName === 'INPUT' && this.type === 'date');
+                if (shouldDebounceShort) {
+                    const timerKey = `change:${fieldName}:${empresaId}`;
+                    if (debounceTimers[timerKey]) {
+                        clearTimeout(debounceTimers[timerKey]);
+                    }
+                    debounceTimers[timerKey] = setTimeout(() => {
+                        updateInventario(empresaId, fieldName, value, this);
+                    }, 250);
+                } else {
+                    updateInventario(empresaId, fieldName, value, this);
+                }
+            });
+            if (field.tagName === 'INPUT' && field.type === 'text' && !field.classList.contains('money-field')) {
+                if (field.dataset.boundInput === '1') return;
+                field.dataset.boundInput = '1';
+                field.addEventListener('input', function () {
+                    const row = this.closest('tr');
+                    const empresaId = row.dataset.empresaId;
+                    const fieldName = this.dataset.field;
+                    const value = this.value;
+                    const element = this;
+                    if (debounceTimers[fieldName + empresaId]) {
+                        clearTimeout(debounceTimers[fieldName + empresaId]);
+                    }
+                    debounceTimers[fieldName + empresaId] = setTimeout(() => {
+                        updateInventario(empresaId, fieldName, value, element);
+                    }, 1000);
+                });
             }
         });
-    });
+        scope.querySelectorAll('.money-field').forEach(field => {
+            if (field.dataset.boundInput === '1') return;
+            field.dataset.boundInput = '1';
+            field.addEventListener('input', function () {
+                let cursorPosition = this.selectionStart;
+                let oldLength = this.value.length;
+                this.value = formatMoney(this.value);
+                let newLength = this.value.length;
+                let diff = newLength - oldLength;
+                this.selectionStart = this.selectionEnd = cursorPosition + diff;
+            });
+            if (field.value && !field.value.startsWith('R$')) {
+                field.value = formatMoney(field.value);
+            }
+        });
+        scope.querySelectorAll('select[data-field="status"]').forEach(select => {
+            adjustStatusFontSize(select);
+        });
+        scope.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(select => {
+            if (select.dataset.boundChange === '1') return;
+            select.dataset.boundChange = '1';
+            select.addEventListener('change', function () {
+                const row = this.closest('tr');
+                checkCFOPConsolidadoStatus(row);
+            });
+        });
+        scope.querySelectorAll('.lazy-options-select').forEach((select) => {
+            if (select.dataset.boundLazy === '1') return;
+            select.dataset.boundLazy = '1';
+            const hydrate = () => hydrateLazySelectOptions(select);
+            select.addEventListener('focus', hydrate, { once: true });
+            select.addEventListener('mousedown', hydrate, { once: true });
+            select.addEventListener('touchstart', hydrate, { once: true });
+        });
+        scope.querySelectorAll('tr[data-empresa-id]').forEach(row => {
+            updateLoadButtonLabel(row, 'cfop');
+            updateLoadButtonLabel(row, 'cfop-consolidado');
+            updateLoadButtonLabel(row, 'cliente');
+            checkCFOPConsolidadoStatus(row);
+        });
+    }
 
-    // Deletar arquivo do cliente
-    document.querySelectorAll('.delete-cliente-file-btn').forEach(bindDeleteClienteButton);
+    // Evita duplicar listeners já registrados nos elementos iniciais.
+    document.querySelectorAll('.editable-field').forEach(el => {
+        el.dataset.boundChange = '1';
+        if (el.tagName === 'INPUT' && el.type === 'text' && !el.classList.contains('money-field')) {
+            el.dataset.boundInput = '1';
+        }
+    });
+    document.querySelectorAll('.money-field').forEach(el => el.dataset.boundInput = '1');
+    document.querySelectorAll('.pdf-upload, .cfop-consolidado-upload').forEach(el => {
+        el.dataset.boundChange = '1';
+    });
+    document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(el => el.dataset.boundChange = '1');
+    document.querySelectorAll('.lazy-options-select').forEach(el => el.dataset.boundLazy = '1');
+
+    bindRowHandlers(document);
+
+    if (listAllProgressive && listAllToken) {
+        const loadMoreBtn = document.getElementById('listallLoadMoreBtn');
+        const progressText = document.getElementById('listallProgressText');
+        const tbody = document.querySelector('#inventarioTable tbody');
+        const tableWrapper = document.querySelector('.table-wrapper');
+        let isLoadingChunk = false;
+        let refreshVirtualization = null;
+
+        const updateProgress = () => {
+            if (progressText) {
+                progressText.textContent = `${listAllLoaded} / ${listAllTotal}`;
+            }
+            if (loadMoreBtn && listAllLoaded >= listAllTotal) {
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.textContent = 'Carregado';
+            }
+        };
+
+        const requestNextChunk = (source = 'manual') => {
+            if (!loadMoreBtn || !tbody) return;
+            if (isLoadingChunk || listAllLoaded >= listAllTotal) return;
+            isLoadingChunk = true;
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.textContent = source === 'auto' ? 'Carregando automaticamente...' : 'Carregando...';
+
+            fetch(`/api/inventario/chunk?token=${encodeURIComponent(listAllToken)}&offset=${listAllLoaded}&limit=${listAllChunkSize}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.error || 'Erro ao carregar lote');
+                    }
+                    if (data.html) {
+                        const tmp = document.createElement('tbody');
+                        tmp.innerHTML = data.html;
+                        const newRows = Array.from(tmp.querySelectorAll('tr'));
+                        newRows.forEach(row => tbody.appendChild(row));
+                        bindRowHandlers(tbody);
+                        if (typeof refreshVirtualization === 'function') {
+                            refreshVirtualization();
+                        }
+                    }
+                    listAllLoaded = Number(data.loaded || listAllLoaded);
+                    updateProgress();
+                    if (listAllLoaded < listAllTotal) {
+                        loadMoreBtn.disabled = false;
+                        loadMoreBtn.textContent = 'Carregar mais';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar mais linhas:', error);
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.textContent = 'Tentar novamente';
+                })
+                .finally(() => {
+                    isLoadingChunk = false;
+                });
+        };
+
+        updateProgress();
+
+        if (loadMoreBtn && tbody) {
+            loadMoreBtn.addEventListener('click', () => requestNextChunk('manual'));
+        }
+
+        if (tableWrapper) {
+            const enableVirtualization = () => {
+                const topSpacer = document.createElement('tr');
+                topSpacer.className = 'virtual-spacer';
+                const topSpacerCell = document.createElement('td');
+                topSpacerCell.colSpan = document.querySelectorAll('#inventarioTable thead th').length || 1;
+                topSpacer.appendChild(topSpacerCell);
+
+                const bottomSpacer = document.createElement('tr');
+                bottomSpacer.className = 'virtual-spacer';
+                const bottomSpacerCell = document.createElement('td');
+                bottomSpacerCell.colSpan = topSpacerCell.colSpan;
+                bottomSpacer.appendChild(bottomSpacerCell);
+
+                const ensureSpacers = () => {
+                    if (!tbody.firstElementChild || !tbody.firstElementChild.classList.contains('virtual-spacer')) {
+                        tbody.insertBefore(topSpacer, tbody.firstChild);
+                    }
+                    if (!tbody.lastElementChild || !tbody.lastElementChild.classList.contains('virtual-spacer')) {
+                        tbody.appendChild(bottomSpacer);
+                    }
+                };
+
+                const renderWindow = () => {
+                    const rows = Array.from(tbody.querySelectorAll('tr[data-empresa-id]'));
+                    const totalRows = rows.length;
+                    if (totalRows <= 220) {
+                        rows.forEach(row => row.classList.remove('virtual-hidden'));
+                        topSpacerCell.style.height = '0px';
+                        bottomSpacerCell.style.height = '0px';
+                        return;
+                    }
+
+                    const firstVisible = rows.find(row => !row.classList.contains('virtual-hidden')) || rows[0];
+                    const rowHeight = Math.max(36, firstVisible.getBoundingClientRect().height || 48);
+                    const overscan = 14;
+                    const viewportRows = Math.ceil(tableWrapper.clientHeight / rowHeight) + overscan * 2;
+                    const rawStart = Math.floor(tableWrapper.scrollTop / rowHeight) - overscan;
+                    const start = Math.max(0, rawStart);
+                    const end = Math.min(totalRows, start + viewportRows);
+
+                    rows.forEach((row, idx) => {
+                        if (idx >= start && idx < end) {
+                            row.classList.remove('virtual-hidden');
+                        } else {
+                            row.classList.add('virtual-hidden');
+                        }
+                    });
+
+                    topSpacerCell.style.height = `${start * rowHeight}px`;
+                    bottomSpacerCell.style.height = `${Math.max(0, (totalRows - end) * rowHeight)}px`;
+                };
+
+                ensureSpacers();
+                renderWindow();
+                refreshVirtualization = () => {
+                    ensureSpacers();
+                    renderWindow();
+                };
+                tableWrapper.addEventListener('scroll', renderWindow, { passive: true });
+            };
+
+            enableVirtualization();
+
+            tableWrapper.addEventListener('scroll', () => {
+                if (isLoadingChunk || listAllLoaded >= listAllTotal) return;
+                const remaining = tableWrapper.scrollHeight - tableWrapper.scrollTop - tableWrapper.clientHeight;
+                if (remaining <= 220) {
+                    requestNextChunk('auto');
+                }
+            }, { passive: true });
+
+            // Se o viewport inicial não preencher a área, puxa o próximo lote automaticamente.
+            setTimeout(() => {
+                const remaining = tableWrapper.scrollHeight - tableWrapper.clientHeight;
+                if (remaining <= 220 && listAllLoaded < listAllTotal) {
+                    requestNextChunk('auto');
+                }
+            }, 120);
+        }
+    }
 
     // Mantém dropdown de tributação aberto ao marcar checkboxes
     const tribDropdownToggle = document.getElementById('tributacaoFilterDropdown');
@@ -2080,8 +2295,20 @@
         });
     }
 
-    function updateInventario(empresaId, field, value, element) {
-        // Indicador visual de salvamento
+    const updateQueue = new Map();
+    const updateInFlight = new Set();
+    let updateSeq = 0;
+
+    function _updateQueueKey(empresaId, field) {
+        return `${empresaId}:${field}`;
+    }
+
+    function _drainInventarioUpdate(key) {
+        const queued = updateQueue.get(key);
+        if (!queued || updateInFlight.has(key)) return;
+        updateInFlight.add(key);
+
+        const { empresaId, field, value, element, seq } = queued;
         element.classList.remove('saved', 'error');
         element.classList.add('saving');
 
@@ -2101,7 +2328,6 @@
                 element.classList.remove('saving');
                 if (data.success) {
                     const resolvedValue = data.value !== undefined ? data.value : value;
-                    // Atualizar valor formatado se retornado
                     if (data.value !== undefined && data.value !== value) {
                         element.value = data.value;
                     }
@@ -2135,28 +2361,32 @@
                             }
                         }
                     }
-                if (field === 'status') {
-                    const row = element.closest('tr');
-                    const nextStatus = resolvedStatus || resolvedValue;
-                    updateDashboardForStatus(row, nextStatus);
-                    element.dataset.prevStatus = nextStatus;
-                }
-                if (field === 'encerramento_fiscal') {
-                    const row = element.closest('tr');
-                    updateDashboardForEncerramento(row, resolvedValue);
-                }
-                element.classList.add('saved');
-                setTimeout(() => element.classList.remove('saved'), 2000);
-            } else {
-                element.classList.add('error');
-                if (field === 'status') {
+                    if (field === 'status') {
+                        const row = element.closest('tr');
+                        const nextStatus = resolvedStatus || resolvedValue;
+                        updateDashboardForStatus(row, nextStatus);
+                        element.dataset.prevStatus = nextStatus;
+                    }
+                    if (field === 'encerramento_fiscal') {
+                        const row = element.closest('tr');
+                        updateDashboardForEncerramento(row, resolvedValue);
+                    }
+                    element.classList.add('saved');
+                    setTimeout(() => element.classList.remove('saved'), 2000);
+                } else {
+                    element.classList.add('error');
+                    if (field === 'status') {
                         const row = element.closest('tr');
                         const prevStatus = element.dataset.prevStatus || row?.dataset.status || '';
                         element.value = prevStatus;
                         adjustStatusFontSize(element);
                         updateDashboardForStatus(row, prevStatus);
                     }
-                    alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+                    // Evita alert de request antiga já substituída por valor mais novo na fila.
+                    const latest = updateQueue.get(key);
+                    if (!latest || latest.seq === seq) {
+                        alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+                    }
                 }
             })
             .catch(error => {
@@ -2170,8 +2400,34 @@
                     adjustStatusFontSize(element);
                     updateDashboardForStatus(row, prevStatus);
                 }
-                alert('Erro ao salvar. Tente novamente.');
+                const latest = updateQueue.get(key);
+                if (!latest || latest.seq === seq) {
+                    alert('Erro ao salvar. Tente novamente.');
+                }
+            })
+            .finally(() => {
+                updateInFlight.delete(key);
+                const latest = updateQueue.get(key);
+                if (!latest) return;
+                if (latest.seq !== seq) {
+                    _drainInventarioUpdate(key);
+                } else {
+                    updateQueue.delete(key);
+                }
             });
+    }
+
+    function updateInventario(empresaId, field, value, element) {
+        const key = _updateQueueKey(empresaId, field);
+        updateSeq += 1;
+        updateQueue.set(key, {
+            empresaId,
+            field,
+            value,
+            element,
+            seq: updateSeq,
+        });
+        _drainInventarioUpdate(key);
     }
 
     function uploadPDF(empresaId, file, inputElement) {
@@ -2203,6 +2459,8 @@
                     const filesList = ensureFilesList(container, inputElement);
                     const filename = data.filename || (file && file.name) || 'arquivo.pdf';
                     appendCfopFileItem(filesList, empresaId, data.file_index, filename);
+                    filesList.dataset.loaded = '1';
+                    setRowFileCountByType(row, 'cfop', parseRowFileCount(row, 'cfopCount') + 1);
                     updateRowStatus(row, data.status);
                     checkCFOPConsolidadoStatus(row);
                     inputElement.value = '';
@@ -2243,6 +2501,8 @@
                 if (cfopContainer && cfopInput) {
                     const filesList = ensureFilesList(cfopContainer, cfopInput);
                     filesList.innerHTML = '';
+                    filesList.dataset.loaded = '1';
+                    setRowFileCountByType(row, 'cfop', 0);
                 }
 
                 if (consolidatedContainer && consolidatedInput) {
@@ -2251,6 +2511,8 @@
                     (data.cfop_consolidado_files || []).forEach((file, idx) => {
                         appendCfopConsolidadoFileItem(filesList, empresaId, idx, file.filename || 'arquivo.pdf');
                     });
+                    filesList.dataset.loaded = '1';
+                    setRowFileCountByType(row, 'cfop-consolidado', (data.cfop_consolidado_files || []).length);
                 }
 
                 updateRowStatus(row, data.status);
@@ -2291,6 +2553,8 @@
                     const filesList = ensureFilesList(container, inputElement);
                     const filename = data.filename || (file && file.name) || 'arquivo.pdf';
                     appendCfopConsolidadoFileItem(filesList, empresaId, data.file_index, filename);
+                    filesList.dataset.loaded = '1';
+                    setRowFileCountByType(row, 'cfop-consolidado', parseRowFileCount(row, 'cfopConsolidadoCount') + 1);
                     updateRowStatus(row, data.status);
                     checkCFOPConsolidadoStatus(row);
                     inputElement.value = '';
@@ -2332,6 +2596,11 @@
                         fileItem.remove();
                         if (filesList) {
                             updateFileListIndices(filesList, empresaId, 'cfop');
+                            const currentCount = filesList.querySelectorAll('.file-item').length;
+                            setRowFileCountByType(row, 'cfop', currentCount);
+                            if (currentCount === 0) {
+                                filesList.innerHTML = '<small class="text-muted">Nenhum arquivo</small>';
+                            }
                         }
                         if (row) {
                             if (data.status) {
@@ -2377,6 +2646,11 @@
                         fileItem.remove();
                         if (filesList) {
                             updateFileListIndices(filesList, empresaId, 'cfop-consolidado');
+                            const currentCount = filesList.querySelectorAll('.file-item').length;
+                            setRowFileCountByType(row, 'cfop-consolidado', currentCount);
+                            if (currentCount === 0) {
+                                filesList.innerHTML = '<small class="text-muted">Nenhum arquivo</small>';
+                            }
                         }
                         if (row) {
                             if (data.status) {
@@ -2424,7 +2698,8 @@
                     const filesList = ensureFilesList(container, inputElement);
                     const filename = data.filename || (file && file.name) || 'arquivo';
                     appendClienteFileItem(filesList, empresaId, data.file_index, filename);
-                    updateDashboardForClienteFile(row, true);
+                    filesList.dataset.loaded = '1';
+                    setRowFileCountByType(row, 'cliente', parseRowFileCount(row, 'clienteCount') + 1);
                     updateRowStatus(row, data.status);
                     inputElement.value = '';
                 } else {
@@ -2465,11 +2740,13 @@
                         fileItem.remove();
                         if (filesList) {
                             updateFileListIndices(filesList, empresaId, 'cliente');
+                            const currentCount = filesList.querySelectorAll('.file-item').length;
+                            setRowFileCountByType(row, 'cliente', currentCount);
+                            if (currentCount === 0) {
+                                filesList.innerHTML = '<small class="text-muted">Nenhum arquivo</small>';
+                            }
                         }
                         if (row) {
-                            const hasLegacy = row.dataset.hasClienteLegacy === '1';
-                            const hasFileNow = hasLegacy || !!(filesList && filesList.querySelector('.file-item'));
-                            updateDashboardForClienteFile(row, hasFileNow);
                             if (data.status) {
                                 updateRowStatus(row, data.status);
                             }
@@ -2700,7 +2977,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox"
                                id="vis_${colId}" data-column-id="${colId}"
-                               ${isVisible ? 'checked' : ''}>
+                               ${isVisible ?'checked' : ''}>
                         <label class="form-check-label" for="vis_${colId}">
                             ${meta.label}
                         </label>

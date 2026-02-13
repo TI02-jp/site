@@ -51,8 +51,12 @@ logs/
 # Ignorar arquivos do Qodo AI
 .qodo/
 
-# Ignorar diretórios de migrações do Flask-Migrate
+# Ignorar migrações por padrão; liberar apenas revisões explicitamente adicionadas
 migrations/
+!migrations/
+!migrations/versions/
+migrations/versions/*
+!migrations/versions/ab12cd34ef56_add_inventario_route_composite_indexes.py
 
 # Ignorar diretório de instância do Flask
 instance/

@@ -1,5 +1,6 @@
 """Flask application factory and common utilities."""
 
+import hashlib
 import mimetypes
 import os
 import threading
@@ -152,8 +153,7 @@ limiter = Limiter(
     headers_enabled=True,
 )
 
-# Compressão HTTP para reduzir tamanho das respostas em ~70%
-compress = Compress(app)
+# Compressao HTTP para reduzir payload de HTML/JSON (inclui Brotli quando suportado)
 app.config['COMPRESS_MIMETYPES'] = [
     'text/html',
     'text/css',
@@ -163,20 +163,51 @@ app.config['COMPRESS_MIMETYPES'] = [
     'text/xml',
     'application/xml',
 ]
-app.config['COMPRESS_LEVEL'] = 6  # Nível de compressão (1-9, 6 é bom balanço)
-app.config['COMPRESS_MIN_SIZE'] = 500  # Só comprime respostas > 500 bytes
+app.config['COMPRESS_LEVEL'] = 6
+app.config['COMPRESS_MIN_SIZE'] = 256
+app.config['COMPRESS_ALGORITHM'] = ['br', 'gzip']
+app.config['COMPRESS_BR_LEVEL'] = 5
+compress = Compress(app)
 
+# Browser cache for static assets (safe with per-file cache-buster below)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 1 day
 
 
 # Import centralized cache for session tracking
 from app.extensions.cache import cache as session_cache
 
 
+# ---------------------------------------------------------------------------
+# Static asset cache-buster (per-file mtime hash)
+# ---------------------------------------------------------------------------
+_asset_hashes: dict[str, str] = {}
+
+
+def _get_asset_hash(filename: str) -> str:
+    """Return a short hash based on the file's modification time.
+
+    The hash is computed once per filename and cached in-process for the
+    lifetime of the application, so it only changes when the app restarts
+    (i.e. after a deploy).
+    """
+    cached = _asset_hashes.get(filename)
+    if cached is not None:
+        return cached
+    filepath = os.path.join(app.static_folder, filename)
+    try:
+        mtime = os.path.getmtime(filepath)
+        h = hashlib.md5(str(mtime).encode()).hexdigest()[:8]
+    except OSError:
+        h = "0"
+    _asset_hashes[filename] = h
+    return h
+
+
 @app.url_defaults
 def add_cache_buster(endpoint, values):
-    """Append a timestamp query parameter to static asset URLs."""
+    """Append a per-file hash query parameter to static asset URLs."""
     if endpoint == 'static' and 'cb' not in values:
-        values['cb'] = int(time.time())
+        values['cb'] = _get_asset_hash(values.get('filename', ''))
 
 
 @app.before_request
@@ -852,6 +883,43 @@ with app.app_context():
                             "ALTER TABLE tbl_inventario ADD COLUMN cliente_files JSON NULL"
                         )
                     )
+
+            inventario_indexes = {
+                idx.get("name")
+                for idx in inspector.get_indexes("tbl_inventario")
+                if idx.get("name")
+            }
+            inventario_index_ddl = {
+                "idx_inventario_status_empresa": (
+                    "CREATE INDEX idx_inventario_status_empresa ON tbl_inventario (status, empresa_id)"
+                ),
+                "idx_inventario_encerramento": (
+                    "CREATE INDEX idx_inventario_encerramento ON tbl_inventario (encerramento_fiscal)"
+                ),
+            }
+            for index_name, ddl in inventario_index_ddl.items():
+                if index_name not in inventario_indexes:
+                    with db.engine.begin() as conn:
+                        conn.execute(sa.text(ddl))
+
+        if inspector.has_table("tbl_empresas"):
+            empresa_indexes = {
+                idx.get("name")
+                for idx in inspector.get_indexes("tbl_empresas")
+                if idx.get("name")
+            }
+            empresa_index_ddl = {
+                "idx_empresas_ativo_tipo": (
+                    "CREATE INDEX idx_empresas_ativo_tipo ON tbl_empresas (ativo, tipo_empresa)"
+                ),
+                "idx_empresas_ativo_tributacao": (
+                    "CREATE INDEX idx_empresas_ativo_tributacao ON tbl_empresas (ativo, tributacao)"
+                ),
+            }
+            for index_name, ddl in empresa_index_ddl.items():
+                if index_name not in empresa_indexes:
+                    with db.engine.begin() as conn:
+                        conn.execute(sa.text(ddl))
 
     except SQLAlchemyError as exc:
         app.logger.warning(

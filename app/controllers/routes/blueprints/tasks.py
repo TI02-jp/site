@@ -98,6 +98,7 @@ from app.utils.security import sanitize_html
 # Optimized queries with cache and eager loading
 from app.services.optimized_queries import (
     get_active_users_with_tags,
+    get_all_tags,
 )
 
 # Other imports
@@ -975,20 +976,14 @@ def tasks_overview():
 
     # Otimizado: usa cache e eager loading de tags
     active_users = get_active_users_with_tags()
+    # Tags cached (10 min) - filtra em Python ao inves de query separada
+    all_tags = get_all_tags()
+    excluded_set = set(EXCLUDED_TASK_TAGS)
     if current_user.role == "admin":
-        available_tags = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-            .order_by(Tag.nome.asc())
-            .all()
-        )
+        available_tags = [t for t in all_tags if t.nome not in excluded_set]
     else:
-        available_tags = (
-            Tag.query.filter(Tag.id.in_(accessible_ids))
-            .order_by(Tag.nome.asc())
-            .all()
-            if accessible_ids
-            else []
-        )
+        accessible_set = set(accessible_ids) if accessible_ids else set()
+        available_tags = [t for t in all_tags if t.id in accessible_set]
 
     tasks = (
         query.options(
@@ -1073,13 +1068,11 @@ def tasks_overview_mine():
         if not tag.nome.startswith(PERSONAL_TAG_PREFIX)
     ]
     owned_sector_tag_ids = [tag.id for tag in owned_sector_tags]
-    available_tags = (
-        Tag.query.filter(Tag.id.in_(owned_sector_tag_ids))
-        .order_by(Tag.nome.asc())
-        .all()
-        if owned_sector_tag_ids
-        else []
-    )
+    owned_set = set(owned_sector_tag_ids)
+    available_tags = sorted(
+        [t for t in get_all_tags() if t.id in owned_set],
+        key=lambda t: t.nome,
+    ) if owned_sector_tag_ids else []
 
     def _parse_date_param(raw_value: str | None):
         if not raw_value:
@@ -1193,13 +1186,10 @@ def tasks_overview_mine():
     )
     # Otimizado: usa cache e eager loading de tags
     active_users = get_active_users_with_tags()
-    available_tags = (
-        Tag.query.filter(Tag.id.in_(owned_sector_tag_ids))
-        .order_by(Tag.nome.asc())
-        .all()
-        if owned_sector_tag_ids
-        else []
-    )
+    available_tags = sorted(
+        [t for t in get_all_tags() if t.id in owned_set],
+        key=lambda t: t.nome,
+    ) if owned_sector_tag_ids else []
     tasks = _filter_tasks_for_user(tasks, current_user)
     summaries = _load_task_response_summaries(
         (task.id for task in _iter_tasks_with_children(tasks)),
@@ -1495,12 +1485,13 @@ def tasks_new():
         # Não desabilitar o campo aqui - será tratado no template
         form.assigned_to.choices = _build_task_user_choices(parent_task.tag)
     else:
-        tags_query = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
-            .order_by(Tag.nome)
-        )
-        choices = [(t.id, t.nome) for t in tags_query.all()]
+        all_tags_cached = get_all_tags()
+        excluded_set = set(EXCLUDED_TASK_TAGS)
+        filtered_tags = [
+            t for t in all_tags_cached
+            if t.nome not in excluded_set and not t.nome.startswith(PERSONAL_TAG_PREFIX)
+        ]
+        choices = [(t.id, t.nome) for t in filtered_tags]
         choices = _sort_choice_pairs(choices)
         form.tag_id.choices = choices
         selected_tag_id = form.tag_id.data
@@ -1779,12 +1770,13 @@ def tasks_edit(task_id: int):
         form.tag_id.data = parent_task.tag_id
         tag = parent_task.tag
     else:
-        tags_query = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
-            .order_by(Tag.nome)
-        )
-        tag_choices = [(t.id, t.nome) for t in tags_query.all()]
+        all_tags_cached = get_all_tags()
+        excluded_set = set(EXCLUDED_TASK_TAGS)
+        filtered_tags = [
+            t for t in all_tags_cached
+            if t.nome not in excluded_set and not t.nome.startswith(PERSONAL_TAG_PREFIX)
+        ]
+        tag_choices = [(t.id, t.nome) for t in filtered_tags]
         tag_choices = _sort_choice_pairs(tag_choices)
         form.tag_id.choices = tag_choices
         if task.is_private and all(choice[0] != task.tag_id for choice in form.tag_id.choices):
@@ -2014,28 +2006,18 @@ def tasks_transfer_options(task_id: int):
     is_admin = current_user.role == "admin"
 
     tag_entries: dict[int, Tag] = {}
+    all_tags_cached = get_all_tags()
+    excluded_set = set(EXCLUDED_TASK_TAGS)
     if is_admin:
-        available_tags = (
-            Tag.query.filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-            .filter(~Tag.nome.like(f"{PERSONAL_TAG_PREFIX}%"))
-            .order_by(Tag.nome)
-            .all()
-        )
-        for tag in available_tags:
-            tag_entries[tag.id] = tag
+        for tag in all_tags_cached:
+            if tag.nome not in excluded_set and not tag.nome.startswith(PERSONAL_TAG_PREFIX):
+                tag_entries[tag.id] = tag
     else:
         accessible_ids = {tag_id for tag_id in _get_accessible_tag_ids(current_user) if tag_id}
         if task.tag_id:
             accessible_ids.add(task.tag_id)
-        if accessible_ids:
-            available_tags = (
-                Tag.query.filter(Tag.id.in_(accessible_ids))
-                .order_by(Tag.nome)
-                .all()
-            )
-            for tag in available_tags:
-                if tag.nome.lower() in EXCLUDED_TASK_TAGS_LOWER:
-                    continue
+        for tag in all_tags_cached:
+            if tag.id in accessible_ids and tag.nome.lower() not in EXCLUDED_TASK_TAGS_LOWER:
                 tag_entries[tag.id] = tag
     if task.tag and task.tag.id not in tag_entries:
         tag_entries[task.tag.id] = task.tag

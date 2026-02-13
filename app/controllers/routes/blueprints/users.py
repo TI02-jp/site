@@ -127,7 +127,7 @@ def list_users():
             tag_edit_form.nome.data = edit_tag.nome
 
     if editing_user_id:
-        editing_user = User.query.get(editing_user_id)
+        editing_user = User.query.options(joinedload(User.tags)).get(editing_user_id)
         if not editing_user:
             flash("Usuário não encontrado.", "warning")
             editing_user_id = None

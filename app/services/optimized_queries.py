@@ -16,11 +16,21 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
-from sqlalchemy.orm import joinedload, selectinload
+import sqlalchemy as sa
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload, load_only, selectinload
 
 from app import db
 from app.extensions.cache import cached_query
-from app.models.tables import Empresa, Inventario, Tag, Task, User
+from app.models.tables import (
+    Empresa,
+    Inventario,
+    ProcessoSocietario,
+    ProcessoSocietarioHistorico,
+    Tag,
+    Task,
+    User,
+)
 
 
 # =============================================================================
@@ -210,7 +220,11 @@ def get_tag_by_id(tag_id: int) -> Optional[Tag]:
 # QUERIES DE INVENTÁRIO
 # =============================================================================
 
-def get_inventarios_by_empresa_ids(empresa_ids: List[int], status_filter: Optional[List[str]] = None):
+def get_inventarios_by_empresa_ids(
+    empresa_ids: List[int],
+    status_filter: Optional[List[str]] = None,
+    include_file_columns: bool = True,
+):
     """
     Retorna inventários para lista de empresa IDs de forma otimizada.
 
@@ -228,6 +242,29 @@ def get_inventarios_by_empresa_ids(empresa_ids: List[int], status_filter: Option
 
     query = Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids))
 
+    if not include_file_columns:
+        query = query.options(
+            load_only(
+                Inventario.id,
+                Inventario.empresa_id,
+                Inventario.encerramento_fiscal,
+                Inventario.dief_2024,
+                Inventario.balanco_2025_cliente,
+                Inventario.fechamento_tadeu_2025,
+                Inventario.observacoes_tadeu,
+                Inventario.valor_enviado_sped,
+                Inventario.status,
+                Inventario.encerramento_balanco_data,
+                Inventario.encerramento_balanco_usuario_id,
+                Inventario.pdf_path,
+                Inventario.pdf_original_name,
+                Inventario.cliente_pdf_path,
+                Inventario.cliente_original_name,
+                Inventario.created_at,
+                Inventario.updated_at,
+            )
+        )
+
     if status_filter:
         query = query.filter(Inventario.status.in_(status_filter))
 
@@ -235,6 +272,72 @@ def get_inventarios_by_empresa_ids(empresa_ids: List[int], status_filter: Option
 
     # Retornar como dict para acesso O(1)
     return {inv.empresa_id: inv for inv in inventarios}
+
+
+def get_inventario_file_counts_by_empresa_ids(empresa_ids: List[int]) -> dict[int, dict[str, int | bool]]:
+    """
+    Retorna metadados de anexos do inventário sem carregar payload base64.
+
+    Return:
+        {
+            empresa_id: {
+                "cfop": int,
+                "cfop_consolidado": int,
+                "cliente": int,
+                "cliente_legacy": bool,
+            }
+        }
+    """
+    if not empresa_ids:
+        return {}
+
+    try:
+        rows = (
+            db.session.query(
+                Inventario.empresa_id.label("empresa_id"),
+                sa.func.coalesce(sa.func.json_length(Inventario.cfop_files), 0).label("cfop"),
+                sa.func.coalesce(
+                    sa.func.json_length(Inventario.cfop_consolidado_files), 0
+                ).label("cfop_consolidado"),
+                sa.func.coalesce(sa.func.json_length(Inventario.cliente_files), 0).label("cliente"),
+                Inventario.cliente_pdf_path.label("cliente_pdf_path"),
+            )
+            .filter(Inventario.empresa_id.in_(empresa_ids))
+            .all()
+        )
+        return {
+            int(row.empresa_id): {
+                "cfop": int(row.cfop or 0),
+                "cfop_consolidado": int(row.cfop_consolidado or 0),
+                "cliente": int(row.cliente or 0),
+                "cliente_legacy": bool(row.cliente_pdf_path),
+            }
+            for row in rows
+        }
+    except SQLAlchemyError:
+        # Fallback para bancos sem json_length: calcula no Python.
+        inventarios = (
+            Inventario.query.options(
+                load_only(
+                    Inventario.empresa_id,
+                    Inventario.cfop_files,
+                    Inventario.cfop_consolidado_files,
+                    Inventario.cliente_files,
+                    Inventario.cliente_pdf_path,
+                )
+            )
+            .filter(Inventario.empresa_id.in_(empresa_ids))
+            .all()
+        )
+        return {
+            int(inv.empresa_id): {
+                "cfop": len(inv.cfop_files or []),
+                "cfop_consolidado": len(inv.cfop_consolidado_files or []),
+                "cliente": len(inv.cliente_files or []),
+                "cliente_legacy": bool(inv.cliente_pdf_path),
+            }
+            for inv in inventarios
+        }
 
 
 # =============================================================================
@@ -257,6 +360,60 @@ def invalidate_task_caches():
     """Invalida todos os caches relacionados a tasks."""
     from app.extensions.cache import invalidate_cache_pattern
     invalidate_cache_pattern('tasks:*')
+
+
+# =============================================================================
+# QUERIES DE SOCIETÁRIO
+# =============================================================================
+
+def get_processos_with_history_counts(
+    status_filter=None,
+    exclude_status=None,
+):
+    """
+    Retorna processos societarios com contagem de historico em query unica.
+
+    Performance: Usa LEFT JOIN com subquery ao inves de 2 queries separadas.
+
+    Args:
+        status_filter: Filtrar por status especifico (opcional)
+        exclude_status: Excluir status especifico (opcional)
+
+    Returns:
+        Tuple (processos, history_counts_dict)
+    """
+    from sqlalchemy import func as sa_func
+
+    history_subq = (
+        db.session.query(
+            ProcessoSocietarioHistorico.processo_id,
+            sa_func.count(ProcessoSocietarioHistorico.id).label("hist_count"),
+        )
+        .group_by(ProcessoSocietarioHistorico.processo_id)
+        .subquery()
+    )
+
+    query = ProcessoSocietario.query
+    if status_filter is not None:
+        query = query.filter(ProcessoSocietario.status == status_filter)
+    elif exclude_status is not None:
+        query = query.filter(ProcessoSocietario.status != exclude_status)
+
+    rows = (
+        query
+        .outerjoin(history_subq, ProcessoSocietario.id == history_subq.c.processo_id)
+        .add_columns(sa_func.coalesce(history_subq.c.hist_count, 0).label("history_count"))
+        .order_by(ProcessoSocietario.data_inicio.asc(), ProcessoSocietario.id.asc())
+        .all()
+    )
+
+    processos = []
+    history_counts = {}
+    for processo, hist_count in rows:
+        processos.append(processo)
+        history_counts[processo.id] = int(hist_count)
+
+    return processos, history_counts
 
 
 # =============================================================================

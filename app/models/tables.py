@@ -799,6 +799,7 @@ class ProcessoSocietarioTipo(str, Enum):
     """Tipos permitidos para processos societarios."""
 
     ALTERACAO = "ALTERACAO"
+    ATA = "ATA"
     RERATIFICACAO = "RERATIFICACAO"
     TRANSFORMACAO = "TRANSFORMACAO"
     BAIXA = "BAIXA"
