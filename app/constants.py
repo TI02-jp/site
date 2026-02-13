@@ -77,6 +77,7 @@ MANUAL_VIDEOS_SUBDIR = "uploads/manual/videos"
 MANUAL_THUMBNAILS_SUBDIR = "uploads/manual/thumbnails"
 ANNOUNCEMENTS_UPLOAD_SUBDIR = "uploads/announcements"
 DIRETORIA_UPLOAD_SUBDIR = "uploads/diretoria"
+INVENTARIO_UPLOAD_SUBDIR = "uploads/inventario"
 
 
 # =============================================================================

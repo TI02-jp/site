@@ -18,7 +18,7 @@ from typing import List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload, load_only, selectinload
+from sqlalchemy.orm import joinedload, load_only, selectinload, defer
 
 from app import db
 from app.extensions.cache import cached_query
@@ -228,11 +228,12 @@ def get_inventarios_by_empresa_ids(
     """
     Retorna inventários para lista de empresa IDs de forma otimizada.
 
-    Performance: Usa IN clause ao invés de múltiplas queries individuais
+    Performance: Usa IN clause ao invés de múltiplas queries individuais e defer de colunas pesadas.
 
     Args:
         empresa_ids: Lista de IDs de empresas
         status_filter: Filtro opcional de status (ex: ['ENCERRADO', 'FALTA ARQUIVO'])
+        include_file_columns: Se False, adia o carregamento de colunas JSON com Base64.
 
     Returns:
         Dict mapeando empresa_id -> inventario
@@ -243,26 +244,12 @@ def get_inventarios_by_empresa_ids(
     query = Inventario.query.filter(Inventario.empresa_id.in_(empresa_ids))
 
     if not include_file_columns:
+        # Otimização: Adiar o carregamento das colunas JSON que podem conter Base64 pesado.
+        # Isso evita consumo massivo de memória no servidor Flask.
         query = query.options(
-            load_only(
-                Inventario.id,
-                Inventario.empresa_id,
-                Inventario.encerramento_fiscal,
-                Inventario.dief_2024,
-                Inventario.balanco_2025_cliente,
-                Inventario.fechamento_tadeu_2025,
-                Inventario.observacoes_tadeu,
-                Inventario.valor_enviado_sped,
-                Inventario.status,
-                Inventario.encerramento_balanco_data,
-                Inventario.encerramento_balanco_usuario_id,
-                Inventario.pdf_path,
-                Inventario.pdf_original_name,
-                Inventario.cliente_pdf_path,
-                Inventario.cliente_original_name,
-                Inventario.created_at,
-                Inventario.updated_at,
-            )
+            defer(Inventario.cfop_files),
+            defer(Inventario.cfop_consolidado_files),
+            defer(Inventario.cliente_files)
         )
 
     if status_filter:
@@ -316,14 +303,16 @@ def get_inventario_file_counts_by_empresa_ids(empresa_ids: List[int]) -> dict[in
         }
     except SQLAlchemyError:
         # Fallback para bancos sem json_length: calcula no Python.
+        # AVISO: Isso pode ser lento se as colunas JSON contiverem dados Base64 pesados.
+        # Por isso, limitamos o carregamento apenas ao estritamente necessário.
         inventarios = (
             Inventario.query.options(
                 load_only(
-                    Inventario.empresa_id,
-                    Inventario.cfop_files,
-                    Inventario.cfop_consolidado_files,
-                    Inventario.cliente_files,
-                    Inventario.cliente_pdf_path,
+                    "empresa_id",
+                    "cfop_files",
+                    "cfop_consolidado_files",
+                    "cliente_files",
+                    "cliente_pdf_path",
                 )
             )
             .filter(Inventario.empresa_id.in_(empresa_ids))
@@ -331,9 +320,9 @@ def get_inventario_file_counts_by_empresa_ids(empresa_ids: List[int]) -> dict[in
         )
         return {
             int(inv.empresa_id): {
-                "cfop": len(inv.cfop_files or []),
-                "cfop_consolidado": len(inv.cfop_consolidado_files or []),
-                "cliente": len(inv.cliente_files or []),
+                "cfop": len(inv.cfop_files or []) if isinstance(inv.cfop_files, list) else 0,
+                "cfop_consolidado": len(inv.cfop_consolidado_files or []) if isinstance(inv.cfop_consolidado_files, list) else 0,
+                "cliente": len(inv.cliente_files or []) if isinstance(inv.cliente_files, list) else 0,
                 "cliente_legacy": bool(inv.cliente_pdf_path),
             }
             for inv in inventarios

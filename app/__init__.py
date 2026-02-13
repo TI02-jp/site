@@ -896,6 +896,9 @@ with app.app_context():
                 "idx_inventario_encerramento": (
                     "CREATE INDEX idx_inventario_encerramento ON tbl_inventario (encerramento_fiscal)"
                 ),
+                "idx_inventario_status_composite": (
+                    "CREATE INDEX idx_inventario_status_composite ON tbl_inventario (status, empresa_id)"
+                ),
             }
             for index_name, ddl in inventario_index_ddl.items():
                 if index_name not in inventario_indexes:
@@ -914,6 +917,12 @@ with app.app_context():
                 ),
                 "idx_empresas_ativo_tributacao": (
                     "CREATE INDEX idx_empresas_ativo_tributacao ON tbl_empresas (ativo, tributacao)"
+                ),
+                "idx_empresas_tributacao_ativo": (
+                    "CREATE INDEX idx_empresas_tributacao_ativo ON tbl_empresas (tributacao, ativo)"
+                ),
+                "idx_empresas_codigo_ativo": (
+                    "CREATE INDEX idx_empresas_codigo_ativo ON tbl_empresas (codigo_empresa, ativo)"
                 ),
             }
             for index_name, ddl in empresa_index_ddl.items():
