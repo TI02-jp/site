@@ -259,7 +259,14 @@ def listar_empresas():
         "page": page,
     }
 
-    query = Empresa.query
+    # Otimizado: deferir colunas JSON pesadas que não são usadas na listagem
+    from sqlalchemy.orm import defer
+    query = Empresa.query.options(
+        defer(Empresa.regime_lancamento),
+        defer(Empresa.sistemas_consultorias),
+        defer(Empresa.acessos),
+        defer(Empresa.contatos)
+    )
 
     if show_inactive:
         query = query.filter_by(ativo=False)
@@ -1443,7 +1450,25 @@ def inventario():
         dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
         cache.set(cache_key, dashboard_cards, timeout=cache_timeout)
 
-    # 4. Ordenação e Paginação
+    # 4. Ordenação e Cache de Listagem
+    list_cache_timeout = get_cache_timeout("INVENTARIO_LISTALL_CACHE_SECONDS", 60)
+    list_cache_key_payload = {
+        "sort": sort,
+        "order": order,
+        "tributacao": tributacao_filters,
+        "encerramento": encerramento_filters,
+        "status": status_filters,
+        "tag": tag_filters,
+        "search": search_term,
+        "show_all": show_all
+    }
+    list_cache_key = f"inventario:list_v3:{current_user.id}:{json.dumps(list_cache_key_payload, sort_keys=True)}"
+
+    if show_all:
+        cached_list = cache.get(list_cache_key)
+        if cached_list:
+            return cached_list
+
     order_col = {
         'codigo': Empresa.codigo_empresa,
         'nome': Empresa.nome_empresa,
@@ -1452,27 +1477,67 @@ def inventario():
 
     final_query = query.order_by(order_col.desc() if order == 'desc' else order_col.asc())
 
-    # Eager load do inventário usando o join já feito
-    final_query = final_query.options(contains_eager(Empresa.inventario))
+    # Eager load do inventário usando o join já feito.
+    # Otimização Crítica: deferir o carregamento de colunas JSON pesadas que contém base64
+    # para evitar transferência massiva de dados e consumo de memória no ListAll.
+    from sqlalchemy.orm import defer
+    final_query = final_query.options(
+        contains_eager(Empresa.inventario),
+        defer(Inventario.cfop_files),
+        defer(Inventario.cfop_consolidado_files),
+        defer(Inventario.cliente_files)
+    )
 
     if show_all:
-        # Modo Listar Tudo - Limitar a 500 para evitar crash do browser em bases gigantes
-        empresas = final_query.limit(500).all()
+        # Modo Listar Tudo - Limitar a 300 para estabilidade
+        empresas = final_query.limit(300).all()
         pagination = type("Pagination", (), {"total": len(empresas), "page": 1, "pages": 1, "has_prev": False, "has_next": False, "iter_pages": lambda **k: [], "items": empresas})
     else:
         pagination = final_query.paginate(page=page, per_page=20, error_out=False)
         empresas = pagination.items
 
-    # 5. Formatar itens para o template
-    # Não criamos mais registros no banco durante o GET.
-    # O template/frontend lidará com a ausência de inventário (campos vazios).
-    items = [{'empresa': e, 'inventario': e.inventario} for e in empresas]
+    # 5. Buscar Metadados de Arquivos (sem base64) para evitar N+1 e payloads gigantes
+    # Esta é a otimização mestre para o ListAll.
+    inv_ids = [e.inventario.id for e in empresas if e.inventario]
+    file_meta = {}
+    if inv_ids:
+        # Usamos JSON_REMOVE para obter a estrutura JSON sem o campo 'file_data' que contém o base64
+        meta_rows = db.session.query(
+            Inventario.id,
+            sa.func.json_remove(Inventario.cfop_files, '$[*].file_data').label('cfop'),
+            sa.func.json_remove(Inventario.cfop_consolidado_files, '$[*].file_data').label('cfop_cons'),
+            sa.func.json_remove(Inventario.cliente_files, '$[*].file_data').label('cliente')
+        ).filter(Inventario.id.in_(inv_ids)).all()
+
+        for r in meta_rows:
+            # MySQL retorna o JSON como string ou objeto dependendo do driver
+            def _parse_json(val):
+                if not val: return []
+                try: return json.loads(val) if isinstance(val, str) else val
+                except: return []
+
+            file_meta[r.id] = {
+                'cfop_files': _parse_json(r.cfop),
+                'cfop_consolidado_files': _parse_json(r.cfop_cons),
+                'cliente_files': _parse_json(r.cliente)
+            }
+
+    # 6. Formatar itens para o template
+    items = []
+    for e in empresas:
+        inv_data = e.inventario
+        meta = file_meta.get(inv_data.id) if inv_data else None
+        items.append({
+            'empresa': e,
+            'inventario': inv_data,
+            'file_meta': meta # Passamos os metadados separadamente para evitar lazy loading
+        })
 
     usuarios = get_active_users_with_tags()
     display_name = (current_user.username or current_user.name or "").strip().lower()
     is_tadeu = display_name.startswith("tadeu")
 
-    return render_template(
+    response_html = render_template(
         "empresas/inventario.html",
         items=items,
         pagination=pagination,
@@ -1495,13 +1560,9 @@ def inventario():
     )
 
     if show_all:
-        cache.set(
-            list_cache_key,
-            {"html": response, "empresa_ids": empresa_ids},
-            timeout=list_cache_timeout,
-        )
+        cache.set(list_cache_key, response_html, timeout=list_cache_timeout)
 
-    return response
+    return response_html
 
 
 @empresas_bp.route("/api/inventario/update", methods=["POST"])

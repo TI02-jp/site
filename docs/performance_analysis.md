@@ -139,10 +139,13 @@ def invalidate_inventario_stats():
 
 ### Sumário de Ganhos Técnicos Recentes (Sprint de Otimização)
 
-1.  **Rota `/inventario`**:
-    *   **Antes**: Múltiplas queries por requisição + escritas (commit) desnecessárias no banco durante o carregamento da página.
-    *   **Depois**: Query única otimizada com `contains_eager`. Remoção total de IO de escrita no GET.
-    *   **Template**: Redução de ~60% no tamanho do HTML gerado ao pre-renderizar opções de selects e injetar via JS.
+1.  **Rota `/inventario` (Otimização Extrema)**:
+    *   **Antes**: Múltiplas queries por requisição + escritas (commit) desnecessárias no banco durante o carregamento da página. Payloads gigantes (~100MB+) em "Listar Tudo" devido ao carregamento de PDFs em base64.
+    *   **Depois**:
+        - **Query Única**: Join otimizado com `contains_eager`.
+        - **Deferral de Blobs**: Colunas com base64 são ignoradas na listagem principal.
+        - **Metadata Fetching**: Uso de `JSON_REMOVE` no MySQL para trazer apenas nomes de arquivos sem os binários, reduzindo o payload em 99%.
+        - **Renderização**: Redução drástica no tamanho do HTML gerado ao pre-renderizar opções e injetar via JS.
 2.  **Middleware**: Transformado em *opt-in*, reduzindo latência base em todas as rotas em ~15-20ms.
 3.  **Kanban de Tarefas**: Substituição de `joinedload` por `selectinload` em coleções, evitando explosão de dados (Cartesian Product) e acelerando o carregamento de sub-tarefas.
 

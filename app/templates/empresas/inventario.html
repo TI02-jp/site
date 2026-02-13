@@ -530,8 +530,7 @@
                     </thead>
                     <tbody>
                         {% for item in items %}
-                        {% set cliente_files = item.inventario.cliente_files if item.inventario and
-                        item.inventario.cliente_files else [] %}
+                        {% set cliente_files = item.file_meta.cliente_files if item.file_meta else [] %}
                         {% set has_cliente_file = cliente_files|length > 0 or (item.inventario and
                         item.inventario.cliente_pdf_path) %}
                         <tr data-empresa-id="{{ item.empresa.id }}"
@@ -567,8 +566,7 @@
                             {% if not is_tadeu %}
                             <!-- CFOP -->
                             <td class="col-cfop">
-                                {% set cfop_files = item.inventario.cfop_files if item.inventario and
-                                item.inventario.cfop_files else [] %}
+                                {% set cfop_files = item.file_meta.cfop_files if item.file_meta else [] %}
                                 <div class="pdf-upload-container cfop-container">
                                     <!-- Lista de arquivos existentes -->
                                     <div class="files-list mb-1">
@@ -615,8 +613,7 @@
                             {% endif %}
                             <!-- CFOP Consolidado -->
                             <td class="col-cfop">
-                                {% set cfop_consolidado_files = item.inventario.cfop_consolidado_files if item.inventario and
-                                item.inventario.cfop_consolidado_files else [] %}
+                                {% set cfop_consolidado_files = item.file_meta.cfop_consolidado_files if item.file_meta else [] %}
                                 <div class="pdf-upload-container cfop-consolidado-container">
                                     <div class="files-list mb-1">
                                         {% for file in cfop_consolidado_files %}
