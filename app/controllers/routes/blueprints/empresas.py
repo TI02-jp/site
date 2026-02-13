@@ -389,7 +389,13 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
         flash("Empresa não encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
 
-    empresa = Empresa.query.get(resolved_empresa_id)
+    # Otimizado: Eager load departamentos para evitar query separada posterior.
+    # joinedload é preferível para carregar tudo em um único JOIN SQL no lookup por ID.
+    empresa = (
+        Empresa.query
+        .options(joinedload(Empresa.departamentos))
+        .get(resolved_empresa_id)
+    )
     if empresa is None:
         flash("Empresa não encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
@@ -413,9 +419,11 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     if can_access_financeiro:
         dept_tipos.append("Departamento Financeiro")
 
-    departamentos = Departamento.query.filter(
-        Departamento.empresa_id == resolved_empresa_id, Departamento.tipo.in_(dept_tipos)
-    ).all()
+    # Otimizado: Usar a lista já carregada via selectinload para evitar nova query
+    departamentos = [
+        dept for dept in (empresa.departamentos or [])
+        if dept.tipo in dept_tipos
+    ]
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
