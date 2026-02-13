@@ -9,8 +9,10 @@ from functools import wraps
 from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import inspect, func
+from sqlalchemy.orm import joinedload
 
 from app import db
+from app.extensions.cache import cache, cached_query
 from app.controllers.routes._base import utc3_now
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.models.tables import (
@@ -23,28 +25,35 @@ from app.models.tables import (
 
 societario_bp = Blueprint("societario", __name__)
 
-TIPO_PROCESSO_CHOICES = [
-    (ProcessoSocietarioTipo.ALTERACAO.value, "ALTERAÇÃO"),
-    (ProcessoSocietarioTipo.RERATIFICACAO.value, "RERATIFICAÇÃO"),
-    (ProcessoSocietarioTipo.TRANSFORMACAO.value, "TRANSFORMAÇÃO"),
-    (ProcessoSocietarioTipo.BAIXA.value, "BAIXA"),
-    (ProcessoSocietarioTipo.CONSTITUICAO.value, "CONSTITUIÇÃO"),
-    (ProcessoSocietarioTipo.ATUALIZACAO_CNPJ_RECEITA.value, "ATUALIZAÇÃO CNPJ RECEITA"),
-    (ProcessoSocietarioTipo.CRIACAO_FILIAL.value, "CRIAÇÃO FILIAL"),
-    (ProcessoSocietarioTipo.CLIENTE_TRANSFERIDO.value, "CLIENTE TRANSFERIDO"),
-]
+TIPO_PROCESSO_CHOICES = sorted(
+    [
+        (ProcessoSocietarioTipo.ALTERACAO.value, "ALTERAÇÃO"),
+        (ProcessoSocietarioTipo.ATA.value, "ATA"),
+        (ProcessoSocietarioTipo.RERATIFICACAO.value, "RERATIFICAÇÃO"),
+        (ProcessoSocietarioTipo.TRANSFORMACAO.value, "TRANSFORMAÇÃO"),
+        (ProcessoSocietarioTipo.BAIXA.value, "BAIXA"),
+        (ProcessoSocietarioTipo.CONSTITUICAO.value, "CONSTITUIÇÃO"),
+        (ProcessoSocietarioTipo.ATUALIZACAO_CNPJ_RECEITA.value, "ATUALIZAÇÃO CNPJ RECEITA"),
+        (ProcessoSocietarioTipo.CRIACAO_FILIAL.value, "CRIAÇÃO FILIAL"),
+        (ProcessoSocietarioTipo.CLIENTE_TRANSFERIDO.value, "CLIENTE TRANSFERIDO"),
+    ],
+    key=lambda item: item[1],
+)
 
-STATUS_PROCESSO_CHOICES = [
-    (ProcessoSocietarioStatus.VIABILIDADE.value, "VIABILIDADE"),
-    (ProcessoSocietarioStatus.DIGITACAO.value, "DIGITAÇÃO"),
-    (ProcessoSocietarioStatus.CORRECAO.value, "CORREÇÃO"),
-    (ProcessoSocietarioStatus.ASSINATURA.value, "ASSINATURA"),
-    (ProcessoSocietarioStatus.JUCESC.value, "JUCESC"),
-    (ProcessoSocietarioStatus.FINALIZADA.value, "FINALIZADA"),
-    (ProcessoSocietarioStatus.PARALISADA.value, "PARALISADA"),
-    (ProcessoSocietarioStatus.DEFERIDO.value, "DEFERIDO"),
-    (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
-]
+STATUS_PROCESSO_CHOICES = sorted(
+    [
+        (ProcessoSocietarioStatus.VIABILIDADE.value, "VIABILIDADE"),
+        (ProcessoSocietarioStatus.DIGITACAO.value, "DIGITAÇÃO"),
+        (ProcessoSocietarioStatus.CORRECAO.value, "CORREÇÃO"),
+        (ProcessoSocietarioStatus.ASSINATURA.value, "ASSINATURA"),
+        (ProcessoSocietarioStatus.JUCESC.value, "JUCESC"),
+        (ProcessoSocietarioStatus.FINALIZADA.value, "FINALIZADA"),
+        (ProcessoSocietarioStatus.PARALISADA.value, "PARALISADA"),
+        (ProcessoSocietarioStatus.DEFERIDO.value, "DEFERIDO"),
+        (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
+    ],
+    key=lambda item: item[1],
+)
 
 TIPO_LABELS = {value: label for value, label in TIPO_PROCESSO_CHOICES}
 STATUS_LABELS = {value: label for value, label in STATUS_PROCESSO_CHOICES}
@@ -165,7 +174,15 @@ def _serialize_processo(processo: ProcessoSocietario, history_count: int | None 
     }
 
 
+_SOCIETARIO_STATUS_CACHE_KEY = "societario:status_counts"
+_SOCIETARIO_STATUS_CACHE_TIMEOUT = 120  # 2 minutos
+
+
 def _status_counts_payload() -> dict[str, int]:
+    cached = cache.get(_SOCIETARIO_STATUS_CACHE_KEY)
+    if cached is not None:
+        return cached
+
     grouped_status = (
         db.session.query(ProcessoSocietario.status, func.count(ProcessoSocietario.id))
         .group_by(ProcessoSocietario.status)
@@ -176,7 +193,19 @@ def _status_counts_payload() -> dict[str, int]:
         key = status_value.value if hasattr(status_value, "value") else str(status_value)
         if key in status_counts:
             status_counts[key] = int(count or 0)
+
+    cache.set(_SOCIETARIO_STATUS_CACHE_KEY, status_counts, timeout=_SOCIETARIO_STATUS_CACHE_TIMEOUT)
     return status_counts
+
+
+def _invalidate_societario_caches() -> None:
+    """Invalida caches do modulo societario apos mutacoes."""
+    cache.delete(_SOCIETARIO_STATUS_CACHE_KEY)
+
+
+@cached_query(timeout=300, key_prefix='empresas_ativas')
+def _get_empresas_ativas():
+    return Empresa.query.filter(Empresa.ativo.is_(True)).order_by(Empresa.nome_empresa.asc()).all()
 
 
 def _apply_processo_changes(processo: ProcessoSocietario, payload: dict) -> tuple[bool, list[str], tuple[dict, int] | None]:
@@ -255,6 +284,7 @@ def _persist_processo_update(processo: ProcessoSocietario, change_labels: list[s
     db.session.add(history_entry)
     try:
         db.session.commit()
+        _invalidate_societario_caches()
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception("Erro ao salvar processo societario %s", processo.id)
@@ -302,46 +332,38 @@ def societario():
             ProcessoSocietario.status != ProcessoSocietarioStatus.FINALIZADA
         )
 
-    processos = processos_query.order_by(
-        ProcessoSocietario.data_inicio.asc(),
-        ProcessoSocietario.id.asc(),
-    ).all()
-    processo_ids = [p.id for p in processos]
-    history_counts: dict[int, int] = {}
-    if processo_ids:
-        count_rows = (
-            db.session.query(
-                ProcessoSocietarioHistorico.processo_id,
-                func.count(ProcessoSocietarioHistorico.id),
-            )
-            .filter(ProcessoSocietarioHistorico.processo_id.in_(processo_ids))
-            .group_by(ProcessoSocietarioHistorico.processo_id)
-            .all()
+    # Subquery: contagem de historico por processo (evita query separada)
+    history_subq = (
+        db.session.query(
+            ProcessoSocietarioHistorico.processo_id,
+            func.count(ProcessoSocietarioHistorico.id).label("hist_count"),
         )
-        history_counts = {int(pid): int(total or 0) for pid, total in count_rows}
+        .group_by(ProcessoSocietarioHistorico.processo_id)
+        .subquery()
+    )
 
-    grouped_status = (
-        db.session.query(ProcessoSocietario.status, func.count(ProcessoSocietario.id))
-        .group_by(ProcessoSocietario.status)
+    # Query unica: processos + history_counts via LEFT JOIN na subquery
+    rows = (
+        processos_query
+        .outerjoin(history_subq, ProcessoSocietario.id == history_subq.c.processo_id)
+        .add_columns(func.coalesce(history_subq.c.hist_count, 0).label("history_count"))
+        .order_by(ProcessoSocietario.data_inicio.asc(), ProcessoSocietario.id.asc())
         .all()
     )
-    status_counts = {value: 0 for value, _ in STATUS_PROCESSO_CHOICES}
-    for status_value, count in grouped_status:
-        key = status_value.value if hasattr(status_value, "value") else str(status_value)
-        if key in status_counts:
-            status_counts[key] = int(count or 0)
+
+    processos = []
+    history_counts: dict[int, int] = {}
+    for processo, hist_count in rows:
+        processos.append(processo)
+        history_counts[processo.id] = int(hist_count)
+
+    # Status counts com cache (2 min)
+    status_counts = _status_counts_payload()
 
     total_processos = sum(
         count for status, count in status_counts.items()
         if status != ProcessoSocietarioStatus.FINALIZADA.value
     )
-    # Cache empresas ativas por 5 minutos (lista muda raramente)
-    from app.extensions.cache import cached_query
-
-    @cached_query(timeout=300, key_prefix='empresas_ativas')
-    def _get_empresas_ativas():
-        return Empresa.query.filter(Empresa.ativo.is_(True)).order_by(Empresa.nome_empresa.asc()).all()
-
     empresas = _get_empresas_ativas()
     return render_template(
         "societario.html",
@@ -391,6 +413,7 @@ def societario_create():
     )
     db.session.add(processo)
     db.session.commit()
+    _invalidate_societario_caches()
     return redirect(url_for("societario.societario"))
 
 
@@ -426,7 +449,9 @@ def societario_history(processo_id: int):
     _ensure_history_table()
     ProcessoSocietario.query.get_or_404(processo_id)
     items = (
-        ProcessoSocietarioHistorico.query.filter_by(processo_id=processo_id)
+        ProcessoSocietarioHistorico.query
+        .options(joinedload(ProcessoSocietarioHistorico.changed_by))
+        .filter_by(processo_id=processo_id)
         .order_by(ProcessoSocietarioHistorico.changed_at.desc(), ProcessoSocietarioHistorico.id.desc())
         .all()
     )
@@ -452,4 +477,5 @@ def societario_delete(processo_id: int):
     processo = ProcessoSocietario.query.get_or_404(processo_id)
     db.session.delete(processo)
     db.session.commit()
+    _invalidate_societario_caches()
     return redirect(url_for("societario.societario"))

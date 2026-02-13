@@ -1,0 +1,272 @@
+{% for item in items %}
+                        {% set file_counts = file_counts_by_empresa.get(item.empresa.id, {}) %}
+                        {% set cfop_count = file_counts.get('cfop', 0) %}
+                        {% set cfop_consolidado_count = file_counts.get('cfop_consolidado', 0) %}
+                        {% set cliente_count = file_counts.get('cliente', 0) %}
+                        {% set has_cliente_legacy = 1 if file_counts.get('cliente_legacy', false) else 0 %}
+                        {% set has_cliente_file = 1 if (cliente_count > 0 or has_cliente_legacy == 1) else 0 %}
+                        <tr data-empresa-id="{{ item.empresa.id }}"
+                            data-tributacao="{{ item.empresa.tributacao or '' }}"
+                            data-status="{{ item.inventario.status if item.inventario else '' }}"
+                            data-encerramento-fiscal="{{ 1 if item.inventario and item.inventario.encerramento_fiscal else 0 }}"
+                            data-has-cliente-file="{{ has_cliente_file }}"
+                            data-has-cliente-legacy="{{ has_cliente_legacy }}"
+                            data-cfop-count="{{ cfop_count }}"
+                            data-cfop-consolidado-count="{{ cfop_consolidado_count }}"
+                            data-cliente-count="{{ cliente_count }}">
+
+                            <!-- ID -->
+                            <td class="col-id text-center">
+                                <strong>{{ item.empresa.codigo_empresa }}</strong>
+                            </td>
+
+                            <!-- Razão Social -->
+                            <td class="col-razao">
+                                <a href="{{ url_for('empresas.visualizar_empresa', empresa_id=item.empresa.id) }}"
+                                    class="text-decoration-none" target="_blank">
+                                    {{ item.empresa.nome_empresa }}
+                                </a>
+                                {% set tipo_tag = item.empresa.tipo_empresa or 'Matriz' %}
+                                {% set tag_class = 'bg-primary-subtle text-primary' if tipo_tag == 'Matriz' else ('bg-info-subtle text-info' if tipo_tag == 'MEI' else 'bg-warning-subtle text-warning') %}
+                                <div class="mt-1">
+                                    <span class="badge {{ tag_class }}">{{ tipo_tag }}</span>
+                                </div>
+                            </td>
+
+                            <!-- Tributação -->
+                            <td class="col-tributacao">
+                                <span class="badge bg-secondary small">{{ item.empresa.tributacao or '-' }}</span>
+                            </td>
+
+                            {% if not is_tadeu %}
+                            <!-- CFOP -->
+                            <td class="col-cfop">
+                                <div class="pdf-upload-container cfop-container">
+                                    <div class="files-list mb-1"
+                                        data-file-type="cfop"
+                                        data-loaded="{{ '1' if is_tadeu else '0' }}">
+                                        {% if is_tadeu and item.inventario and item.inventario.cfop_files %}
+                                        {% for file in item.inventario.cfop_files %}
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
+                                            data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1"
+                                                style="max-width: 70px;"
+                                                title="{{ file.filename if file.filename else 'arquivo' }}">
+                                                {{ file.filename if file.filename else 'arquivo' }}
+                                            </small>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
+                                                target="_blank"
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop/{{ loop.index0 }}"
+                                                download="{{ file.filename if file.filename else 'arquivo' }}"
+                                                class="btn btn-outline-success btn-sm"
+                                                title="Baixar">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-cfop-file-btn"
+                                                title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <small class="text-muted files-placeholder">
+                                            {% if is_tadeu %}Nenhum arquivo{% else %}{{ cfop_count }} arquivo(s) - carregar sob demanda{% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    {% if not is_tadeu %}
+                                    <button type="button"
+                                        class="btn btn-outline-primary btn-sm load-files-btn load-files-btn-readable mb-1"
+                                        data-file-type="cfop">
+                                        <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Carregar
+                                    </button>
+                                    {% endif %}
+                                    <!-- Botão de upload -->
+                                    <input type="file" class="form-control form-control-sm pdf-upload" accept=".pdf"
+                                        title="Adicionar PDF">
+                                </div>
+                            </td>
+
+                            <!-- CFOP (Mover) -->
+                            <td class="col-cfop-move text-center">
+                                <button type="button"
+                                    class="btn btn-outline-secondary btn-sm move-cfop-to-consolidado-btn"
+                                    title="Mover CFOP para CFOP Consolidado">
+                                    <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </td>
+
+                            {% endif %}
+                            <!-- CFOP Consolidado -->
+                            <td class="col-cfop">
+                                <div class="pdf-upload-container cfop-consolidado-container">
+                                    <div class="files-list mb-1"
+                                        data-file-type="cfop-consolidado"
+                                        data-loaded="{{ '1' if is_tadeu else '0' }}">
+                                        {% if is_tadeu and item.inventario and item.inventario.cfop_consolidado_files %}
+                                        {% for file in item.inventario.cfop_consolidado_files %}
+                                        <div class="file-item d-flex gap-1 align-items-center mb-1"
+                                            data-file-index="{{ loop.index0 }}">
+                                            <small class="text-muted text-truncate flex-grow-1"
+                                                style="max-width: 70px;"
+                                                title="{{ file.filename if file.filename else 'arquivo' }}">
+                                                {{ file.filename if file.filename else 'arquivo' }}
+                                            </small>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
+                                                target="_blank"
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/api/inventario/file/{{ item.empresa.id }}/cfop-consolidado/{{ loop.index0 }}"
+                                                download="{{ file.filename if file.filename else 'arquivo' }}"
+                                                class="btn btn-outline-success btn-sm"
+                                                title="Baixar">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-sm delete-cfop-consolidado-file-btn"
+                                                title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <small class="text-muted files-placeholder">
+                                            {% if is_tadeu %}Nenhum arquivo{% else %}{{ cfop_consolidado_count }} arquivo(s) - carregar sob demanda{% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    {% if not is_tadeu %}
+                                    <button type="button"
+                                        class="btn btn-outline-primary btn-sm load-files-btn load-files-btn-readable mb-1"
+                                        data-file-type="cfop-consolidado">
+                                        <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Carregar
+                                    </button>
+                                    {% endif %}
+                                    <input type="file"
+                                        class="form-control form-control-sm cfop-consolidado-upload"
+                                        accept=".pdf"
+                                        title="Adicionar PDF">
+                                </div>
+                            </td>
+
+                            <!-- DIEF 2024 -->
+                            <td class="col-dief">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="dief_2024"
+                                    value="{{ item.inventario.dief_2024_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Balanço Cliente 2025 -->
+                            <td class="col-balanco">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="balanco_2025_cliente"
+                                    value="{{ item.inventario.balanco_2025_cliente_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Fechamento Tadeu 2025 -->
+                            <td class="col-fechamento">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="fechamento_tadeu_2025"
+                                    value="{{ item.inventario.fechamento_tadeu_2025_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Observação Tadeu -->
+                            <td class="col-obs">
+                                <textarea class="form-control form-control-sm editable-field"
+                                    data-field="observacoes_tadeu" rows="2"
+                                    placeholder="Obs...">{{ (item.inventario.observacoes_tadeu if item.inventario.observacoes_tadeu is not none else '') if item.inventario else '' }}</textarea>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="col-status">
+                                {% set current_status = item.inventario.status if item.inventario else '' %}
+                                <select class="form-select form-select-sm editable-field lazy-options-select"
+                                    data-field="status"
+                                    data-options-type="status"
+                                    data-current-value="{{ current_status }}"
+                                    data-prev-status="{{ current_status }}">
+                                    <option value="">Selecione...</option>
+                                    {% if current_status %}
+                                    <option value="{{ current_status }}" selected>{{ current_status }}</option>
+                                    {% endif %}
+                                </select>
+                            </td>
+
+
+                            <!-- Valor Enviado SPED Fiscal 02/2025 -->
+                            <td class="col-valor">
+                                <input type="text" class="form-control form-control-sm editable-field money-field"
+                                    data-field="valor_enviado_sped"
+                                    value="{{ item.inventario.valor_enviado_sped_formatado if item.inventario else '' }}"
+                                    placeholder="R$ 0,00">
+                            </td>
+
+                            <!-- Encerramento Fiscal -->
+                            <td>
+                                <select class="form-select form-select-sm editable-field"
+                                    data-field="encerramento_fiscal">
+                                    <option value="">Selecione...</option>
+                                    <option value="true" {% if item.inventario and item.inventario.encerramento_fiscal
+                                        is true %}selected{% endif %}>Sim</option>
+                                    <option value="false" {% if not item.inventario or
+                                        item.inventario.encerramento_fiscal is not true %}selected{% endif %}>Não
+                                    </option>
+                                </select>
+                            </td>
+
+                            <!-- Arquivo Cliente -->
+                            <td>
+                                <div class="cliente-upload-container">
+                                    <div class="files-list mb-1"
+                                        data-file-type="cliente"
+                                        data-loaded="0">
+                                        <small class="text-muted files-placeholder">
+                                            {{ cliente_count }} arquivo(s) - carregar sob demanda
+                                        </small>
+                                    </div>
+                                    <button type="button"
+                                        class="btn btn-outline-primary btn-sm load-files-btn load-files-btn-readable mb-1"
+                                        data-file-type="cliente">
+                                        <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Carregar
+                                    </button>
+                                    <!-- Botão de upload -->
+                                    <input type="file" class="form-control form-control-sm cliente-upload"
+                                        title="Adicionar arquivo">
+                                </div>
+                            </td>
+
+                            <!-- Data Encerramento -->
+                            <td>
+                                <input type="date" class="form-control form-control-sm editable-field"
+                                    data-field="encerramento_balanco_data"
+                                    value="{{ item.inventario.encerramento_balanco_data.strftime('%Y-%m-%d') if item.inventario and item.inventario.encerramento_balanco_data else '' }}">
+                            </td>
+
+                            <!-- Usuário Encerramento -->
+                            <td>
+                                {% set current_usuario_id = item.inventario.encerramento_balanco_usuario_id if item.inventario and item.inventario.encerramento_balanco_usuario_id else '' %}
+                                {% set current_usuario_name = usuarios_name_by_id.get(current_usuario_id, '') if current_usuario_id else '' %}
+                                <select class="form-select form-select-sm editable-field lazy-options-select"
+                                    data-field="encerramento_balanco_usuario_id"
+                                    data-options-type="usuarios"
+                                    data-current-value="{{ current_usuario_id }}">
+                                    <option value="">Selecione...</option>
+                                    {% if current_usuario_id %}
+                                    <option value="{{ current_usuario_id }}" selected>
+                                        {{ current_usuario_name or ('ID ' ~ current_usuario_id) }}
+                                    </option>
+                                    {% endif %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}

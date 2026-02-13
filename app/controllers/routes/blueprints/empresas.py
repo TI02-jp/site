@@ -1,4 +1,4 @@
-"""
+﻿"""
 Blueprint para gestao de empresas.
 
 Rotas:
@@ -20,6 +20,8 @@ from datetime import datetime, date
 from io import BytesIO
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlencode
+from uuid import uuid4
 
 import sqlalchemy as sa
 from flask import (
@@ -49,6 +51,7 @@ from app.extensions.task_queue import submit_io_task
 from app.extensions.cache import cache, get_cache_timeout
 from app.services.optimized_queries import (
     get_active_users_with_tags,
+    get_inventario_file_counts_by_empresa_ids,
     get_inventarios_by_empresa_ids,
 )
 from app.forms import (
@@ -78,6 +81,280 @@ from app.utils.security import sanitize_html
 
 empresas_bp = Blueprint("empresas", __name__)
 
+INVENTARIO_STATUS_CHOICES = [
+    "FALTA ARQUIVO",
+    "AGUARDANDO FECHAMENTO FISCAL",
+    "AGUARDANDO TADEU",
+    "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O",
+    "IMPORTADO",
+    "LIBERADO PARA BALANÃƒâ€¡O",
+    "ENCERRADO",
+    "ECD-ECF ENCERRADO",
+    "JULIANA IRÃƒÂ IMPORTAR",
+    "AGUARDANDO HELENA",
+]
+
+
+def _get_inventario_cache_version() -> int:
+    version = cache.get("inventario:cache_version")
+    if version is None:
+        version = 1
+        cache.set("inventario:cache_version", version, timeout=60 * 60 * 24 * 30)
+    return int(version)
+
+
+def _bump_inventario_cache_version() -> int:
+    next_version = _get_inventario_cache_version() + 1
+    cache.set("inventario:cache_version", next_version, timeout=60 * 60 * 24 * 30)
+    return next_version
+
+
+def _build_inventario_dashboard_cache_key(cache_key_payload: dict) -> str:
+    return f"inventario:dashboard:{json.dumps(cache_key_payload, sort_keys=True)}"
+
+
+def _compute_inventario_dashboard_cards(
+    *,
+    base_query,
+    inventario_joined: bool,
+    status_filters: list[str],
+    allowed_tributacoes: list[str],
+) -> list[dict]:
+    dashboard_stats = {
+        trib: {
+            "tributacao": trib,
+            "total": 0,
+            "concluida": 0,
+            "aguardando_arquivo": 0,
+            "fechamento_fiscal": 0,
+        }
+        for trib in allowed_tributacoes
+    }
+
+    stats_query = base_query
+    if status_filters:
+        if "FALTA ARQUIVO" in status_filters:
+            if not inventario_joined:
+                stats_query = stats_query.outerjoin(Inventario)
+            stats_query = stats_query.filter(
+                sa.or_(
+                    Inventario.status.in_(status_filters),
+                    Inventario.id.is_(None),
+                )
+            )
+        else:
+            if not inventario_joined:
+                stats_query = stats_query.join(Inventario)
+            stats_query = stats_query.filter(Inventario.status.in_(status_filters))
+    else:
+        if not inventario_joined:
+            stats_query = stats_query.outerjoin(Inventario)
+
+    stats_rows = (
+        stats_query
+        .with_entities(
+            Empresa.tributacao.label("tributacao"),
+            sa.func.count(Empresa.id).label("total"),
+            sa.func.coalesce(
+                sa.func.sum(sa.case((Inventario.status == "ENCERRADO", 1), else_=0)),
+                0,
+            ).label("concluida"),
+            sa.func.coalesce(
+                sa.func.sum(sa.case((Inventario.status == "FALTA ARQUIVO", 1), else_=0)),
+                0,
+            ).label("aguardando_arquivo"),
+            sa.func.coalesce(
+                sa.func.sum(sa.case((Inventario.encerramento_fiscal.is_(True), 1), else_=0)),
+                0,
+            ).label("fechamento_fiscal"),
+        )
+        .group_by(Empresa.tributacao)
+        .all()
+    )
+    for row in stats_rows:
+        tributacao = row.tributacao
+        if tributacao not in dashboard_stats:
+            continue
+        stats = dashboard_stats[tributacao]
+        stats["total"] = int(row.total or 0)
+        stats["concluida"] = int(row.concluida or 0)
+        stats["aguardando_arquivo"] = int(row.aguardando_arquivo or 0)
+        stats["fechamento_fiscal"] = int(row.fechamento_fiscal or 0)
+    for stats in dashboard_stats.values():
+        stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
+    return [dashboard_stats[trib] for trib in allowed_tributacoes]
+
+
+def _get_or_set_inventario_dashboard_cards(
+    *,
+    base_query,
+    inventario_joined: bool,
+    status_filters: list[str],
+    allowed_tributacoes: list[str],
+    cache_key_payload: dict,
+    cache_timeout: int,
+) -> list[dict]:
+    cache_key = _build_inventario_dashboard_cache_key(cache_key_payload)
+    dashboard_cards = cache.get(cache_key)
+    if dashboard_cards is not None:
+        return dashboard_cards
+
+    dashboard_cards = _compute_inventario_dashboard_cards(
+        base_query=base_query,
+        inventario_joined=inventario_joined,
+        status_filters=status_filters,
+        allowed_tributacoes=allowed_tributacoes,
+    )
+    cache.set(cache_key, dashboard_cards, timeout=cache_timeout)
+    return dashboard_cards
+
+
+def _prewarm_default_inventario_dashboard_cache(app_obj) -> None:
+    try:
+        with app_obj.app_context():
+            cache_version = _get_inventario_cache_version()
+            allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
+            default_tag_filters = ["Matriz", "Filial"]
+            base_query = Empresa.query.filter_by(ativo=True).filter(
+                sa.or_(Empresa.tipo_empresa.in_(default_tag_filters), Empresa.tipo_empresa.is_(None))
+            )
+            cache_key_payload = {
+                "tributacao": [],
+                "encerramento": [],
+                "status": [],
+                "tag": default_tag_filters,
+                "search": "",
+                "v": cache_version,
+            }
+            cache_timeout = get_cache_timeout("INVENTARIO_DASHBOARD_CACHE_SECONDS", 60)
+            dashboard_cards = _compute_inventario_dashboard_cards(
+                base_query=base_query,
+                inventario_joined=False,
+                status_filters=[],
+                allowed_tributacoes=allowed_tributacoes,
+            )
+            cache_key = _build_inventario_dashboard_cache_key(cache_key_payload)
+            cache.set(cache_key, dashboard_cards, timeout=cache_timeout)
+    except Exception:
+        app_obj.logger.exception("Inventario dashboard prewarm failed")
+
+
+def _invalidate_and_prewarm_inventario_caches() -> None:
+    cooldown = int(current_app.config.get("INVENTARIO_CACHE_INVALIDATION_COOLDOWN_SECONDS", 15))
+    bump_lock_key = "inventario:cache_version:bump_lock"
+    should_bump = cache.add(bump_lock_key, "1", timeout=max(1, cooldown))
+    if not should_bump:
+        return
+
+    _bump_inventario_cache_version()
+    prewarm_lock_key = "inventario:dashboard:prewarm:lock"
+    should_prewarm = cache.add(prewarm_lock_key, "1", timeout=15)
+    if not should_prewarm:
+        return
+    app_obj = current_app._get_current_object()
+    submit_io_task(_prewarm_default_inventario_dashboard_cache, app_obj)
+
+
+def _build_inventario_items_for_empresas(
+    empresas,
+    status_filters: list[str],
+    *,
+    include_file_columns: bool = False,
+) -> tuple[list[dict], dict]:
+    empresa_ids = [empresa.id for empresa in empresas]
+    inventarios_by_empresa = (
+        get_inventarios_by_empresa_ids(empresa_ids, include_file_columns=include_file_columns)
+        if empresa_ids
+        else {}
+    )
+    file_counts_by_empresa = get_inventario_file_counts_by_empresa_ids(empresa_ids) if empresa_ids else {}
+
+    items: list[dict] = []
+    for empresa in empresas:
+        inventario = inventarios_by_empresa.get(empresa.id)
+
+        if inventario is None and (not status_filters or "FALTA ARQUIVO" in status_filters):
+            inventario = Inventario(
+                empresa_id=empresa.id,
+                status='FALTA ARQUIVO',
+                encerramento_fiscal=False,
+            )
+
+        if status_filters:
+            if inventario is None:
+                continue
+            if inventario.status not in status_filters:
+                continue
+
+        items.append({'empresa': empresa, 'inventario': inventario})
+
+    return items, file_counts_by_empresa
+
+
+def _build_zero_inventario_dashboard_cards(allowed_tributacoes: list[str]) -> list[dict]:
+    return [
+        {
+            "tributacao": trib,
+            "total": 0,
+            "concluida": 0,
+            "aguardando_arquivo": 0,
+            "faltantes": 0,
+            "fechamento_fiscal": 0,
+        }
+        for trib in allowed_tributacoes
+    ]
+
+
+def _build_inventario_base_query(
+    *,
+    search_term: str,
+    tributacao_filters: list[str],
+    encerramento_filters: list[str],
+    tag_filters: list[str],
+    allowed_tributacoes: list[str],
+):
+    """Build base query for inventario list/dashboard with common filters."""
+    base_query = Empresa.query.filter_by(ativo=True)
+
+    if tag_filters:
+        if "Matriz" in tag_filters:
+            base_query = base_query.filter(
+                sa.or_(Empresa.tipo_empresa.in_(tag_filters), Empresa.tipo_empresa.is_(None))
+            )
+        else:
+            base_query = base_query.filter(Empresa.tipo_empresa.in_(tag_filters))
+
+    if search_term:
+        like_pattern = f"%{search_term}%"
+        base_query = base_query.filter(
+            sa.or_(
+                Empresa.codigo_empresa.ilike(like_pattern),
+                Empresa.nome_empresa.ilike(like_pattern),
+            )
+        )
+
+    if tributacao_filters:
+        valid_filters = [t for t in tributacao_filters if t in allowed_tributacoes]
+        if valid_filters:
+            base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
+
+    inventario_joined = False
+    if encerramento_filters:
+        bool_filters = []
+        for encerramento_value in encerramento_filters:
+            if encerramento_value == "true":
+                bool_filters.append(True)
+            elif encerramento_value == "false":
+                bool_filters.append(False)
+
+        if bool_filters:
+            base_query = base_query.outerjoin(Inventario).filter(
+                Inventario.encerramento_fiscal.in_(bool_filters)
+            )
+            inventario_joined = True
+
+    return base_query, inventario_joined
+
 
 # =============================================================================
 # APIs auxiliares
@@ -91,14 +368,14 @@ def api_cnpj(cnpj):
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
         msg = str(e)
-        status = 400 if "inválido" in msg.lower() or "invalido" in msg.lower() else 404
+        status = 400 if "invÃƒÂ¡lido" in msg.lower() or "invalido" in msg.lower() else 404
         if status == 404:
-            msg = "CNPJ não está cadastrado"
+            msg = "CNPJ nÃƒÂ£o estÃƒÂ¡ cadastrado"
         return jsonify({"error": msg}), status
     except Exception:
         return jsonify({"error": "Erro ao consultar CNPJ"}), 500
     if not dados:
-        return jsonify({"error": "CNPJ não está cadastrado"}), 404
+        return jsonify({"error": "CNPJ nÃƒÂ£o estÃƒÂ¡ cadastrado"}), 404
     return jsonify(dados)
 
 
@@ -146,7 +423,7 @@ def api_reunioes():
 def api_general_calendar_events():
     """Return collaborator calendar events as JSON."""
 
-    can_manage = is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
+    can_manage = is_user_admin(current_user) or user_has_tag("GestÃƒÂ£o") or user_has_tag("Coord.")
     events = serialize_events_for_calendar(current_user.id, can_manage, is_user_admin(current_user))
     return jsonify(events)
 
@@ -194,7 +471,7 @@ def cadastrar_empresa():
             db.session.rollback()
             flash(f"Erro ao cadastrar empresa: {e}", "danger")
     else:
-        current_app.logger.debug("Formulário não validado: %s", form.errors)
+        current_app.logger.debug("FormulÃƒÂ¡rio nÃƒÂ£o validado: %s", form.errors)
 
     return render_template("empresas/cadastrar.html", form=form)
 
@@ -386,12 +663,12 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     try:
         resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
     except NotFound:
-        flash("Empresa não encontrada.", "warning")
+        flash("Empresa nÃƒÂ£o encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
 
     empresa = Empresa.query.get(resolved_empresa_id)
     if empresa is None:
-        flash("Empresa não encontrada.", "warning")
+        flash("Empresa nÃƒÂ£o encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
 
     empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
@@ -405,7 +682,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     dept_tipos = [
         "Departamento Fiscal",
-        "Departamento Contábil",
+        "Departamento ContÃƒÂ¡bil",
         "Departamento Pessoal",
         "Departamento Administrativo",
         "Departamento Notas Fiscais",
@@ -419,7 +696,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento Contábil")
+    contabil = dept_map.get("Departamento ContÃƒÂ¡bil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -496,7 +773,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     # Otimizado: usa cache e eager loading de tags
     usuarios_responsaveis = get_active_users_with_tags()
     responsaveis_map = {
-        str(usuario.id): (usuario.name or usuario.username or f"Usuário {usuario.id}") for usuario in usuarios_responsaveis
+        str(usuario.id): (usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}") for usuario in usuarios_responsaveis
     }
 
     return render_template(
@@ -583,7 +860,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     dept_tipos = [
         "Departamento Fiscal",
-        "Departamento Contábil",
+        "Departamento ContÃƒÂ¡bil",
         "Departamento Pessoal",
         "Departamento Administrativo",
         "Departamento Notas Fiscais",
@@ -597,7 +874,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento Contábil")
+    contabil = dept_map.get("Departamento ContÃƒÂ¡bil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -610,7 +887,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
     financeiro_form = DepartamentoFinanceiroForm(request.form, obj=financeiro) if can_access_financeiro else None
     # Otimizado: usa cache e eager loading de tags
     usuarios_responsaveis = [
-        {"id": str(usuario.id), "label": usuario.name or usuario.username or f"Usuário {usuario.id}"}
+        {"id": str(usuario.id), "label": usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}"}
         for usuario in get_active_users_with_tags()
     ]
     usuarios_responsaveis_ids = [usuario["id"] for usuario in usuarios_responsaveis]
@@ -693,7 +970,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
         elif form_type == "contabil" and contabil_form.validate():
             if not contabil:
-                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento Contábil")
+                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento ContÃƒÂ¡bil")
                 db.session.add(contabil)
 
             contabil_form.populate_obj(contabil)
@@ -708,7 +985,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
 
-            flash("Departamento Contábil salvo com sucesso!", "success")
+            flash("Departamento ContÃƒÂ¡bil salvo com sucesso!", "success")
             form_processed_successfully = True
 
         elif form_type == "pessoal" and pessoal_form.validate():
@@ -785,7 +1062,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             if active_form and active_form.errors:
                 for field, errors in active_form.errors.items():
                     for error in errors:
-                        flash(f"Erro no formulário {form_type.capitalize()}: {error}", "danger")
+                        flash(f"Erro no formulÃƒÂ¡rio {form_type.capitalize()}: {error}", "danger")
 
     reunioes_cliente = (
         ClienteReuniao.query.options(joinedload(ClienteReuniao.setor))
@@ -835,7 +1112,7 @@ def _populate_cliente_reuniao_form(form: ClienteReuniaoForm) -> None:
     # Otimizado: usa cache e eager loading de tags
     usuarios = get_active_users_with_tags()
     form.participantes.choices = [
-        (usuario.id, (usuario.name or usuario.username or f"Usuário {usuario.id}")) for usuario in usuarios
+        (usuario.id, (usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}")) for usuario in usuarios
     ]
 
     setores = Setor.query.order_by(Setor.nome.asc()).all()
@@ -954,7 +1231,7 @@ def _resolve_reuniao_participantes(participantes_raw: list | None, user_lookup: 
                 nome = None
                 if usuario is not None:
                     nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
-                resolved.append({"label": nome or f"UsuÇ­rio #{pid}", "is_user": True, "id": pid})
+                resolved.append({"label": nome or f"UsuÃƒâ€¡Ã‚Â­rio #{pid}", "is_user": True, "id": pid})
                 continue
             alt_nome = (participante.get("name") or participante.get("label") or "").strip()
             if alt_nome:
@@ -964,7 +1241,7 @@ def _resolve_reuniao_participantes(participantes_raw: list | None, user_lookup: 
             nome = None
             if usuario is not None:
                 nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
-            resolved.append({"label": nome or f"UsuÇ­rio #{participante}", "is_user": True, "id": participante})
+            resolved.append({"label": nome or f"UsuÃƒâ€¡Ã‚Â­rio #{participante}", "is_user": True, "id": participante})
         elif isinstance(participante, str):
             nome = participante.strip()
             if nome:
@@ -1005,12 +1282,12 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
         db.session.add(reuniao)
         try:
             db.session.commit()
-            flash("Reunião registrada com sucesso!", "success")
+            flash("ReuniÃƒÂ£o registrada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
-            current_app.logger.exception("Erro ao salvar reunião com cliente: %s", exc)
+            current_app.logger.exception("Erro ao salvar reuniÃƒÂ£o com cliente: %s", exc)
             db.session.rollback()
-            flash("Não foi possível salvar a reunião. Tente novamente.", "danger")
+            flash("NÃƒÂ£o foi possÃƒÂ­vel salvar a reuniÃƒÂ£o. Tente novamente.", "danger")
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
@@ -1022,7 +1299,7 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
         empresa=empresa,
         form=form,
         is_edit=False,
-        page_title="Adicionar reunião com cliente",
+        page_title="Adicionar reuniÃƒÂ£o com cliente",
     )
 
 
@@ -1071,12 +1348,12 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         reuniao.updated_by = current_user.id
         try:
             db.session.commit()
-            flash("Reunião atualizada com sucesso!", "success")
+            flash("ReuniÃƒÂ£o atualizada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
-            current_app.logger.exception("Erro ao atualizar reunião com cliente: %s", exc)
+            current_app.logger.exception("Erro ao atualizar reuniÃƒÂ£o com cliente: %s", exc)
             db.session.rollback()
-            flash("Não foi possível atualizar a reunião. Tente novamente.", "danger")
+            flash("NÃƒÂ£o foi possÃƒÂ­vel atualizar a reuniÃƒÂ£o. Tente novamente.", "danger")
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
@@ -1089,7 +1366,7 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         form=form,
         is_edit=True,
         reuniao=reuniao,
-        page_title="Editar reunião com cliente",
+        page_title="Editar reuniÃƒÂ£o com cliente",
     )
 
 
@@ -1147,7 +1424,7 @@ def reuniao_cliente_detalhes_modal(empresa_id: str | None = None, reuniao_id: st
     )
     return jsonify(
         {
-            "title": f"Reunião com {reuniao.empresa.nome_empresa}",
+            "title": f"ReuniÃƒÂ£o com {reuniao.empresa.nome_empresa}",
             "html": html,
         }
     )
@@ -1174,11 +1451,11 @@ def reuniao_cliente_pdf(empresa_id: str | None = None, reuniao_id: str | None = 
     try:
         pdf_bytes, filename = export_reuniao_decisoes_pdf(reuniao)
     except FileNotFoundError as exc:
-        current_app.logger.error("Modelo de timbrado não encontrado: %s", exc)
-        abort(404, description="Modelo de timbrado não encontrado.")
+        current_app.logger.error("Modelo de timbrado nÃƒÂ£o encontrado: %s", exc)
+        abort(404, description="Modelo de timbrado nÃƒÂ£o encontrado.")
     except Exception as exc:  # pragma: no cover - caminho de erro
-        current_app.logger.exception("Falha ao gerar PDF da reunião", exc_info=exc)
-        abort(500, description="Falha ao gerar PDF da reunião.")
+        current_app.logger.exception("Falha ao gerar PDF da reuniÃƒÂ£o", exc_info=exc)
+        abort(500, description="Falha ao gerar PDF da reuniÃƒÂ£o.")
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",
@@ -1204,11 +1481,11 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     db.session.delete(reuniao)
     try:
         db.session.commit()
-        flash("Reunião excluída com sucesso.", "success")
+        flash("ReuniÃƒÂ£o excluÃƒÂ­da com sucesso.", "success")
     except SQLAlchemyError as exc:
-        current_app.logger.exception("Erro ao excluir reunião com cliente: %s", exc)
+        current_app.logger.exception("Erro ao excluir reuniÃƒÂ£o com cliente: %s", exc)
         db.session.rollback()
-        flash("Não foi possível excluir a reunião. Tente novamente.", "danger")
+        flash("NÃƒÂ£o foi possÃƒÂ­vel excluir a reuniÃƒÂ£o. Tente novamente.", "danger")
     return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 
@@ -1232,27 +1509,13 @@ def normalize_contatos(contatos: Iterable[dict] | None) -> list[dict]:
 
 
 # =============================================================================
-# Rotas de Inventário
+# Rotas de InventÃƒÂ¡rio
 # =============================================================================
 
 @empresas_bp.route("/inventario")
 @login_required
 def inventario():
-    """Lista todas as empresas com seus dados de inventário."""
-    STATUS_CHOICES = [
-        'FALTA ARQUIVO',
-        'AGUARDANDO FECHAMENTO FISCAL',
-        'AGUARDANDO TADEU',
-        'LIBERADO PARA IMPORTAÇÃO',
-        'IMPORTADO',
-        'LIBERADO PARA BALANÇO',
-        'ENCERRADO',
-        'ECD-ECF ENCERRADO',
-        'JULIANA IRÁ IMPORTAR',
-        'AGUARDANDO HELENA'
-    ]
-
-    saved_filters = session.get("inventario_filters", {})
+    """Lista todas as empresas com seus dados de inventÃƒÂ¡rio."""    saved_filters = session.get("inventario_filters", {})
 
     search_arg = request.args.get("q")
     if search_arg is None:
@@ -1266,7 +1529,7 @@ def inventario():
     else:
         saved_page = page_arg
 
-    # Parâmetros de ordenação
+    # ParÃƒÂ¢metros de ordenaÃƒÂ§ÃƒÂ£o
     sort_arg = request.args.get('sort')
     order_arg = request.args.get('order')
 
@@ -1309,7 +1572,7 @@ def inventario():
     if clear_status:
         status_filters = []
     elif raw_status:
-        status_filters = [s for s in raw_status if s in STATUS_CHOICES]
+        status_filters = [s for s in raw_status if s in INVENTARIO_STATUS_CHOICES]
     else:
         status_filters = saved_filters.get("status_filters", [])
 
@@ -1321,10 +1584,12 @@ def inventario():
     if order not in ('asc', 'desc'):
         order = 'asc'
 
-    # Paginação vs listagem completa
+    # PaginaÃƒÂ§ÃƒÂ£o vs listagem completa
+    username_normalized = (current_user.username or "").strip().lower()
+    default_show_all = username_normalized == "tadeu"
     all_arg = request.args.get("all")
     if all_arg is None:
-        show_all = saved_filters.get("show_all", True)
+        show_all = saved_filters.get("show_all", default_show_all)
     else:
         show_all = all_arg in ("1", "on", "true", "True")
 
@@ -1342,130 +1607,38 @@ def inventario():
 
     page = saved_page if saved_page > 0 else 1
 
-    # Query base - empresas ativas
-    base_query = Empresa.query.filter_by(ativo=True)
-
-    if tag_filters:
-        if "Matriz" in tag_filters:
-            base_query = base_query.filter(
-                sa.or_(Empresa.tipo_empresa.in_(tag_filters), Empresa.tipo_empresa.is_(None))
-            )
-        else:
-            base_query = base_query.filter(Empresa.tipo_empresa.in_(tag_filters))
-
-    # Aplicar filtro de pesquisa
-    if search_term:
-        like_pattern = f"%{search_term}%"
-        base_query = base_query.filter(
-            sa.or_(
-                Empresa.codigo_empresa.ilike(like_pattern),
-                Empresa.nome_empresa.ilike(like_pattern),
-            )
-        )
-
-    # Aplicar filtro de tributação
-    if tributacao_filters:
-        valid_filters = [t for t in tributacao_filters if t in allowed_tributacoes]
-        if valid_filters:
-            base_query = base_query.filter(Empresa.tributacao.in_(valid_filters))
-
-    # Aplicar filtro de Encerramento Fiscal
-    inventario_joined = False
-    if encerramento_filters:
-        # Converter strings "true"/"false" para booleanos
-        bool_filters = []
-        for e in encerramento_filters:
-            if e == "true":
-                bool_filters.append(True)
-            elif e == "false":
-                bool_filters.append(False)
-
-        if bool_filters:
-            # Fazer join com Inventario se ainda não foi feito
-            base_query = base_query.outerjoin(Inventario).filter(
-                Inventario.encerramento_fiscal.in_(bool_filters)
-            )
-            inventario_joined = True
+    base_query, inventario_joined = _build_inventario_base_query(
+        search_term=search_term,
+        tributacao_filters=tributacao_filters,
+        encerramento_filters=encerramento_filters,
+        tag_filters=tag_filters,
+        allowed_tributacoes=allowed_tributacoes,
+    )
 
     cache_timeout = get_cache_timeout("INVENTARIO_DASHBOARD_CACHE_SECONDS", 60)
+    cache_version = _get_inventario_cache_version()
     cache_key_payload = {
         "tributacao": tributacao_filters,
         "encerramento": encerramento_filters,
         "status": status_filters,
         "tag": tag_filters,
         "search": search_term,
+        "v": cache_version,
     }
-    cache_key = f"inventario:dashboard:{current_user.id}:{json.dumps(cache_key_payload, sort_keys=True)}"
-    dashboard_cards = cache.get(cache_key)
-    if dashboard_cards is None:
-        dashboard_stats = {
-            trib: {
-                "tributacao": trib,
-                "total": 0,
-                "concluida": 0,
-                "aguardando_arquivo": 0,
-                "fechamento_fiscal": 0,
-            }
-            for trib in allowed_tributacoes
-        }
-        # Aplicar o mesmo filtro de status usado na query de listagem
-        stats_query = base_query
-        if status_filters:
-            if "FALTA ARQUIVO" in status_filters:
-                if not inventario_joined:
-                    stats_query = stats_query.outerjoin(Inventario)
-                stats_query = stats_query.filter(
-                    sa.or_(
-                        Inventario.status.in_(status_filters),
-                        Inventario.id.is_(None),
-                    )
-                )
-            else:
-                if not inventario_joined:
-                    stats_query = stats_query.join(Inventario)
-                stats_query = stats_query.filter(
-                    Inventario.status.in_(status_filters)
-                )
-        else:
-            if not inventario_joined:
-                stats_query = stats_query.outerjoin(Inventario)
-
-        stats_rows = (
-            stats_query
-            .with_entities(
-                Empresa.tributacao.label("tributacao"),
-                sa.func.count(Empresa.id).label("total"),
-                sa.func.coalesce(
-                    sa.func.sum(sa.case((Inventario.status == "ENCERRADO", 1), else_=0)),
-                    0,
-                ).label("concluida"),
-                sa.func.coalesce(
-                    sa.func.sum(sa.case((Inventario.status == "FALTA ARQUIVO", 1), else_=0)),
-                    0,
-                ).label("aguardando_arquivo"),
-                sa.func.coalesce(
-                    sa.func.sum(sa.case((Inventario.encerramento_fiscal.is_(True), 1), else_=0)),
-                    0,
-                ).label("fechamento_fiscal"),
-            )
-            .group_by(Empresa.tributacao)
-            .all()
+    dashboard_async = bool(current_app.config.get("INVENTARIO_DASHBOARD_ASYNC", True))
+    if dashboard_async:
+        dashboard_cards = _build_zero_inventario_dashboard_cards(allowed_tributacoes)
+    else:
+        dashboard_cards = _get_or_set_inventario_dashboard_cards(
+            base_query=base_query,
+            inventario_joined=inventario_joined,
+            status_filters=status_filters,
+            allowed_tributacoes=allowed_tributacoes,
+            cache_key_payload=cache_key_payload,
+            cache_timeout=cache_timeout,
         )
-        for row in stats_rows:
-            tributacao = row.tributacao
-            if tributacao not in dashboard_stats:
-                continue
-            stats = dashboard_stats[tributacao]
-            stats["total"] = int(row.total or 0)
-            stats["concluida"] = int(row.concluida or 0)
-            stats["aguardando_arquivo"] = int(row.aguardando_arquivo or 0)
-            stats["fechamento_fiscal"] = int(row.fechamento_fiscal or 0)
-        for stats in dashboard_stats.values():
-            stats["faltantes"] = max(stats["total"] - stats["concluida"], 0)
-        dashboard_cards = [dashboard_stats[trib] for trib in allowed_tributacoes]
-        cache.set(cache_key, dashboard_cards, timeout=cache_timeout)
 
-    # Aplicar ordenação
+    # Aplicar ordenaÃƒÂ§ÃƒÂ£o
     if sort == 'codigo':
         order_column = Empresa.codigo_empresa
     elif sort == 'nome':
@@ -1493,11 +1666,16 @@ def inventario():
                 )
             )
         else:
-            if not inventario_joined:
-                query = base_query.join(Inventario)
-            else:
-                query = base_query
-            query = query.filter(Inventario.status.in_(status_filters))
+            # Usa EXISTS para evitar join+sort pesado em ordenaÃƒÂ§ÃƒÂ£o por campos de Empresa.
+            status_exists = sa.exists(
+                sa.select(1)
+                .select_from(Inventario)
+                .where(
+                    Inventario.empresa_id == Empresa.id,
+                    Inventario.status.in_(status_filters),
+                )
+            )
+            query = base_query.filter(status_exists)
         query = query.order_by(order_by_clause)
     else:
         query = base_query.order_by(order_by_clause)
@@ -1512,7 +1690,13 @@ def inventario():
         )
     )
 
+    # Buscar usuarios uma unica vez por request e reutilizar no template/chunks.
+    usuarios = get_active_users_with_tags()
+    usuarios_select_options = [{"id": int(u.id), "name": (u.name or "")} for u in usuarios]
+    usuarios_name_by_id = {int(u.id): (u.name or "") for u in usuarios}
+
     list_cache_timeout = get_cache_timeout("INVENTARIO_LISTALL_CACHE_SECONDS", 30)
+    listall_max_rows = int(current_app.config.get("INVENTARIO_LISTALL_MAX_ROWS", 300))
     list_cache_key_payload = {
         "sort": sort,
         "order": order,
@@ -1521,6 +1705,8 @@ def inventario():
         "status": status_filters,
         "tag": tag_filters,
         "search": search_term,
+        "max_rows": listall_max_rows,
+        "v": cache_version,
     }
     list_cache_key = (
         f"inventario:listall:{current_user.id}:"
@@ -1529,132 +1715,108 @@ def inventario():
     if show_all:
         cached_listall = cache.get(list_cache_key)
         if cached_listall is not None:
-            empresa_ids = cached_listall.get("empresa_ids", [])
-            should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
-            if should_create and empresa_ids:
-                existing_inventario_ids = {
-                    row[0]
-                    for row in db.session.query(Inventario.empresa_id)
-                    .filter(Inventario.empresa_id.in_(empresa_ids))
-                    .all()
-                }
-                missing_ids = [eid for eid in empresa_ids if eid not in existing_inventario_ids]
-                if missing_ids:
-                    novos_inventarios = [
-                        Inventario(
-                            empresa_id=eid,
-                            status='FALTA ARQUIVO',
-                            encerramento_fiscal=False
-                        )
-                        for eid in missing_ids
-                    ]
-                    db.session.add_all(novos_inventarios)
-                    db.session.commit()
             return cached_listall.get("html", "")
 
+    listall_token = None
+    listall_total_rows = 0
+    initial_batch_size = int(current_app.config.get("INVENTARIO_LISTALL_INITIAL_BATCH", 100))
     if show_all:
-        empresas = query.all()
-        total = len(empresas)
-        per_page = total if total > 0 else 1
-        page = 1
+        # Guardrail para evitar resposta HTML gigante quando hÃƒÂ¡ muitos registros.
+        limited_ids_rows = query.with_entities(Empresa.id).limit(listall_max_rows + 1).all()
+        if len(limited_ids_rows) > listall_max_rows:
+            show_all = False
+            page = 1
+            per_page = 20
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            empresas = pagination.items
+            flash(
+                f"Listagem completa limitada a {listall_max_rows} registros. "
+                "Aplique filtros para reduzir o volume e tentar novamente.",
+                "warning",
+            )
+        else:
+            ordered_empresa_ids = [int(row.id) for row in limited_ids_rows]
+            listall_total_rows = len(ordered_empresa_ids)
+            listall_token = uuid4().hex
+            cache.set(
+                f"inventario:listall:token:{listall_token}",
+                {
+                    "empresa_ids": ordered_empresa_ids,
+                    "status_filters": status_filters,
+                    "user_id": current_user.id,
+                    "usuarios_name_by_id": usuarios_name_by_id,
+                },
+                timeout=300,
+            )
+            first_empresa_ids = ordered_empresa_ids[:initial_batch_size]
+            empresas_map = (
+                Empresa.query.filter(Empresa.id.in_(first_empresa_ids))
+                .options(
+                    load_only(
+                        Empresa.id,
+                        Empresa.codigo_empresa,
+                        Empresa.nome_empresa,
+                        Empresa.tributacao,
+                        Empresa.tipo_empresa,
+                    )
+                )
+                .all()
+            )
+            empresa_by_id = {empresa.id: empresa for empresa in empresas_map}
+            empresas = [empresa_by_id[eid] for eid in first_empresa_ids if eid in empresa_by_id]
+            total = listall_total_rows
+            per_page = total if total > 0 else 1
+            page = 1
 
-        def _iter_pages(**_kwargs):
-            return []
+            def _iter_pages(**_kwargs):
+                return []
 
-        pagination = type(
-            "ListAllPagination",
-            (),
-            {
-                "total": total,
-                "page": page,
-                "per_page": per_page,
-                "pages": 1 if total > 0 else 0,
-                "has_prev": False,
-                "has_next": False,
-                "prev_num": None,
-                "next_num": None,
-                "iter_pages": staticmethod(_iter_pages),
-                "items": empresas,
-            },
-        )()
+            pagination = type(
+                "ListAllPagination",
+                (),
+                {
+                    "total": total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": 1 if total > 0 else 0,
+                    "has_prev": False,
+                    "has_next": False,
+                    "prev_num": None,
+                    "next_num": None,
+                    "iter_pages": staticmethod(_iter_pages),
+                    "items": empresas,
+                },
+            )()
     else:
         per_page = 20
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         empresas = pagination.items
-    empresa_ids = [empresa.id for empresa in empresas]
-
-    # Identificar empresas sem inventário (sem considerar filtro de status)
-    existing_inventario_ids = set()
-    if empresa_ids:
-        existing_inventario_ids = {
-            row[0]
-            for row in db.session.query(Inventario.empresa_id)
-            .filter(Inventario.empresa_id.in_(empresa_ids))
-            .all()
-        }
-
-    empresas_sem_inventario = [e for e in empresas if e.id not in existing_inventario_ids]
-
-    # Criar inventários faltantes
-    created_inventarios = False
-    if empresas_sem_inventario:
-        # Se há filtro de status e 'FALTA ARQUIVO' não está nos filtros, não criar
-        should_create = not status_filters or 'FALTA ARQUIVO' in status_filters
-
-        if should_create:
-            novos_inventarios = [
-                Inventario(
-                    empresa_id=e.id,
-                    status='FALTA ARQUIVO',
-                    encerramento_fiscal=False
-                )
-                for e in empresas_sem_inventario
-            ]
-            db.session.add_all(novos_inventarios)
-            created_inventarios = True
-
-    # Buscar inventários existentes com filtro de status aplicado no SQL (otimizado)
-    inventarios = get_inventarios_by_empresa_ids(empresa_ids, status_filter=status_filters) if empresa_ids else {}
-
-    # Criar lista combinada garantindo que empresas sem inventário apareçam quando aplicável
-    items: list[dict] = []
-    for empresa in empresas:
-        inventario = inventarios.get(empresa.id)
-
-        # Se não houver inventário, mas não há filtro de status (ou inclui FALTA ARQUIVO), cria placeholder
-        if inventario is None and (not status_filters or "FALTA ARQUIVO" in status_filters):
-            inventario = Inventario(
-                empresa_id=empresa.id,
-                status='FALTA ARQUIVO',
-                encerramento_fiscal=False,
-            )
-            db.session.add(inventario)
-            created_inventarios = True
-
-        # Respeita filtro de status: se houver filtro e o inventário não atende, pula
-        if status_filters:
-            if inventario is None:
-                continue
-            if inventario.status not in status_filters:
-                continue
-
-        # Adiciona item (permitindo inventário None somente quando sem filtros)
-        items.append({
-            'empresa': empresa,
-            'inventario': inventario
-        })
-
-    # Buscar todos os usuários para o select de encerramento (otimizado com cache)
-    usuarios = get_active_users_with_tags()
-
     display_name = (current_user.username or current_user.name or "").strip().lower()
     is_tadeu = display_name.startswith("tadeu")
+    items, file_counts_by_empresa = _build_inventario_items_for_empresas(
+        empresas,
+        status_filters,
+        include_file_columns=is_tadeu,
+    )
+
+    # Buscar todos os usuÃƒÂ¡rios para o select de encerramento (otimizado com cache)
+    dashboard_query_params = urlencode(
+        [
+            *[("tributacao", value) for value in tributacao_filters],
+            *[("encerramento", value) for value in encerramento_filters],
+            *[("status", value) for value in status_filters],
+            *[("tag", value) for value in tag_filters],
+            *([("q", search_term)] if search_term else []),
+        ],
+        doseq=True,
+    )
 
     response = render_template(
         "empresas/inventario.html",
         items=items,
+        file_counts_by_empresa=file_counts_by_empresa,
         pagination=pagination,
-        status_choices=STATUS_CHOICES,
+        status_choices=INVENTARIO_STATUS_CHOICES,
         sort=sort,
         order=order,
         tributacao_filters=tributacao_filters,
@@ -1667,29 +1829,170 @@ def inventario():
         show_all=show_all,
         all_param="1" if show_all else "0",
         usuarios=usuarios,
+        usuarios_select_options=usuarios_select_options,
+        usuarios_name_by_id=usuarios_name_by_id,
         dashboard_cards=dashboard_cards,
         is_admin=is_user_admin(current_user),
         is_tadeu=is_tadeu,
+        dashboard_async=dashboard_async,
+        dashboard_api_url=url_for("empresas.api_inventario_dashboard"),
+        dashboard_query_params=dashboard_query_params,
+        listall_token=listall_token,
+        listall_initial_loaded=len(items) if show_all else 0,
+        listall_total_rows=listall_total_rows if show_all else 0,
+        listall_initial_batch=initial_batch_size if show_all else 0,
     )
-
-    if created_inventarios:
-        db.session.commit()
 
     if show_all:
         cache.set(
             list_cache_key,
-            {"html": response, "empresa_ids": empresa_ids},
+            {"html": response},
             timeout=list_cache_timeout,
         )
 
     return response
 
 
+@empresas_bp.route("/api/inventario/dashboard", methods=["GET"])
+@login_required
+def api_inventario_dashboard():
+    """Retorna cards de dashboard do inventario de forma assíncrona."""
+    try:
+        allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
+        allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
+
+        search_term = (request.args.get("q") or "").strip()
+        tributacao_filters = [
+            value for value in request.args.getlist("tributacao") if value in allowed_tributacoes
+        ]
+        encerramento_filters = [
+            value for value in request.args.getlist("encerramento") if value in ("true", "false")
+        ]
+        status_filters = [
+            value for value in request.args.getlist("status") if value in INVENTARIO_STATUS_CHOICES
+        ]
+        tag_filters = [value for value in request.args.getlist("tag") if value in allowed_tag_filters]
+        if not tag_filters:
+            tag_filters = ["Matriz", "Filial"]
+
+        base_query, inventario_joined = _build_inventario_base_query(
+            search_term=search_term,
+            tributacao_filters=tributacao_filters,
+            encerramento_filters=encerramento_filters,
+            tag_filters=tag_filters,
+            allowed_tributacoes=allowed_tributacoes,
+        )
+
+        cache_timeout = get_cache_timeout("INVENTARIO_DASHBOARD_CACHE_SECONDS", 60)
+        cache_version = _get_inventario_cache_version()
+        cache_key_payload = {
+            "tributacao": tributacao_filters,
+            "encerramento": encerramento_filters,
+            "status": status_filters,
+            "tag": tag_filters,
+            "search": search_term,
+            "v": cache_version,
+        }
+
+        dashboard_cards = _get_or_set_inventario_dashboard_cards(
+            base_query=base_query,
+            inventario_joined=inventario_joined,
+            status_filters=status_filters,
+            allowed_tributacoes=allowed_tributacoes,
+            cache_key_payload=cache_key_payload,
+            cache_timeout=cache_timeout,
+        )
+        return jsonify({"success": True, "cards": dashboard_cards})
+    except Exception as exc:
+        current_app.logger.exception("Erro ao calcular dashboard do inventario: %s", exc)
+        return jsonify({"success": False, "error": "Falha ao carregar dashboard"}), 500
+
+
+@empresas_bp.route("/api/inventario/chunk", methods=["GET"])
+@login_required
+def api_inventario_chunk():
+    token = (request.args.get("token") or "").strip()
+    offset = request.args.get("offset", type=int) or 0
+    limit = request.args.get("limit", type=int) or 100
+    if not token:
+        return jsonify({"success": False, "error": "Token ausente"}), 400
+    if offset < 0:
+        offset = 0
+    limit = max(1, min(limit, 300))
+
+    payload = cache.get(f"inventario:listall:token:{token}")
+    if not payload:
+        return jsonify({"success": False, "error": "SessÃƒÂ£o expirada. Recarregue a pÃƒÂ¡gina."}), 410
+    if int(payload.get("user_id") or 0) != int(current_user.id):
+        return jsonify({"success": False, "error": "Token invÃƒÂ¡lido para este usuÃƒÂ¡rio."}), 403
+
+    empresa_ids: list[int] = payload.get("empresa_ids") or []
+    status_filters: list[str] = payload.get("status_filters") or []
+    usuarios_name_by_id: dict[int, str] = payload.get("usuarios_name_by_id") or {}
+    total = len(empresa_ids)
+    chunk_cache_key = f"inventario:listall:chunk:{token}:{offset}:{limit}"
+    cached_chunk = cache.get(chunk_cache_key)
+    if cached_chunk is not None:
+        return jsonify(cached_chunk)
+    chunk_ids = empresa_ids[offset: offset + limit]
+
+    if not chunk_ids:
+        result = {"success": True, "html": "", "loaded": offset, "total": total, "has_more": False}
+        cache.set(chunk_cache_key, result, timeout=120)
+        return jsonify(result)
+
+    empresas_map = (
+        Empresa.query.filter(Empresa.id.in_(chunk_ids))
+        .options(
+            load_only(
+                Empresa.id,
+                Empresa.codigo_empresa,
+                Empresa.nome_empresa,
+                Empresa.tributacao,
+                Empresa.tipo_empresa,
+            )
+        )
+        .all()
+    )
+    empresa_by_id = {empresa.id: empresa for empresa in empresas_map}
+    empresas = [empresa_by_id[eid] for eid in chunk_ids if eid in empresa_by_id]
+    display_name = (current_user.username or current_user.name or "").strip().lower()
+    is_tadeu = display_name.startswith("tadeu")
+    items, file_counts_by_empresa = _build_inventario_items_for_empresas(
+        empresas,
+        status_filters,
+        include_file_columns=is_tadeu,
+    )
+
+    if not usuarios_name_by_id:
+        usuarios = get_active_users_with_tags()
+        usuarios_name_by_id = {int(u.id): (u.name or "") for u in usuarios}
+    status_choices = INVENTARIO_STATUS_CHOICES
+    rows_html = render_template(
+        "empresas/_inventario_rows.html",
+        items=items,
+        file_counts_by_empresa=file_counts_by_empresa,
+        is_tadeu=is_tadeu,
+        status_choices=status_choices,
+        usuarios_name_by_id=usuarios_name_by_id,
+    )
+    new_loaded = min(offset + len(items), total)
+    result = {
+        "success": True,
+        "html": rows_html,
+        "loaded": new_loaded,
+        "total": total,
+        "has_more": new_loaded < total,
+    }
+    cache.set(chunk_cache_key, result, timeout=120)
+    return jsonify(result)
+
+
 @empresas_bp.route("/api/inventario/update", methods=["POST"])
 @login_required
 @csrf.exempt
 def api_inventario_update():
-    """API para atualizar campos do inventário inline."""
+    """API para atualizar campos do inventÃƒÂ¡rio inline."""
     from decimal import Decimal, InvalidOperation
 
     try:
@@ -1700,15 +2003,15 @@ def api_inventario_update():
             value = data.get('value', '').strip()
 
         if not empresa_id or not field:
-            return jsonify({'success': False, 'error': 'Dados inválidos'}), 400
+            return jsonify({'success': False, 'error': 'Dados invÃƒÂ¡lidos'}), 400
 
         # Verificar se a empresa existe
         with track_custom_span("inventario_update", "load_empresa"):
             empresa = Empresa.query.get(empresa_id)
         if not empresa:
-            return jsonify({'success': False, 'error': 'Empresa não encontrada'}), 404
+            return jsonify({'success': False, 'error': 'Empresa nÃƒÂ£o encontrada'}), 404
 
-        # Buscar ou criar inventário
+        # Buscar ou criar inventÃƒÂ¡rio
         with track_custom_span("inventario_update", "load_inventario"):
             inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
             if not inventario:
@@ -1716,7 +2019,7 @@ def api_inventario_update():
                 db.session.add(inventario)
         previous_status = inventario.status if field == "status" else None
 
-        # Campos monetários que precisam de conversão
+        # Campos monetÃƒÂ¡rios que precisam de conversÃƒÂ£o
         campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'fechamento_tadeu_2025', 'valor_enviado_sped']
 
         # Campos booleanos
@@ -1744,7 +2047,7 @@ def api_inventario_update():
         }
 
         if field not in field_map:
-            return jsonify({'success': False, 'error': 'Campo inválido'}), 400
+            return jsonify({'success': False, 'error': 'Campo invÃƒÂ¡lido'}), 400
 
         # Processar valor
         old_pdf_path = inventario.pdf_path
@@ -1752,21 +2055,21 @@ def api_inventario_update():
         with track_custom_span("inventario_update", "process_value"):
             if value:
                 if field in campos_monetarios:
-                    # Converter valor monetário (remover R$, pontos e trocar vírgula por ponto)
+                    # Converter valor monetÃƒÂ¡rio (remover R$, pontos e trocar vÃƒÂ­rgula por ponto)
                     try:
                         value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
                         processed_value = Decimal(value_clean) if value_clean else None
 
-                        # Validar limite de R$ 1.000.000.000,00 (1 bilhão)
+                        # Validar limite de R$ 1.000.000.000,00 (1 bilhÃƒÂ£o)
                         if processed_value is not None and processed_value > Decimal('1000000000.00'):
-                            return jsonify({'success': False, 'error': 'Valor não pode exceder R$ 1.000.000.000,00'}), 400
+                            return jsonify({'success': False, 'error': 'Valor nÃƒÂ£o pode exceder R$ 1.000.000.000,00'}), 400
                     except (InvalidOperation, ValueError):
-                        return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
+                        return jsonify({'success': False, 'error': 'Valor monetÃƒÂ¡rio invÃƒÂ¡lido'}), 400
                 elif field in campos_booleanos:
                     # Converter para booleano
                     if value.lower() in ['true', '1', 'sim', 'yes']:
                         processed_value = True
-                    elif value.lower() in ['false', '0', 'não', 'nao', 'no']:
+                    elif value.lower() in ['false', '0', 'nÃƒÂ£o', 'nao', 'no']:
                         processed_value = False
                     else:
                         processed_value = None
@@ -1775,13 +2078,13 @@ def api_inventario_update():
                     try:
                         processed_value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
                     except ValueError:
-                        return jsonify({'success': False, 'error': 'Data inválida. Use o formato AAAA-MM-DD'}), 400
+                        return jsonify({'success': False, 'error': 'Data invÃƒÂ¡lida. Use o formato AAAA-MM-DD'}), 400
                 elif field in campos_inteiros:
                     # Converter para inteiro
                     try:
                         processed_value = int(value) if value else None
                     except ValueError:
-                        return jsonify({'success': False, 'error': 'Valor inteiro inválido'}), 400
+                        return jsonify({'success': False, 'error': 'Valor inteiro invÃƒÂ¡lido'}), 400
                 else:
                     processed_value = value
             elif field in campos_booleanos:
@@ -1802,8 +2105,8 @@ def api_inventario_update():
         )
         notify_cristiano = (
             field == "status"
-            and processed_value == "LIBERADO PARA IMPORTAÇÃO"
-            and previous_status != "LIBERADO PARA IMPORTAÇÃO"
+            and processed_value == "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O"
+            and previous_status != "LIBERADO PARA IMPORTAÃƒâ€¡ÃƒÆ’O"
         )
         if field == "pdf_path":
             with track_custom_span("inventario_update", "cleanup_pdf"):
@@ -1838,6 +2141,7 @@ def api_inventario_update():
             db.session.commit()
         finally:
             track_commit_end(commit_started)
+        _invalidate_and_prewarm_inventario_caches()
         if status_changed_to_tadeu:
             current_app.logger.info(
                 "Inventario: status alterado para AGUARDANDO TADEU; email sai pelo job diario das 17h"
@@ -1845,7 +2149,7 @@ def api_inventario_update():
         if notify_cristiano:
             _notify_cristiano_liberado_importacao(empresa)
 
-        # Retornar valor formatado se for campo monetário
+        # Retornar valor formatado se for campo monetÃƒÂ¡rio
         response_value = value
         if field in campos_monetarios and processed_value is not None:
             response_value = f"R$ {processed_value:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
@@ -1854,7 +2158,7 @@ def api_inventario_update():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception("Erro ao atualizar inventário: %s", e)
+        current_app.logger.exception("Erro ao atualizar inventÃƒÂ¡rio: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1877,13 +2181,13 @@ def _coerce_file_entries(value):
 
 
 def _has_file_entries(value):
-    """Verifica se há arquivos VÁLIDOS na lista."""
+    """Verifica se hÃƒÂ¡ arquivos VÃƒÂLIDOS na lista."""
     entries = _coerce_file_entries(value)
     if not entries:
         return False
 
-    # Verificar se há pelo menos um arquivo válido
-    # Um arquivo válido deve ter 'filename' E 'file_data' não vazios
+    # Verificar se hÃƒÂ¡ pelo menos um arquivo vÃƒÂ¡lido
+    # Um arquivo vÃƒÂ¡lido deve ter 'filename' E 'file_data' nÃƒÂ£o vazios
     for entry in entries:
         if isinstance(entry, dict):
             filename = entry.get('filename', '').strip()
@@ -1907,8 +2211,8 @@ def _maybe_set_status_aguardando_tadeu(inventario):
     has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
     
     if not (has_cfop_consolidado and has_cliente):
-        # Só reverter para FALTA ARQUIVO se o status nunca foi definido
-        # Se já está em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
+        # SÃƒÂ³ reverter para FALTA ARQUIVO se o status nunca foi definido
+        # Se jÃƒÂ¡ estÃƒÂ¡ em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
         if inventario.status in (None, "", "Selecione..."):
             inventario.status = "FALTA ARQUIVO"
             return True
@@ -2064,21 +2368,21 @@ def _notify_tadeu_aguardando_inventario() -> None:
 
 
 def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
-    """Cria notificação no portal para Cassio quando CFOP é adicionado sem arquivo do cliente."""
+    """Cria notificaÃƒÂ§ÃƒÂ£o no portal para Cassio quando CFOP ÃƒÂ© adicionado sem arquivo do cliente."""
     from app.models.tables import TaskNotification, NotificationType
 
-    # Buscar usuário Cassio
+    # Buscar usuÃƒÂ¡rio Cassio
     cassio = _find_active_user_by_name("Cassio")
     if not cassio:
-        current_app.logger.warning("Inventario: usuário Cassio não encontrado para notificação")
+        current_app.logger.warning("Inventario: usuÃƒÂ¡rio Cassio nÃƒÂ£o encontrado para notificaÃƒÂ§ÃƒÂ£o")
         return
 
-    # Criar mensagem da notificação
-    message = f"Fechamento Fiscal finalizado sem arquivo do inventário: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    # Criar mensagem da notificaÃƒÂ§ÃƒÂ£o
+    message = f"Fechamento Fiscal finalizado sem arquivo do inventÃƒÂ¡rio: {empresa.codigo_empresa} - {empresa.nome_empresa}"
     if len(message) > 255:
         message = message[:252] + "..."
 
-    # Criar notificação no portal
+    # Criar notificaÃƒÂ§ÃƒÂ£o no portal
     notification = TaskNotification(
         user_id=cassio.id,
         task_id=None,
@@ -2091,27 +2395,27 @@ def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
         db.session.add(notification)
         db.session.commit()
         current_app.logger.info(
-            "Notificação de inventário criada para Cassio: empresa %s",
+            "NotificaÃƒÂ§ÃƒÂ£o de inventÃƒÂ¡rio criada para Cassio: empresa %s",
             empresa.codigo_empresa,
         )
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error(
-            "Erro ao criar notificação para Cassio: %s",
+            "Erro ao criar notificaÃƒÂ§ÃƒÂ£o para Cassio: %s",
             exc,
         )
 
 
 def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
-    """Cria notificação no portal para Cristiano quando o inventário é liberado para importação."""
+    """Cria notificaÃƒÂ§ÃƒÂ£o no portal para Cristiano quando o inventÃƒÂ¡rio ÃƒÂ© liberado para importaÃƒÂ§ÃƒÂ£o."""
     from app.models.tables import TaskNotification, NotificationType
 
     cristiano = _find_active_user_by_name("Cristiano")
     if not cristiano:
-        current_app.logger.warning("Inventario: usuário Cristiano não encontrado para notificação")
+        current_app.logger.warning("Inventario: usuÃƒÂ¡rio Cristiano nÃƒÂ£o encontrado para notificaÃƒÂ§ÃƒÂ£o")
         return
 
-    message = f"Inventário liberado para importação: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    message = f"InventÃƒÂ¡rio liberado para importaÃƒÂ§ÃƒÂ£o: {empresa.codigo_empresa} - {empresa.nome_empresa}"
     if len(message) > 255:
         message = message[:252] + "..."
 
@@ -2127,13 +2431,13 @@ def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
         db.session.add(notification)
         db.session.commit()
         current_app.logger.info(
-            "Notificação de inventário criada para Cristiano: empresa %s",
+            "NotificaÃƒÂ§ÃƒÂ£o de inventÃƒÂ¡rio criada para Cristiano: empresa %s",
             empresa.codigo_empresa,
         )
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error(
-            "Erro ao criar notificação para Cristiano: %s",
+            "Erro ao criar notificaÃƒÂ§ÃƒÂ£o para Cristiano: %s",
             exc,
         )
 
@@ -2148,7 +2452,7 @@ def send_daily_tadeu_notification(
     Executado diariamente ?s 17h pelo scheduler.
     """
     current_app.logger.info("=" * 50)
-    current_app.logger.info("🚀 EXECUTANDO JOB DIÁRIO DE NOTIFICAÇÃO PARA TADEU")
+    current_app.logger.info("Ã°Å¸Å¡â‚¬ EXECUTANDO JOB DIÃƒÂRIO DE NOTIFICAÃƒâ€¡ÃƒÆ’O PARA TADEU")
     current_app.logger.info("=" * 50)
 
     hoje = datetime.now(get_calendar_timezone()).date()
@@ -2170,7 +2474,7 @@ def send_daily_tadeu_notification(
     try:
         inventario_url = url_for("empresas.inventario", _external=True)
     except RuntimeError:
-        # Fallback quando executado fora de requisição (ex: script standalone)
+        # Fallback quando executado fora de requisiÃƒÂ§ÃƒÂ£o (ex: script standalone)
         inventario_url = "http://localhost:5000/inventario"
     if recipients:
         recipient_list = tuple(recipient.strip() for recipient in recipients if recipient and recipient.strip())
@@ -2191,7 +2495,7 @@ def send_daily_tadeu_notification(
 
     current_app.logger.info("=" * 50)
     current_app.logger.info(
-        "✅ NOTIFICAÇÃO ENVIADA: %d empresas em %d grupos",
+        "Ã¢Å“â€¦ NOTIFICAÃƒâ€¡ÃƒÆ’O ENVIADA: %d empresas em %d grupos",
         total_empresas,
         len(groups),
     )
@@ -2206,7 +2510,7 @@ def send_daily_tadeu_notification(
 @empresas_bp.route("/api/inventario/preferences", methods=["GET"])
 @login_required
 def api_inventario_get_preferences():
-    """Retorna as preferências de colunas do usuário."""
+    """Retorna as preferÃƒÂªncias de colunas do usuÃƒÂ¡rio."""
     from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
 
     user_prefs = current_user.preferences or {}
@@ -2239,13 +2543,13 @@ def api_inventario_get_preferences():
 @empresas_bp.route("/api/inventario/preferences", methods=["POST"])
 @login_required
 def api_inventario_save_preferences():
-    """Salva as preferências de colunas do usuário."""
+    """Salva as preferÃƒÂªncias de colunas do usuÃƒÂ¡rio."""
     try:
         data = request.get_json()
         preferences = data.get('preferences', {})
 
         if not isinstance(preferences, dict):
-            return jsonify({'success': False, 'error': 'Formato inválido'}), 400
+            return jsonify({'success': False, 'error': 'Formato invÃƒÂ¡lido'}), 400
 
         # Get or create user preferences
         user_prefs = current_user.preferences or {}
@@ -2256,14 +2560,14 @@ def api_inventario_save_preferences():
         user_prefs['inventario_table']['columns'] = preferences
         user_prefs['inventario_table']['version'] = 1
 
-        # Usar flag para forçar atualização JSON
+        # Usar flag para forÃƒÂ§ar atualizaÃƒÂ§ÃƒÂ£o JSON
         flag_modified(current_user, 'preferences')
         current_user.preferences = user_prefs
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': 'Preferências salvas com sucesso'
+            'message': 'PreferÃƒÂªncias salvas com sucesso'
         })
     except Exception as e:
         db.session.rollback()
@@ -2276,11 +2580,11 @@ def api_inventario_save_preferences():
 @empresas_bp.route("/api/inventario/preferences/reset", methods=["POST"])
 @login_required
 def api_inventario_reset_preferences():
-    """Reseta preferências para o padrão."""
+    """Reseta preferÃƒÂªncias para o padrÃƒÂ£o."""
     try:
         from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
 
-        # Limpar preferências do inventario
+        # Limpar preferÃƒÂªncias do inventario
         user_prefs = current_user.preferences or {}
         if 'inventario_table' in user_prefs:
             del user_prefs['inventario_table']
@@ -2301,7 +2605,7 @@ def api_inventario_reset_preferences():
 
         return jsonify({
             'success': True,
-            'message': 'Preferências resetadas',
+            'message': 'PreferÃƒÂªncias resetadas',
             'defaults': defaults
         })
     except Exception as e:
@@ -2315,7 +2619,7 @@ def api_inventario_reset_preferences():
 @empresas_bp.route("/inventario/test-email")
 @login_required
 def inventario_test_email_page():
-    """Página para testar envio de emails do inventário."""
+    """PÃƒÂ¡gina para testar envio de emails do inventÃƒÂ¡rio."""
     return render_template("empresas/inventario_test_email.html")
 
 
@@ -2327,9 +2631,9 @@ def api_test_email_cristiano():
     from app.utils.mailer import send_email
 
     try:
-        current_app.logger.info("🔥 Disparando email de teste para Tadeu e Cristiano")
+        current_app.logger.info("Ã°Å¸â€Â¥ Disparando email de teste para Tadeu e Cristiano")
 
-        # Verificar se há empresas aguardando
+        # Verificar se hÃƒÂ¡ empresas aguardando
         groups = _build_aguardando_tadeu_groups()
         if not groups:
             current_app.logger.warning("Nenhuma empresa aguardando Tadeu")
@@ -2345,11 +2649,11 @@ def api_test_email_cristiano():
         for recipient_name in ("Tadeu", "Cristiano"):
             user = _find_active_user_by_name(recipient_name)
             if not user:
-                current_app.logger.warning("Usuário %s não encontrado", recipient_name)
+                current_app.logger.warning("UsuÃƒÂ¡rio %s nÃƒÂ£o encontrado", recipient_name)
                 continue
 
             if not user.email:
-                current_app.logger.warning("Usuário %s sem email cadastrado", recipient_name)
+                current_app.logger.warning("UsuÃƒÂ¡rio %s sem email cadastrado", recipient_name)
                 continue
 
             current_app.logger.info("Enviando email para %s (%s)", recipient_name, user.email)
@@ -2362,7 +2666,7 @@ def api_test_email_cristiano():
                 inventario_url=inventario_url
             )
 
-            # Enviar email SÍNCRONO (direto, sem fila) para ver erros
+            # Enviar email SÃƒÂNCRONO (direto, sem fila) para ver erros
             send_email(
                 subject="[Inventario] Teste - Empresas aguardando Tadeu",
                 html_body=html_body,
@@ -2373,7 +2677,7 @@ def api_test_email_cristiano():
             current_app.logger.info("Email enviado com sucesso para %s!", recipient_name)
 
         if not recipients_info:
-            return jsonify({'success': False, 'error': 'Nenhum destinatário encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Nenhum destinatÃƒÂ¡rio encontrado'}), 404
 
         return jsonify({
             'success': True,
@@ -2389,7 +2693,7 @@ def api_test_email_cristiano():
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_pdf(empresa_id):
-    """Upload de arquivo PDF para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
+    """Upload de arquivo PDF para o inventÃƒÂ¡rio - suporta mÃƒÂºltiplos arquivos (armazenado no banco)."""
     import base64
     from werkzeug.utils import secure_filename
 
@@ -2404,11 +2708,11 @@ def api_inventario_upload_pdf(empresa_id):
         if file.filename == '':
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
-        # Verificar extensão
+        # Verificar extensÃƒÂ£o
         if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF sÃƒÂ£o permitidos'}), 400
 
-        # Buscar ou criar inventário
+        # Buscar ou criar inventÃƒÂ¡rio
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
@@ -2451,7 +2755,7 @@ def api_inventario_upload_pdf(empresa_id):
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
             'status': inventario.status,
-            'file_index': len(cfop_files) - 1  # Índice do arquivo no array
+            'file_index': len(cfop_files) - 1  # ÃƒÂndice do arquivo no array
         })
 
     except Exception as e:
@@ -2479,7 +2783,7 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
         if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF sÃƒÂ£o permitidos'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
@@ -2535,23 +2839,23 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
 @empresas_bp.route("/api/inventario/delete-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_pdf(empresa_id):
-    """Remove o PDF do inventário."""
+    """Remove o PDF do inventÃƒÂ¡rio."""
     import os
 
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.pdf_path:
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
-        # Remover arquivo local se não for URL
+        # Remover arquivo local se nÃƒÂ£o for URL
         if not inventario.pdf_path.startswith('http'):
             file_path = os.path.join(current_app.root_path, 'static', inventario.pdf_path)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
+                    current_app.logger.warning("Erro ao remover arquivo fÃƒÂ­sico: %s", e)
 
         # Limpar campos
         inventario.pdf_path = None
@@ -2571,7 +2875,7 @@ def api_inventario_delete_pdf(empresa_id):
 @empresas_bp.route("/api/inventario/upload-cliente-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_cliente_file(empresa_id):
-    """Upload de arquivo do cliente para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
+    """Upload de arquivo do cliente para o inventÃƒÂ¡rio - suporta mÃƒÂºltiplos arquivos (armazenado no banco)."""
     import base64
     import mimetypes
     from werkzeug.utils import secure_filename
@@ -2587,7 +2891,7 @@ def api_inventario_upload_cliente_file(empresa_id):
         if file.filename == '':
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
-        # Buscar ou criar inventário
+        # Buscar ou criar inventÃƒÂ¡rio
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
@@ -2628,7 +2932,7 @@ def api_inventario_upload_cliente_file(empresa_id):
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
             'status': inventario.status,
-            'file_index': len(cliente_files) - 1  # Índice do arquivo no array
+            'file_index': len(cliente_files) - 1  # ÃƒÂndice do arquivo no array
         })
 
     except Exception as e:
@@ -2640,7 +2944,7 @@ def api_inventario_upload_cliente_file(empresa_id):
 @empresas_bp.route("/api/inventario/file/<int:empresa_id>/<file_type>/<int:file_index>", methods=["GET"])
 @login_required
 def api_inventario_get_file(empresa_id, file_type, file_index):
-    """Serve arquivo do inventário armazenado no banco de dados."""
+    """Serve arquivo do inventÃƒÂ¡rio armazenado no banco de dados."""
     import base64
     from flask import send_file
     import io
@@ -2649,7 +2953,7 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario:
-            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'InventÃƒÂ¡rio nÃƒÂ£o encontrado'}), 404
 
         # Selecionar array de arquivos correto
         if file_type == 'cfop':
@@ -2659,26 +2963,26 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         elif file_type == 'cliente':
             files_array = inventario.cliente_files or []
         else:
-            return jsonify({'success': False, 'error': 'Tipo de arquivo inválido'}), 400
+            return jsonify({'success': False, 'error': 'Tipo de arquivo invÃƒÂ¡lido'}), 400
 
-        # Verificar se o índice é válido
+        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
         if file_index < 0 or file_index >= len(files_array):
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         file_info = files_array[file_index]
 
         # Verificar se tem dados do arquivo
         if 'file_data' not in file_info:
-            return jsonify({'success': False, 'error': 'Dados do arquivo não encontrados'}), 404
+            return jsonify({'success': False, 'error': 'Dados do arquivo nÃƒÂ£o encontrados'}), 404
 
         # Decodificar base64
         file_data = base64.b64decode(file_info['file_data'])
 
-        # Criar buffer de memória
+        # Criar buffer de memÃƒÂ³ria
         file_buffer = io.BytesIO(file_data)
         file_buffer.seek(0)
 
-        # Obter informações do arquivo
+        # Obter informaÃƒÂ§ÃƒÂµes do arquivo
         filename = file_info.get('filename', 'arquivo')
         mime_type = file_info.get('mime_type', 'application/octet-stream')
 
@@ -2691,30 +2995,78 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         )
 
     except Exception as e:
-        current_app.logger.exception("Erro ao servir arquivo do inventário: %s", e)
+        current_app.logger.exception("Erro ao servir arquivo do inventÃƒÂ¡rio: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def _serialize_inventario_file_metadata(files_array: list[dict]) -> list[dict]:
+    """Retorna apenas metadados dos anexos, sem o campo pesado file_data."""
+    items: list[dict] = []
+    for index, file_info in enumerate(files_array or []):
+        if not isinstance(file_info, dict):
+            continue
+        items.append(
+            {
+                "index": index,
+                "filename": file_info.get("filename") or "arquivo",
+                "uploaded_at": file_info.get("uploaded_at"),
+                "mime_type": file_info.get("mime_type", "application/octet-stream"),
+            }
+        )
+    return items
+
+
+@empresas_bp.route("/api/inventario/files/<int:empresa_id>", methods=["GET"])
+@login_required
+def api_inventario_list_files_metadata(empresa_id):
+    """Retorna metadados de anexos por empresa para carregamento sob demanda."""
+    try:
+        inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
+        if not inventario:
+            return jsonify(
+                {
+                    "success": True,
+                    "cfop": [],
+                    "cfop_consolidado": [],
+                    "cliente": [],
+                }
+            )
+
+        return jsonify(
+            {
+                "success": True,
+                "cfop": _serialize_inventario_file_metadata(inventario.cfop_files or []),
+                "cfop_consolidado": _serialize_inventario_file_metadata(
+                    inventario.cfop_consolidado_files or []
+                ),
+                "cliente": _serialize_inventario_file_metadata(inventario.cliente_files or []),
+            }
+        )
+    except Exception as exc:
+        current_app.logger.exception("Erro ao listar metadados dos arquivos do inventario: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 @empresas_bp.route("/api/inventario/delete-cliente-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cliente_file(empresa_id):
-    """Remove o arquivo do cliente do inventário."""
+    """Remove o arquivo do cliente do inventÃƒÂ¡rio."""
     import os
 
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cliente_pdf_path:
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
-        # Remover arquivo local se não for URL
+        # Remover arquivo local se nÃƒÂ£o for URL
         if not inventario.cliente_pdf_path.startswith('http'):
             file_path = os.path.join(current_app.root_path, 'static', inventario.cliente_pdf_path)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
+                    current_app.logger.warning("Erro ao remover arquivo fÃƒÂ­sico: %s", e)
 
         # Limpar campos
         inventario.cliente_pdf_path = None
@@ -2734,23 +3086,23 @@ def api_inventario_delete_cliente_file(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cfop-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cfop_file(empresa_id):
-    """Remove um arquivo específico do CFOP (armazenado no banco de dados)."""
+    """Remove um arquivo especÃƒÂ­fico do CFOP (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cfop_files:
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
-        # Verificar se o índice é válido
+        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
         cfop_files = inventario.cfop_files or []
         if file_index < 0 or file_index >= len(cfop_files):
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         # Remover arquivo do array
         cfop_files.pop(file_index)
@@ -2773,22 +3125,22 @@ def api_inventario_delete_cfop_file(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cfop-consolidado-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cfop_consolidado_file(empresa_id):
-    """Remove um arquivo específico do CFOP consolidado (armazenado no banco de dados)."""
+    """Remove um arquivo especÃƒÂ­fico do CFOP consolidado (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cfop_consolidado_files:
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         cfop_consolidado_files = inventario.cfop_consolidado_files or []
         if file_index < 0 or file_index >= len(cfop_consolidado_files):
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         cfop_consolidado_files.pop(file_index)
         inventario.cfop_consolidado_files = cfop_consolidado_files
@@ -2813,7 +3165,7 @@ def api_inventario_move_cfop_to_consolidado(empresa_id):
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
-            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'InventÃƒÂ¡rio nÃƒÂ£o encontrado'}), 404
 
         cfop_files = _coerce_file_entries(inventario.cfop_files)
         if not cfop_files:
@@ -2847,23 +3199,23 @@ def api_inventario_move_cfop_to_consolidado(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cliente-file-v2/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cliente_file_v2(empresa_id):
-    """Remove um arquivo específico do cliente (armazenado no banco de dados)."""
+    """Remove um arquivo especÃƒÂ­fico do cliente (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'Índice do arquivo não fornecido'}), 400
+            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cliente_files:
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
-        # Verificar se o índice é válido
+        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
         cliente_files = inventario.cliente_files or []
         if file_index < 0 or file_index >= len(cliente_files):
-            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
 
         # Remover arquivo do array
         cliente_files.pop(file_index)
@@ -2881,3 +3233,4 @@ def api_inventario_delete_cliente_file_v2(empresa_id):
         db.session.rollback()
         current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
+
