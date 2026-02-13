@@ -1480,12 +1480,13 @@ def inventario():
     # Eager load do inventário usando o join já feito.
     # Otimização Crítica: deferir o carregamento de colunas JSON pesadas que contém base64
     # para evitar transferência massiva de dados e consumo de memória no ListAll.
+    # Nota: O defer deve ser encadeado no contains_eager para especificar o caminho correto da entidade.
     from sqlalchemy.orm import defer
     final_query = final_query.options(
-        contains_eager(Empresa.inventario),
-        defer(Inventario.cfop_files),
-        defer(Inventario.cfop_consolidado_files),
-        defer(Inventario.cliente_files)
+        contains_eager(Empresa.inventario)
+        .defer(Inventario.cfop_files)
+        .defer(Inventario.cfop_consolidado_files)
+        .defer(Inventario.cliente_files)
     )
 
     if show_all:
