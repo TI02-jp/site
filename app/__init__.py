@@ -859,7 +859,9 @@ with app.app_context():
         )
 
     # Setup performance middleware (needs to be inside app context to access db.engine)
-    register_performance_middleware(app, db)
+    # Only enable if explicitly requested or in debug mode, as it adds significant overhead
+    if os.getenv("ENABLE_PERFORMANCE_MONITORING") == "1" or app.debug:
+        register_performance_middleware(app, db)
 
     # Inicializar scheduler de tarefas agendadas
     if os.getenv("DISABLE_SCHEDULER") != "1":

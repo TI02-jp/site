@@ -996,10 +996,10 @@ def tasks_overview():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).joinedload(Task.assignee),
+            selectinload(Task.children).joinedload(Task.finisher),
+            selectinload(Task.children).joinedload(Task.tag),
+            selectinload(Task.children).joinedload(Task.creator),
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1182,10 +1182,10 @@ def tasks_overview_mine():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).joinedload(Task.assignee),
+            selectinload(Task.children).joinedload(Task.finisher),
+            selectinload(Task.children).joinedload(Task.tag),
+            selectinload(Task.children).joinedload(Task.creator),
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1258,10 +1258,10 @@ def tasks_overview_personal():
             joinedload(Task.assignee),
             joinedload(Task.finisher),
             joinedload(Task.creator),
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),
+            selectinload(Task.children).joinedload(Task.assignee),
+            selectinload(Task.children).joinedload(Task.finisher),
+            selectinload(Task.children).joinedload(Task.tag),
+            selectinload(Task.children).joinedload(Task.creator),
         )
         .order_by(Task.due_date)
         .limit(200)
@@ -1343,10 +1343,10 @@ def tasks_sector(tag_id):
             joinedload(Task.finisher),
             joinedload(Task.creator),  # NOVO: Eager load creator to prevent N+1
             # Removed status_history and attachments eager loading to reduce Cartesian product
-            joinedload(Task.children).joinedload(Task.assignee),
-            joinedload(Task.children).joinedload(Task.finisher),
-            joinedload(Task.children).joinedload(Task.tag),
-            joinedload(Task.children).joinedload(Task.creator),  # NOVO: Eager load creator for children
+            selectinload(Task.children).joinedload(Task.assignee),
+            selectinload(Task.children).joinedload(Task.finisher),
+            selectinload(Task.children).joinedload(Task.tag),
+            selectinload(Task.children).joinedload(Task.creator),  # NOVO: Eager load creator for children
             # Removed children's status_history and attachments for same reason
         )
         .order_by(Task.due_date)

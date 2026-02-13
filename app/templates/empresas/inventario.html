@@ -242,6 +242,20 @@
         </div>
     </div>
 
+    {%- set status_options_html -%}
+        <option value="">Selecione...</option>
+        {% for status_opt in status_choices %}
+        <option value="{{ status_opt }}">{{ status_opt }}</option>
+        {% endfor %}
+    {%- endset -%}
+
+    {%- set user_options_html -%}
+        <option value="">Selecione...</option>
+        {% for usuario in usuarios %}
+        <option value="{{ usuario.id }}">{{ usuario.name }}</option>
+        {% endfor %}
+    {%- endset -%}
+
     <!-- Tabela de Inventário -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
@@ -671,14 +685,9 @@
                             <!-- Status -->
                             <td class="col-status">
                                 <select class="form-select form-select-sm editable-field" data-field="status"
-                                    data-prev-status="{{ item.inventario.status if item.inventario else '' }}">
-                                    <option value="">Selecione...</option>
-                                    {% for status_opt in status_choices %}
-                                    <option value="{{ status_opt }}" {% if item.inventario and
-                                        item.inventario.status==status_opt %}selected{% endif %}>
-                                        {{ status_opt }}
-                                    </option>
-                                    {% endfor %}
+                                    data-prev-status="{{ item.inventario.status if item.inventario else '' }}"
+                                    data-initial-value="{{ item.inventario.status if item.inventario else '' }}">
+                                    {{ status_options_html|safe }}
                                 </select>
                             </td>
 
@@ -750,15 +759,9 @@
                             <!-- Usuário Encerramento -->
                             <td>
                                 <select class="form-select form-select-sm editable-field"
-                                    data-field="encerramento_balanco_usuario_id">
-                                    <option value="">Selecione...</option>
-                                    {% for usuario in usuarios %}
-                                    <option value="{{ usuario.id }}" {% if item.inventario and
-                                        item.inventario.encerramento_balanco_usuario_id==usuario.id %}selected{% endif
-                                        %}>
-                                        {{ usuario.name }}
-                                    </option>
-                                    {% endfor %}
+                                    data-field="encerramento_balanco_usuario_id"
+                                    data-initial-value="{{ item.inventario.encerramento_balanco_usuario_id if item.inventario else '' }}">
+                                    {{ user_options_html|safe }}
                                 </select>
                             </td>
                         </tr>
@@ -1688,6 +1691,14 @@
             const row = this.closest('tr');
             checkCFOPConsolidadoStatus(row);
         });
+    });
+
+    // Definir valores iniciais para os selects otimizados
+    document.querySelectorAll('select.editable-field[data-initial-value]').forEach(select => {
+        const val = select.dataset.initialValue;
+        if (val) {
+            select.value = val;
+        }
     });
 
     // Atualizar campo editável
