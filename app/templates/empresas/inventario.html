@@ -2023,6 +2023,19 @@
                 let newLength = this.value.length;
                 let diff = newLength - oldLength;
                 this.selectionStart = this.selectionEnd = cursorPosition + diff;
+
+                const row = this.closest('tr');
+                if (!row) return;
+                const empresaId = row.dataset.empresaId;
+                const fieldName = this.dataset.field;
+                const value = this.value;
+                const timerKey = `money:${fieldName}:${empresaId}`;
+                if (debounceTimers[timerKey]) {
+                    clearTimeout(debounceTimers[timerKey]);
+                }
+                debounceTimers[timerKey] = setTimeout(() => {
+                    updateInventario(empresaId, fieldName, value, this);
+                }, 800);
             });
             if (field.value && !field.value.startsWith('R$')) {
                 field.value = formatMoney(field.value);
@@ -2055,19 +2068,6 @@
         });
     }
 
-    // Evita duplicar listeners já registrados nos elementos iniciais.
-    document.querySelectorAll('.editable-field').forEach(el => {
-        el.dataset.boundChange = '1';
-        if (el.tagName === 'INPUT' && el.type === 'text' && !el.classList.contains('money-field')) {
-            el.dataset.boundInput = '1';
-        }
-    });
-    document.querySelectorAll('.money-field').forEach(el => el.dataset.boundInput = '1');
-    document.querySelectorAll('.pdf-upload, .cfop-consolidado-upload').forEach(el => {
-        el.dataset.boundChange = '1';
-    });
-    document.querySelectorAll('select[data-field="encerramento_fiscal"]').forEach(el => el.dataset.boundChange = '1');
-    document.querySelectorAll('.lazy-options-select').forEach(el => el.dataset.boundLazy = '1');
 
     bindRowHandlers(document);
 

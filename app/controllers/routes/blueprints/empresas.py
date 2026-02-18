@@ -39,7 +39,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import defer, joinedload, load_only
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.exceptions import NotFound
 
@@ -368,14 +368,14 @@ def api_cnpj(cnpj):
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
         msg = str(e)
-        status = 400 if "invÃƒÂ¡lido" in msg.lower() or "invalido" in msg.lower() else 404
+        status = 400 if "inválido" in msg.lower() or "invalido" in msg.lower() else 404
         if status == 404:
-            msg = "CNPJ nÃƒÂ£o estÃƒÂ¡ cadastrado"
+            msg = "CNPJ não está cadastrado"
         return jsonify({"error": msg}), status
     except Exception:
         return jsonify({"error": "Erro ao consultar CNPJ"}), 500
     if not dados:
-        return jsonify({"error": "CNPJ nÃƒÂ£o estÃƒÂ¡ cadastrado"}), 404
+        return jsonify({"error": "CNPJ não está cadastrado"}), 404
     return jsonify(dados)
 
 
@@ -423,7 +423,7 @@ def api_reunioes():
 def api_general_calendar_events():
     """Return collaborator calendar events as JSON."""
 
-    can_manage = is_user_admin(current_user) or user_has_tag("GestÃƒÂ£o") or user_has_tag("Coord.")
+    can_manage = is_user_admin(current_user) or user_has_tag("Gestáo") or user_has_tag("Coord.")
     events = serialize_events_for_calendar(current_user.id, can_manage, is_user_admin(current_user))
     return jsonify(events)
 
@@ -471,7 +471,7 @@ def cadastrar_empresa():
             db.session.rollback()
             flash(f"Erro ao cadastrar empresa: {e}", "danger")
     else:
-        current_app.logger.debug("FormulÃƒÂ¡rio nÃƒÂ£o validado: %s", form.errors)
+        current_app.logger.debug("Formulário não validado: %s", form.errors)
 
     return render_template("empresas/cadastrar.html", form=form)
 
@@ -663,12 +663,12 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     try:
         resolved_empresa_id = decode_id(str(raw_empresa), namespace="empresa")
     except NotFound:
-        flash("Empresa nÃƒÂ£o encontrada.", "warning")
+        flash("Empresa não encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
 
     empresa = Empresa.query.get(resolved_empresa_id)
     if empresa is None:
-        flash("Empresa nÃƒÂ£o encontrada.", "warning")
+        flash("Empresa não encontrada.", "warning")
         return redirect(url_for("empresas.listar_empresas"))
 
     empresa_token = encode_id(resolved_empresa_id, namespace="empresa")
@@ -682,7 +682,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     dept_tipos = [
         "Departamento Fiscal",
-        "Departamento ContÃƒÂ¡bil",
+        "Departamento Contábil",
         "Departamento Pessoal",
         "Departamento Administrativo",
         "Departamento Notas Fiscais",
@@ -696,7 +696,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento ContÃƒÂ¡bil")
+    contabil = dept_map.get("Departamento Contábil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -773,7 +773,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     # Otimizado: usa cache e eager loading de tags
     usuarios_responsaveis = get_active_users_with_tags()
     responsaveis_map = {
-        str(usuario.id): (usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}") for usuario in usuarios_responsaveis
+        str(usuario.id): (usuario.name or usuario.username or f"Usuário {usuario.id}") for usuario in usuarios_responsaveis
     }
 
     return render_template(
@@ -860,7 +860,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     dept_tipos = [
         "Departamento Fiscal",
-        "Departamento ContÃƒÂ¡bil",
+        "Departamento Contábil",
         "Departamento Pessoal",
         "Departamento Administrativo",
         "Departamento Notas Fiscais",
@@ -874,7 +874,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento ContÃƒÂ¡bil")
+    contabil = dept_map.get("Departamento Contábil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -887,7 +887,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
     financeiro_form = DepartamentoFinanceiroForm(request.form, obj=financeiro) if can_access_financeiro else None
     # Otimizado: usa cache e eager loading de tags
     usuarios_responsaveis = [
-        {"id": str(usuario.id), "label": usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}"}
+        {"id": str(usuario.id), "label": usuario.name or usuario.username or f"Usuário {usuario.id}"}
         for usuario in get_active_users_with_tags()
     ]
     usuarios_responsaveis_ids = [usuario["id"] for usuario in usuarios_responsaveis]
@@ -970,7 +970,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
         elif form_type == "contabil" and contabil_form.validate():
             if not contabil:
-                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento ContÃƒÂ¡bil")
+                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento Contábil")
                 db.session.add(contabil)
 
             contabil_form.populate_obj(contabil)
@@ -985,7 +985,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
 
-            flash("Departamento ContÃƒÂ¡bil salvo com sucesso!", "success")
+            flash("Departamento Contábil salvo com sucesso!", "success")
             form_processed_successfully = True
 
         elif form_type == "pessoal" and pessoal_form.validate():
@@ -1062,7 +1062,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             if active_form and active_form.errors:
                 for field, errors in active_form.errors.items():
                     for error in errors:
-                        flash(f"Erro no formulÃƒÂ¡rio {form_type.capitalize()}: {error}", "danger")
+                        flash(f"Erro no formulário {form_type.capitalize()}: {error}", "danger")
 
     reunioes_cliente = (
         ClienteReuniao.query.options(joinedload(ClienteReuniao.setor))
@@ -1112,7 +1112,7 @@ def _populate_cliente_reuniao_form(form: ClienteReuniaoForm) -> None:
     # Otimizado: usa cache e eager loading de tags
     usuarios = get_active_users_with_tags()
     form.participantes.choices = [
-        (usuario.id, (usuario.name or usuario.username or f"UsuÃƒÂ¡rio {usuario.id}")) for usuario in usuarios
+        (usuario.id, (usuario.name or usuario.username or f"Usuário {usuario.id}")) for usuario in usuarios
     ]
 
     setores = Setor.query.order_by(Setor.nome.asc()).all()
@@ -1231,7 +1231,7 @@ def _resolve_reuniao_participantes(participantes_raw: list | None, user_lookup: 
                 nome = None
                 if usuario is not None:
                     nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
-                resolved.append({"label": nome or f"UsuÃƒâ€¡Ã‚Â­rio #{pid}", "is_user": True, "id": pid})
+                resolved.append({"label": nome or f"Usuário #{pid}", "is_user": True, "id": pid})
                 continue
             alt_nome = (participante.get("name") or participante.get("label") or "").strip()
             if alt_nome:
@@ -1241,7 +1241,7 @@ def _resolve_reuniao_participantes(participantes_raw: list | None, user_lookup: 
             nome = None
             if usuario is not None:
                 nome = getattr(usuario, "name", None) or getattr(usuario, "username", None)
-            resolved.append({"label": nome or f"UsuÃƒâ€¡Ã‚Â­rio #{participante}", "is_user": True, "id": participante})
+            resolved.append({"label": nome or f"Usuário #{participante}", "is_user": True, "id": participante})
         elif isinstance(participante, str):
             nome = participante.strip()
             if nome:
@@ -1282,12 +1282,12 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
         db.session.add(reuniao)
         try:
             db.session.commit()
-            flash("ReuniÃƒÂ£o registrada com sucesso!", "success")
+            flash("Reunião registrada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
-            current_app.logger.exception("Erro ao salvar reuniÃƒÂ£o com cliente: %s", exc)
+            current_app.logger.exception("Erro ao salvar reunião com cliente: %s", exc)
             db.session.rollback()
-            flash("NÃƒÂ£o foi possÃƒÂ­vel salvar a reuniÃƒÂ£o. Tente novamente.", "danger")
+            flash("Não foi possível salvar a reunião. Tente novamente.", "danger")
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
@@ -1299,7 +1299,7 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
         empresa=empresa,
         form=form,
         is_edit=False,
-        page_title="Adicionar reuniÃƒÂ£o com cliente",
+        page_title="Adicionar reunião com cliente",
     )
 
 
@@ -1348,12 +1348,12 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         reuniao.updated_by = current_user.id
         try:
             db.session.commit()
-            flash("ReuniÃƒÂ£o atualizada com sucesso!", "success")
+            flash("Reunião atualizada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
-            current_app.logger.exception("Erro ao atualizar reuniÃƒÂ£o com cliente: %s", exc)
+            current_app.logger.exception("Erro ao atualizar reunião com cliente: %s", exc)
             db.session.rollback()
-            flash("NÃƒÂ£o foi possÃƒÂ­vel atualizar a reuniÃƒÂ£o. Tente novamente.", "danger")
+            flash("Não foi possível atualizar a reunião. Tente novamente.", "danger")
 
     if not form.topicos_json.data:
         form.topicos_json.data = "[]"
@@ -1366,7 +1366,7 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         form=form,
         is_edit=True,
         reuniao=reuniao,
-        page_title="Editar reuniÃƒÂ£o com cliente",
+        page_title="Editar reunião com cliente",
     )
 
 
@@ -1424,7 +1424,7 @@ def reuniao_cliente_detalhes_modal(empresa_id: str | None = None, reuniao_id: st
     )
     return jsonify(
         {
-            "title": f"ReuniÃƒÂ£o com {reuniao.empresa.nome_empresa}",
+            "title": f"Reunião com {reuniao.empresa.nome_empresa}",
             "html": html,
         }
     )
@@ -1451,11 +1451,11 @@ def reuniao_cliente_pdf(empresa_id: str | None = None, reuniao_id: str | None = 
     try:
         pdf_bytes, filename = export_reuniao_decisoes_pdf(reuniao)
     except FileNotFoundError as exc:
-        current_app.logger.error("Modelo de timbrado nÃƒÂ£o encontrado: %s", exc)
-        abort(404, description="Modelo de timbrado nÃƒÂ£o encontrado.")
+        current_app.logger.error("Modelo de timbrado não encontrado: %s", exc)
+        abort(404, description="Modelo de timbrado não encontrado.")
     except Exception as exc:  # pragma: no cover - caminho de erro
-        current_app.logger.exception("Falha ao gerar PDF da reuniÃƒÂ£o", exc_info=exc)
-        abort(500, description="Falha ao gerar PDF da reuniÃƒÂ£o.")
+        current_app.logger.exception("Falha ao gerar PDF da reunião", exc_info=exc)
+        abort(500, description="Falha ao gerar PDF da reunião.")
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",
@@ -1481,11 +1481,11 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     db.session.delete(reuniao)
     try:
         db.session.commit()
-        flash("ReuniÃƒÂ£o excluÃƒÂ­da com sucesso.", "success")
+        flash("Reunião excluída com sucesso.", "success")
     except SQLAlchemyError as exc:
-        current_app.logger.exception("Erro ao excluir reuniÃƒÂ£o com cliente: %s", exc)
+        current_app.logger.exception("Erro ao excluir reunião com cliente: %s", exc)
         db.session.rollback()
-        flash("NÃƒÂ£o foi possÃƒÂ­vel excluir a reuniÃƒÂ£o. Tente novamente.", "danger")
+        flash("Não foi possível excluir a reunião. Tente novamente.", "danger")
     return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 
@@ -1509,13 +1509,14 @@ def normalize_contatos(contatos: Iterable[dict] | None) -> list[dict]:
 
 
 # =============================================================================
-# Rotas de InventÃƒÂ¡rio
+# Rotas de Inventário
 # =============================================================================
 
 @empresas_bp.route("/inventario")
 @login_required
 def inventario():
-    """Lista todas as empresas com seus dados de inventÃƒÂ¡rio."""    saved_filters = session.get("inventario_filters", {})
+    """Lista todas as empresas com seus dados de inventário."""
+    saved_filters = session.get("inventario_filters", {})
 
     search_arg = request.args.get("q")
     if search_arg is None:
@@ -1529,7 +1530,7 @@ def inventario():
     else:
         saved_page = page_arg
 
-    # ParÃƒÂ¢metros de ordenaÃƒÂ§ÃƒÂ£o
+    # Parâmetros de ordenação
     sort_arg = request.args.get('sort')
     order_arg = request.args.get('order')
 
@@ -1584,7 +1585,7 @@ def inventario():
     if order not in ('asc', 'desc'):
         order = 'asc'
 
-    # PaginaÃƒÂ§ÃƒÂ£o vs listagem completa
+    # Paginação vs listagem completa
     username_normalized = (current_user.username or "").strip().lower()
     default_show_all = username_normalized == "tadeu"
     all_arg = request.args.get("all")
@@ -1638,7 +1639,7 @@ def inventario():
             cache_timeout=cache_timeout,
         )
 
-    # Aplicar ordenaÃƒÂ§ÃƒÂ£o
+    # Aplicar ordenação
     if sort == 'codigo':
         order_column = Empresa.codigo_empresa
     elif sort == 'nome':
@@ -1666,7 +1667,7 @@ def inventario():
                 )
             )
         else:
-            # Usa EXISTS para evitar join+sort pesado em ordenaÃƒÂ§ÃƒÂ£o por campos de Empresa.
+            # Usa EXISTS para evitar join+sort pesado em ordenação por campos de Empresa.
             status_exists = sa.exists(
                 sa.select(1)
                 .select_from(Inventario)
@@ -1796,7 +1797,7 @@ def inventario():
     )
     is_tadeu = (current_user.username or "").strip().lower().startswith("tadeu")
 
-    # Buscar todos os usuÃƒÂ¡rios para o select de encerramento (otimizado com cache)
+    # Buscar todos os usuários para o select de encerramento (otimizado com cache)
     dashboard_query_params = urlencode(
         [
             *[("tributacao", value) for value in tributacao_filters],
@@ -1919,9 +1920,9 @@ def api_inventario_chunk():
 
     payload = cache.get(f"inventario:listall:token:{token}")
     if not payload:
-        return jsonify({"success": False, "error": "SessÃƒÂ£o expirada. Recarregue a pÃƒÂ¡gina."}), 410
+        return jsonify({"success": False, "error": "Sessão expirada. Recarregue a página."}), 410
     if int(payload.get("user_id") or 0) != int(current_user.id):
-        return jsonify({"success": False, "error": "Token invÃƒÂ¡lido para este usuÃƒÂ¡rio."}), 403
+        return jsonify({"success": False, "error": "Token inválido para este usuário."}), 403
 
     empresa_ids: list[int] = payload.get("empresa_ids") or []
     status_filters: list[str] = payload.get("status_filters") or []
@@ -1989,7 +1990,7 @@ def api_inventario_chunk():
 @login_required
 @csrf.exempt
 def api_inventario_update():
-    """API para atualizar campos do inventÃƒÂ¡rio inline."""
+    """API para atualizar campos do inventário inline."""
     from decimal import Decimal, InvalidOperation
 
     try:
@@ -2000,13 +2001,13 @@ def api_inventario_update():
             value = data.get('value', '').strip()
 
         if not empresa_id or not field:
-            return jsonify({'success': False, 'error': 'Dados invÃƒÂ¡lidos'}), 400
+            return jsonify({'success': False, 'error': 'Dados inválidos'}), 400
 
         # Verificar se a empresa existe
         with track_custom_span("inventario_update", "load_empresa"):
             empresa = Empresa.query.get(empresa_id)
         if not empresa:
-            return jsonify({'success': False, 'error': 'Empresa nÃƒÂ£o encontrada'}), 404
+            return jsonify({'success': False, 'error': 'Empresa não encontrada'}), 404
 
         # Buscar ou criar inventário
         with track_custom_span("inventario_update", "load_inventario"):
@@ -2025,7 +2026,7 @@ def api_inventario_update():
                 db.session.add(inventario)
         previous_status = inventario.status if field == "status" else None
 
-        # Campos monetÃƒÂ¡rios que precisam de conversÃƒÂ£o
+        # Campos monetários que precisam de conversão
         campos_monetarios = ['dief_2024', 'balanco_2025_cliente', 'fechamento_tadeu_2025', 'valor_enviado_sped']
 
         # Campos booleanos
@@ -2053,7 +2054,7 @@ def api_inventario_update():
         }
 
         if field not in field_map:
-            return jsonify({'success': False, 'error': 'Campo invÃƒÂ¡lido'}), 400
+            return jsonify({'success': False, 'error': 'Campo inválido'}), 400
 
         # Processar valor
         old_pdf_path = inventario.pdf_path
@@ -2061,21 +2062,21 @@ def api_inventario_update():
         with track_custom_span("inventario_update", "process_value"):
             if value:
                 if field in campos_monetarios:
-                    # Converter valor monetÃƒÂ¡rio (remover R$, pontos e trocar vÃƒÂ­rgula por ponto)
+                    # Converter valor monetário (remover R$, pontos e trocar vírgula por ponto)
                     try:
                         value_clean = value.replace('R$', '').replace('.', '').replace(',', '.').strip()
                         processed_value = Decimal(value_clean) if value_clean else None
 
-                        # Validar limite de R$ 1.000.000.000,00 (1 bilhÃƒÂ£o)
+                        # Validar limite de R$ 1.000.000.000,00 (1 bilhão)
                         if processed_value is not None and processed_value > Decimal('1000000000.00'):
-                            return jsonify({'success': False, 'error': 'Valor nÃƒÂ£o pode exceder R$ 1.000.000.000,00'}), 400
+                            return jsonify({'success': False, 'error': 'Valor não pode exceder R$ 1.000.000.000,00'}), 400
                     except (InvalidOperation, ValueError):
-                        return jsonify({'success': False, 'error': 'Valor monetÃƒÂ¡rio invÃƒÂ¡lido'}), 400
+                        return jsonify({'success': False, 'error': 'Valor monetário inválido'}), 400
                 elif field in campos_booleanos:
                     # Converter para booleano
                     if value.lower() in ['true', '1', 'sim', 'yes']:
                         processed_value = True
-                    elif value.lower() in ['false', '0', 'nÃƒÂ£o', 'nao', 'no']:
+                    elif value.lower() in ['false', '0', 'não', 'nao', 'no']:
                         processed_value = False
                     else:
                         processed_value = None
@@ -2084,13 +2085,13 @@ def api_inventario_update():
                     try:
                         processed_value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
                     except ValueError:
-                        return jsonify({'success': False, 'error': 'Data invÃƒÂ¡lida. Use o formato AAAA-MM-DD'}), 400
+                        return jsonify({'success': False, 'error': 'Data inválida. Use o formato AAAA-MM-DD'}), 400
                 elif field in campos_inteiros:
                     # Converter para inteiro
                     try:
                         processed_value = int(value) if value else None
                     except ValueError:
-                        return jsonify({'success': False, 'error': 'Valor inteiro invÃƒÂ¡lido'}), 400
+                        return jsonify({'success': False, 'error': 'Valor inteiro inválido'}), 400
                 else:
                     processed_value = value
             elif field in campos_booleanos:
@@ -2155,7 +2156,7 @@ def api_inventario_update():
         if notify_cristiano:
             _notify_cristiano_liberado_importacao(empresa)
 
-        # Retornar valor formatado se for campo monetÃƒÂ¡rio
+        # Retornar valor formatado se for campo monetário
         response_value = value
         if field in campos_monetarios and processed_value is not None:
             response_value = f"R$ {processed_value:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
@@ -2164,7 +2165,7 @@ def api_inventario_update():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception("Erro ao atualizar inventÃƒÂ¡rio: %s", e)
+        current_app.logger.exception("Erro ao atualizar inventário: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2218,8 +2219,8 @@ def _maybe_set_status_aguardando_tadeu(inventario):
     has_cliente = _has_file_entries(inventario.cliente_files) or bool(inventario.cliente_pdf_path)
 
     if not (has_cfop_consolidado and has_cliente):
-        # SÃƒÂ³ reverter para FALTA ARQUIVO se o status nunca foi definido
-        # Se jÃƒÂ¡ estÃƒÂ¡ em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
+        # Só reverter para FALTA ARQUIVO se o status nunca foi definido
+        # Se já está em AGUARDANDO TADEU, preservar (foi definido manualmente ou pelos uploads)
         if inventario.status in (None, "", "Selecione..."):
             inventario.status = "FALTA ARQUIVO"
             return True
@@ -2375,21 +2376,21 @@ def _notify_tadeu_aguardando_inventario() -> None:
 
 
 def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
-    """Cria notificaÃƒÂ§ÃƒÂ£o no portal para Cassio quando CFOP ÃƒÂ© adicionado sem arquivo do cliente."""
+    """Cria notificação no portal para Cassio quando CFOP é adicionado sem arquivo do cliente."""
     from app.models.tables import TaskNotification, NotificationType
 
-    # Buscar usuÃƒÂ¡rio Cassio
+    # Buscar usuário Cassio
     cassio = _find_active_user_by_name("Cassio")
     if not cassio:
-        current_app.logger.warning("Inventario: usuÃƒÂ¡rio Cassio nÃƒÂ£o encontrado para notificaÃƒÂ§ÃƒÂ£o")
+        current_app.logger.warning("Inventario: usuário Cassio não encontrado para notificação")
         return
 
-    # Criar mensagem da notificaÃƒÂ§ÃƒÂ£o
-    message = f"Fechamento Fiscal finalizado sem arquivo do inventÃƒÂ¡rio: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    # Criar mensagem da notificação
+    message = f"Fechamento Fiscal finalizado sem arquivo do inventário: {empresa.codigo_empresa} - {empresa.nome_empresa}"
     if len(message) > 255:
         message = message[:252] + "..."
 
-    # Criar notificaÃƒÂ§ÃƒÂ£o no portal
+    # Criar notificação no portal
     notification = TaskNotification(
         user_id=cassio.id,
         task_id=None,
@@ -2402,27 +2403,27 @@ def _notify_cassio_sem_cliente(empresa: Empresa) -> None:
         db.session.add(notification)
         db.session.commit()
         current_app.logger.info(
-            "NotificaÃƒÂ§ÃƒÂ£o de inventÃƒÂ¡rio criada para Cassio: empresa %s",
+            "Notificação de inventário criada para Cassio: empresa %s",
             empresa.codigo_empresa,
         )
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error(
-            "Erro ao criar notificaÃƒÂ§ÃƒÂ£o para Cassio: %s",
+            "Erro ao criar notificação para Cassio: %s",
             exc,
         )
 
 
 def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
-    """Cria notificaÃƒÂ§ÃƒÂ£o no portal para Cristiano quando o inventÃƒÂ¡rio ÃƒÂ© liberado para importaÃƒÂ§ÃƒÂ£o."""
+    """Cria notificação no portal para Cristiano quando o inventário é liberado para importação."""
     from app.models.tables import TaskNotification, NotificationType
 
     cristiano = _find_active_user_by_name("Cristiano")
     if not cristiano:
-        current_app.logger.warning("Inventario: usuÃƒÂ¡rio Cristiano nÃƒÂ£o encontrado para notificaÃƒÂ§ÃƒÂ£o")
+        current_app.logger.warning("Inventario: usuário Cristiano não encontrado para notificação")
         return
 
-    message = f"InventÃƒÂ¡rio liberado para importaÃƒÂ§ÃƒÂ£o: {empresa.codigo_empresa} - {empresa.nome_empresa}"
+    message = f"Inventário liberado para importação: {empresa.codigo_empresa} - {empresa.nome_empresa}"
     if len(message) > 255:
         message = message[:252] + "..."
 
@@ -2438,13 +2439,13 @@ def _notify_cristiano_liberado_importacao(empresa: Empresa) -> None:
         db.session.add(notification)
         db.session.commit()
         current_app.logger.info(
-            "NotificaÃƒÂ§ÃƒÂ£o de inventÃƒÂ¡rio criada para Cristiano: empresa %s",
+            "Notificação de inventário criada para Cristiano: empresa %s",
             empresa.codigo_empresa,
         )
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error(
-            "Erro ao criar notificaÃƒÂ§ÃƒÂ£o para Cristiano: %s",
+            "Erro ao criar notificação para Cristiano: %s",
             exc,
         )
 
@@ -2455,16 +2456,16 @@ def send_daily_tadeu_notification(
     use_async: bool = True,
 ) -> None:
     """
-    Job agendado: envia notifica??o di?ria para Tadeu com todas as empresas aguardando.
-    Executado diariamente ?s 17h pelo scheduler.
+    Job agendado: envia notificação diária para Tadeu com todas as empresas aguardando.
+    Executado diariamente às 17h pelo scheduler.
     """
     current_app.logger.info("=" * 50)
-    current_app.logger.info("Ã°Å¸Å¡â‚¬ EXECUTANDO JOB DIÃƒÂRIO DE NOTIFICAÃƒâ€¡ÃƒÆ’O PARA TADEU")
+    current_app.logger.info("🚀 EXECUTANDO JOB DIÁRIO DE NOTIFICAÇÃO PARA TADEU")
     current_app.logger.info("=" * 50)
 
     hoje = datetime.now(get_calendar_timezone()).date()
     if not force and _was_tadeu_notified_today(hoje):
-        current_app.logger.info("Notifica??o de hoje j? foi enviada; ignorando novo envio.")
+        current_app.logger.info("Notificação de hoje já foi enviada; ignorando novo envio.")
         return
 
     # Buscar TODAS as empresas com status AGUARDANDO TADEU (sem filtro de data)
@@ -2477,11 +2478,11 @@ def send_daily_tadeu_notification(
     # Contar total de empresas
     total_empresas = sum(len(group["empresas"]) for group in groups)
 
-    # Enviar notifica??o
+    # Enviar notificação
     try:
         inventario_url = url_for("empresas.inventario", _external=True)
     except RuntimeError:
-        # Fallback quando executado fora de requisiÃƒÂ§ÃƒÂ£o (ex: script standalone)
+        # Fallback quando executado fora de requisição (ex: script standalone)
         inventario_url = "http://localhost:5000/inventario"
     if recipients:
         recipient_list = tuple(recipient.strip() for recipient in recipients if recipient and recipient.strip())
@@ -2502,7 +2503,7 @@ def send_daily_tadeu_notification(
 
     current_app.logger.info("=" * 50)
     current_app.logger.info(
-        "Ã¢Å“â€¦ NOTIFICAÃƒâ€¡ÃƒÆ’O ENVIADA: %d empresas em %d grupos",
+        "✅ NOTIFICAÇÃO ENVIADA: %d empresas em %d grupos",
         total_empresas,
         len(groups),
     )
@@ -2517,7 +2518,7 @@ def send_daily_tadeu_notification(
 @empresas_bp.route("/api/inventario/preferences", methods=["GET"])
 @login_required
 def api_inventario_get_preferences():
-    """Retorna as preferÃƒÂªncias de colunas do usuÃƒÂ¡rio."""
+    """Retorna as preferências de colunas do usuário."""
     from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
 
     user_prefs = current_user.preferences or {}
@@ -2550,13 +2551,13 @@ def api_inventario_get_preferences():
 @empresas_bp.route("/api/inventario/preferences", methods=["POST"])
 @login_required
 def api_inventario_save_preferences():
-    """Salva as preferÃƒÂªncias de colunas do usuÃƒÂ¡rio."""
+    """Salva as preferências de colunas do usuário."""
     try:
         data = request.get_json()
         preferences = data.get('preferences', {})
 
         if not isinstance(preferences, dict):
-            return jsonify({'success': False, 'error': 'Formato invÃƒÂ¡lido'}), 400
+            return jsonify({'success': False, 'error': 'Formato inválido'}), 400
 
         # Get or create user preferences
         user_prefs = current_user.preferences or {}
@@ -2567,14 +2568,14 @@ def api_inventario_save_preferences():
         user_prefs['inventario_table']['columns'] = preferences
         user_prefs['inventario_table']['version'] = 1
 
-        # Usar flag para forÃƒÂ§ar atualizaÃƒÂ§ÃƒÂ£o JSON
+        # Usar flag para forçar atualização JSON
         flag_modified(current_user, 'preferences')
         current_user.preferences = user_prefs
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': 'PreferÃƒÂªncias salvas com sucesso'
+            'message': 'Preferências salvas com sucesso'
         })
     except Exception as e:
         db.session.rollback()
@@ -2587,11 +2588,11 @@ def api_inventario_save_preferences():
 @empresas_bp.route("/api/inventario/preferences/reset", methods=["POST"])
 @login_required
 def api_inventario_reset_preferences():
-    """Reseta preferÃƒÂªncias para o padrÃƒÂ£o."""
+    """Reseta preferências para o padrão."""
     try:
         from app.models.tables import INVENTARIO_DEFAULT_COLUMNS
 
-        # Limpar preferÃƒÂªncias do inventario
+        # Limpar preferências do inventario
         user_prefs = current_user.preferences or {}
         if 'inventario_table' in user_prefs:
             del user_prefs['inventario_table']
@@ -2612,7 +2613,7 @@ def api_inventario_reset_preferences():
 
         return jsonify({
             'success': True,
-            'message': 'PreferÃƒÂªncias resetadas',
+            'message': 'Preferências resetadas',
             'defaults': defaults
         })
     except Exception as e:
@@ -2626,7 +2627,7 @@ def api_inventario_reset_preferences():
 @empresas_bp.route("/inventario/test-email")
 @login_required
 def inventario_test_email_page():
-    """PÃƒÂ¡gina para testar envio de emails do inventÃƒÂ¡rio."""
+    """Página para testar envio de emails do inventário."""
     return render_template("empresas/inventario_test_email.html")
 
 
@@ -2638,9 +2639,9 @@ def api_test_email_cristiano():
     from app.utils.mailer import send_email
 
     try:
-        current_app.logger.info("Ã°Å¸â€Â¥ Disparando email de teste para Tadeu e Cristiano")
+        current_app.logger.info("🔥 Disparando email de teste para Tadeu e Cristiano")
 
-        # Verificar se hÃƒÂ¡ empresas aguardando
+        # Verificar se há empresas aguardando
         groups = _build_aguardando_tadeu_groups()
         if not groups:
             current_app.logger.warning("Nenhuma empresa aguardando Tadeu")
@@ -2656,11 +2657,11 @@ def api_test_email_cristiano():
         for recipient_name in ("Tadeu", "Cristiano"):
             user = _find_active_user_by_name(recipient_name)
             if not user:
-                current_app.logger.warning("UsuÃƒÂ¡rio %s nÃƒÂ£o encontrado", recipient_name)
+                current_app.logger.warning("Usuário %s não encontrado", recipient_name)
                 continue
 
             if not user.email:
-                current_app.logger.warning("UsuÃƒÂ¡rio %s sem email cadastrado", recipient_name)
+                current_app.logger.warning("Usuário %s sem email cadastrado", recipient_name)
                 continue
 
             current_app.logger.info("Enviando email para %s (%s)", recipient_name, user.email)
@@ -2673,7 +2674,7 @@ def api_test_email_cristiano():
                 inventario_url=inventario_url
             )
 
-            # Enviar email SÃƒÂNCRONO (direto, sem fila) para ver erros
+            # Enviar email SÍNCRONO (direto, sem fila) para ver erros
             send_email(
                 subject="[Inventario] Teste - Empresas aguardando Tadeu",
                 html_body=html_body,
@@ -2684,7 +2685,7 @@ def api_test_email_cristiano():
             current_app.logger.info("Email enviado com sucesso para %s!", recipient_name)
 
         if not recipients_info:
-            return jsonify({'success': False, 'error': 'Nenhum destinatÃƒÂ¡rio encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Nenhum destinatário encontrado'}), 404
 
         return jsonify({
             'success': True,
@@ -2700,7 +2701,7 @@ def api_test_email_cristiano():
 @empresas_bp.route("/api/inventario/upload-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_pdf(empresa_id):
-    """Upload de arquivo PDF para o inventÃƒÂ¡rio - suporta mÃƒÂºltiplos arquivos (armazenado no banco)."""
+    """Upload de arquivo PDF para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
     import base64
     from werkzeug.utils import secure_filename
 
@@ -2715,11 +2716,11 @@ def api_inventario_upload_pdf(empresa_id):
         if file.filename == '':
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
-        # Verificar extensÃƒÂ£o
+        # Verificar extensão
         if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'success': False, 'error': 'Apenas arquivos PDF sÃƒÂ£o permitidos'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
 
-        # Buscar ou criar inventÃƒÂ¡rio
+        # Buscar ou criar inventário
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
@@ -2754,7 +2755,7 @@ def api_inventario_upload_pdf(empresa_id):
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
             'status': inventario.status,
-            'file_index': len(cfop_files) - 1  # ÃƒÂndice do arquivo no array
+            'file_index': len(cfop_files) - 1  # índice do arquivo no array
         })
 
     except Exception as e:
@@ -2782,7 +2783,7 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
         if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'success': False, 'error': 'Apenas arquivos PDF sÃƒÂ£o permitidos'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos PDF são permitidos'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
@@ -2831,23 +2832,23 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
 @empresas_bp.route("/api/inventario/delete-pdf/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_pdf(empresa_id):
-    """Remove o PDF do inventÃƒÂ¡rio."""
+    """Remove o PDF do inventário."""
     import os
 
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.pdf_path:
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
-        # Remover arquivo local se nÃƒÂ£o for URL
+        # Remover arquivo local se não for URL
         if not inventario.pdf_path.startswith('http'):
             file_path = os.path.join(current_app.root_path, 'static', inventario.pdf_path)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    current_app.logger.warning("Erro ao remover arquivo fÃƒÂ­sico: %s", e)
+                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
 
         # Limpar campos
         inventario.pdf_path = None
@@ -2867,7 +2868,7 @@ def api_inventario_delete_pdf(empresa_id):
 @empresas_bp.route("/api/inventario/upload-cliente-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_upload_cliente_file(empresa_id):
-    """Upload de arquivo do cliente para o inventÃƒÂ¡rio - suporta mÃƒÂºltiplos arquivos (armazenado no banco)."""
+    """Upload de arquivo do cliente para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
     import base64
     import mimetypes
     from werkzeug.utils import secure_filename
@@ -2883,7 +2884,7 @@ def api_inventario_upload_cliente_file(empresa_id):
         if file.filename == '':
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
 
-        # Buscar ou criar inventÃƒÂ¡rio
+        # Buscar ou criar inventário
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
             inventario = Inventario(empresa_id=empresa_id, encerramento_fiscal=False)
@@ -2913,7 +2914,7 @@ def api_inventario_upload_cliente_file(empresa_id):
             'uploaded_at': file_info['uploaded_at'],
             'storage': 'database',
             'status': inventario.status,
-            'file_index': len(cliente_files) - 1  # ÃƒÂndice do arquivo no array
+            'file_index': len(cliente_files) - 1  # índice do arquivo no array
         })
 
     except Exception as e:
@@ -2934,7 +2935,7 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario:
-            return jsonify({'success': False, 'error': 'InventÃƒÂ¡rio nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
 
         # Selecionar array de arquivos correto
         if file_type == 'cfop':
@@ -2944,11 +2945,11 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         elif file_type == 'cliente':
             files_array = inventario.cliente_files or []
         else:
-            return jsonify({'success': False, 'error': 'Tipo de arquivo invÃƒÂ¡lido'}), 400
+            return jsonify({'success': False, 'error': 'Tipo de arquivo inválido'}), 400
 
-        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
+        # Verificar se o índice é válido
         if file_index < 0 or file_index >= len(files_array):
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
         file_info = files_array[file_index]
         storage = file_info.get("storage", "database")
@@ -2966,7 +2967,7 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
 
         # Fallback: Database (Legacy)
         if 'file_data' not in file_info:
-            return jsonify({'success': False, 'error': 'Dados do arquivo nÃƒÂ£o encontrados'}), 404
+            return jsonify({'success': False, 'error': 'Dados do arquivo não encontrados'}), 404
 
         file_data = base64.b64decode(file_info['file_data'])
         return send_file(
@@ -2977,7 +2978,7 @@ def api_inventario_get_file(empresa_id, file_type, file_index):
         )
 
     except Exception as e:
-        current_app.logger.exception("Erro ao servir arquivo do inventÃƒÂ¡rio: %s", e)
+        current_app.logger.exception("Erro ao servir arquivo do inventário: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -3062,23 +3063,23 @@ def api_inventario_list_files_metadata(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cliente-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cliente_file(empresa_id):
-    """Remove o arquivo do cliente do inventÃƒÂ¡rio."""
+    """Remove o arquivo do cliente do inventário."""
     import os
 
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cliente_pdf_path:
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
-        # Remover arquivo local se nÃƒÂ£o for URL
+        # Remover arquivo local se não for URL
         if not inventario.cliente_pdf_path.startswith('http'):
             file_path = os.path.join(current_app.root_path, 'static', inventario.cliente_pdf_path)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    current_app.logger.warning("Erro ao remover arquivo fÃƒÂ­sico: %s", e)
+                    current_app.logger.warning("Erro ao remover arquivo físico: %s", e)
 
         # Limpar campos
         inventario.cliente_pdf_path = None
@@ -3098,23 +3099,23 @@ def api_inventario_delete_cliente_file(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cfop-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cfop_file(empresa_id):
-    """Remove um arquivo especÃƒÂ­fico do CFOP (armazenado no banco de dados)."""
+    """Remove um arquivo específico do CFOP (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
+            return jsonify({'success': False, 'error': 'índice do arquivo não fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cfop_files:
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
-        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
+        # Verificar se o índice é válido
         cfop_files = inventario.cfop_files or []
         if file_index < 0 or file_index >= len(cfop_files):
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
         # Remover arquivo do array
         cfop_files.pop(file_index)
@@ -3137,22 +3138,22 @@ def api_inventario_delete_cfop_file(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cfop-consolidado-file/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cfop_consolidado_file(empresa_id):
-    """Remove um arquivo especÃƒÂ­fico do CFOP consolidado (armazenado no banco de dados)."""
+    """Remove um arquivo específico do CFOP consolidado (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
+            return jsonify({'success': False, 'error': 'índice do arquivo não fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cfop_consolidado_files:
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
         cfop_consolidado_files = inventario.cfop_consolidado_files or []
         if file_index < 0 or file_index >= len(cfop_consolidado_files):
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
         cfop_consolidado_files.pop(file_index)
         inventario.cfop_consolidado_files = cfop_consolidado_files
@@ -3177,7 +3178,7 @@ def api_inventario_move_cfop_to_consolidado(empresa_id):
     try:
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
         if not inventario:
-            return jsonify({'success': False, 'error': 'InventÃƒÂ¡rio nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Inventário não encontrado'}), 404
 
         cfop_files = _coerce_file_entries(inventario.cfop_files)
         if not cfop_files:
@@ -3211,23 +3212,23 @@ def api_inventario_move_cfop_to_consolidado(empresa_id):
 @empresas_bp.route("/api/inventario/delete-cliente-file-v2/<int:empresa_id>", methods=["POST"])
 @login_required
 def api_inventario_delete_cliente_file_v2(empresa_id):
-    """Remove um arquivo especÃƒÂ­fico do cliente (armazenado no banco de dados)."""
+    """Remove um arquivo específico do cliente (armazenado no banco de dados)."""
     try:
         data = request.get_json()
         file_index = data.get('file_index')
 
         if file_index is None:
-            return jsonify({'success': False, 'error': 'ÃƒÂndice do arquivo nÃƒÂ£o fornecido'}), 400
+            return jsonify({'success': False, 'error': 'índice do arquivo não fornecido'}), 400
 
         inventario = Inventario.query.filter_by(empresa_id=empresa_id).first()
 
         if not inventario or not inventario.cliente_files:
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
-        # Verificar se o ÃƒÂ­ndice ÃƒÂ© vÃƒÂ¡lido
+        # Verificar se o índice é válido
         cliente_files = inventario.cliente_files or []
         if file_index < 0 or file_index >= len(cliente_files):
-            return jsonify({'success': False, 'error': 'Arquivo nÃƒÂ£o encontrado'}), 404
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
 
         # Remover arquivo do array
         cliente_files.pop(file_index)
