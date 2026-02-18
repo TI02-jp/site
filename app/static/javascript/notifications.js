@@ -654,7 +654,7 @@
             <i class="bi bi-clock"></i>
             <span class="notification-toast__time-text">${time || 'agora'}</span>
           </span>
-          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notifica??o">
+          <button type="button" class="btn btn-link p-0 notification-toast__dismiss" aria-label="Fechar notificação">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -718,7 +718,7 @@
         });
       }
 
-      // Mant?m o toast at? intera??o expl?cita (abrir ou fechar)
+      // Mantém o toast até interação explícita (abrir ou fechar)
     }
 
     function restoreStoredToasts() {

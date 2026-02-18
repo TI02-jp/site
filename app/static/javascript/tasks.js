@@ -342,9 +342,9 @@ const TaskResponses = (() => {
                 info.className = 'conversation-last-response';
                 const title = document.createElement('span');
                 title.className = 'label';
-                title.textContent = '�ltima resposta';
+                title.textContent = 'Última resposta';
                 const author = document.createElement('strong');
-                author.textContent = meta.last_response.author?.name || 'Usu�rio';
+                author.textContent = meta.last_response.author?.name || 'Usuário';
                 const time = document.createElement('span');
                 time.className = 'timestamp';
                 time.textContent = meta.last_response.created_at_display || formatDateForDisplay(meta.last_response.created_at);
@@ -376,7 +376,7 @@ const TaskResponses = (() => {
 
         if (state.hint) {
             if (meta.can_post === false) {
-                state.hint.textContent = 'A conversa est� bloqueada para este status.';
+                state.hint.textContent = 'A conversa está bloqueada para este status.';
             } else {
                 state.hint.textContent = 'Use Ctrl + Enter para enviar rapidamente.';
             }
@@ -507,7 +507,7 @@ const TaskResponses = (() => {
             updateDrawerMeta(state.meta);
         } catch (error) {
             console.error('[Tasks] Failed to submit response:', error);
-            window.alert('N�o foi poss�vel enviar a resposta.');
+            window.alert('Não foi possível enviar a resposta.');
         } finally {
             if (submitButton) {
                 submitButton.disabled = false;

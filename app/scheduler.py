@@ -43,14 +43,14 @@ def init_scheduler(app):
     from app.services.inventario_sync import sync_encerramento_fiscal
 
     def job_wrapper():
-        """Wrapper que executa a fun????o dentro do contexto da aplica????o Flask"""
+        """Wrapper que executa a função dentro do contexto da aplicação Flask"""
         with app.app_context():
             base_url = _build_base_url(app)
             with app.test_request_context(base_url=base_url):
                 try:
                     send_daily_tadeu_notification()
                 except Exception as e:
-                    logger.error(f"Erro ao executar notifica????o di??ria para Tadeu: {e}", exc_info=True)
+                    logger.error(f"Erro ao executar notificação diária para Tadeu: {e}", exc_info=True)
 
     def test_cristiano_wrapper():
         """Wrapper para envio de teste do inventario apenas para Cristiano."""
