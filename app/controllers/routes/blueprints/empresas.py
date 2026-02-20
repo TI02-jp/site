@@ -2702,8 +2702,6 @@ def api_test_email_cristiano():
 @login_required
 def api_inventario_upload_pdf(empresa_id):
     """Upload de arquivo PDF para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
-    import base64
-    from werkzeug.utils import secure_filename
 
     try:
         empresa = Empresa.query.get_or_404(empresa_id)
@@ -2751,9 +2749,9 @@ def api_inventario_upload_pdf(empresa_id):
 
         return jsonify({
             'success': True,
-            'filename': filename,
+            'filename': file_info.get('filename') or file.filename,
             'uploaded_at': file_info['uploaded_at'],
-            'storage': 'database',
+            'storage': file_info.get('storage', 'disk'),
             'status': inventario.status,
             'file_index': len(cfop_files) - 1  # índice do arquivo no array
         })
@@ -2768,8 +2766,6 @@ def api_inventario_upload_pdf(empresa_id):
 @login_required
 def api_inventario_upload_cfop_consolidado(empresa_id):
     """Upload de arquivo PDF para o CFOP consolidado (armazenado no banco)."""
-    import base64
-    from werkzeug.utils import secure_filename
 
     try:
         empresa = Empresa.query.get_or_404(empresa_id)
@@ -2816,9 +2812,9 @@ def api_inventario_upload_cfop_consolidado(empresa_id):
 
         return jsonify({
             'success': True,
-            'filename': filename,
+            'filename': file_info.get('filename') or file.filename,
             'uploaded_at': file_info['uploaded_at'],
-            'storage': 'database',
+            'storage': file_info.get('storage', 'disk'),
             'status': inventario.status,
             'file_index': len(cfop_consolidado_files) - 1
         })
@@ -2869,9 +2865,6 @@ def api_inventario_delete_pdf(empresa_id):
 @login_required
 def api_inventario_upload_cliente_file(empresa_id):
     """Upload de arquivo do cliente para o inventário - suporta múltiplos arquivos (armazenado no banco)."""
-    import base64
-    import mimetypes
-    from werkzeug.utils import secure_filename
 
     try:
         empresa = Empresa.query.get_or_404(empresa_id)
@@ -2910,9 +2903,9 @@ def api_inventario_upload_cliente_file(empresa_id):
 
         return jsonify({
             'success': True,
-            'filename': filename,
+            'filename': file_info.get('filename') or file.filename,
             'uploaded_at': file_info['uploaded_at'],
-            'storage': 'database',
+            'storage': file_info.get('storage', 'disk'),
             'status': inventario.status,
             'file_index': len(cliente_files) - 1  # índice do arquivo no array
         })
