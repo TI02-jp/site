@@ -10,8 +10,8 @@ from datetime import date, datetime
 from mimetypes import guess_type
 from uuid import uuid4
 
-from flask import Blueprint, flash, redirect, render_template, url_for, current_app, request
-from flask_login import current_user
+from flask import Blueprint, abort, flash, redirect, render_template, url_for, current_app, request
+from flask_login import current_user, login_required
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -216,8 +216,11 @@ def _collect_uploaded_files(form: ClientAnnouncementForm) -> list:
 
 
 @comunicados_clientes_bp.route("/comunicados-clientes", methods=["GET", "POST"])
-@admin_required
+@login_required
 def comunicados_clientes():
+    if request.method == "POST" and current_user.role != "admin":
+        abort(403)
+
     form = ClientAnnouncementForm()
     _trigger_client_announcement_notifications()
     allowed_tributacoes = {value for value, _ in form.tax_regime.choices}
