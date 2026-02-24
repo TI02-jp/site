@@ -31,6 +31,7 @@ from wtforms.validators import (
     NumberRange,
 )
 import re
+from html import unescape
 
 from app.services.courses import CourseStatus
 from app.constants import EMPRESA_TAG_CHOICES
@@ -323,7 +324,7 @@ class AnnouncementForm(BaseForm):
     )
     content = TextAreaField(
         "Mensagem",
-        validators=[DataRequired(), Length(min=1, max=20000)],
+        validators=[DataRequired()],
         render_kw={
             "rows": 4,
         },
@@ -342,6 +343,25 @@ class AnnouncementForm(BaseForm):
         widget=widgets.ListWidget(prefix_label=False),
     )
     submit = SubmitField("Salvar")
+
+    def validate_content(self, field):
+        """Validate announcement message by meaningful plain text length."""
+
+        raw_content = (field.data or "").strip()
+        if not raw_content:
+            raise ValidationError("Campo obrigatorio.")
+
+        plain_text = re.sub(r"<[^>]+>", " ", raw_content)
+        plain_text = unescape(plain_text).replace("\xa0", " ").strip()
+        has_media = bool(
+            re.search(r"<(img|video|audio|iframe|svg|object|embed)\b", raw_content, re.IGNORECASE)
+        )
+
+        if not plain_text and not has_media:
+            raise ValidationError("Campo obrigatorio.")
+
+        if len(plain_text) > 20000:
+            raise ValidationError("Field must be between 1 and 20000 characters long.")
 
 
 class ClientAnnouncementForm(BaseForm):
@@ -1076,7 +1096,6 @@ class ManualVideoForm(BaseForm):
         render_kw={"accept": "image/*"}
     )
     submit = SubmitField("Salvar vídeo")
-
 
 
 

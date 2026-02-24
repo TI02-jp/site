@@ -1463,6 +1463,38 @@
       const richtextToggleButtons = richtextRoot ? Array.from(richtextRoot.querySelectorAll('[data-richtext-toggle]')) : [];
       const richtextColorInputs = richtextControls.filter((element) => element.matches('input[type="color"]'));
       const scratchPad = document.createElement('div');
+      const normalizeInlineImageUrl = (rawValue) => {
+        if (typeof rawValue !== 'string') {
+          return rawValue;
+        }
+        const value = rawValue.trim();
+        if (!value || value.startsWith('data:image/')) {
+          return value;
+        }
+        if (value.startsWith('/static/uploads/')) {
+          return value;
+        }
+        if (value.startsWith('static/uploads/')) {
+          return `/${value}`;
+        }
+        if (value.startsWith('/uploads/')) {
+          return `/static${value}`;
+        }
+        if (value.startsWith('uploads/')) {
+          return `/static/${value}`;
+        }
+        const absoluteMatch = value.match(/^https?:\/\/[^/]+(\/.*)$/i);
+        if (absoluteMatch && absoluteMatch[1]) {
+          const path = absoluteMatch[1];
+          if (path.startsWith('/static/uploads/')) {
+            return path;
+          }
+          if (path.startsWith('/uploads/')) {
+            return `/static${path}`;
+          }
+        }
+        return value;
+      };
       const decodeEntities = (value) => {
         if (!value) {
           return '';
@@ -1865,7 +1897,7 @@
                 throw new Error(data.error || 'Falha ao enviar imagem.');
               }
               const img = document.createElement('img');
-              img.src = data.image_url;
+              img.src = normalizeInlineImageUrl(data.image_url);
               img.alt = filename ? `Imagem colada: ${filename}` : 'Imagem colada';
               if (placeholder.isConnected) {
                 placeholder.replaceWith(img);
@@ -2534,6 +2566,47 @@
 </script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    const normalizeInlineImageUrl = (rawValue) => {
+      if (typeof rawValue !== 'string') {
+        return rawValue;
+      }
+      const value = rawValue.trim();
+      if (!value || value.startsWith('data:image/')) {
+        return value;
+      }
+      if (value.startsWith('/static/uploads/')) {
+        return value;
+      }
+      if (value.startsWith('static/uploads/')) {
+        return `/${value}`;
+      }
+      if (value.startsWith('/uploads/')) {
+        return `/static${value}`;
+      }
+      if (value.startsWith('uploads/')) {
+        return `/static/${value}`;
+      }
+      const absoluteMatch = value.match(/^https?:\/\/[^/]+(\/.*)$/i);
+      if (absoluteMatch && absoluteMatch[1]) {
+        const path = absoluteMatch[1];
+        if (path.startsWith('/static/uploads/')) {
+          return path;
+        }
+        if (path.startsWith('/uploads/')) {
+          return `/static${path}`;
+        }
+      }
+      return value;
+    };
+
+    document.querySelectorAll('.announcement-body img').forEach((img) => {
+      const src = img.getAttribute('src') || '';
+      const normalized = normalizeInlineImageUrl(src);
+      if (normalized && normalized !== src) {
+        img.setAttribute('src', normalized);
+      }
+    });
+
     const clampRatio = (value) => {
       if (!Number.isFinite(value) || value <= 0) {
         return null;
