@@ -125,6 +125,7 @@
 {% endblock %}
 
 {% block content %}
+{% set can_manage = current_user.role == "admin" %}
 {% set enviados = entries|selectattr("status", "equalto", "Enviado")|list|length %}
 {% set pendentes = entries|rejectattr("status", "equalto", "Enviado")|list|length %}
 <div class="container-fluid py-4">
@@ -137,9 +138,11 @@
                 <p class="text-muted mb-0">Acompanhamento de envio de comunicados aos clientes</p>
             </div>
             <div class="d-flex align-items-center gap-2">
+                {% if can_manage %}
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#clientAnnouncementModal">
                     <i class="bi bi-plus-lg me-1"></i>Incluir comunicado
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -256,7 +259,9 @@
                         <th style="width: 160px;">Status</th>
                         <th>Resumo do comunicado</th>
                         <th style="width: 200px;">Anexos</th>
+                        {% if can_manage %}
                         <th style="width: 110px;">Acoes</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -298,6 +303,7 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        {% if can_manage %}
                         <td>
                             <div class="d-flex flex-wrap gap-2">
                                 <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#clientAnnouncementEditModal-{{ item.id }}">
@@ -314,10 +320,11 @@
                                 </form>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="{{ 8 if can_manage else 7 }}" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                             {% if tributacao_filters %}
                                 Nenhum comunicado encontrado para a tributacao selecionada.
@@ -333,6 +340,7 @@
     </div>
 </div>
 
+{% if can_manage %}
 <div class="modal fade" id="clientAnnouncementModal" tabindex="-1" aria-labelledby="clientAnnouncementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -403,8 +411,10 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 {% for item in entries %}
+{% if can_manage %}
 {% set edit_form = edit_forms.get(item.id) %}
 {% if edit_form %}
 <div class="modal fade" id="clientAnnouncementEditModal-{{ item.id }}" tabindex="-1" aria-labelledby="clientAnnouncementEditModalLabel-{{ item.id }}" aria-hidden="true">
@@ -523,6 +533,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endfor %}
 
 {% endblock %}
