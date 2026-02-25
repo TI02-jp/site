@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Logs do Mural{% endblock %}
+
+{% block sidebar_nav %}
+{% include "sidebar_home.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-journal-text me-2"></i>Logs do Mural</h1>
+      <p class="text-muted mb-0">Auditoria de acesso ao MURAL e cliques nos cards de comunicados.</p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('relatorios') }}">
+      <i class="bi bi-arrow-left me-1"></i>Voltar para Relatórios
+    </a>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-2">
+          <label class="form-label small text-muted mb-1" for="event_type">Evento</label>
+          <select class="form-select form-select-sm" id="event_type" name="event_type">
+            <option value="" {% if not event_type %}selected{% endif %}>Todos</option>
+            <option value="mural_view" {% if event_type == "mural_view" %}selected{% endif %}>Entrada no MURAL</option>
+            <option value="mural_card_click" {% if event_type == "mural_card_click" %}selected{% endif %}>Clique em card</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label small text-muted mb-1" for="user_id">Usuário</label>
+          <select class="form-select form-select-sm" id="user_id" name="user_id">
+            <option value="">Todos</option>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if user_id_filter == user.id %}selected{% endif %}>
+              {{ user.name or user.username }}{% if user.username %} ({{ user.username }}){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="announcement_id">ID comunicado</label>
+          <input class="form-control form-control-sm" id="announcement_id" name="announcement_id" type="number" min="1" value="{{ announcement_id_filter or '' }}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="start_date">Data inicial</label>
+          <input class="form-control form-control-sm" id="start_date" name="start_date" type="date" value="{{ start_date }}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="end_date">Data final</label>
+          <input class="form-control form-control-sm" id="end_date" name="end_date" type="date" value="{{ end_date }}">
+        </div>
+        <div class="col-6 col-md-1 d-flex gap-2">
+          <button class="btn btn-primary btn-sm w-100" type="submit">Filtrar</button>
+          <a class="btn btn-outline-secondary btn-sm w-100" href="{{ url_for('relatorio_mural_logs') }}">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white">
+      <strong>Total de registros:</strong> {{ total_logs }}
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped table-sm mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>Data/Hora</th>
+            <th>Usuário</th>
+            <th>Evento</th>
+            <th>Comunicado</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if logs %}
+            {% for log in logs %}
+            <tr>
+              <td>{{ log.created_at and log.created_at.strftime("%d/%m/%Y %H:%M:%S") or "-" }}</td>
+              <td>
+                <div class="fw-semibold">{{ log.user.name if log.user else log.username }}</div>
+                <div class="small text-muted">{{ log.username }}</div>
+              </td>
+              <td>
+                {% if log.action_description == "mural_card_click" %}
+                <span class="badge bg-primary-subtle text-primary">Clique em card</span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary">Entrada no MURAL</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.resource_id %}
+                  <div class="fw-semibold">#{{ log.resource_id }}</div>
+                  {% set subject = announcement_subject_by_id.get(log.resource_id) %}
+                  {% if subject %}
+                  <div class="small text-muted">{{ subject }}</div>
+                  {% endif %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ log.ip_address or "-" }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Nenhum log encontrado para os filtros informados.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white">
+      <nav aria-label="Paginação dos logs do MURAL">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('relatorio_mural_logs', page=page - 1, event_type=event_type, user_id=user_id_filter, announcement_id=announcement_id_filter, start_date=start_date, end_date=end_date) }}">Anterior</a>
+          </li>
+          <li class="page-item disabled"><span class="page-link">Página {{ page }} de {{ total_pages }}</span></li>
+          <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('relatorio_mural_logs', page=page + 1, event_type=event_type, user_id=user_id_filter, announcement_id=announcement_id_filter, start_date=start_date, end_date=end_date) }}">Próxima</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
