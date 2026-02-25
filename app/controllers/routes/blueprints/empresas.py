@@ -78,6 +78,8 @@ from app.utils.performance_middleware import track_commit_end, track_commit_star
 from app.utils.permissions import is_user_admin
 from app.utils.mailer import send_email, EmailDeliveryError
 from app.utils.security import sanitize_html
+from app.utils.audit import ActionType, ResourceType, log_user_action
+from app.utils.audit_diff import build_field_diff
 
 empresas_bp = Blueprint("empresas", __name__)
 
@@ -93,6 +95,59 @@ INVENTARIO_STATUS_CHOICES = [
     "JULIANA IRÁ IMPORTAR",
     "AGUARDANDO HELENA",
 ]
+
+
+def _empresa_snapshot(empresa: Empresa) -> dict[str, object]:
+    return {
+        "id": empresa.id,
+        "codigo_empresa": empresa.codigo_empresa,
+        "nome_empresa": empresa.nome_empresa,
+        "cnpj": empresa.cnpj,
+        "data_abertura": empresa.data_abertura,
+        "tipo_empresa": empresa.tipo_empresa,
+        "socio_administrador": empresa.socio_administrador,
+        "tributacao": empresa.tributacao,
+        "regime_lancamento": empresa.regime_lancamento or [],
+        "atividade_principal": empresa.atividade_principal,
+        "sistemas_consultorias": empresa.sistemas_consultorias or [],
+        "sistema_utilizado": empresa.sistema_utilizado,
+        "acessos": empresa.acessos or [],
+        "contatos": empresa.contatos or [],
+        "ativo": empresa.ativo,
+    }
+
+
+def _departamento_snapshot(departamento: Departamento) -> dict[str, object]:
+    return {
+        "id": departamento.id,
+        "empresa_id": departamento.empresa_id,
+        "tipo": departamento.tipo,
+        "responsavel": departamento.responsavel,
+        "formas_importacao": departamento.formas_importacao or [],
+        "metodo_importacao": departamento.metodo_importacao or [],
+        "forma_movimento": departamento.forma_movimento,
+        "envio_digital": departamento.envio_digital or [],
+        "envio_fisico": departamento.envio_fisico or [],
+        "malote_coleta": departamento.malote_coleta,
+        "contatos": departamento.contatos or [],
+        "controle_relatorios": departamento.controle_relatorios or [],
+        "particularidades_texto": departamento.particularidades_texto,
+    }
+
+
+def _reuniao_cliente_snapshot(reuniao: ClienteReuniao) -> dict[str, object]:
+    return {
+        "id": reuniao.id,
+        "empresa_id": reuniao.empresa_id,
+        "data": reuniao.data,
+        "setor_id": reuniao.setor_id,
+        "participantes": reuniao.participantes or [],
+        "topicos": reuniao.topicos or [],
+        "decisoes": reuniao.decisoes,
+        "acompanhar_ate": reuniao.acompanhar_ate,
+        "created_by": reuniao.created_by,
+        "updated_by": reuniao.updated_by,
+    }
 
 
 def _get_inventario_cache_version() -> int:
@@ -465,6 +520,13 @@ def cadastrar_empresa():
             )
             db.session.add(nova_empresa)
             db.session.commit()
+            log_user_action(
+                action_type=ActionType.CREATE,
+                resource_type=ResourceType.CLIENT_COMPANY,
+                resource_id=nova_empresa.id,
+                action_description="client_company_create",
+                new_values=_empresa_snapshot(nova_empresa),
+            )
             flash("Empresa cadastrada com sucesso!", "success")
             return redirect(url_for("empresas.gerenciar_departamentos", empresa_id=nova_empresa.id))
         except Exception as e:
@@ -618,6 +680,7 @@ def editar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     if request.method == "POST":
         if empresa_form.validate():
+            old_snapshot = _empresa_snapshot(empresa)
             empresa_form.populate_obj(empresa)
             empresa.cnpj = re.sub(r"\D", "", empresa_form.cnpj.data)
             empresa.sistemas_consultorias = empresa_form.sistemas_consultorias.data
@@ -632,6 +695,17 @@ def editar_empresa(empresa_id: str | None = None, id: int | None = None):
             db.session.add(empresa)
             try:
                 db.session.commit()
+                new_snapshot = _empresa_snapshot(empresa)
+                changed_old, changed_new = build_field_diff(old_snapshot, new_snapshot)
+                if changed_new:
+                    log_user_action(
+                        action_type=ActionType.UPDATE,
+                        resource_type=ResourceType.CLIENT_COMPANY,
+                        resource_id=empresa.id,
+                        action_description="client_company_update",
+                        old_values=changed_old,
+                        new_values=changed_new,
+                    )
                 flash("Dados do Cliente salvos com sucesso!", "success")
                 return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#dados-cliente")
             except Exception as e:
@@ -945,12 +1019,15 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     if request.method == "POST":
         form_processed_successfully = False
+        old_department_snapshot: dict[str, object] | None = None
 
         def _set_responsavel(departamento_obj):
             if departamento_obj is not None:
                 departamento_obj.responsavel = responsavel_value or None
 
         if form_type == "fiscal" and fiscal_form.validate():
+            if fiscal:
+                old_department_snapshot = _departamento_snapshot(fiscal)
             if not fiscal:
                 fiscal = Departamento(empresa_id=empresa_id_int, tipo="Departamento Fiscal")
                 db.session.add(fiscal)
@@ -969,6 +1046,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             form_processed_successfully = True
 
         elif form_type == "contabil" and contabil_form.validate():
+            if contabil:
+                old_department_snapshot = _departamento_snapshot(contabil)
             if not contabil:
                 contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento Contábil")
                 db.session.add(contabil)
@@ -989,6 +1068,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             form_processed_successfully = True
 
         elif form_type == "pessoal" and pessoal_form.validate():
+            if pessoal:
+                old_department_snapshot = _departamento_snapshot(pessoal)
             if not pessoal:
                 pessoal = Departamento(empresa_id=empresa_id_int, tipo="Departamento Pessoal")
                 db.session.add(pessoal)
@@ -999,6 +1080,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             form_processed_successfully = True
 
         elif form_type == "administrativo" and administrativo_form.validate():
+            if administrativo:
+                old_department_snapshot = _departamento_snapshot(administrativo)
             if not administrativo:
                 administrativo = Departamento(empresa_id=empresa_id_int, tipo="Departamento Administrativo")
                 db.session.add(administrativo)
@@ -1011,6 +1094,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             if not can_access_financeiro:
                 abort(403)
             if financeiro_form and financeiro_form.validate():
+                if financeiro:
+                    old_department_snapshot = _departamento_snapshot(financeiro)
                 if not financeiro:
                     financeiro = Departamento(empresa_id=empresa_id_int, tipo="Departamento Financeiro")
                     db.session.add(financeiro)
@@ -1021,6 +1106,8 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
                 form_processed_successfully = True
 
         elif form_type == "notas_fiscais":
+            if notas_fiscais:
+                old_department_snapshot = _departamento_snapshot(notas_fiscais)
             if not notas_fiscais:
                 notas_fiscais = Departamento(empresa_id=empresa_id_int, tipo="Departamento Notas Fiscais")
                 db.session.add(notas_fiscais)
@@ -1034,6 +1121,38 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
         if form_processed_successfully:
             try:
                 db.session.commit()
+                department_obj = {
+                    "fiscal": fiscal,
+                    "contabil": contabil,
+                    "pessoal": pessoal,
+                    "administrativo": administrativo,
+                    "financeiro": financeiro,
+                    "notas_fiscais": notas_fiscais,
+                }.get(form_type)
+                if department_obj:
+                    new_department_snapshot = _departamento_snapshot(department_obj)
+                    if old_department_snapshot is None:
+                        log_user_action(
+                            action_type=ActionType.CREATE,
+                            resource_type=ResourceType.CLIENT_DEPARTMENT,
+                            resource_id=department_obj.id,
+                            action_description="client_department_create",
+                            new_values=new_department_snapshot,
+                        )
+                    else:
+                        changed_old, changed_new = build_field_diff(
+                            old_department_snapshot,
+                            new_department_snapshot,
+                        )
+                        if changed_new:
+                            log_user_action(
+                                action_type=ActionType.UPDATE,
+                                resource_type=ResourceType.CLIENT_DEPARTMENT,
+                                resource_id=department_obj.id,
+                                action_description="client_department_update",
+                                old_values=changed_old,
+                                new_values=changed_new,
+                            )
 
                 hash_ancoras = {
                     "fiscal": "fiscal",
@@ -1282,6 +1401,13 @@ def nova_reuniao_cliente(empresa_id: str | None = None, id: int | None = None):
         db.session.add(reuniao)
         try:
             db.session.commit()
+            log_user_action(
+                action_type=ActionType.CREATE,
+                resource_type=ResourceType.CLIENT_MEETING,
+                resource_id=reuniao.id,
+                action_description="client_meeting_create",
+                new_values=_reuniao_cliente_snapshot(reuniao),
+            )
             flash("Reunião registrada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
@@ -1334,6 +1460,7 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         form.topicos_json.data = json.dumps(reuniao.topicos or [])
         form.decisoes.data = reuniao.decisoes or ""
     if form.validate_on_submit():
+        old_snapshot = _reuniao_cliente_snapshot(reuniao)
         topicos = _parse_cliente_reuniao_topicos(form.topicos_json.data)
         participantes_extras = _parse_cliente_reuniao_participantes_extras(form.participantes_extras.data)
         reuniao.data = form.data.data
@@ -1348,6 +1475,17 @@ def editar_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | None
         reuniao.updated_by = current_user.id
         try:
             db.session.commit()
+            new_snapshot = _reuniao_cliente_snapshot(reuniao)
+            changed_old, changed_new = build_field_diff(old_snapshot, new_snapshot)
+            if changed_new:
+                log_user_action(
+                    action_type=ActionType.UPDATE,
+                    resource_type=ResourceType.CLIENT_MEETING,
+                    resource_id=reuniao.id,
+                    action_description="client_meeting_update",
+                    old_values=changed_old,
+                    new_values=changed_new,
+                )
             flash("Reunião atualizada com sucesso!", "success")
             return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
         except SQLAlchemyError as exc:
@@ -1478,9 +1616,17 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     reuniao_id_int = decode_id(str(raw_reuniao), namespace="empresa-reuniao")
     empresa_token = encode_id(empresa_id_int, namespace="empresa")
     reuniao = ClienteReuniao.query.filter_by(id=reuniao_id_int, empresa_id=empresa_id_int).first_or_404()
+    deleted_snapshot = _reuniao_cliente_snapshot(reuniao)
     db.session.delete(reuniao)
     try:
         db.session.commit()
+        log_user_action(
+            action_type=ActionType.DELETE,
+            resource_type=ResourceType.CLIENT_MEETING,
+            resource_id=reuniao_id_int,
+            action_description="client_meeting_delete",
+            old_values=deleted_snapshot,
+        )
         flash("Reunião excluída com sucesso.", "success")
     except SQLAlchemyError as exc:
         current_app.logger.exception("Erro ao excluir reunião com cliente: %s", exc)

@@ -305,6 +305,74 @@
         </div>
         {% endif %}
 
+        <!-- Logs de Clientes -->
+        {% if has_report_access('client_logs') %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header text-white border-0" style="background-color: #1d4ed8 !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-people-fill me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Logs de Clientes</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Auditoria das mudanças em empresas, departamentos, comunicados e reuniões de clientes.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-primary-subtle text-primary">
+                            <i class="bi bi-check-circle me-1"></i>Disponível
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Criação, alteração e exclusão</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Filtro por usuário, período e recurso</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Visualização de diff por campo</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('relatorio_client_logs') }}" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Atividade de Usuários -->
+        {% if has_report_access('user_activity_logs') %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100 card-hover">
+                <div class="card-header text-white border-0" style="background-color: #0ea5e9 !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-activity me-2 fs-4"></i>
+                        <h5 class="card-title mb-0">Atividade de Usuários</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Acompanhamento de login, status online/offline e última atividade de sessão dos usuários.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge bg-info-subtle text-info">
+                            <i class="bi bi-check-circle me-1"></i>Disponível
+                        </span>
+                    </div>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Último login com data/hora</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>Status online/offline em tempo quase real</li>
+                        <li><i class="bi bi-check2 me-2 text-success"></i>IP de login e de atividade</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{{ url_for('relatorio_atividade_usuarios') }}" class="btn btn-info text-white w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Acessar Relatório
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Dashboards Gerenciais -->
         <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100 card-hover">

@@ -37,6 +37,7 @@ from app.forms import AnnouncementForm
 from app.models.tables import (
     Announcement,
     AnnouncementAttachment,
+    AuditLog,
     NotificationType,
     TaskNotification,
     Tag,
@@ -254,6 +255,41 @@ def _apply_visibility_filter(query):
     return query.filter(~Announcement.target_tags.any())
 
 
+def _build_announcement_click_logs(
+    announcement_ids: list[int],
+    *,
+    per_announcement_limit: int = 20,
+) -> tuple[dict[int, list[AuditLog]], dict[int, int]]:
+    """Return click logs and totals for the provided announcement IDs."""
+
+    if not announcement_ids:
+        return {}, {}
+
+    rows = (
+        AuditLog.query.filter(
+            AuditLog.resource_type == ResourceType.ANNOUNCEMENT,
+            AuditLog.action_type == ActionType.VIEW,
+            AuditLog.action_description == "mural_card_click",
+            AuditLog.resource_id.in_(announcement_ids),
+        )
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .all()
+    )
+
+    grouped: dict[int, list[AuditLog]] = {announcement_id: [] for announcement_id in announcement_ids}
+    totals: dict[int, int] = {announcement_id: 0 for announcement_id in announcement_ids}
+
+    for row in rows:
+        announcement_id = row.resource_id
+        if not isinstance(announcement_id, int) or announcement_id not in totals:
+            continue
+        totals[announcement_id] += 1
+        if len(grouped[announcement_id]) < per_announcement_limit:
+            grouped[announcement_id].append(row)
+
+    return grouped, totals
+
+
 @announcements_bp.route(
     "/announcements", methods=["GET", "POST"], endpoint="announcements"
 )
@@ -390,6 +426,15 @@ def announcements():
             edit_form.target_tag_ids.data = [tag.id for tag in item.target_tags]
             edit_forms[item.id] = edit_form
 
+    can_view_click_logs = is_user_admin(current_user) or getattr(current_user, "is_master", False)
+    announcement_click_logs: dict[int, list[AuditLog]] = {}
+    announcement_click_totals: dict[int, int] = {}
+    if can_view_click_logs:
+        announcement_ids = [item.id for item in announcement_items if item.id]
+        announcement_click_logs, announcement_click_totals = _build_announcement_click_logs(
+            announcement_ids
+        )
+
     return render_template(
         "announcements.html",
         form=form,
@@ -406,6 +451,9 @@ def announcements():
         history_link_url=url_for("announcement_history"),
         history_back_url=None,
         can_manage=_can_manage_announcements(),
+        can_view_click_logs=can_view_click_logs,
+        announcement_click_logs=announcement_click_logs,
+        announcement_click_totals=announcement_click_totals,
         available_tags=available_tags,
         selected_tag_id=selected_tag_id,
     )
@@ -504,6 +552,15 @@ def announcement_history():
             edit_form.target_tag_ids.data = [tag.id for tag in item.target_tags]
             edit_forms[item.id] = edit_form
 
+    can_view_click_logs = is_user_admin(current_user) or getattr(current_user, "is_master", False)
+    announcement_click_logs: dict[int, list[AuditLog]] = {}
+    announcement_click_totals: dict[int, int] = {}
+    if can_view_click_logs:
+        announcement_ids = [item.id for item in announcement_items if item.id]
+        announcement_click_logs, announcement_click_totals = _build_announcement_click_logs(
+            announcement_ids
+        )
+
     return render_template(
         "announcements.html",
         form=None,
@@ -524,6 +581,9 @@ def announcement_history():
         per_page=per_page,
         total_pages=total_pages,
         can_manage=_can_manage_announcements(),
+        can_view_click_logs=can_view_click_logs,
+        announcement_click_logs=announcement_click_logs,
+        announcement_click_totals=announcement_click_totals,
         available_tags=available_tags,
         selected_tag_id=selected_tag_id,
     )
