@@ -28,12 +28,30 @@ from app.models.tables import (
     TaskNotification,
     User,
 )
+from app.utils.audit import ActionType, ResourceType, log_user_action
+from app.utils.audit_diff import build_field_diff
 from app.utils.permissions import is_user_admin
 
 
 comunicados_clientes_bp = Blueprint("comunicados_clientes", __name__)
 
 CLIENT_ANNOUNCEMENTS_UPLOAD_SUBDIR = os.path.join("uploads", "client_announcements")
+
+
+def _client_announcement_snapshot(entry: ClientAnnouncement) -> dict[str, object]:
+    """Return a normalized snapshot used by audit logs."""
+
+    return {
+        "id": entry.id,
+        "sequence_number": entry.sequence_number,
+        "code": entry.code,
+        "status": entry.status,
+        "subject": entry.subject,
+        "tax_regime": entry.tax_regime,
+        "send_date": entry.send_date,
+        "summary": entry.summary,
+        "attachments_count": len(entry.attachments or []),
+    }
 
 
 def _get_next_sequence_number() -> int:
@@ -280,6 +298,13 @@ def comunicados_clientes():
                 "warning",
             )
         else:
+            log_user_action(
+                action_type=ActionType.CREATE,
+                resource_type=ResourceType.CLIENT_ANNOUNCEMENT,
+                resource_id=entry.id,
+                action_description="client_announcement_create",
+                new_values=_client_announcement_snapshot(entry),
+            )
             flash("Comunicado registrado com sucesso.", "success")
             return redirect(url_for("comunicados_clientes"))
 
@@ -333,6 +358,7 @@ def update_comunicado_cliente(announcement_id: int):
     form = ClientAnnouncementForm(prefix=f"edit-{announcement_id}")
 
     if form.validate_on_submit():
+        old_snapshot = _client_announcement_snapshot(entry)
         entry.code = (form.code.data or "").strip() or None
         entry.status = (form.status.data or "Aguardando Envio").strip() or "Aguardando Envio"
         entry.subject = form.subject.data or ""
@@ -382,6 +408,17 @@ def update_comunicado_cliente(announcement_id: int):
                 "warning",
             )
         else:
+            new_snapshot = _client_announcement_snapshot(entry)
+            changed_old, changed_new = build_field_diff(old_snapshot, new_snapshot)
+            if changed_new:
+                log_user_action(
+                    action_type=ActionType.UPDATE,
+                    resource_type=ResourceType.CLIENT_ANNOUNCEMENT,
+                    resource_id=entry.id,
+                    action_description="client_announcement_update",
+                    old_values=changed_old,
+                    new_values=changed_new,
+                )
             flash("Comunicado atualizado com sucesso.", "success")
         return redirect(url_for("comunicados_clientes"))
 
@@ -407,6 +444,7 @@ def delete_comunicado_cliente(announcement_id: int):
         for attachment in entry.attachments
         if attachment.file_path
     ]
+    deleted_snapshot = _client_announcement_snapshot(entry)
 
     try:
         db.session.delete(entry)
@@ -421,6 +459,14 @@ def delete_comunicado_cliente(announcement_id: int):
 
     if attachment_paths:
         _remove_client_announcement_attachments(attachment_paths)
+
+    log_user_action(
+        action_type=ActionType.DELETE,
+        resource_type=ResourceType.CLIENT_ANNOUNCEMENT,
+        resource_id=announcement_id,
+        action_description="client_announcement_delete",
+        old_values=deleted_snapshot,
+    )
 
     flash("Comunicado removido com sucesso.", "success")
     return redirect(url_for("comunicados_clientes"))
@@ -475,5 +521,12 @@ def clone_comunicado_cliente(announcement_id: int):
             "warning",
         )
     else:
+        log_user_action(
+            action_type=ActionType.CREATE,
+            resource_type=ResourceType.CLIENT_ANNOUNCEMENT,
+            resource_id=cloned.id,
+            action_description="client_announcement_clone",
+            new_values=_client_announcement_snapshot(cloned),
+        )
         flash("Comunicado clonado com sucesso.", "success")
     return redirect(url_for("comunicados_clientes"))

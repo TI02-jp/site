@@ -11,6 +11,32 @@ from flask_login import current_user
 user_actions_logger = logging.getLogger('user_actions')
 
 
+def _extract_client_ip() -> str | None:
+    """Resolve the best client IP, honoring reverse-proxy headers."""
+
+    if not request:
+        return None
+
+    # Standard reverse proxy chain: client, proxy1, proxy2...
+    forwarded_for = (request.headers.get('X-Forwarded-For') or '').strip()
+    if forwarded_for:
+        first_hop = forwarded_for.split(',')[0].strip()
+        if first_hop:
+            return first_hop
+
+    real_ip = (request.headers.get('X-Real-IP') or '').strip()
+    if real_ip:
+        return real_ip
+
+    # Flask may fill access_route with forwarded addresses depending on server stack.
+    if getattr(request, 'access_route', None):
+        for candidate in request.access_route:
+            if candidate:
+                return candidate
+
+    return request.remote_addr
+
+
 class ActionType:
     """Constants for action types."""
     # Autenticacao
@@ -61,6 +87,10 @@ class ResourceType:
     TAG = 'tag'
     PROCEDURE = 'procedure'
     CONSULTORIA = 'consultoria'
+    CLIENT_COMPANY = 'client_company'
+    CLIENT_DEPARTMENT = 'client_department'
+    CLIENT_ANNOUNCEMENT = 'client_announcement'
+    CLIENT_MEETING = 'client_meeting'
 
 
 def log_user_action(
@@ -90,7 +120,7 @@ def log_user_action(
         return
 
     # Request context
-    ip_address = request.remote_addr if request else None
+    ip_address = _extract_client_ip()
     user_agent = request.headers.get('User-Agent') if request else None
     request_id = getattr(g, 'request_id', None)
     endpoint = request.endpoint if request else None

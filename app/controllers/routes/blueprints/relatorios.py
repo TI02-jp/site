@@ -45,6 +45,7 @@ from app.models.tables import (
     TaskStatus,
     TaskStatusHistory,
     User,
+    Session,
 )
 from app.controllers.routes._decorators import report_access_required
 from app.services.courses import CourseStatus, get_courses_overview
@@ -70,6 +71,8 @@ REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
     "cursos": {"title": "Relatório de Cursos", "description": "Métricas do catálogo de treinamentos"},
     "tarefas": {"title": "Relatório de Tarefas", "description": "Painel de tarefas e indicadores"},
     "mural_logs": {"title": "Logs do Mural", "description": "Auditoria de acesso e cliques em comunicados"},
+    "client_logs": {"title": "Logs de Clientes", "description": "Auditoria de criação e atualização de dados de clientes"},
+    "user_activity_logs": {"title": "Atividade de Usuários", "description": "Login, última atividade e status online/offline"},
 }
 
 PORTAL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
@@ -1342,6 +1345,227 @@ def relatorio_mural_logs():
         total_logs=total_logs,
         total_pages=total_pages,
         announcement_subject_by_id=announcement_subject_by_id,
+    )
+
+
+@relatorios_bp.route("/relatorio_client_logs")
+@report_access_required("client_logs")
+def relatorio_client_logs():
+    """Display audit logs for client-related create/update/delete actions."""
+
+    start_date_raw = (request.args.get("start_date") or "").strip()
+    end_date_raw = (request.args.get("end_date") or "").strip()
+    user_id_filter = request.args.get("user_id", type=int)
+    resource_id_filter = request.args.get("resource_id", type=int)
+    resource_type_filter = (request.args.get("resource_type") or "").strip().lower()
+    action_type_filter = (request.args.get("action_type") or "").strip().lower()
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 50
+
+    valid_resource_types = {"client_company", "client_department", "client_announcement", "client_meeting"}
+    valid_action_types = {"create", "update", "delete"}
+
+    def _parse_date(raw: str) -> date | None:
+        if not raw:
+            return None
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    start_date = _parse_date(start_date_raw)
+    end_date = _parse_date(end_date_raw)
+
+    if resource_type_filter and resource_type_filter not in valid_resource_types:
+        resource_type_filter = ""
+    if action_type_filter and action_type_filter not in valid_action_types:
+        action_type_filter = ""
+
+    logs_query = AuditLog.query.filter(
+        AuditLog.resource_type.in_(tuple(valid_resource_types))
+    )
+
+    if start_date:
+        logs_query = logs_query.filter(
+            AuditLog.created_at >= datetime.combine(start_date, datetime.min.time())
+        )
+    if end_date:
+        logs_query = logs_query.filter(
+            AuditLog.created_at <= datetime.combine(end_date, datetime.max.time())
+        )
+    if user_id_filter:
+        logs_query = logs_query.filter(AuditLog.user_id == user_id_filter)
+    if resource_id_filter:
+        logs_query = logs_query.filter(AuditLog.resource_id == resource_id_filter)
+    if resource_type_filter:
+        logs_query = logs_query.filter(AuditLog.resource_type == resource_type_filter)
+    if action_type_filter:
+        logs_query = logs_query.filter(AuditLog.action_type == action_type_filter)
+
+    total_logs = logs_query.count()
+    logs = (
+        logs_query
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    active_users = (
+        User.query
+        .with_entities(User.id, User.name, User.username)
+        .filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+    total_pages = max((total_logs + per_page - 1) // per_page, 1)
+
+    return render_template(
+        "admin/relatorio_client_logs.html",
+        logs=logs,
+        users=active_users,
+        start_date=start_date_raw,
+        end_date=end_date_raw,
+        user_id_filter=user_id_filter,
+        resource_id_filter=resource_id_filter,
+        resource_type_filter=resource_type_filter,
+        action_type_filter=action_type_filter,
+        page=page,
+        per_page=per_page,
+        total_logs=total_logs,
+        total_pages=total_pages,
+    )
+
+
+@relatorios_bp.route("/relatorio_atividade_usuarios")
+@report_access_required("user_activity_logs")
+def relatorio_atividade_usuarios():
+    """Display user activity with latest login and session heartbeat."""
+
+    start_date_raw = (request.args.get("start_date") or "").strip()
+    end_date_raw = (request.args.get("end_date") or "").strip()
+    user_id_filter = request.args.get("user_id", type=int)
+    status_filter = (request.args.get("status") or "").strip().lower()
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 50
+
+    if status_filter not in {"online", "offline"}:
+        status_filter = ""
+
+    def _parse_date(raw: str) -> date | None:
+        if not raw:
+            return None
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    start_date = _parse_date(start_date_raw)
+    end_date = _parse_date(end_date_raw)
+
+    users_query = User.query.filter(User.ativo.is_(True))
+    if user_id_filter:
+        users_query = users_query.filter(User.id == user_id_filter)
+    users = users_query.order_by(User.name.asc(), User.username.asc()).all()
+    if not users:
+        return render_template(
+            "admin/relatorio_atividade_usuarios.html",
+            rows=[],
+            users=[],
+            total_rows=0,
+            total_pages=1,
+            page=1,
+            per_page=per_page,
+            user_id_filter=user_id_filter,
+            status_filter=status_filter,
+            start_date=start_date_raw,
+            end_date=end_date_raw,
+        )
+
+    user_ids = [user.id for user in users if user.id]
+
+    sessions = (
+        Session.query.filter(Session.user_id.in_(user_ids))
+        .order_by(Session.last_activity.desc())
+        .all()
+    )
+    latest_session_by_user: dict[int, Session] = {}
+    for sess in sessions:
+        if not sess.user_id or sess.user_id in latest_session_by_user:
+            continue
+        latest_session_by_user[sess.user_id] = sess
+
+    login_logs_query = (
+        AuditLog.query.filter(
+            AuditLog.user_id.in_(user_ids),
+            AuditLog.resource_type == "session",
+            AuditLog.action_type == "login",
+        )
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+    )
+    if start_date:
+        login_logs_query = login_logs_query.filter(
+            AuditLog.created_at >= datetime.combine(start_date, datetime.min.time())
+        )
+    if end_date:
+        login_logs_query = login_logs_query.filter(
+            AuditLog.created_at <= datetime.combine(end_date, datetime.max.time())
+        )
+    login_logs = login_logs_query.all()
+    latest_login_by_user: dict[int, AuditLog] = {}
+    for log in login_logs:
+        if not log.user_id or log.user_id in latest_login_by_user:
+            continue
+        latest_login_by_user[log.user_id] = log
+
+    now = utc3_now()
+    online_threshold = now - timedelta(minutes=5)
+    rows: list[dict[str, object]] = []
+    for user in users:
+        latest_session = latest_session_by_user.get(user.id)
+        latest_login = latest_login_by_user.get(user.id)
+        last_activity = latest_session.last_activity if latest_session else None
+        is_online = bool(last_activity and last_activity >= online_threshold)
+        status_value = "online" if is_online else "offline"
+        if status_filter and status_value != status_filter:
+            continue
+        rows.append(
+            {
+                "user": user,
+                "status": status_value,
+                "last_activity": last_activity,
+                "last_activity_ip": (latest_session.ip_address if latest_session else None),
+                "last_login_at": (latest_login.created_at if latest_login else None),
+                "last_login_ip": (latest_login.ip_address if latest_login else None),
+            }
+        )
+
+    total_rows = len(rows)
+    total_pages = max((total_rows + per_page - 1) // per_page, 1)
+    if page > total_pages:
+        page = total_pages
+    start_idx = (page - 1) * per_page
+    paginated_rows = rows[start_idx:start_idx + per_page]
+
+    selectable_users = (
+        User.query.with_entities(User.id, User.name, User.username)
+        .filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+
+    return render_template(
+        "admin/relatorio_atividade_usuarios.html",
+        rows=paginated_rows,
+        users=selectable_users,
+        total_rows=total_rows,
+        total_pages=total_pages,
+        page=page,
+        per_page=per_page,
+        user_id_filter=user_id_filter,
+        status_filter=status_filter,
+        start_date=start_date_raw,
+        end_date=end_date_raw,
     )
 
 

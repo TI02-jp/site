@@ -763,6 +763,18 @@
               </div>
               {% if can_manage %}
               <div class="d-flex align-items-center flex-wrap gap-2 announcement-card-actions" data-stop-propagation="true">
+                {% if can_view_click_logs %}
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                  title="Ver logs de visualização do comunicado"
+                  data-bs-toggle="modal"
+                  data-bs-target="#announcementLogModal-{{ announcement.id }}"
+                >
+                  <i class="bi bi-journal-text"></i>
+                  <span>Log{% if announcement_click_totals.get(announcement.id, 0) %} ({{ announcement_click_totals.get(announcement.id, 0) }}){% endif %}</span>
+                </button>
+                {% endif %}
                 <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
                   <i class="bi bi-pencil-square"></i>
                   <span>Editar</span>
@@ -932,6 +944,67 @@
           </div>
         </div>
       </div>
+
+      {% if can_view_click_logs %}
+      {% set click_logs = announcement_click_logs.get(announcement.id, []) %}
+      {% set click_total = announcement_click_totals.get(announcement.id, 0) %}
+      <div class="modal fade" id="announcementLogModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="announcementLogModalLabel-{{ announcement.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <h2 class="h6 mb-1" id="announcementLogModalLabel-{{ announcement.id }}">Log de visualizações do comunicado</h2>
+                <p class="small text-muted mb-0">{{ announcement.subject }}</p>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-muted">ID: {{ announcement.id }}</span>
+                <span class="badge text-bg-secondary">Total de cliques: {{ click_total }}</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-striped table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Data/Hora</th>
+                      <th>Usuário</th>
+                      <th>IP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if click_logs %}
+                      {% for log_item in click_logs %}
+                      <tr>
+                        <td>{{ log_item.created_at and log_item.created_at.strftime('%d/%m/%Y %H:%M:%S') or '-' }}</td>
+                        <td>
+                          <div class="fw-semibold">{{ log_item.user.name if log_item.user and log_item.user.name else log_item.username }}</div>
+                          {% if log_item.user and log_item.user.username and log_item.user.username != log_item.username %}
+                          <div class="small text-muted">{{ log_item.user.username }}</div>
+                          {% endif %}
+                        </td>
+                        <td>{{ log_item.ip_address or '-' }}</td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="3" class="text-center text-muted py-3">Nenhum clique registrado para este comunicado.</td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+              {% if click_total > (click_logs|length) %}
+              <p class="small text-muted mt-2 mb-0">Mostrando os {{ click_logs|length }} cliques mais recentes.</p>
+              {% endif %}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
       {% if can_manage %}
       {% set edit_form = edit_forms.get(announcement.id) %}
