@@ -33,6 +33,8 @@ from flask_login import current_user, login_required
 from app import db
 from app.forms import DepartamentoContabilForm, DepartamentoFiscalForm
 from app.models.tables import (
+    Announcement,
+    AuditLog,
     Departamento,
     Empresa,
     ReportPermission,
@@ -44,6 +46,7 @@ from app.models.tables import (
     TaskStatusHistory,
     User,
 )
+from app.controllers.routes._decorators import report_access_required
 from app.services.courses import CourseStatus, get_courses_overview
 from app.controllers.routes._base import encode_id
 
@@ -66,6 +69,7 @@ REPORT_DEFINITIONS: dict[str, dict[str, str]] = {
     "usuarios": {"title": "Relatório de Usuários", "description": "Gestão e estatísticas de usuários"},
     "cursos": {"title": "Relatório de Cursos", "description": "Métricas do catálogo de treinamentos"},
     "tarefas": {"title": "Relatório de Tarefas", "description": "Painel de tarefas e indicadores"},
+    "mural_logs": {"title": "Logs do Mural", "description": "Auditoria de acesso e cliques em comunicados"},
 }
 
 PORTAL_PERMISSION_DEFINITIONS: dict[str, dict[str, str]] = {
@@ -1241,6 +1245,106 @@ def relatorio_tarefas():
     )
 
 
+@relatorios_bp.route("/relatorio_mural_logs")
+@report_access_required("mural_logs")
+def relatorio_mural_logs():
+    """Display audit logs for MURAL access and card click interactions."""
+
+    start_date_raw = (request.args.get("start_date") or "").strip()
+    end_date_raw = (request.args.get("end_date") or "").strip()
+    user_id_filter = request.args.get("user_id", type=int)
+    announcement_id_filter = request.args.get("announcement_id", type=int)
+    event_type = (request.args.get("event_type") or "").strip().lower()
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 50
+
+    def _parse_date(raw: str) -> date | None:
+        if not raw:
+            return None
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    start_date = _parse_date(start_date_raw)
+    end_date = _parse_date(end_date_raw)
+
+    valid_events = {"mural_view", "mural_card_click"}
+    if event_type and event_type not in valid_events:
+        event_type = ""
+
+    logs_query = (
+        AuditLog.query
+        .filter(AuditLog.resource_type == "announcement")
+        .filter(AuditLog.action_type == "view")
+        .filter(AuditLog.action_description.in_(tuple(valid_events)))
+    )
+
+    if start_date:
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        logs_query = logs_query.filter(AuditLog.created_at >= start_dt)
+    if end_date:
+        end_dt = datetime.combine(end_date, datetime.max.time())
+        logs_query = logs_query.filter(AuditLog.created_at <= end_dt)
+    if user_id_filter:
+        logs_query = logs_query.filter(AuditLog.user_id == user_id_filter)
+    if announcement_id_filter:
+        logs_query = logs_query.filter(AuditLog.resource_id == announcement_id_filter)
+    if event_type:
+        logs_query = logs_query.filter(AuditLog.action_description == event_type)
+
+    total_logs = logs_query.count()
+    logs = (
+        logs_query
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    announcement_ids = {
+        log.resource_id for log in logs if isinstance(log.resource_id, int)
+    }
+    announcement_subject_by_id = {}
+    if announcement_ids:
+        rows = (
+            Announcement.query
+            .with_entities(Announcement.id, Announcement.subject)
+            .filter(Announcement.id.in_(announcement_ids))
+            .all()
+        )
+        announcement_subject_by_id = {
+            announcement_id: subject
+            for announcement_id, subject in rows
+        }
+
+    active_users = (
+        User.query
+        .with_entities(User.id, User.name, User.username)
+        .filter(User.ativo.is_(True))
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+
+    total_pages = max((total_logs + per_page - 1) // per_page, 1)
+
+    return render_template(
+        "admin/relatorio_mural_logs.html",
+        logs=logs,
+        users=active_users,
+        event_type=event_type,
+        user_id_filter=user_id_filter,
+        announcement_id_filter=announcement_id_filter,
+        start_date=start_date_raw,
+        end_date=end_date_raw,
+        page=page,
+        per_page=per_page,
+        total_logs=total_logs,
+        total_pages=total_pages,
+        announcement_subject_by_id=announcement_subject_by_id,
+    )
+
+
 @relatorios_bp.route("/relatorios/permissoes", methods=["GET", "POST"])
 @login_required
 def report_permissions():
@@ -1315,3 +1419,4 @@ def report_permissions():
         permitted_tags=permitted_tags,
         permitted_users=permitted_users,
     )
+

@@ -44,6 +44,7 @@ from app.models.tables import (
 )
 from app.utils.permissions import is_user_admin
 from app.utils.security import sanitize_html
+from app.utils.audit import ActionType, ResourceType, log_user_action
 
 announcements_bp = Blueprint("announcements", __name__)
 
@@ -677,3 +678,44 @@ def mark_announcement_read(announcement_id: int):
     read = bool(updated or already_read or not notifications)
 
     return jsonify({"status": "ok", "read": read})
+
+
+@announcements_bp.route(
+    "/announcements/log-event",
+    methods=["POST"],
+    endpoint="log_mural_event",
+)
+@login_required
+@meeting_only_access_check
+def log_mural_event():
+    """Register MURAL interaction events for auditing/reporting."""
+
+    payload = request.get_json(silent=True) or {}
+    event_type = (payload.get("event_type") or "").strip().lower()
+    if event_type not in {"mural_view", "mural_card_click"}:
+        return jsonify({"status": "error", "message": "Evento invalido."}), 400
+
+    resource_id = None
+    if event_type == "mural_card_click":
+        announcement_id = payload.get("announcement_id")
+        if not isinstance(announcement_id, int):
+            return jsonify({"status": "error", "message": "Comunicado invalido."}), 400
+
+        announcement = _apply_visibility_filter(
+            Announcement.query.filter(Announcement.id == announcement_id)
+        ).first()
+        if not announcement:
+            return jsonify({"status": "error", "message": "Comunicado nao encontrado."}), 404
+        resource_id = announcement.id
+
+    log_user_action(
+        action_type=ActionType.VIEW,
+        resource_type=ResourceType.ANNOUNCEMENT,
+        resource_id=resource_id,
+        action_description=event_type,
+        new_values={
+            "mural_event": event_type,
+            "announcement_id": resource_id,
+        },
+    )
+    return jsonify({"status": "ok"})
