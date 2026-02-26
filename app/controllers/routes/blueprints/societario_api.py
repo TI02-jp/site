@@ -89,7 +89,7 @@ def api_societario_list():
     if empresa_arg:
         query = query.filter(func.upper(ProcessoSocietario.nome_empresa).like(f"%{empresa_arg}%"))
 
-    processos = query.order_by(ProcessoSocietario.data_inicio.asc(), ProcessoSocietario.id.asc()).limit(limit).all()
+    processos = query.order_by(ProcessoSocietario.data_inicio.desc(), ProcessoSocietario.id.desc()).limit(limit).all()
     ids = [p.id for p in processos]
     counts_map: dict[int, int] = {}
     if ids:

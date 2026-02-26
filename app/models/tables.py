@@ -799,10 +799,14 @@ class ProcessoSocietarioTipo(str, Enum):
     """Tipos permitidos para processos societarios."""
 
     ALTERACAO = "ALTERACAO"
+    ACOMPANHAMENTO = "ACOMPANHAMENTO"
     ATA = "ATA"
     RERATIFICACAO = "RERATIFICACAO"
     TRANSFORMACAO = "TRANSFORMACAO"
     BAIXA = "BAIXA"
+    INSCRICOES = "INSCRICOES"
+    SISTEMAS_INTERNOS = "SISTEMAS_INTERNOS"
+    IMPLANTACAO = "IMPLANTACAO"
     CONSTITUICAO = "CONSTITUICAO"
     ATUALIZACAO_CNPJ_RECEITA = "ATUALIZACAO_CNPJ_RECEITA"
     CRIACAO_FILIAL = "CRIACAO_FILIAL"
@@ -813,7 +817,9 @@ class ProcessoSocietarioStatus(str, Enum):
     """Status permitidos para processos societarios."""
 
     VIABILIDADE = "VIABILIDADE"
+    AGUARDANDO_INICIO = "AGUARDANDO_INICIO"
     DIGITACAO = "DIGITACAO"
+    EM_EXIGENCIA = "EM_EXIGENCIA"
     CORRECAO = "CORRECAO"
     ASSINATURA = "ASSINATURA"
     JUCESC = "JUCESC"
@@ -821,6 +827,8 @@ class ProcessoSocietarioStatus(str, Enum):
     PARALISADA = "PARALISADA"
     DEFERIDO = "DEFERIDO"
     REGISTRADA = "REGISTRADA"
+    EM_ANDAMENTO = "EM_ANDAMENTO"
+    AGUARDANDO_RETORNO = "AGUARDANDO_RETORNO"
 
 
 class ProcessoSocietario(db.Model):
