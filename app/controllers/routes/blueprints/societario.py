@@ -27,14 +27,18 @@ societario_bp = Blueprint("societario", __name__)
 
 TIPO_PROCESSO_CHOICES = sorted(
     [
-        (ProcessoSocietarioTipo.ALTERACAO.value, "ALTERAÇÃO"),
+        (ProcessoSocietarioTipo.ALTERACAO.value, "ALTERA\u00c7\u00c3O"),
+        (ProcessoSocietarioTipo.ACOMPANHAMENTO.value, "ACOMPANHAMENTO"),
         (ProcessoSocietarioTipo.ATA.value, "ATA"),
-        (ProcessoSocietarioTipo.RERATIFICACAO.value, "RERATIFICAÇÃO"),
-        (ProcessoSocietarioTipo.TRANSFORMACAO.value, "TRANSFORMAÇÃO"),
+        (ProcessoSocietarioTipo.RERATIFICACAO.value, "RERATIFICA\u00c7\u00c3O"),
+        (ProcessoSocietarioTipo.TRANSFORMACAO.value, "TRANSFORMA\u00c7\u00c3O"),
         (ProcessoSocietarioTipo.BAIXA.value, "BAIXA"),
-        (ProcessoSocietarioTipo.CONSTITUICAO.value, "CONSTITUIÇÃO"),
-        (ProcessoSocietarioTipo.ATUALIZACAO_CNPJ_RECEITA.value, "ATUALIZAÇÃO CNPJ RECEITA"),
-        (ProcessoSocietarioTipo.CRIACAO_FILIAL.value, "CRIAÇÃO FILIAL"),
+        (ProcessoSocietarioTipo.INSCRICOES.value, "INSCRI\u00c7\u00d5ES"),
+        (ProcessoSocietarioTipo.SISTEMAS_INTERNOS.value, "SISTEMAS INTERNOS"),
+        (ProcessoSocietarioTipo.IMPLANTACAO.value, "IMPLANTA\u00c7\u00c3O"),
+        (ProcessoSocietarioTipo.CONSTITUICAO.value, "CONSTITUI\u00c7\u00c3O"),
+        (ProcessoSocietarioTipo.ATUALIZACAO_CNPJ_RECEITA.value, "ATUALIZA\u00c7\u00c3O CNPJ RECEITA"),
+        (ProcessoSocietarioTipo.CRIACAO_FILIAL.value, "CRIA\u00c7\u00c3O FILIAL"),
         (ProcessoSocietarioTipo.CLIENTE_TRANSFERIDO.value, "CLIENTE TRANSFERIDO"),
     ],
     key=lambda item: item[1],
@@ -43,14 +47,18 @@ TIPO_PROCESSO_CHOICES = sorted(
 STATUS_PROCESSO_CHOICES = sorted(
     [
         (ProcessoSocietarioStatus.VIABILIDADE.value, "VIABILIDADE"),
-        (ProcessoSocietarioStatus.DIGITACAO.value, "DIGITAÇÃO"),
-        (ProcessoSocietarioStatus.CORRECAO.value, "CORREÇÃO"),
+        (ProcessoSocietarioStatus.AGUARDANDO_INICIO.value, "AGUARDANDO IN\u00cdCIO"),
+        (ProcessoSocietarioStatus.DIGITACAO.value, "DIGITA\u00c7\u00c3O"),
+        (ProcessoSocietarioStatus.EM_EXIGENCIA.value, "EM EXIG\u00caNCIA"),
+        (ProcessoSocietarioStatus.CORRECAO.value, "CORRE\u00c7\u00c3O"),
         (ProcessoSocietarioStatus.ASSINATURA.value, "ASSINATURA"),
         (ProcessoSocietarioStatus.JUCESC.value, "JUCESC"),
         (ProcessoSocietarioStatus.FINALIZADA.value, "FINALIZADA"),
         (ProcessoSocietarioStatus.PARALISADA.value, "PARALISADA"),
         (ProcessoSocietarioStatus.DEFERIDO.value, "DEFERIDO"),
         (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
+        (ProcessoSocietarioStatus.EM_ANDAMENTO.value, "EM ANDAMENTO"),
+        (ProcessoSocietarioStatus.AGUARDANDO_RETORNO.value, "AGUARDANDO RETORNO"),
     ],
     key=lambda item: item[1],
 )
@@ -317,19 +325,75 @@ def _persist_processo_update(processo: ProcessoSocietario, change_labels: list[s
 @societario_access_required
 def societario():
     """Renderiza a pagina principal de processos societarios."""
+    return _render_societario_page(is_acompanhamento=False)
+
+
+@societario_bp.route("/societario/acompanhamento", methods=["GET"])
+@login_required
+@meeting_only_access_check
+@societario_access_required
+def societario_acompanhamento():
+    """Renderiza a pagina de acompanhamento societario (somente registradas)."""
+    return _render_societario_page(is_acompanhamento=True)
+
+
+def _render_societario_page(*, is_acompanhamento: bool):
+    """Renderiza listagem societaria conforme o contexto da tela."""
     _ensure_history_table()
+    acompanhamento_status_enum_values = [
+        ProcessoSocietarioStatus.REGISTRADA,
+        ProcessoSocietarioStatus.EM_ANDAMENTO,
+        ProcessoSocietarioStatus.AGUARDANDO_RETORNO,
+        ProcessoSocietarioStatus.FINALIZADA,
+    ]
+    acompanhamento_status_values = {item.value for item in acompanhamento_status_enum_values}
     status_arg = (request.args.get("status") or "").strip().upper()
+    tipo_arg = (request.args.get("tipo") or "").strip().upper()
     status_values = {value for value, _ in STATUS_PROCESSO_CHOICES}
+    tipo_values = {value for value, _ in TIPO_PROCESSO_CHOICES}
     active_status = status_arg if status_arg in status_values else ""
+    active_tipo = tipo_arg if tipo_arg in tipo_values else ""
 
     processos_query = ProcessoSocietario.query
-    if active_status:
+    if active_tipo:
         processos_query = processos_query.filter(
-            ProcessoSocietario.status == ProcessoSocietarioStatus(active_status)
+            ProcessoSocietario.tipo_processo == ProcessoSocietarioTipo(active_tipo)
         )
+    base_query = processos_query
+
+    if is_acompanhamento:
+        if active_status in acompanhamento_status_values:
+            processos_query = processos_query.filter(
+                ProcessoSocietario.status == ProcessoSocietarioStatus(active_status)
+            )
+        else:
+            active_status = ""
+            processos_query = processos_query.filter(
+                ProcessoSocietario.status.in_(
+                    [
+                        ProcessoSocietarioStatus.REGISTRADA,
+                        ProcessoSocietarioStatus.EM_ANDAMENTO,
+                        ProcessoSocietarioStatus.AGUARDANDO_RETORNO,
+                    ]
+                )
+            )
+    elif active_status:
+        if active_status in acompanhamento_status_values:
+            active_status = ""
+            processos_query = processos_query.filter(
+                ProcessoSocietario.status.notin_(
+                    acompanhamento_status_enum_values
+                )
+            )
+        else:
+            processos_query = processos_query.filter(
+                ProcessoSocietario.status == ProcessoSocietarioStatus(active_status)
+            )
     else:
         processos_query = processos_query.filter(
-            ProcessoSocietario.status != ProcessoSocietarioStatus.FINALIZADA
+            ProcessoSocietario.status.notin_(
+                acompanhamento_status_enum_values
+            )
         )
 
     # Subquery: contagem de historico por processo (evita query separada)
@@ -347,7 +411,7 @@ def societario():
         processos_query
         .outerjoin(history_subq, ProcessoSocietario.id == history_subq.c.processo_id)
         .add_columns(func.coalesce(history_subq.c.hist_count, 0).label("history_count"))
-        .order_by(ProcessoSocietario.data_inicio.asc(), ProcessoSocietario.id.asc())
+        .order_by(ProcessoSocietario.data_inicio.desc(), ProcessoSocietario.id.desc())
         .all()
     )
 
@@ -359,11 +423,36 @@ def societario():
 
     # Status counts com cache (2 min)
     status_counts = _status_counts_payload()
-
-    total_processos = sum(
-        count for status, count in status_counts.items()
-        if status != ProcessoSocietarioStatus.FINALIZADA.value
-    )
+    if is_acompanhamento:
+        grouped_status = (
+            base_query.with_entities(
+                ProcessoSocietario.status,
+                func.count(ProcessoSocietario.id),
+            )
+            .filter(
+                ProcessoSocietario.status.in_(acompanhamento_status_enum_values)
+            )
+            .group_by(ProcessoSocietario.status)
+            .all()
+        )
+        status_counts = {value: 0 for value, _ in STATUS_PROCESSO_CHOICES}
+        for status_value, count in grouped_status:
+            key = status_value.value if hasattr(status_value, "value") else str(status_value)
+            if key in status_counts:
+                status_counts[key] = int(count or 0)
+        total_processos = sum(
+            status_counts.get(status_value, 0)
+            for status_value in acompanhamento_status_values
+            if status_value != ProcessoSocietarioStatus.FINALIZADA.value
+        )
+    else:
+        status_counts = dict(status_counts)
+        for status_value in acompanhamento_status_values:
+            status_counts[status_value] = 0
+        total_processos = sum(
+            count for status, count in status_counts.items()
+            if status not in acompanhamento_status_values
+        )
     empresas = _get_empresas_ativas()
     return render_template(
         "societario.html",
@@ -374,7 +463,10 @@ def societario():
         status_choices=STATUS_PROCESSO_CHOICES,
         status_counts=status_counts,
         active_status=active_status,
+        active_tipo=active_tipo,
         total_processos=total_processos,
+        is_acompanhamento=is_acompanhamento,
+        page_mode="acompanhamento" if is_acompanhamento else "societario",
     )
 
 
@@ -479,3 +571,4 @@ def societario_delete(processo_id: int):
     db.session.commit()
     _invalidate_societario_caches()
     return redirect(url_for("societario.societario"))
+

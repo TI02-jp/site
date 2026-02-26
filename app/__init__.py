@@ -442,6 +442,55 @@ with app.app_context():
     try:
         inspector = sa.inspect(db.engine)
 
+        if inspector.has_table("societario_processos") and db.engine.dialect.name == "mysql":
+            tipo_column = next(
+                (
+                    col
+                    for col in inspector.get_columns("societario_processos")
+                    if col.get("name") == "tipo_processo"
+                ),
+                None,
+            )
+            desired_tipo_values = [item.value for item in _models.ProcessoSocietarioTipo]
+            if tipo_column is not None:
+                tipo_type_str = str(tipo_column.get("type", ""))
+                if any(value not in tipo_type_str for value in desired_tipo_values):
+                    enum_tipos_sql = ", ".join(f"'{value}'" for value in desired_tipo_values)
+                    with db.engine.begin() as conn:
+                        conn.execute(
+                            sa.text(
+                                f"""
+                                ALTER TABLE societario_processos
+                                MODIFY COLUMN tipo_processo ENUM({enum_tipos_sql})
+                                NOT NULL
+                                """
+                            )
+                        )
+
+            status_column = next(
+                (
+                    col
+                    for col in inspector.get_columns("societario_processos")
+                    if col.get("name") == "status"
+                ),
+                None,
+            )
+            desired_status_values = [item.value for item in _models.ProcessoSocietarioStatus]
+            if status_column is not None:
+                status_type_str = str(status_column.get("type", ""))
+                if any(value not in status_type_str for value in desired_status_values):
+                    enum_values_sql = ", ".join(f"'{value}'" for value in desired_status_values)
+                    with db.engine.begin() as conn:
+                        conn.execute(
+                            sa.text(
+                                f"""
+                                ALTER TABLE societario_processos
+                                MODIFY COLUMN status ENUM({enum_values_sql})
+                                NOT NULL DEFAULT '{_models.ProcessoSocietarioStatus.VIABILIDADE.value}'
+                                """
+                            )
+                        )
+
         if not inspector.has_table("diretoria_feedbacks"):
             diretoria_feedback_table = db.metadata.tables.get("diretoria_feedbacks")
             if diretoria_feedback_table is not None:
