@@ -13,8 +13,8 @@
       <h1 class="h4 mb-1"><i class="bi bi-journal-text me-2"></i>Logs do Mural</h1>
       <p class="text-muted mb-0">Auditoria de acesso ao MURAL e cliques nos cards de comunicados.</p>
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('relatorios') }}">
-      <i class="bi bi-arrow-left me-1"></i>Voltar para Relatórios
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('announcements') }}">
+      <i class="bi bi-arrow-left me-1"></i>Voltar ao mural
     </a>
   </div>
 
@@ -41,10 +41,6 @@
           </select>
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label small text-muted mb-1" for="announcement_id">ID comunicado</label>
-          <input class="form-control form-control-sm" id="announcement_id" name="announcement_id" type="number" min="1" value="{{ announcement_id_filter or '' }}">
-        </div>
-        <div class="col-6 col-md-2">
           <label class="form-label small text-muted mb-1" for="start_date">Data inicial</label>
           <input class="form-control form-control-sm" id="start_date" name="start_date" type="date" value="{{ start_date }}">
         </div>
@@ -60,7 +56,7 @@
     </div>
   </div>
 
-  <div class="card shadow-sm border-0">
+  <div class="card shadow-sm border-0" id="mural-logs-results">
     <div class="card-header bg-white">
       <strong>Total de registros:</strong> {{ total_logs }}
     </div>
@@ -130,4 +126,51 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const REFRESH_INTERVAL_MS = 5000;
+    let isRefreshing = false;
+
+    const refreshLogs = async () => {
+      if (isRefreshing) {
+        return;
+      }
+      isRefreshing = true;
+
+      try {
+        const response = await fetch(window.location.href, {
+          method: 'GET',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const nextResults = doc.querySelector('#mural-logs-results');
+        const currentResults = document.querySelector('#mural-logs-results');
+
+        if (!nextResults || !currentResults) {
+          return;
+        }
+
+        currentResults.replaceWith(nextResults);
+      } catch (error) {
+        console.warn('Falha ao atualizar logs do mural:', error);
+      } finally {
+        isRefreshing = false;
+      }
+    };
+
+    refreshLogs();
+    setInterval(refreshLogs, REFRESH_INTERVAL_MS);
+  });
+</script>
 {% endblock %}

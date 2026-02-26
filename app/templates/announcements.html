@@ -141,6 +141,11 @@
     font-size: var(--font-base);
   }
 
+  .announcement-log-not-viewed-scroll {
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+
   .announcement-snippet {
     max-height: 3.75rem;
     overflow: hidden;
@@ -671,11 +676,21 @@
 <div class="container-fluid py-2">
   <div class="d-flex flex-column flex-md-row align-items-start justify-content-between gap-2 mb-3">
     <h1 class="h4 mb-0 fw-semibold text-uppercase"><i class="bi bi-megaphone me-2"></i>{{ page_title }}</h1>
-    {% if can_manage and not is_history %}
-    <button type="button" class="btn btn-primary d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#newAnnouncementModal">
-      <i class="bi bi-plus-circle"></i>
-      <span>Novo comunicado</span>
-    </button>
+    {% if not is_history and (can_access_mural_logs or can_manage) %}
+    <div class="d-flex align-items-center flex-wrap gap-2">
+      {% if can_access_mural_logs %}
+      <a href="{{ url_for('relatorio_mural_logs') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2 px-3">
+        <i class="bi bi-journal-text"></i>
+        <span>Logs do mural</span>
+      </a>
+      {% endif %}
+      {% if can_manage %}
+      <button type="button" class="btn btn-primary d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#newAnnouncementModal">
+        <i class="bi bi-plus-circle"></i>
+        <span>Novo comunicado</span>
+      </button>
+      {% endif %}
+    </div>
     {% endif %}
   </div>
 
@@ -770,9 +785,11 @@
                   title="Ver logs de visualização do comunicado"
                   data-bs-toggle="modal"
                   data-bs-target="#announcementLogModal-{{ announcement.id }}"
+                  data-announcement-log-trigger="true"
+                  data-announcement-id="{{ announcement.id }}"
                 >
                   <i class="bi bi-journal-text"></i>
-                  <span>Log{% if announcement_click_totals.get(announcement.id, 0) %} ({{ announcement_click_totals.get(announcement.id, 0) }}){% endif %}</span>
+                  <span data-announcement-log-count>Log{% if announcement_view_totals.get(announcement.id, 0) %} ({{ announcement_view_totals.get(announcement.id, 0) }}){% endif %}</span>
                 </button>
                 {% endif %}
                 <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Editar comunicado" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal-{{ announcement.id }}">
@@ -946,14 +963,16 @@
       </div>
 
       {% if can_view_click_logs %}
-      {% set click_logs = announcement_click_logs.get(announcement.id, []) %}
-      {% set click_total = announcement_click_totals.get(announcement.id, 0) %}
-      <div class="modal fade" id="announcementLogModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="announcementLogModalLabel-{{ announcement.id }}" aria-hidden="true">
+      {% set viewed_logs = announcement_view_logs.get(announcement.id, []) %}
+      {% set viewed_total = announcement_view_totals.get(announcement.id, 0) %}
+      {% set not_viewed_users = announcement_not_viewed_users.get(announcement.id, []) %}
+      {% set not_viewed_total = not_viewed_users|length %}
+      <div class="modal fade" id="announcementLogModal-{{ announcement.id }}" tabindex="-1" aria-labelledby="announcementLogModalLabel-{{ announcement.id }}" aria-hidden="true" data-announcement-log-modal="true" data-announcement-id="{{ announcement.id }}">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
               <div>
-                <h2 class="h6 mb-1" id="announcementLogModalLabel-{{ announcement.id }}">Log de visualizações do comunicado</h2>
+                <h2 class="h6 mb-1" id="announcementLogModalLabel-{{ announcement.id }}">Status de visualização do comunicado</h2>
                 <p class="small text-muted mb-0">{{ announcement.subject }}</p>
               </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -961,20 +980,23 @@
             <div class="modal-body">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="small text-muted">ID: {{ announcement.id }}</span>
-                <span class="badge text-bg-secondary">Total de cliques: {{ click_total }}</span>
+                <div class="d-flex flex-wrap gap-1">
+                  <span class="badge text-bg-success" data-announcement-viewed-total>Viram: {{ viewed_total }}</span>
+                  <span class="badge text-bg-warning" data-announcement-not-viewed-total>Não viram: {{ not_viewed_total }}</span>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-striped table-sm align-middle mb-0">
                   <thead>
                     <tr>
-                      <th>Data/Hora</th>
+                      <th>Primeira visualização</th>
                       <th>Usuário</th>
                       <th>IP</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {% if click_logs %}
-                      {% for log_item in click_logs %}
+                  <tbody data-announcement-viewed-body>
+                    {% if viewed_logs %}
+                      {% for log_item in viewed_logs %}
                       <tr>
                         <td>{{ log_item.created_at and log_item.created_at.strftime('%d/%m/%Y %H:%M:%S') or '-' }}</td>
                         <td>
@@ -988,15 +1010,44 @@
                       {% endfor %}
                     {% else %}
                       <tr>
-                        <td colspan="3" class="text-center text-muted py-3">Nenhum clique registrado para este comunicado.</td>
+                        <td colspan="3" class="text-center text-muted py-3">Nenhum usuário visualizou este comunicado ainda.</td>
                       </tr>
                     {% endif %}
                   </tbody>
                 </table>
               </div>
-              {% if click_total > (click_logs|length) %}
-              <p class="small text-muted mt-2 mb-0">Mostrando os {{ click_logs|length }} cliques mais recentes.</p>
-              {% endif %}
+              <div class="mt-3">
+                <h3 class="h6 mb-2" data-announcement-not-viewed-title>Não visualizaram ({{ not_viewed_total }})</h3>
+                <div class="table-responsive announcement-log-not-viewed-scroll">
+                  <table class="table table-striped table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Usuário</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody data-announcement-not-viewed-body>
+                      {% if not_viewed_users %}
+                        {% for user_item in not_viewed_users %}
+                        <tr>
+                          <td>
+                            <div class="fw-semibold">{{ user_item.name or user_item.username }}</div>
+                            {% if user_item.username %}
+                            <div class="small text-muted">{{ user_item.username }}</div>
+                            {% endif %}
+                          </td>
+                          <td><span class="badge text-bg-warning">Não visualizou</span></td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr>
+                          <td colspan="2" class="text-center text-muted py-3">Todos os usuários do público-alvo visualizaram este comunicado.</td>
+                        </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
@@ -2786,6 +2837,113 @@
       });
     });
 
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const REFRESH_INTERVAL_MS = 5000;
+    const csrfToken = window.csrfToken || '';
+    const refreshTimers = new Map();
+
+    const renderViewedRows = (items) => {
+      if (!items.length) {
+        return '<tr><td colspan="3" class="text-center text-muted py-3">Nenhum usuário visualizou este comunicado ainda.</td></tr>';
+      }
+      return items
+        .map((item) => `
+          <tr>
+            <td>${item.created_at || '-'}</td>
+            <td>
+              <div class="fw-semibold">${item.name || item.username || '-'}</div>
+              ${item.username ? `<div class="small text-muted">${item.username}</div>` : ''}
+            </td>
+            <td>${item.ip_address || '-'}</td>
+          </tr>
+        `)
+        .join('');
+    };
+
+    const renderNotViewedRows = (items) => {
+      if (!items.length) {
+        return '<tr><td colspan="2" class="text-center text-muted py-3">Todos os usuários visualizaram este comunicado.</td></tr>';
+      }
+      return items
+        .map((item) => `
+          <tr>
+            <td>
+              <div class="fw-semibold">${item.name || item.username || '-'}</div>
+              ${item.username ? `<div class="small text-muted">${item.username}</div>` : ''}
+            </td>
+            <td><span class="badge text-bg-warning">Não visualizou</span></td>
+          </tr>
+        `)
+        .join('');
+    };
+
+    const updateLogUi = (announcementId, payload) => {
+      const modal = document.querySelector(`[data-announcement-log-modal="true"][data-announcement-id="${announcementId}"]`);
+      if (!modal) {
+        return;
+      }
+
+      const viewedBadge = modal.querySelector('[data-announcement-viewed-total]');
+      const notViewedBadge = modal.querySelector('[data-announcement-not-viewed-total]');
+      const notViewedTitle = modal.querySelector('[data-announcement-not-viewed-title]');
+      const viewedBody = modal.querySelector('[data-announcement-viewed-body]');
+      const notViewedBody = modal.querySelector('[data-announcement-not-viewed-body]');
+
+      if (viewedBadge) viewedBadge.textContent = `Viram: ${payload.viewed_total ?? 0}`;
+      if (notViewedBadge) notViewedBadge.textContent = `Não viram: ${payload.not_viewed_total ?? 0}`;
+      if (notViewedTitle) notViewedTitle.textContent = `Não visualizaram (${payload.not_viewed_total ?? 0})`;
+      if (viewedBody) viewedBody.innerHTML = renderViewedRows(payload.viewed_logs || []);
+      if (notViewedBody) notViewedBody.innerHTML = renderNotViewedRows(payload.not_viewed_users || []);
+
+      document.querySelectorAll(`[data-announcement-log-trigger="true"][data-announcement-id="${announcementId}"] [data-announcement-log-count]`)
+        .forEach((counterEl) => {
+          const total = payload.viewed_total ?? 0;
+          counterEl.textContent = total ? `Log (${total})` : 'Log';
+        });
+    };
+
+    const fetchLogStatus = async (announcementId) => {
+      const response = await fetch(`/announcements/${announcementId}/log-status`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Falha ao atualizar log (${response.status})`);
+      }
+      const payload = await response.json();
+      updateLogUi(announcementId, payload);
+    };
+
+    document.querySelectorAll('[data-announcement-log-modal="true"]').forEach((modal) => {
+      const announcementId = Number.parseInt(modal.dataset.announcementId || '', 10);
+      if (!Number.isInteger(announcementId) || announcementId <= 0) {
+        return;
+      }
+
+      modal.addEventListener('shown.bs.modal', () => {
+        fetchLogStatus(announcementId).catch(() => {});
+        const timer = window.setInterval(() => {
+          fetchLogStatus(announcementId).catch(() => {});
+        }, REFRESH_INTERVAL_MS);
+        refreshTimers.set(announcementId, timer);
+      });
+
+      modal.addEventListener('hidden.bs.modal', () => {
+        const timer = refreshTimers.get(announcementId);
+        if (timer) {
+          window.clearInterval(timer);
+          refreshTimers.delete(announcementId);
+        }
+      });
+    });
   });
 </script>
 <script>

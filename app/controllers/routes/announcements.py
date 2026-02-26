@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections import defaultdict
 from mimetypes import guess_type
 from typing import Iterable
 from uuid import uuid4
@@ -21,7 +22,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
@@ -255,39 +256,88 @@ def _apply_visibility_filter(query):
     return query.filter(~Announcement.target_tags.any())
 
 
-def _build_announcement_click_logs(
-    announcement_ids: list[int],
-    *,
-    per_announcement_limit: int = 20,
-) -> tuple[dict[int, list[AuditLog]], dict[int, int]]:
-    """Return click logs and totals for the provided announcement IDs."""
+def _build_announcement_view_status(
+    announcements: list[Announcement],
+) -> tuple[dict[int, list[AuditLog]], dict[int, list[User]], dict[int, int]]:
+    """Return per-announcement first viewers, non-viewers and totals."""
 
+    announcement_ids = [announcement.id for announcement in announcements if announcement.id]
     if not announcement_ids:
-        return {}, {}
+        return {}, {}, {}
 
-    rows = (
-        AuditLog.query.filter(
+    all_users = (
+        User.query
+        .order_by(User.name.asc(), User.username.asc())
+        .all()
+    )
+
+    first_log_ids_subquery = (
+        db.session.query(func.min(AuditLog.id).label("first_log_id"))
+        .filter(
             AuditLog.resource_type == ResourceType.ANNOUNCEMENT,
             AuditLog.action_type == ActionType.VIEW,
             AuditLog.action_description == "mural_card_click",
             AuditLog.resource_id.in_(announcement_ids),
         )
+        .group_by(AuditLog.resource_id, AuditLog.user_id)
+        .subquery()
+    )
+
+    first_view_logs = (
+        AuditLog.query.options(joinedload(AuditLog.user))
+        .filter(
+            AuditLog.id.in_(
+                db.session.query(first_log_ids_subquery.c.first_log_id)
+            )
+        )
         .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
         .all()
     )
 
-    grouped: dict[int, list[AuditLog]] = {announcement_id: [] for announcement_id in announcement_ids}
-    totals: dict[int, int] = {announcement_id: 0 for announcement_id in announcement_ids}
-
-    for row in rows:
+    seen_by_announcement: dict[int, dict[int, AuditLog]] = defaultdict(dict)
+    for row in first_view_logs:
         announcement_id = row.resource_id
-        if not isinstance(announcement_id, int) or announcement_id not in totals:
+        user_id = row.user_id
+        if not isinstance(announcement_id, int) or announcement_id not in announcement_ids:
             continue
-        totals[announcement_id] += 1
-        if len(grouped[announcement_id]) < per_announcement_limit:
-            grouped[announcement_id].append(row)
+        if not isinstance(user_id, int):
+            continue
+        seen_by_announcement[announcement_id][user_id] = row
 
-    return grouped, totals
+    viewed_logs_by_announcement: dict[int, list[AuditLog]] = {}
+    not_viewed_users_by_announcement: dict[int, list[User]] = {}
+    viewed_totals: dict[int, int] = {}
+
+    for announcement in announcements:
+        announcement_id = announcement.id
+        if not announcement_id:
+            continue
+
+        seen_map = seen_by_announcement.get(announcement_id, {})
+        audience_user_ids = {user.id for user in all_users}
+        viewed_logs = [
+            log_item
+            for user_id, log_item in seen_map.items()
+            if user_id in audience_user_ids
+        ]
+        seen_audience_user_ids = {
+            log_item.user_id
+            for log_item in viewed_logs
+            if isinstance(log_item.user_id, int)
+        }
+        not_viewed_users = [
+            user for user in all_users if user.id not in seen_audience_user_ids
+        ]
+
+        viewed_logs_by_announcement[announcement_id] = viewed_logs
+        not_viewed_users_by_announcement[announcement_id] = not_viewed_users
+        viewed_totals[announcement_id] = len(viewed_logs)
+
+    return (
+        viewed_logs_by_announcement,
+        not_viewed_users_by_announcement,
+        viewed_totals,
+    )
 
 
 @announcements_bp.route(
@@ -427,12 +477,17 @@ def announcements():
             edit_forms[item.id] = edit_form
 
     can_view_click_logs = is_user_admin(current_user) or getattr(current_user, "is_master", False)
-    announcement_click_logs: dict[int, list[AuditLog]] = {}
-    announcement_click_totals: dict[int, int] = {}
+    can_access_mural_logs = has_report_access("mural_logs")
+    announcement_view_logs: dict[int, list[AuditLog]] = {}
+    announcement_not_viewed_users: dict[int, list[User]] = {}
+    announcement_view_totals: dict[int, int] = {}
     if can_view_click_logs:
-        announcement_ids = [item.id for item in announcement_items if item.id]
-        announcement_click_logs, announcement_click_totals = _build_announcement_click_logs(
-            announcement_ids
+        (
+            announcement_view_logs,
+            announcement_not_viewed_users,
+            announcement_view_totals,
+        ) = _build_announcement_view_status(
+            announcement_items
         )
 
     return render_template(
@@ -452,8 +507,10 @@ def announcements():
         history_back_url=None,
         can_manage=_can_manage_announcements(),
         can_view_click_logs=can_view_click_logs,
-        announcement_click_logs=announcement_click_logs,
-        announcement_click_totals=announcement_click_totals,
+        can_access_mural_logs=can_access_mural_logs,
+        announcement_view_logs=announcement_view_logs,
+        announcement_not_viewed_users=announcement_not_viewed_users,
+        announcement_view_totals=announcement_view_totals,
         available_tags=available_tags,
         selected_tag_id=selected_tag_id,
     )
@@ -553,12 +610,17 @@ def announcement_history():
             edit_forms[item.id] = edit_form
 
     can_view_click_logs = is_user_admin(current_user) or getattr(current_user, "is_master", False)
-    announcement_click_logs: dict[int, list[AuditLog]] = {}
-    announcement_click_totals: dict[int, int] = {}
+    can_access_mural_logs = has_report_access("mural_logs")
+    announcement_view_logs: dict[int, list[AuditLog]] = {}
+    announcement_not_viewed_users: dict[int, list[User]] = {}
+    announcement_view_totals: dict[int, int] = {}
     if can_view_click_logs:
-        announcement_ids = [item.id for item in announcement_items if item.id]
-        announcement_click_logs, announcement_click_totals = _build_announcement_click_logs(
-            announcement_ids
+        (
+            announcement_view_logs,
+            announcement_not_viewed_users,
+            announcement_view_totals,
+        ) = _build_announcement_view_status(
+            announcement_items
         )
 
     return render_template(
@@ -582,8 +644,10 @@ def announcement_history():
         total_pages=total_pages,
         can_manage=_can_manage_announcements(),
         can_view_click_logs=can_view_click_logs,
-        announcement_click_logs=announcement_click_logs,
-        announcement_click_totals=announcement_click_totals,
+        can_access_mural_logs=can_access_mural_logs,
+        announcement_view_logs=announcement_view_logs,
+        announcement_not_viewed_users=announcement_not_viewed_users,
+        announcement_view_totals=announcement_view_totals,
         available_tags=available_tags,
         selected_tag_id=selected_tag_id,
     )
@@ -768,6 +832,21 @@ def log_mural_event():
             return jsonify({"status": "error", "message": "Comunicado nao encontrado."}), 404
         resource_id = announcement.id
 
+        # Keep only the first view per user/card for view/not-view tracking.
+        first_view = (
+            AuditLog.query.with_entities(AuditLog.id)
+            .filter(
+                AuditLog.resource_type == ResourceType.ANNOUNCEMENT,
+                AuditLog.action_type == ActionType.VIEW,
+                AuditLog.action_description == "mural_card_click",
+                AuditLog.resource_id == resource_id,
+                AuditLog.user_id == current_user.id,
+            )
+            .first()
+        )
+        if first_view:
+            return jsonify({"status": "ok", "already_logged": True})
+
     log_user_action(
         action_type=ActionType.VIEW,
         resource_type=ResourceType.ANNOUNCEMENT,
@@ -779,3 +858,64 @@ def log_mural_event():
         },
     )
     return jsonify({"status": "ok"})
+
+
+@announcements_bp.route(
+    "/announcements/<int:announcement_id>/log-status",
+    methods=["GET"],
+    endpoint="announcement_log_status",
+)
+@login_required
+def announcement_log_status(announcement_id: int):
+    """Return live log status (viewed/not viewed) for one announcement."""
+
+    if not (is_user_admin(current_user) or getattr(current_user, "is_master", False)):
+        abort(403)
+
+    announcement = _apply_visibility_filter(
+        Announcement.query.options(joinedload(Announcement.target_tags)).filter(
+            Announcement.id == announcement_id
+        )
+    ).first()
+    if not announcement:
+        abort(404)
+
+    viewed_map, not_viewed_map, totals = _build_announcement_view_status([announcement])
+    viewed_logs = viewed_map.get(announcement_id, [])
+    not_viewed_users = not_viewed_map.get(announcement_id, [])
+
+    return jsonify(
+        {
+            "announcement_id": announcement_id,
+            "viewed_total": totals.get(announcement_id, 0),
+            "not_viewed_total": len(not_viewed_users),
+            "viewed_logs": [
+                {
+                    "created_at": (
+                        row.created_at.strftime("%d/%m/%Y %H:%M:%S")
+                        if row.created_at
+                        else "-"
+                    ),
+                    "name": (
+                        row.user.name
+                        if row.user and row.user.name
+                        else row.username
+                    ),
+                    "username": (
+                        row.user.username
+                        if row.user and row.user.username
+                        else row.username
+                    ),
+                    "ip_address": row.ip_address or "-",
+                }
+                for row in viewed_logs
+            ],
+            "not_viewed_users": [
+                {
+                    "name": user.name or user.username,
+                    "username": user.username or "",
+                }
+                for user in not_viewed_users
+            ],
+        }
+    )
