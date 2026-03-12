@@ -66,7 +66,7 @@ STATUS_PROCESSO_CHOICES = sorted(
 TIPO_LABELS = {value: label for value, label in TIPO_PROCESSO_CHOICES}
 STATUS_LABELS = {value: label for value, label in STATUS_PROCESSO_CHOICES}
 _HISTORY_TABLE_CHECKED = False
-_SOCIETARIO_ALLOWED_NAMES = {"juliane", "tadeu", "leticia"}
+_SOCIETARIO_ALLOWED_NAMES = {"juliane", "tadeu", "leticia", "cassio"}
 _DEFAULT_API_LIMIT = 100
 _MAX_API_LIMIT = 500
 
