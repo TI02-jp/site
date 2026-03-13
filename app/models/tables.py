@@ -1,4 +1,4 @@
-"""Database models used by the application."""
+﻿"""Database models used by the application."""
 
 import json
 import os
@@ -41,7 +41,7 @@ CALENDAR_TZ = get_calendar_timezone()
 
 
 def sao_paulo_now_naive() -> datetime:
-    """Return current datetime in São Paulo timezone, naive for MySQL DATETIME."""
+    """Return current datetime in SÃ£o Paulo timezone, naive for MySQL DATETIME."""
 
     return datetime.now(SAO_PAULO_TZ).replace(tzinfo=None)
 
@@ -49,18 +49,18 @@ def sao_paulo_now_naive() -> datetime:
 def _normalize_utc(dt: datetime) -> datetime:
     """Return ``dt`` converted to an aware UTC timestamp.
 
-    If dt is naive (no timezone), assumes it's in São Paulo timezone,
+    If dt is naive (no timezone), assumes it's in SÃ£o Paulo timezone,
     since all naive datetimes in the database are stored using sao_paulo_now_naive().
     """
 
     if dt.tzinfo is None:
-        # Assume naive datetimes are in São Paulo timezone
+        # Assume naive datetimes are in SÃ£o Paulo timezone
         return dt.replace(tzinfo=SAO_PAULO_TZ).astimezone(timezone.utc)
     return dt.astimezone(timezone.utc)
 
 
 def _to_sao_paulo(dt: datetime | None) -> datetime | None:
-    """Return ``dt`` converted to the São Paulo timezone."""
+    """Return ``dt`` converted to the SÃ£o Paulo timezone."""
 
     if dt is None:
         return None
@@ -411,7 +411,7 @@ class Announcement(db.Model):
 
     @property
     def created_at_sao_paulo(self) -> datetime | None:
-        """Return the creation timestamp converted to the São Paulo timezone."""
+        """Return the creation timestamp converted to the SÃ£o Paulo timezone."""
 
         return _to_sao_paulo(self.created_at)
 
@@ -811,6 +811,9 @@ class ProcessoSocietarioTipo(str, Enum):
     ATUALIZACAO_CNPJ_RECEITA = "ATUALIZACAO_CNPJ_RECEITA"
     CRIACAO_FILIAL = "CRIACAO_FILIAL"
     CLIENTE_TRANSFERIDO = "CLIENTE_TRANSFERIDO"
+    BRIEFING = "BRIEFING"
+    ONBOARDING = "ONBOARDING"
+    SUCESSO_CLIENTE = "SUCESSO_CLIENTE"
 
 
 class ProcessoSocietarioStatus(str, Enum):
@@ -829,6 +832,32 @@ class ProcessoSocietarioStatus(str, Enum):
     REGISTRADA = "REGISTRADA"
     EM_ANDAMENTO = "EM_ANDAMENTO"
     AGUARDANDO_RETORNO = "AGUARDANDO_RETORNO"
+    FORMULARIO_RECEBIDO = "FORMULARIO_RECEBIDO"
+    ENVIO_DE_ORCAMENTO_AO_CLIENTE = "ENVIO_DE_ORCAMENTO_AO_CLIENTE"
+    ACEITE_TERMO_DE_CIENCIA_ORCAMENTO = "ACEITE_TERMO_DE_CIENCIA_ORCAMENTO"
+    CONFIRMAR_INFORMACOES_TAREFAS_INTERNAS = "CONFIRMAR_INFORMACOES_TAREFAS_INTERNAS"
+    ENCAMINHAR_AO_FINANCEIRO_E_SOCIETARIO = "ENCAMINHAR_AO_FINANCEIRO_E_SOCIETARIO"
+    CADASTRAR_CLIENTE_NOS_SISTEMAS_UTILIZADOS = "CADASTRAR_CLIENTE_NOS_SISTEMAS_UTILIZADOS"
+    INICIO = "INICIO"
+    IDENTIFICAR_DOCUMENTOS_NECESSARIOS = "IDENTIFICAR_DOCUMENTOS_NECESSARIOS"
+    REPASSADO_AO_SOCIETARIO_AGUARDANDO_RETORNO = "REPASSADO_AO_SOCIETARIO_AGUARDANDO_RETORNO"
+    MENSAGEM_ATUALIZACAO_STATUS = "MENSAGEM_ATUALIZACAO_STATUS"
+    AGENDAR_REUNIAO_COM_CLIENTE = "AGENDAR_REUNIAO_COM_CLIENTE"
+    REUNIAO_AGENDADA = "REUNIAO_AGENDADA"
+    CONFIRMANDO_INFORMACOES_NO_SISTEMA = "CONFIRMANDO_INFORMACOES_NO_SISTEMA"
+    FIM_DO_ONBOARDING_INICIO_DO_SUCESSO_DO_CLIENTE = "FIM_DO_ONBOARDING_INICIO_DO_SUCESSO_DO_CLIENTE"
+    SOLICITAR_FEEDBACK_DO_CLIENTE_INTERNO_E_EXTERNO = "SOLICITAR_FEEDBACK_DO_CLIENTE_INTERNO_E_EXTERNO"
+    RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_INTERNO = "RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_INTERNO"
+    RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_EXTERNO = "RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_EXTERNO"
+    ANALISE_DE_PONTOS_POSITIVOS_E_NEGATIVOS = "ANALISE_DE_PONTOS_POSITIVOS_E_NEGATIVOS"
+    AGENDAR_REUNIAO_PARA_DAR_O_FEEDBACK = "AGENDAR_REUNIAO_PARA_DAR_O_FEEDBACK"
+    REUNIAO_INTERNA = "REUNIAO_INTERNA"
+    RETORNO_PARA_O_CLIENTE = "RETORNO_PARA_O_CLIENTE"
+    FINALIZADO_O_PRIMEIRO_MES = "FINALIZADO_O_PRIMEIRO_MES"
+    FINALIZADO_O_SEGUNDO_MES = "FINALIZADO_O_SEGUNDO_MES"
+    FINALIZADO_O_TERCEIRO_MES = "FINALIZADO_O_TERCEIRO_MES"
+    FINALIZADO_O_SEXTO_MES = "FINALIZADO_O_SEXTO_MES"
+    FINALIZADO_O_DECIMO_MES = "FINALIZADO_O_DECIMO_MES"
 
 
 class ProcessoSocietario(db.Model):
@@ -1222,7 +1251,7 @@ class Reuniao(db.Model):
         db.DateTime(timezone=True),
         default=lambda: datetime.now(CALENDAR_TZ),
     )
-    # Campos de recorrência
+    # Campos de recorrÃªncia
     recorrencia_tipo = db.Column(
         db.Enum(ReuniaoRecorrenciaTipo, name="reuniao_recorrencia_tipo"),
         nullable=False,
@@ -1653,18 +1682,18 @@ class TaskHistory(db.Model):
 
     @property
     def changed_at_sao_paulo(self) -> datetime | None:
-        """Return the change timestamp converted to the São Paulo timezone."""
+        """Return the change timestamp converted to the SÃ£o Paulo timezone."""
         return _to_sao_paulo(self.changed_at)
 
     def get_display_message(self) -> str:
         """Return a human-friendly description of this change."""
         field_labels = {
-            'title': 'Título',
-            'description': 'Descrição',
+            'title': 'TÃ­tulo',
+            'description': 'DescriÃ§Ã£o',
             'status': 'Status',
             'priority': 'Prioridade',
             'due_date': 'Data de vencimento',
-            'assigned_to': 'Atribuído para',
+            'assigned_to': 'AtribuÃ­do para',
             'is_private': 'Visibilidade',
             'tag_id': 'Setor'
         }
@@ -1674,15 +1703,15 @@ class TaskHistory(db.Model):
         if self.change_type == 'created':
             return f'Tarefa criada'
         elif self.change_type == 'deleted':
-            return f'Tarefa excluída'
+            return f'Tarefa excluÃ­da'
         elif self.field_name == 'status':
             status_labels = {
                 'TaskStatus.PENDING': 'Pendente',
                 'TaskStatus.IN_PROGRESS': 'Em andamento',
-                'TaskStatus.DONE': 'Concluída',
+                'TaskStatus.DONE': 'ConcluÃ­da',
                 'pending': 'Pendente',
                 'in_progress': 'Em andamento',
-                'done': 'Concluída'
+                'done': 'ConcluÃ­da'
             }
             old = status_labels.get(self.old_value or '', self.old_value or '')
             new = status_labels.get(self.new_value or '', self.new_value or '')
@@ -1690,18 +1719,18 @@ class TaskHistory(db.Model):
         elif self.field_name == 'priority':
             priority_labels = {
                 'TaskPriority.LOW': 'Baixa',
-                'TaskPriority.MEDIUM': 'Média',
+                'TaskPriority.MEDIUM': 'MÃ©dia',
                 'TaskPriority.HIGH': 'Alta',
                 'low': 'Baixa',
-                'medium': 'Média',
+                'medium': 'MÃ©dia',
                 'high': 'Alta'
             }
             old = priority_labels.get(self.old_value or '', self.old_value or '')
             new = priority_labels.get(self.new_value or '', self.new_value or '')
             return f'{field_display} alterada de "{old}" para "{new}"'
         elif self.field_name == 'is_private':
-            old = 'Privada' if self.old_value == 'True' else 'Pública'
-            new = 'Privada' if self.new_value == 'True' else 'Pública'
+            old = 'Privada' if self.old_value == 'True' else 'PÃºblica'
+            new = 'Privada' if self.new_value == 'True' else 'PÃºblica'
             return f'{field_display} alterada de "{old}" para "{new}"'
         elif self.old_value and self.new_value:
             return f'{field_display} alterado de "{self.old_value}" para "{self.new_value}"'
@@ -1821,11 +1850,11 @@ def _build_assignment_message(title: str, tag_name: str | None, assignee_id: int
     """Return a human-friendly notification message for a task assignment."""
 
     if assignee_id:
-        return f'Tarefa "{title}" atribuída a você.'
+        return f'Tarefa "{title}" atribuÃ­da a vocÃª.'
     if tag_name:
         display = "Para Mim" if tag_name.startswith("__personal__") else tag_name
-        return f'Tarefa "{title}" atribuída no setor {display}.'
-    return f'Tarefa "{title}" atribuída.'
+        return f'Tarefa "{title}" atribuÃ­da no setor {display}.'
+    return f'Tarefa "{title}" atribuÃ­da.'
 
 
 def _create_task_assignment_notification(connection, task: Task, assignee_id: int) -> None:
@@ -1858,8 +1887,8 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
 
     task._pending_push_notifications.append({
         "user_id": assignee_id,
-        "title": "JP Contábil",
-        "body": message[:255] if message else "Nova tarefa atribuída",
+        "title": "JP ContÃ¡bil",
+        "body": message[:255] if message else "Nova tarefa atribuÃ­da",
         "url": f"/tasks/view/{task.id}" if task.id else "/",
         "notification_id": result.inserted_primary_key[0] if hasattr(result, 'inserted_primary_key') else None,
     })
@@ -1924,8 +1953,8 @@ def _build_completion_message(title: str, completer_name: str, tag_name: str | N
     """Return a human-friendly notification message for task completion."""
 
     if tag_name:
-        return f'Tarefa "{title}" concluída por {completer_name} no setor {tag_name}.'
-    return f'Tarefa "{title}" concluída por {completer_name}.'
+        return f'Tarefa "{title}" concluÃ­da por {completer_name} no setor {tag_name}.'
+    return f'Tarefa "{title}" concluÃ­da por {completer_name}.'
 
 
 def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> None:
@@ -1951,7 +1980,7 @@ def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> 
         ).scalar_one_or_none()
 
     # Build message
-    completer_name = completer or "Usuário"
+    completer_name = completer or "UsuÃ¡rio"
     message = _build_completion_message(title, completer_name, tag_name)
 
     # Create notification
@@ -2024,7 +2053,7 @@ def _format_value_for_history(value) -> str | None:
 # =============================================================================
 
 class ManualCategory(db.Model):
-    """Categoria de vídeos do manual."""
+    """Categoria de vÃ­deos do manual."""
 
     __tablename__ = "manual_categories"
 
@@ -2052,7 +2081,7 @@ class ManualCategory(db.Model):
 
 
 class ManualVideo(db.Model):
-    """Vídeo de treinamento do manual."""
+    """VÃ­deo de treinamento do manual."""
 
     __tablename__ = "manual_videos"
 
@@ -2072,11 +2101,11 @@ class ManualVideo(db.Model):
     mime_type = db.Column(db.String(128), nullable=False)
     file_size = db.Column(db.BigInteger, nullable=False)
 
-    # Metadados do vídeo
+    # Metadados do vÃ­deo
     duration_seconds = db.Column(db.Integer, nullable=True)
     duration_formatted = db.Column(db.String(20), nullable=True)  # "HH:MM:SS"
 
-    # Ordenação e controle
+    # OrdenaÃ§Ã£o e controle
     display_order = db.Column(db.Integer, nullable=False, default=0)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
@@ -2113,13 +2142,13 @@ class ManualVideo(db.Model):
 
 
 class Inventario(db.Model):
-    """Inventário anual 2026 vinculado às empresas."""
+    """InventÃ¡rio anual 2026 vinculado Ã s empresas."""
     __tablename__ = 'tbl_inventario'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False, unique=True)
 
-    # Campos editáveis da planilha
+    # Campos editÃ¡veis da planilha
     encerramento_fiscal = db.Column(db.Boolean, nullable=True, default=False)
     dief_2024 = db.Column(db.Numeric(12, 2), nullable=True)
     balanco_2025_cliente = db.Column(db.Numeric(12, 2), nullable=True)
@@ -2136,7 +2165,7 @@ class Inventario(db.Model):
     cliente_pdf_path = db.Column(db.String(255), nullable=True)
     cliente_original_name = db.Column(db.String(255), nullable=True)
 
-    # Múltiplos arquivos (JSON)
+    # MÃºltiplos arquivos (JSON)
     cfop_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
     cfop_consolidado_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
     cliente_files = db.Column(db.JSON, nullable=True)  # Array de {filename, path, uploaded_at}
@@ -2164,7 +2193,7 @@ class Inventario(db.Model):
 
     @property
     def balanco_2025_cliente_formatado(self):
-        """Retorna balanço cliente formatado como moeda."""
+        """Retorna balanÃ§o cliente formatado como moeda."""
         return _format_brl(self.balanco_2025_cliente)
 
     @property
@@ -2294,7 +2323,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 1,
         'width': 220,
-        'label': 'Razão Social',
+        'label': 'RazÃ£o Social',
         'hideable': False,
         'resizable': True
     },
@@ -2302,7 +2331,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 2,
         'width': 130,
-        'label': 'Tributação',
+        'label': 'TributaÃ§Ã£o',
         'hideable': True,
         'resizable': True
     },
@@ -2318,7 +2347,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 4,
         'width': 44,
-        'label': '→',
+        'label': 'â†’',
         'hideable': False,
         'resizable': False
     },
@@ -2342,7 +2371,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 7,
         'width': 150,
-        'label': 'Balanço Cliente 2025',
+        'label': 'BalanÃ§o Cliente 2025',
         'hideable': True,
         'resizable': True
     },
@@ -2358,7 +2387,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 9,
         'width': 175,
-        'label': 'Observação Tadeu',
+        'label': 'ObservaÃ§Ã£o Tadeu',
         'hideable': True,
         'resizable': True
     },
@@ -2406,7 +2435,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 15,
         'width': 175,
-        'label': 'Usuário Encerramento',
+        'label': 'UsuÃ¡rio Encerramento',
         'hideable': True,
         'resizable': True
     }

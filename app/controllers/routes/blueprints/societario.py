@@ -40,6 +40,9 @@ TIPO_PROCESSO_CHOICES = sorted(
         (ProcessoSocietarioTipo.ATUALIZACAO_CNPJ_RECEITA.value, "ATUALIZA\u00c7\u00c3O CNPJ RECEITA"),
         (ProcessoSocietarioTipo.CRIACAO_FILIAL.value, "CRIA\u00c7\u00c3O FILIAL"),
         (ProcessoSocietarioTipo.CLIENTE_TRANSFERIDO.value, "CLIENTE TRANSFERIDO"),
+        (ProcessoSocietarioTipo.BRIEFING.value, "BRIEFING"),
+        (ProcessoSocietarioTipo.ONBOARDING.value, "ONBOARDING"),
+        (ProcessoSocietarioTipo.SUCESSO_CLIENTE.value, "SUCESSO DO CLIENTE"),
     ],
     key=lambda item: item[1],
 )
@@ -59,6 +62,32 @@ STATUS_PROCESSO_CHOICES = sorted(
         (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
         (ProcessoSocietarioStatus.EM_ANDAMENTO.value, "EM ANDAMENTO"),
         (ProcessoSocietarioStatus.AGUARDANDO_RETORNO.value, "AGUARDANDO RETORNO"),
+        (ProcessoSocietarioStatus.FORMULARIO_RECEBIDO.value, "FORMULARIO RECEBIDO"),
+        (ProcessoSocietarioStatus.ENVIO_DE_ORCAMENTO_AO_CLIENTE.value, "ENVIO DE ORÇAMENTO AO CLIENTE"),
+        (ProcessoSocietarioStatus.ACEITE_TERMO_DE_CIENCIA_ORCAMENTO.value, "ACEITE TERMO DE CIÊNCIA/ORÇAMENTO"),
+        (ProcessoSocietarioStatus.CONFIRMAR_INFORMACOES_TAREFAS_INTERNAS.value, "CONFIRMAR INFORMAÇÕES/TAREFAS INTERNAS"),
+        (ProcessoSocietarioStatus.ENCAMINHAR_AO_FINANCEIRO_E_SOCIETARIO.value, "ENCAMINHAR AO FINANCEIRO E SOCIETÁRIO"),
+        (ProcessoSocietarioStatus.CADASTRAR_CLIENTE_NOS_SISTEMAS_UTILIZADOS.value, "CADASTRAR CLIENTE NOS SISTEMAS UTILIZADOS"),
+        (ProcessoSocietarioStatus.INICIO.value, "INICIO"),
+        (ProcessoSocietarioStatus.IDENTIFICAR_DOCUMENTOS_NECESSARIOS.value, "IDENTIFICAR DOCUMENTOS NECESSARIOS"),
+        (ProcessoSocietarioStatus.REPASSADO_AO_SOCIETARIO_AGUARDANDO_RETORNO.value, "REPASSADO AO SOCIETÁRIO (AGUARDANDO RETORNO)"),
+        (ProcessoSocietarioStatus.MENSAGEM_ATUALIZACAO_STATUS.value, "MENSAGEM ATUALIZAÇÃO STATUS"),
+        (ProcessoSocietarioStatus.AGENDAR_REUNIAO_COM_CLIENTE.value, "AGENDAR REUNIÃO COM CLIENTE"),
+        (ProcessoSocietarioStatus.REUNIAO_AGENDADA.value, "REUNIÃO AGENDADA"),
+        (ProcessoSocietarioStatus.CONFIRMANDO_INFORMACOES_NO_SISTEMA.value, "CONFIRMANDO INFORMAÇÕES NO SISTEMA"),
+        (ProcessoSocietarioStatus.FIM_DO_ONBOARDING_INICIO_DO_SUCESSO_DO_CLIENTE.value, "FIM DO ONBOARDING (INICIO DO SUCESSO DO CLIENTE)"),
+        (ProcessoSocietarioStatus.SOLICITAR_FEEDBACK_DO_CLIENTE_INTERNO_E_EXTERNO.value, "Solicitar feedback do Cliente (Interno e externo)"),
+        (ProcessoSocietarioStatus.RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_INTERNO.value, "Resgistrar pontos de melhoria Cliente Interno)"),
+        (ProcessoSocietarioStatus.RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_EXTERNO.value, "Resgistrar pontos de melhoria Cliente Externo)"),
+        (ProcessoSocietarioStatus.ANALISE_DE_PONTOS_POSITIVOS_E_NEGATIVOS.value, "Analise de Pontos Positivos e Negativos"),
+        (ProcessoSocietarioStatus.AGENDAR_REUNIAO_PARA_DAR_O_FEEDBACK.value, "Agendar reunião para dar o Feedback"),
+        (ProcessoSocietarioStatus.REUNIAO_INTERNA.value, "Reunião Interna"),
+        (ProcessoSocietarioStatus.RETORNO_PARA_O_CLIENTE.value, "Retorno para o cliente"),
+        (ProcessoSocietarioStatus.FINALIZADO_O_PRIMEIRO_MES.value, "Finalizado o primeiro mês"),
+        (ProcessoSocietarioStatus.FINALIZADO_O_SEGUNDO_MES.value, "Finalizado o segundo mês"),
+        (ProcessoSocietarioStatus.FINALIZADO_O_TERCEIRO_MES.value, "Finalizado o terceiro mês"),
+        (ProcessoSocietarioStatus.FINALIZADO_O_SEXTO_MES.value, "Finalizado o Sexto mês"),
+        (ProcessoSocietarioStatus.FINALIZADO_O_DECIMO_MES.value, "Finalizado o décimo mês"),
     ],
     key=lambda item: item[1],
 )
@@ -69,6 +98,91 @@ _HISTORY_TABLE_CHECKED = False
 _SOCIETARIO_ALLOWED_NAMES = {"juliane", "tadeu", "leticia", "cassio"}
 _DEFAULT_API_LIMIT = 100
 _MAX_API_LIMIT = 500
+ONBOARDING_TAB_CHOICES = (
+    ("briefing", "Briefing"),
+    ("onboarding", "Onboarding"),
+    ("sucesso-cliente", "Sucesso do Cliente"),
+)
+ONBOARDING_TAB_VALUES = {value for value, _ in ONBOARDING_TAB_CHOICES}
+ONBOARDING_TAB_TYPE_MAP = {
+    "briefing": ProcessoSocietarioTipo.BRIEFING.value,
+    "onboarding": ProcessoSocietarioTipo.ONBOARDING.value,
+    "sucesso-cliente": ProcessoSocietarioTipo.SUCESSO_CLIENTE.value,
+}
+ONBOARDING_TYPE_VALUES = set(ONBOARDING_TAB_TYPE_MAP.values())
+ONBOARDING_TYPE_TAB_MAP = {value: key for key, value in ONBOARDING_TAB_TYPE_MAP.items()}
+ACOMPANHAMENTO_STATUS_CHOICES = [
+    (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
+    (ProcessoSocietarioStatus.EM_ANDAMENTO.value, "EM ANDAMENTO"),
+    (ProcessoSocietarioStatus.AGUARDANDO_RETORNO.value, "AGUARDANDO RETORNO"),
+    (ProcessoSocietarioStatus.FINALIZADA.value, "FINALIZADA"),
+]
+ACOMPANHAMENTO_STATUS_VALUES = {value for value, _ in ACOMPANHAMENTO_STATUS_CHOICES}
+BRIEFING_STATUS_CHOICES = [
+    (ProcessoSocietarioStatus.FORMULARIO_RECEBIDO.value, "FORMULARIO RECEBIDO"),
+    (ProcessoSocietarioStatus.ENVIO_DE_ORCAMENTO_AO_CLIENTE.value, "ENVIO DE ORÇAMENTO AO CLIENTE"),
+    (ProcessoSocietarioStatus.ACEITE_TERMO_DE_CIENCIA_ORCAMENTO.value, "ACEITE TERMO DE CIÊNCIA/ORÇAMENTO"),
+    (ProcessoSocietarioStatus.CONFIRMAR_INFORMACOES_TAREFAS_INTERNAS.value, "CONFIRMAR INFORMAÇÕES/TAREFAS INTERNAS"),
+    (ProcessoSocietarioStatus.ENCAMINHAR_AO_FINANCEIRO_E_SOCIETARIO.value, "ENCAMINHAR AO FINANCEIRO E SOCIETÁRIO"),
+    (ProcessoSocietarioStatus.CADASTRAR_CLIENTE_NOS_SISTEMAS_UTILIZADOS.value, "CADASTRAR CLIENTE NOS SISTEMAS UTILIZADOS"),
+]
+BRIEFING_STATUS_VALUES = {value for value, _ in BRIEFING_STATUS_CHOICES}
+ALL_STATUS_VALUES = {value for value, _ in STATUS_PROCESSO_CHOICES}
+NON_BRIEFING_STATUS_VALUES = ALL_STATUS_VALUES - BRIEFING_STATUS_VALUES
+ONBOARDING_STATUS_CHOICES = [
+    (ProcessoSocietarioStatus.INICIO.value, "INICIO"),
+    (ProcessoSocietarioStatus.IDENTIFICAR_DOCUMENTOS_NECESSARIOS.value, "IDENTIFICAR DOCUMENTOS NECESSARIOS"),
+    (ProcessoSocietarioStatus.REPASSADO_AO_SOCIETARIO_AGUARDANDO_RETORNO.value, "REPASSADO AO SOCIETÁRIO (AGUARDANDO RETORNO)"),
+    (ProcessoSocietarioStatus.MENSAGEM_ATUALIZACAO_STATUS.value, "MENSAGEM ATUALIZAÇÃO STATUS"),
+    (ProcessoSocietarioStatus.AGENDAR_REUNIAO_COM_CLIENTE.value, "AGENDAR REUNIÃO COM CLIENTE"),
+    (ProcessoSocietarioStatus.REUNIAO_AGENDADA.value, "REUNIÃO AGENDADA"),
+    (ProcessoSocietarioStatus.CONFIRMANDO_INFORMACOES_NO_SISTEMA.value, "CONFIRMANDO INFORMAÇÕES NO SISTEMA"),
+    (ProcessoSocietarioStatus.FIM_DO_ONBOARDING_INICIO_DO_SUCESSO_DO_CLIENTE.value, "FIM DO ONBOARDING (INICIO DO SUCESSO DO CLIENTE)"),
+]
+ONBOARDING_STATUS_VALUES = {value for value, _ in ONBOARDING_STATUS_CHOICES}
+SUCESSO_CLIENTE_STATUS_CHOICES = [
+    (ProcessoSocietarioStatus.SOLICITAR_FEEDBACK_DO_CLIENTE_INTERNO_E_EXTERNO.value, "Solicitar feedback do Cliente (Interno e externo)"),
+    (ProcessoSocietarioStatus.RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_INTERNO.value, "Resgistrar pontos de melhoria Cliente Interno)"),
+    (ProcessoSocietarioStatus.RESGISTRAR_PONTOS_DE_MELHORIA_CLIENTE_EXTERNO.value, "Resgistrar pontos de melhoria Cliente Externo)"),
+    (ProcessoSocietarioStatus.ANALISE_DE_PONTOS_POSITIVOS_E_NEGATIVOS.value, "Analise de Pontos Positivos e Negativos"),
+    (ProcessoSocietarioStatus.AGENDAR_REUNIAO_PARA_DAR_O_FEEDBACK.value, "Agendar reunião para dar o Feedback"),
+    (ProcessoSocietarioStatus.REUNIAO_INTERNA.value, "Reunião Interna"),
+    (ProcessoSocietarioStatus.RETORNO_PARA_O_CLIENTE.value, "Retorno para o cliente"),
+    (ProcessoSocietarioStatus.FINALIZADO_O_PRIMEIRO_MES.value, "Finalizado o primeiro mês"),
+    (ProcessoSocietarioStatus.FINALIZADO_O_SEGUNDO_MES.value, "Finalizado o segundo mês"),
+    (ProcessoSocietarioStatus.FINALIZADO_O_TERCEIRO_MES.value, "Finalizado o terceiro mês"),
+    (ProcessoSocietarioStatus.FINALIZADO_O_SEXTO_MES.value, "Finalizado o Sexto mês"),
+    (ProcessoSocietarioStatus.FINALIZADO_O_DECIMO_MES.value, "Finalizado o décimo mês"),
+]
+SUCESSO_CLIENTE_STATUS_VALUES = {value for value, _ in SUCESSO_CLIENTE_STATUS_CHOICES}
+CORE_STATUS_VALUES = ALL_STATUS_VALUES - BRIEFING_STATUS_VALUES - ONBOARDING_STATUS_VALUES - SUCESSO_CLIENTE_STATUS_VALUES
+SOCIETARIO_STATUS_CHOICES = [
+    (value, label)
+    for value, label in STATUS_PROCESSO_CHOICES
+    if value in CORE_STATUS_VALUES and value not in ACOMPANHAMENTO_STATUS_VALUES
+]
+
+
+def _status_choices_for_context(*, is_acompanhamento: bool, is_onboarding: bool, onboarding_tipo_value: str | None):
+    if is_acompanhamento:
+        return list(ACOMPANHAMENTO_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.BRIEFING.value:
+        return list(BRIEFING_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.ONBOARDING.value:
+        return list(ONBOARDING_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value:
+        return list(SUCESSO_CLIENTE_STATUS_CHOICES)
+    return list(SOCIETARIO_STATUS_CHOICES)
+
+def _allowed_status_values_for_tipo(tipo_value: str | None) -> set[str]:
+    if tipo_value == ProcessoSocietarioTipo.BRIEFING.value:
+        return set(BRIEFING_STATUS_VALUES)
+    if tipo_value == ProcessoSocietarioTipo.ONBOARDING.value:
+        return set(ONBOARDING_STATUS_VALUES)
+    if tipo_value == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value:
+        return set(SUCESSO_CLIENTE_STATUS_VALUES)
+    return set(CORE_STATUS_VALUES)
+
 
 
 def _normalize_person_name(value: str | None) -> str:
@@ -241,12 +355,34 @@ def _apply_processo_changes(processo: ProcessoSocietario, payload: dict) -> tupl
         if tipo_raw not in TIPO_LABELS:
             return False, change_labels, ({"success": False, "message": "Tipo de processo invalido."}, 400)
         new_tipo = ProcessoSocietarioTipo(tipo_raw)
+        current_is_onboarding = processo.tipo_processo.value in ONBOARDING_TYPE_VALUES
+        new_is_onboarding = new_tipo.value in ONBOARDING_TYPE_VALUES
+        if current_is_onboarding != new_is_onboarding:
+            return False, change_labels, (
+                {"success": False, "message": "Tipo de processo nao pode migrar entre Onboarding e Societario."},
+                400,
+            )
         if processo.tipo_processo != new_tipo:
             old_tipo_label = TIPO_LABELS.get(processo.tipo_processo.value, processo.tipo_processo.value)
             processo.tipo_processo = new_tipo
             changed = True
             new_tipo_label = TIPO_LABELS.get(new_tipo.value, new_tipo.value)
             change_labels.append(f"tipo de '{old_tipo_label}' para '{new_tipo_label}'")
+            allowed_status_values = _allowed_status_values_for_tipo(new_tipo.value)
+            if processo.status.value not in allowed_status_values:
+                fallback_status = (
+                    BRIEFING_STATUS_CHOICES[0][0]
+                    if new_tipo.value == ProcessoSocietarioTipo.BRIEFING.value
+                    else (
+                        ONBOARDING_STATUS_CHOICES[0][0]
+                        if new_tipo.value == ProcessoSocietarioTipo.ONBOARDING.value
+                        else (SUCESSO_CLIENTE_STATUS_CHOICES[0][0] if new_tipo.value == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value else ProcessoSocietarioStatus.VIABILIDADE.value)
+                    )
+                )
+                old_status_label = STATUS_LABELS.get(processo.status.value, processo.status.value)
+                processo.status = ProcessoSocietarioStatus(fallback_status)
+                new_status_label = STATUS_LABELS.get(fallback_status, fallback_status)
+                change_labels.append(f"status de '{old_status_label}' para '{new_status_label}'")
 
     if "data_inicio" in payload:
         data_inicio = _parse_iso_date(payload.get("data_inicio"))
@@ -268,6 +404,9 @@ def _apply_processo_changes(processo: ProcessoSocietario, payload: dict) -> tupl
 
     if "status" in payload:
         status_raw = (payload.get("status") or "").strip()
+        allowed_status_values = _allowed_status_values_for_tipo(processo.tipo_processo.value)
+        if status_raw not in allowed_status_values:
+            return False, change_labels, ({"success": False, "message": "Status invalido para o tipo de processo."}, 400)
         if status_raw not in STATUS_LABELS:
             return False, change_labels, ({"success": False, "message": "Status invalido."}, 400)
         new_status = ProcessoSocietarioStatus(status_raw)
@@ -325,7 +464,7 @@ def _persist_processo_update(processo: ProcessoSocietario, change_labels: list[s
 @societario_access_required
 def societario():
     """Renderiza a pagina principal de processos societarios."""
-    return _render_societario_page(is_acompanhamento=False)
+    return _render_societario_page(is_acompanhamento=False, is_onboarding=False, onboarding_tab="")
 
 
 @societario_bp.route("/societario/acompanhamento", methods=["GET"])
@@ -334,12 +473,30 @@ def societario():
 @societario_access_required
 def societario_acompanhamento():
     """Renderiza a pagina de acompanhamento societario (somente registradas)."""
-    return _render_societario_page(is_acompanhamento=True)
+    return _render_societario_page(is_acompanhamento=True, is_onboarding=False, onboarding_tab="")
 
 
-def _render_societario_page(*, is_acompanhamento: bool):
+@societario_bp.route("/societario/onboarding", methods=["GET"])
+@login_required
+@meeting_only_access_check
+@societario_access_required
+def societario_onboarding():
+    """Renderiza a pagina de onboarding societario."""
+    onboarding_tab_raw = (request.args.get("aba") or "").strip().lower()
+    onboarding_tab = onboarding_tab_raw if onboarding_tab_raw in ONBOARDING_TAB_VALUES else "briefing"
+    return _render_societario_page(
+        is_acompanhamento=False,
+        is_onboarding=True,
+        onboarding_tab=onboarding_tab,
+    )
+
+def _render_societario_page(*, is_acompanhamento: bool, is_onboarding: bool, onboarding_tab: str):
     """Renderiza listagem societaria conforme o contexto da tela."""
     _ensure_history_table()
+    onboarding_tab = onboarding_tab if onboarding_tab in ONBOARDING_TAB_VALUES else "briefing"
+    onboarding_tipo_value = ONBOARDING_TAB_TYPE_MAP.get(onboarding_tab)
+    onboarding_tipo_label = TIPO_LABELS.get(onboarding_tipo_value, "") if onboarding_tipo_value else ""
+
     acompanhamento_status_enum_values = [
         ProcessoSocietarioStatus.REGISTRADA,
         ProcessoSocietarioStatus.EM_ANDAMENTO,
@@ -349,16 +506,31 @@ def _render_societario_page(*, is_acompanhamento: bool):
     acompanhamento_status_values = {item.value for item in acompanhamento_status_enum_values}
     status_arg = (request.args.get("status") or "").strip().upper()
     tipo_arg = (request.args.get("tipo") or "").strip().upper()
-    status_values = {value for value, _ in STATUS_PROCESSO_CHOICES}
     tipo_values = {value for value, _ in TIPO_PROCESSO_CHOICES}
-    active_status = status_arg if status_arg in status_values else ""
-    active_tipo = tipo_arg if tipo_arg in tipo_values else ""
 
     processos_query = ProcessoSocietario.query
-    if active_tipo:
+    if is_onboarding and onboarding_tipo_value:
+        active_tipo = onboarding_tipo_value
         processos_query = processos_query.filter(
-            ProcessoSocietario.tipo_processo == ProcessoSocietarioTipo(active_tipo)
+            ProcessoSocietario.tipo_processo == ProcessoSocietarioTipo(onboarding_tipo_value)
         )
+    else:
+        active_tipo = tipo_arg if tipo_arg in tipo_values and tipo_arg not in ONBOARDING_TYPE_VALUES else ""
+        processos_query = processos_query.filter(
+            ProcessoSocietario.tipo_processo.notin_([ProcessoSocietarioTipo(value) for value in ONBOARDING_TYPE_VALUES])
+        )
+        if active_tipo:
+            processos_query = processos_query.filter(
+                ProcessoSocietario.tipo_processo == ProcessoSocietarioTipo(active_tipo)
+            )
+
+    status_choices = _status_choices_for_context(
+        is_acompanhamento=is_acompanhamento,
+        is_onboarding=is_onboarding,
+        onboarding_tipo_value=onboarding_tipo_value,
+    )
+    status_values = {value for value, _ in status_choices}
+    active_status = status_arg if status_arg in status_values else ""
     base_query = processos_query
 
     if is_acompanhamento:
@@ -396,7 +568,6 @@ def _render_societario_page(*, is_acompanhamento: bool):
             )
         )
 
-    # Subquery: contagem de historico por processo (evita query separada)
     history_subq = (
         db.session.query(
             ProcessoSocietarioHistorico.processo_id,
@@ -406,7 +577,6 @@ def _render_societario_page(*, is_acompanhamento: bool):
         .subquery()
     )
 
-    # Query unica: processos + history_counts via LEFT JOIN na subquery
     rows = (
         processos_query
         .outerjoin(history_subq, ProcessoSocietario.id == history_subq.c.processo_id)
@@ -421,8 +591,6 @@ def _render_societario_page(*, is_acompanhamento: bool):
         processos.append(processo)
         history_counts[processo.id] = int(hist_count)
 
-    # Status counts com cache (2 min)
-    status_counts = _status_counts_payload()
     if is_acompanhamento:
         grouped_status = (
             base_query.with_entities(
@@ -435,7 +603,7 @@ def _render_societario_page(*, is_acompanhamento: bool):
             .group_by(ProcessoSocietario.status)
             .all()
         )
-        status_counts = {value: 0 for value, _ in STATUS_PROCESSO_CHOICES}
+        status_counts = {value: 0 for value, _ in status_choices}
         for status_value, count in grouped_status:
             key = status_value.value if hasattr(status_value, "value") else str(status_value)
             if key in status_counts:
@@ -446,29 +614,61 @@ def _render_societario_page(*, is_acompanhamento: bool):
             if status_value != ProcessoSocietarioStatus.FINALIZADA.value
         )
     else:
-        status_counts = dict(status_counts)
+        grouped_status = (
+            base_query.with_entities(
+                ProcessoSocietario.status,
+                func.count(ProcessoSocietario.id),
+            )
+            .filter(
+                ProcessoSocietario.status.notin_(acompanhamento_status_enum_values)
+            )
+            .group_by(ProcessoSocietario.status)
+            .all()
+        )
+        status_counts = {value: 0 for value, _ in status_choices}
+        for status_value, count in grouped_status:
+            key = status_value.value if hasattr(status_value, "value") else str(status_value)
+            if key in status_counts:
+                status_counts[key] = int(count or 0)
         for status_value in acompanhamento_status_values:
             status_counts[status_value] = 0
         total_processos = sum(
             count for status, count in status_counts.items()
             if status not in acompanhamento_status_values
         )
+
+    if is_onboarding:
+        tipo_choices = [
+            (value, label) for value, label in TIPO_PROCESSO_CHOICES
+            if value in ONBOARDING_TYPE_VALUES
+        ]
+    else:
+        tipo_choices = [
+            (value, label) for value, label in TIPO_PROCESSO_CHOICES
+            if value not in ONBOARDING_TYPE_VALUES
+        ]
+
     empresas = _get_empresas_ativas()
     return render_template(
         "societario.html",
         processos=processos,
         history_counts=history_counts,
         empresas=empresas,
-        tipo_choices=TIPO_PROCESSO_CHOICES,
-        status_choices=STATUS_PROCESSO_CHOICES,
+        tipo_choices=tipo_choices,
+        status_choices=status_choices,
         status_counts=status_counts,
         active_status=active_status,
         active_tipo=active_tipo,
         total_processos=total_processos,
+        default_status_value=(status_choices[0][0] if status_choices else ProcessoSocietarioStatus.VIABILIDADE.value),
         is_acompanhamento=is_acompanhamento,
-        page_mode="acompanhamento" if is_acompanhamento else "societario",
+        is_onboarding=is_onboarding,
+        onboarding_tab=onboarding_tab,
+        onboarding_tab_choices=ONBOARDING_TAB_CHOICES,
+        onboarding_tipo_value=onboarding_tipo_value,
+        onboarding_tipo_label=onboarding_tipo_label,
+        page_mode="acompanhamento" if is_acompanhamento else ("onboarding" if is_onboarding else "societario"),
     )
-
 
 @societario_bp.route("/societario/processos", methods=["POST"])
 @login_required
@@ -483,13 +683,38 @@ def societario_create():
     if not nome_empresa:
         abort(400, "Informe o nome da empresa.")
 
-    tipo_raw = (request.form.get("tipo_processo") or "").strip()
-    status_raw = (request.form.get("status") or "").strip() or ProcessoSocietarioStatus.VIABILIDADE.value
+    page_mode = (request.form.get("page_mode") or "").strip().lower()
+    onboarding_tab_raw = (request.form.get("onboarding_tab") or "").strip().lower()
+
+    tipo_raw = (request.form.get("tipo_processo") or "").strip().upper()
+    if page_mode == "onboarding":
+        onboarding_tab = onboarding_tab_raw if onboarding_tab_raw in ONBOARDING_TAB_VALUES else "briefing"
+        if tipo_raw not in ONBOARDING_TYPE_VALUES:
+            abort(400, "Tipo de processo invalido para Onboarding.")
+        redirect_tab = ONBOARDING_TYPE_TAB_MAP.get(tipo_raw, onboarding_tab)
+        redirect_target = url_for("societario.societario_onboarding", aba=redirect_tab)
+    else:
+        if tipo_raw in ONBOARDING_TYPE_VALUES:
+            abort(400, "Tipo de processo reservado ao Onboarding.")
+        redirect_target = url_for("societario.societario")
+
+    default_status_value = (BRIEFING_STATUS_CHOICES[0][0] if tipo_raw == ProcessoSocietarioTipo.BRIEFING.value else (ONBOARDING_STATUS_CHOICES[0][0] if tipo_raw == ProcessoSocietarioTipo.ONBOARDING.value else (SUCESSO_CLIENTE_STATUS_CHOICES[0][0] if tipo_raw == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value else ProcessoSocietarioStatus.VIABILIDADE.value)))
+    status_raw = (request.form.get("status") or "").strip() or default_status_value
     data_inicio = _parse_iso_date(request.form.get("data_inicio"))
     observacao = (request.form.get("observacao") or "").strip() or None
 
     if tipo_raw not in TIPO_LABELS:
         abort(400, "Tipo de processo invalido.")
+    allowed_status_values = _allowed_status_values_for_tipo(tipo_raw)
+    if status_raw not in allowed_status_values:
+        if tipo_raw == ProcessoSocietarioTipo.BRIEFING.value:
+            status_raw = BRIEFING_STATUS_CHOICES[0][0]
+        elif tipo_raw == ProcessoSocietarioTipo.ONBOARDING.value:
+            status_raw = ONBOARDING_STATUS_CHOICES[0][0]
+        elif tipo_raw == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value:
+            status_raw = SUCESSO_CLIENTE_STATUS_CHOICES[0][0]
+        else:
+            abort(400, "Status invalido para o tipo de processo.")
     if status_raw not in STATUS_LABELS:
         abort(400, "Status invalido.")
     if data_inicio is None:
@@ -506,8 +731,7 @@ def societario_create():
     db.session.add(processo)
     db.session.commit()
     _invalidate_societario_caches()
-    return redirect(url_for("societario.societario"))
-
+    return redirect(redirect_target)
 
 @societario_bp.route("/societario/processos/<int:processo_id>", methods=["PUT", "POST", "PATCH"])
 @login_required
@@ -571,4 +795,3 @@ def societario_delete(processo_id: int):
     db.session.commit()
     _invalidate_societario_caches()
     return redirect(url_for("societario.societario"))
-
