@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Societário{% endblock %}
 
@@ -525,6 +525,8 @@
         <h1 class="text-primary">
             {% if is_acompanhamento %}
             Acompanhamento Societário
+            {% elif is_onboarding %}
+            Onboarding Societário
             {% else %}
             Processos Societários
             {% endif %}
@@ -534,7 +536,7 @@
 
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
-            <a class="nav-link{% if not is_acompanhamento %} active{% endif %}" href="{{ url_for('societario.societario') }}">
+            <a class="nav-link{% if not is_acompanhamento and not is_onboarding %} active{% endif %}" href="{{ url_for('societario.societario') }}">
                 Societário
             </a>
         </li>
@@ -543,10 +545,32 @@
                 Acompanhamento
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if is_onboarding %} active{% endif %}" href="{{ url_for('societario.societario_onboarding') }}">
+                Onboarding
+            </a>
+        </li>
     </ul>
+
+    {% if is_onboarding %}
+    <ul class="nav nav-pills mb-3">
+        {% for value, label in onboarding_tab_choices %}
+        <li class="nav-item">
+            <a class="nav-link{% if onboarding_tab == value %} active{% endif %}" href="{{ url_for('societario.societario_onboarding', aba=value) }}">{{ label }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
     <div class="card soc-card mb-3">
         <div class="card-body">
+            {% if is_acompanhamento %}
+            {% set base_page = 'societario.societario_acompanhamento' %}
+            {% elif is_onboarding %}
+            {% set base_page = 'societario.societario_onboarding' %}
+            {% else %}
+            {% set base_page = 'societario.societario' %}
+            {% endif %}
             <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
                 <div>
                     <h2 class="h5 mb-1">
@@ -558,13 +582,13 @@
                     </h2>
                     <p class="text-muted mb-0" style="font-size: 0.85rem;">Clique em um card para filtrar os processos</p>
                 </div>
-                <a class="btn btn-outline-secondary btn-sm{% if not active_status %} d-none{% endif %}" href="{% if is_acompanhamento %}{{ url_for('societario.societario_acompanhamento', tipo=active_tipo) if active_tipo else url_for('societario.societario_acompanhamento') }}{% else %}{{ url_for('societario.societario', tipo=active_tipo) if active_tipo else url_for('societario.societario') }}{% endif %}" data-dashboard-clear>
+                <a class="btn btn-outline-secondary btn-sm{% if not active_status %} d-none{% endif %}" href="{% if is_onboarding %}{{ url_for(base_page, aba=onboarding_tab, tipo=active_tipo) if active_tipo else url_for(base_page, aba=onboarding_tab) }}{% else %}{{ url_for(base_page, tipo=active_tipo) if active_tipo else url_for(base_page) }}{% endif %}" data-dashboard-clear>
                     <i class="bi bi-x-circle"></i> Limpar filtro
                 </a>
             </div>
             <div class="status-dash-row">
                 <div class="status-dash-item">
-                    <a class="status-dash-link" href="{% if is_acompanhamento %}{{ url_for('societario.societario_acompanhamento', tipo=active_tipo) if active_tipo else url_for('societario.societario_acompanhamento') }}{% else %}{{ url_for('societario.societario', tipo=active_tipo) if active_tipo else url_for('societario.societario') }}{% endif %}" data-dashboard-filter="">
+                    <a class="status-dash-link" href="{% if is_onboarding %}{{ url_for(base_page, aba=onboarding_tab, tipo=active_tipo) if active_tipo else url_for(base_page, aba=onboarding_tab) }}{% else %}{{ url_for(base_page, tipo=active_tipo) if active_tipo else url_for(base_page) }}{% endif %}" data-dashboard-filter="">
                         <div class="status-dash{% if not active_status %} active{% endif %}" data-status="all">
                             <div class="dash-label">Todos</div>
                             <div class="dash-value">{{ total_processos }}</div>
@@ -574,7 +598,7 @@
                 {% for value, label in status_choices %}
                 {% if (is_acompanhamento and value in ['REGISTRADA', 'EM_ANDAMENTO', 'AGUARDANDO_RETORNO', 'FINALIZADA']) or (not is_acompanhamento and value not in ['REGISTRADA', 'EM_ANDAMENTO', 'AGUARDANDO_RETORNO', 'FINALIZADA']) %}
                 <div class="status-dash-item">
-                    <a class="status-dash-link" href="{% if is_acompanhamento %}{{ url_for('societario.societario_acompanhamento', status=value, tipo=active_tipo) if active_tipo else url_for('societario.societario_acompanhamento', status=value) }}{% else %}{{ url_for('societario.societario', status=value, tipo=active_tipo) if active_tipo else url_for('societario.societario', status=value) }}{% endif %}" data-dashboard-filter="{{ value }}">
+                    <a class="status-dash-link" href="{% if is_onboarding %}{{ url_for(base_page, aba=onboarding_tab, status=value, tipo=active_tipo) if active_tipo else url_for(base_page, aba=onboarding_tab, status=value) }}{% else %}{{ url_for(base_page, status=value, tipo=active_tipo) if active_tipo else url_for(base_page, status=value) }}{% endif %}" data-dashboard-filter="{{ value }}">
                         <div class="status-dash{% if active_status == value %} active{% endif %}" data-status="{{ value }}">
                             <div class="dash-label">{{ label }}</div>
                             <div class="dash-value">{{ status_counts.get(value, 0) }}</div>
@@ -593,6 +617,10 @@
             <h2 class="h6 mb-3">Novo Processo</h2>
             <form method="POST" action="{{ url_for('societario_create') }}" class="new-process-grid">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="page_mode" value="{{ page_mode }}">
+                {% if is_onboarding %}
+                <input type="hidden" name="onboarding_tab" value="{{ onboarding_tab }}">
+                {% endif %}
 
                 <div class="new-process-field">
                     <label class="form-label mb-1">Empresa</label>
@@ -625,7 +653,7 @@
                     <label class="form-label mb-1">Status</label>
                     <select name="status" class="form-select" required>
                         {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if value == 'VIABILIDADE' %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}" {% if value == default_status_value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -671,7 +699,7 @@
                             {% for processo in processos %}
                             <tr data-processo-row="{{ processo.id }}" data-row-status="{{ processo.status.value }}">
                                 <td class="col-empresa">
-                                    <div class="empresa-readonly">{{ processo.nome_empresa }}</div>
+                                    <div class="empresa-readonly">{{ ((processo.empresa.codigo_empresa ~ ' - ') if processo.empresa and processo.empresa.codigo_empresa else '') ~ processo.nome_empresa }}</div>
                                 </td>
                                 <td class="col-tipo">
                                     <select class="form-select form-select-sm" data-field="tipo_processo" data-id="{{ processo.id }}">
@@ -769,6 +797,7 @@
     const endpointBase = '/societario/processos/';
     const initialFilter = "{{ active_status }}";
     const pageMode = "{{ page_mode }}";
+    const onboardingTipoValue = "{{ onboarding_tipo_value or "" }}";
     const debounceTimers = new Map();
     const historyModalEl = document.getElementById('societarioHistoryModal');
     const historyModal = historyModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(historyModalEl) : null;
@@ -788,7 +817,8 @@
     });
     const hiddenStatusesByMode = {
         societario: new Set(['FINALIZADA', 'REGISTRADA', 'EM_ANDAMENTO', 'AGUARDANDO_RETORNO']),
-        acompanhamento: new Set(['FINALIZADA'])
+        acompanhamento: new Set(['FINALIZADA']),
+        onboarding: new Set(['FINALIZADA', 'REGISTRADA', 'EM_ANDAMENTO', 'AGUARDANDO_RETORNO'])
     };
     const acompanhamentoStatuses = new Set(['REGISTRADA', 'EM_ANDAMENTO', 'AGUARDANDO_RETORNO', 'FINALIZADA']);
     const hiddenStatuses = hiddenStatusesByMode[pageMode] || new Set([]);
@@ -1000,6 +1030,21 @@
                     (pageMode === 'societario' && acompanhamentoStatuses.has(payload.status)) ||
                     (pageMode === 'acompanhamento' && !acompanhamentoStatuses.has(payload.status));
                 if (row && mustLeaveCurrentPage) {
+                    processRows = processRows.filter(function (item) {
+                        return item !== row;
+                    });
+                    row.remove();
+                }
+            }
+            if (Object.prototype.hasOwnProperty.call(payload, 'tipo_processo')) {
+                const row = document.querySelector('tr[data-processo-row="' + id + '"]');
+                const rowStatus = row ? (row.getAttribute('data-row-status') || '') : '';
+                const mustLeaveOnboardingTab =
+                    pageMode === 'onboarding' && onboardingTipoValue && payload.tipo_processo !== onboardingTipoValue;
+                if (row && mustLeaveOnboardingTab) {
+                    if (rowStatus) {
+                        dashboardServerCounts[rowStatus] = Math.max(0, (dashboardServerCounts[rowStatus] || 0) - 1);
+                    }
                     processRows = processRows.filter(function (item) {
                         return item !== row;
                     });
