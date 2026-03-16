@@ -17,7 +17,7 @@ ALLOWED_TAGS = [
 # Atributos permitidos por tag
 ALLOWED_ATTRIBUTES = {
     'a': ['href', 'title', 'target', 'rel', 'style'],
-    'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+    'img': ['src', 'alt', 'title', 'width', 'height', 'style', 'data-fullres'],
     'span': ['class', 'style'],
     'div': ['class', 'style'],
     'code': ['class', 'style'],

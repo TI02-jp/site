@@ -80,6 +80,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024  # 5 GB (evita 413 por tamanho)
 app.config['MAX_FORM_MEMORY_SIZE'] = app.config['MAX_CONTENT_LENGTH']
 app.config['WYSIWYG_UPLOAD_SOFT_LIMIT_MB'] = int(os.getenv("WYSIWYG_UPLOAD_SOFT_LIMIT_MB", "512"))
+app.config['WYSIWYG_PREVIEW_MAX_SIDE'] = int(os.getenv("WYSIWYG_PREVIEW_MAX_SIDE", "1600"))
+app.config['WYSIWYG_PREVIEW_WEBP_QUALITY'] = int(os.getenv("WYSIWYG_PREVIEW_WEBP_QUALITY", "86"))
 app.config['ENFORCE_HTTPS'] = os.getenv('ENFORCE_HTTPS') == '1'
 app.config['SESSION_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']
 app.config['REMEMBER_COOKIE_SECURE'] = app.config['ENFORCE_HTTPS']

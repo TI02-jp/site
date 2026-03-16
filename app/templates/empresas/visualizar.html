@@ -1269,7 +1269,8 @@ document.addEventListener("DOMContentLoaded", function () {
         img.classList.add('img-fluid');
         img.addEventListener('click', function() {
             const modalImg = document.getElementById('modalImage');
-            modalImg.src = this.src;
+            const fullResUrl = this.getAttribute('data-fullres') || this.src;
+            modalImg.src = fullResUrl;
             const modal = new bootstrap.Modal(document.getElementById('imageModal'));
             modal.show();
         });
