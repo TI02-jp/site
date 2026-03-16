@@ -66,7 +66,6 @@ if __name__ == "__main__":
             "x-forwarded-proto",
             "x-forwarded-host",
             "x-forwarded-port",
-            "x-forwarded-prefix",
         }
 
     logging.getLogger(__name__).info(
@@ -99,3 +98,4 @@ if __name__ == "__main__":
         serve_kwargs["trusted_proxy_headers"] = trusted_proxy_headers
 
     serve(app, **serve_kwargs)
+
