@@ -828,6 +828,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // -- LÓGICA DO EDITOR QUILL COM UPLOAD --
     
+    
     function uploadImage(file) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
@@ -840,13 +841,111 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => response.json())
             .then(result => {
                 if (result.image_url) {
-                    resolve(result.image_url);
+                    resolve({
+                        image_url: result.image_url,
+                        preview_url: result.preview_url || result.image_url,
+                    });
                 } else {
                     reject('Erro no servidor: ' + (result.error || 'Erro desconhecido'));
                 }
             })
-            .catch(error => reject('Falha na comunicação com o servidor.'));
+            .catch(() => reject('Falha na comunicacao com o servidor.'));
         });
+    }
+
+    function isPortalUploadUrl(src) {
+        if (!src) return false;
+        if (src.startsWith('/static/uploads/')) return true;
+        try {
+            const parsed = new URL(src, window.location.origin);
+            return parsed.origin === window.location.origin && parsed.pathname.startsWith('/static/uploads/');
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function dataUrlToFile(dataUrl, fallbackName) {
+        const matches = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(dataUrl || '');
+        if (!matches) return null;
+
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const binary = atob(base64Data);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        const extension = mimeType.split('/')[1] || 'png';
+        const filename = fallbackName || `clipboard-${Date.now()}.${extension}`;
+        return new File([bytes], filename, { type: mimeType });
+    }
+
+    async function importImageFromUrl(imageUrl) {
+        const response = await fetch('/upload_image_from_url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ image_url: imageUrl })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.image_url) {
+            throw new Error(result.error || 'Falha ao importar imagem remota');
+        }
+        return {
+            image_url: result.image_url,
+            preview_url: result.preview_url || result.image_url,
+        };
+    }
+
+    function applyUploadedImageData(imageElement, uploadResult) {
+        if (!imageElement || !uploadResult || !uploadResult.image_url) {
+            return;
+        }
+
+        imageElement.setAttribute('src', uploadResult.preview_url || uploadResult.image_url);
+        imageElement.setAttribute('data-fullres', uploadResult.image_url);
+        imageElement.removeAttribute('srcset');
+    }
+
+    async function persistEditorImages(quill) {
+        if (!quill || !quill.root) return;
+
+        const images = Array.from(quill.root.querySelectorAll('img[src]'));
+        for (const image of images) {
+            const src = (image.getAttribute('src') || '').trim();
+            if (!src || isPortalUploadUrl(src) || image.dataset.uploading === '1') {
+                continue;
+            }
+
+            image.dataset.uploading = '1';
+            try {
+                let uploadResult = null;
+                if (src.startsWith('data:image/')) {
+                    const fileToUpload = dataUrlToFile(src);
+                    if (!fileToUpload) {
+                        continue;
+                    }
+                    uploadResult = await uploadImage(fileToUpload);
+                } else if (/^https?:\/\//i.test(src)) {
+                    uploadResult = await importImageFromUrl(src);
+                }
+
+                if (!uploadResult) {
+                    continue;
+                }
+
+                applyUploadedImageData(image, uploadResult);
+            } catch (error) {
+                console.warn('Nao foi possivel persistir imagem colada:', error);
+            } finally {
+                delete image.dataset.uploading;
+            }
+        }
     }
 
     function initializeQuill(editorId, hiddenInputId, fileInputId) {
@@ -892,27 +991,55 @@ document.addEventListener("DOMContentLoaded", function () {
                     quill.insertEmbed(range.index, 'image', base64Image);
                     quill.setSelection(range.index + 1);
                     uploadImage(file)
-                    .then(serverUrl => {
+                    .then(uploadResult => {
                         const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
-                        if (previewImage) previewImage.src = serverUrl;
+                        if (previewImage) {
+                            applyUploadedImageData(previewImage, uploadResult);
+                        }
                     })
                     .catch(error => {
-                        console.error("Erro no upload:", error);
+                        console.error('Erro no upload:', error);
                         const previewImage = quill.root.querySelector(`img[src="${base64Image}"]`);
                         if (previewImage) previewImage.remove();
                     });
                 };
                 reader.readAsDataURL(file);
-                imageInput.value = "";
+                imageInput.value = '';
             }
         });
 
-        editorSelector.closest('form').addEventListener('submit', function() {
+        quill.root.addEventListener('paste', () => {
+            setTimeout(() => {
+                persistEditorImages(quill);
+            }, 50);
+        });
+
+        let isSubmitting = false;
+        const formElement = editorSelector.closest('form');
+        formElement.addEventListener('submit', async function(event) {
+            if (isSubmitting) {
+                return;
+            }
+            event.preventDefault();
+            await persistEditorImages(quill);
+
+            const hasExternalImages = Array.from(quill.root.querySelectorAll('img[src]')).some((img) => {
+                const currentSrc = (img.getAttribute('src') || '').trim();
+                return currentSrc && !isPortalUploadUrl(currentSrc);
+            });
+            if (hasExternalImages) {
+                alert('Nao foi possivel importar uma ou mais imagens coladas. Salve novamente apos recarregar as imagens.');
+                return;
+            }
+
             if (hiddenInput) {
                 hiddenInput.value = quill.root.innerHTML;
             }
+            isSubmitting = true;
+            formElement.submit();
         });
     }
+
 
     initializeQuill('#editor-fiscal', '#particularidades-fiscal', '#image-input-fiscal');
     initializeQuill('#editor-contabil', '#particularidades-contabil', '#image-input-contabil');
