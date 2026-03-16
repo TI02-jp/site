@@ -226,6 +226,22 @@ def _broadcast_announcement_notification(announcement: Announcement) -> None:
         # Don't fail if broadcast fails
         pass
 
+def _announcement_audience_query(announcement: Announcement):
+    """Return the active audience query for an announcement."""
+
+    target_tag_ids = {
+        tag.id for tag in (announcement.target_tags or []) if tag.id
+    }
+    query = User.query.filter(User.ativo.is_(True))
+    if target_tag_ids:
+        query = query.filter(
+            or_(
+                User.role == "admin",
+                User.is_master.is_(True),
+                User.tags.any(Tag.id.in_(target_tag_ids)),
+            )
+        )
+    return query
 
 def _get_tag_choices() -> list[tuple[int, str]]:
     """Return sorted tag choices for the announcement forms."""
@@ -264,12 +280,7 @@ def _build_announcement_view_status(
     announcement_ids = [announcement.id for announcement in announcements if announcement.id]
     if not announcement_ids:
         return {}, {}, {}
-
-    all_users = (
-        User.query
-        .order_by(User.name.asc(), User.username.asc())
-        .all()
-    )
+    audience_cache: dict[tuple[int, ...], list[User]] = {}
 
     first_log_ids_subquery = (
         db.session.query(func.min(AuditLog.id).label("first_log_id"))
@@ -312,9 +323,20 @@ def _build_announcement_view_status(
         announcement_id = announcement.id
         if not announcement_id:
             continue
+        target_tag_key = tuple(
+            sorted(tag.id for tag in (announcement.target_tags or []) if tag.id)
+        )
+        audience_users = audience_cache.get(target_tag_key)
+        if audience_users is None:
+            audience_users = (
+                _announcement_audience_query(announcement)
+                .order_by(User.name.asc(), User.username.asc())
+                .all()
+            )
+            audience_cache[target_tag_key] = audience_users
 
         seen_map = seen_by_announcement.get(announcement_id, {})
-        audience_user_ids = {user.id for user in all_users}
+        audience_user_ids = {user.id for user in audience_users}
         viewed_logs = [
             log_item
             for user_id, log_item in seen_map.items()
@@ -326,7 +348,7 @@ def _build_announcement_view_status(
             if isinstance(log_item.user_id, int)
         }
         not_viewed_users = [
-            user for user in all_users if user.id not in seen_audience_user_ids
+            user for user in audience_users if user.id not in seen_audience_user_ids
         ]
 
         viewed_logs_by_announcement[announcement_id] = viewed_logs
@@ -919,3 +941,5 @@ def announcement_log_status(announcement_id: int):
             ],
         }
     )
+
+

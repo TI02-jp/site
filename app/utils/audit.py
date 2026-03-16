@@ -1,5 +1,4 @@
-"""User action auditing module for compliance and security."""
-
+import ipaddress
 import logging
 from typing import Optional, Dict, Any
 
@@ -11,30 +10,90 @@ from flask_login import current_user
 user_actions_logger = logging.getLogger('user_actions')
 
 
+def _normalize_ip_candidate(candidate: str | None) -> str | None:
+    """Normalize forwarded IP candidates (e.g. '1.2.3.4:1234')."""
+
+    if not candidate:
+        return None
+
+    value = candidate.strip().strip('"')
+    if not value or value.lower() == 'unknown':
+        return None
+
+    if value.startswith('[') and ']' in value:
+        value = value[1:value.index(']')]
+    elif value.count(':') == 1 and '.' in value:
+        host, port = value.rsplit(':', 1)
+        if port.isdigit():
+            value = host
+
+    return value.strip() or None
+
+
+def _parse_ip(candidate: str | None) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Parse a normalized candidate into an IP object."""
+
+    normalized = _normalize_ip_candidate(candidate)
+    if not normalized:
+        return None
+
+    try:
+        return ipaddress.ip_address(normalized)
+    except ValueError:
+        return None
+
+
+def _is_public_ip(parsed_ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Return True when the address is public-routable."""
+
+    return not (
+        parsed_ip.is_private
+        or parsed_ip.is_loopback
+        or parsed_ip.is_link_local
+        or parsed_ip.is_multicast
+        or parsed_ip.is_reserved
+        or parsed_ip.is_unspecified
+    )
+
+
 def _extract_client_ip() -> str | None:
     """Resolve the best client IP, honoring reverse-proxy headers."""
 
     if not request:
         return None
 
-    # Standard reverse proxy chain: client, proxy1, proxy2...
+    candidates: list[str] = []
+
     forwarded_for = (request.headers.get('X-Forwarded-For') or '').strip()
     if forwarded_for:
-        first_hop = forwarded_for.split(',')[0].strip()
-        if first_hop:
-            return first_hop
+        candidates.extend(part.strip() for part in forwarded_for.split(',') if part.strip())
 
-    real_ip = (request.headers.get('X-Real-IP') or '').strip()
-    if real_ip:
-        return real_ip
+    for header in ('X-Real-IP', 'CF-Connecting-IP', 'True-Client-IP', 'X-Client-IP'):
+        header_value = (request.headers.get(header) or '').strip()
+        if header_value:
+            candidates.append(header_value)
 
-    # Flask may fill access_route with forwarded addresses depending on server stack.
     if getattr(request, 'access_route', None):
-        for candidate in request.access_route:
-            if candidate:
-                return candidate
+        candidates.extend(str(value).strip() for value in request.access_route if value)
 
-    return request.remote_addr
+    remote_addr = request.remote_addr
+    if remote_addr:
+        candidates.append(str(remote_addr).strip())
+
+    first_valid_ip: str | None = None
+    for candidate in candidates:
+        parsed = _parse_ip(candidate)
+        if not parsed:
+            continue
+
+        normalized = str(parsed)
+        if first_valid_ip is None:
+            first_valid_ip = normalized
+
+        if _is_public_ip(parsed):
+            return normalized
+
+    return first_valid_ip
 
 
 class ActionType:
@@ -168,3 +227,4 @@ def log_user_action(
             'new_values': new_values,
         }
     )
+

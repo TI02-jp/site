@@ -134,6 +134,35 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+def _parse_non_negative_int_env(name: str, default: int) -> int:
+    """Return a non-negative integer parsed from an env var."""
+    raw_value = (os.getenv(name) or "").strip()
+    if not raw_value:
+        return default
+    try:
+        return max(0, int(raw_value))
+    except ValueError:
+        logger.warning("Valor invalido para %s=%r; usando %s.", name, raw_value, default)
+        return default
+
+
+# Trust reverse-proxy forwarding headers when app is behind Nginx/Load Balancer.
+proxy_fix_x_for = _parse_non_negative_int_env('PROXY_FIX_X_FOR', 1)
+proxy_fix_x_proto = _parse_non_negative_int_env('PROXY_FIX_X_PROTO', 1)
+proxy_fix_x_host = _parse_non_negative_int_env('PROXY_FIX_X_HOST', 0)
+proxy_fix_x_port = _parse_non_negative_int_env('PROXY_FIX_X_PORT', 0)
+proxy_fix_x_prefix = _parse_non_negative_int_env('PROXY_FIX_X_PREFIX', 0)
+
+if any((proxy_fix_x_for, proxy_fix_x_proto, proxy_fix_x_host, proxy_fix_x_port, proxy_fix_x_prefix)):
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=proxy_fix_x_for,
+        x_proto=proxy_fix_x_proto,
+        x_host=proxy_fix_x_host,
+        x_port=proxy_fix_x_port,
+        x_prefix=proxy_fix_x_prefix,
+    )
+
 init_cache(app)
 
 # Rate limiting configuration for DDoS/brute-force protection
@@ -1086,3 +1115,4 @@ def _commit_session_updates(_exception=None):
             db.session.rollback()
         finally:
             db.session.remove()
+
