@@ -330,7 +330,6 @@ def acessos_editar(link_id: int):
 
 @acessos_bp.route("/acessos/<int:link_id>/excluir", methods=["POST"])
 @login_required
-@csrf.exempt
 def acessos_excluir(link_id: int):
     """
     Exclui atalho existente.

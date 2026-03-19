@@ -102,6 +102,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['ENFORCE_HTTPS'] else 'http'
 app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24  # 24 horas
 app.config['WTF_CSRF_SSL_STRICT'] = app.config['ENFORCE_HTTPS']
+app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken']
 app.config['SESSION_COOKIE_NAME'] = os.getenv('SESSION_COOKIE_NAME', 'jp_portal_session')
 app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
 app.config['SQLALCHEMY_ENGINE_OPTIONS'].setdefault('pool_pre_ping', True)
