@@ -44,7 +44,8 @@ async function enviarEmail() {
     const response = await fetch('/api/inventario/test-email-cristiano', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-CSRFToken': window.csrfToken,
       }
     });
 

@@ -2134,7 +2134,6 @@ def api_inventario_chunk():
 
 @empresas_bp.route("/api/inventario/update", methods=["POST"])
 @login_required
-@csrf.exempt
 def api_inventario_update():
     """API para atualizar campos do inventário inline."""
     from decimal import Decimal, InvalidOperation
@@ -2779,7 +2778,6 @@ def inventario_test_email_page():
 
 @empresas_bp.route("/api/inventario/test-email-cristiano", methods=["POST"])
 @login_required
-@csrf.exempt
 def api_test_email_cristiano():
     """Dispara email de teste imediato para Tadeu e Cristiano."""
     from app.utils.mailer import send_email
