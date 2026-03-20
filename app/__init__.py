@@ -245,9 +245,9 @@ def add_cache_buster(endpoint, values):
 @app.before_request
 def _enforce_https():
     """Redirect incoming HTTP requests to HTTPS when enforcement is enabled."""
-    if app.config['ENFORCE_HTTPS'] and request.headers.get('X-Forwarded-Proto', request.scheme) != 'https':
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
+    # Redirect HTTP → HTTPS é responsabilidade do proxy reverso (Apache).
+    # Flask gerencia apenas as flags Secure dos cookies via ENFORCE_HTTPS.
+    pass
 
 
 @app.before_request

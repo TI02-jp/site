@@ -1152,8 +1152,8 @@ WAITRESS_TRUSTED_PROXY_COUNT=1
 
 ```env
 # Secret keys (manter em segredo!)
-SECRET_KEY=TI02JPCONTABIL
-CSRF_SECRET_KEY=TI02JPCONTABIL_CSRF
+SECRET_KEY=REDACTED
+CSRF_SECRET_KEY=REDACTED_CSRF
 ENCRYPTION_KEY=53fr8VJIQK5rEklEDlZrx4vftzV0SsnjLhXtwxvYNxc=
 
 # HTTPS enforcement
@@ -1820,7 +1820,7 @@ SSLStaplingReturnResponderErrors off
 $date = Get-Date -Format "yyyy-MM-dd"
 $backupFile = "C:\Backups\mysql\cadastro_empresas_teste_$date.sql"
 
-& "C:\xampp\mysql\bin\mysqldump.exe" -u root -p"jp098*" cadastro_empresas_teste > $backupFile
+& "C:\xampp\mysql\bin\mysqldump.exe" -u root -p"REDACTED" cadastro_empresas_teste > $backupFile
 
 # Comprimir
 Compress-Archive -Path $backupFile -DestinationPath "$backupFile.zip"
@@ -1855,8 +1855,8 @@ netsh advfirewall firewall show rule name=all | findstr 443
 **Migração para environment variables:**
 ```batch
 # Configurar permanentemente
-setx SECRET_KEY "TI02JPCONTABIL" /M
-setx CSRF_SECRET_KEY "TI02JPCONTABIL_CSRF" /M
+setx SECRET_KEY "REDACTED" /M
+setx CSRF_SECRET_KEY "REDACTED_CSRF" /M
 
 # run.py passa a ler de os.environ (não .env)
 ```
