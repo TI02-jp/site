@@ -37,6 +37,7 @@ nosetests.xml
 
 # Ignorar imagens e arquivos
 *.png
+!app/static/images/login.png
 *.jpg
 *.jpeg
 *.gif

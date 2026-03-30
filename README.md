@@ -2,7 +2,7 @@
 
 Aplicacao web interna para operacao e gestao de processos da JP Contabil.
 
-![Tela de login](app/static/images/login.png)
+![Tela de login](https://raw.githubusercontent.com/TI02-jp/site/main/app/static/images/login.png)
 
 ## O que e este projeto
 
