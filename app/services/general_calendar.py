@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Iterable
+import threading
 
 from flask import current_app, flash
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from app import db
 from app.models.tables import (
@@ -15,9 +17,34 @@ from app.models.tables import (
     GeneralCalendarEventParticipant,
     User,
 )
+from app.services.calendar_cache import calendar_cache
 
 
 _TIME_COLUMNS_VERIFIED = False
+_GENERAL_EVENTS_CACHE_VERSION = 0
+_GENERAL_EVENTS_CACHE_VERSION_LOCK = threading.Lock()
+
+
+def _get_general_events_cache_metadata(
+    current_user_id: int,
+    can_manage_all: bool,
+    is_admin: bool,
+) -> tuple[int, str]:
+    with _GENERAL_EVENTS_CACHE_VERSION_LOCK:
+        version = _GENERAL_EVENTS_CACHE_VERSION
+    key = (
+        f"general_calendar_events:{version}:{current_user_id}:"
+        f"{int(can_manage_all)}:{int(is_admin)}"
+    )
+    return version, key
+
+
+def invalidate_general_calendar_cache() -> None:
+    """Invalidate cached serialized general calendar events."""
+
+    global _GENERAL_EVENTS_CACHE_VERSION
+    with _GENERAL_EVENTS_CACHE_VERSION_LOCK:
+        _GENERAL_EVENTS_CACHE_VERSION += 1
 
 
 def _ensure_time_columns() -> None:
@@ -203,6 +230,7 @@ def create_calendar_event_from_form(form, creator_id: int) -> GeneralCalendarEve
         )
     db.session.add(event)
     db.session.commit()
+    invalidate_general_calendar_cache()
     flash("Evento criado com sucesso!", "success")
     return event
 
@@ -268,6 +296,7 @@ def update_calendar_event_from_form(
             )
         )
     db.session.commit()
+    invalidate_general_calendar_cache()
     flash("Evento atualizado com sucesso!", "success")
     return event
 
@@ -277,6 +306,7 @@ def delete_calendar_event(event: GeneralCalendarEvent) -> None:
 
     db.session.delete(event)
     db.session.commit()
+    invalidate_general_calendar_cache()
 
 
 def serialize_events_for_calendar(
@@ -287,15 +317,29 @@ def serialize_events_for_calendar(
     """Return events formatted for FullCalendar consumption."""
 
     _ensure_time_columns()
+    _, cache_key = _get_general_events_cache_metadata(
+        current_user_id, can_manage_all, is_admin
+    )
+    cached_events = calendar_cache.get(cache_key)
+    if cached_events is not None:
+        return cached_events
 
     events: list[dict] = []
-    for event in (
-        GeneralCalendarEvent.query.order_by(
+    query = (
+        GeneralCalendarEvent.query.options(
+            selectinload(GeneralCalendarEvent.created_by).load_only(
+                User.id, User.username
+            ),
+            selectinload(GeneralCalendarEvent.participants).selectinload(
+                GeneralCalendarEventParticipant.user
+            ).load_only(User.id, User.username),
+        ).order_by(
             GeneralCalendarEvent.start_date,
             GeneralCalendarEvent.start_time,
             GeneralCalendarEvent.title,
-        ).all()
-    ):
+        )
+    )
+    for event in query.all():
         can_edit = can_manage_all and (is_admin or event.created_by_id == current_user_id)
         can_delete = can_edit or is_admin
         start_iso = event.start_date.isoformat()
@@ -446,4 +490,5 @@ def serialize_events_for_calendar(
             (data.get("title") or "").lower(),
         )
     )
+    calendar_cache.set(cache_key, events, ttl=120)
     return events

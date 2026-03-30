@@ -464,6 +464,67 @@
             return false;
         }
 
+        var perfParams = new URLSearchParams(window.location.search);
+        var perfEnabled = perfParams.get('perf') === '1' || window.localStorage.getItem('calendarPerfDebug') === '1';
+        var calendarPerf = {
+            nav: {},
+            events: {
+                fetch: {},
+                normalize: {},
+                render: {},
+                payload: {},
+            },
+        };
+
+        function toMs(value) {
+            if (typeof value !== 'number' || !isFinite(value)) { return null; }
+            return Number(value.toFixed(2));
+        }
+
+        function setPerfMetric(scope, key, value) {
+            if (!scope) { return; }
+            scope[key] = toMs(value);
+        }
+
+        function captureNavigationPerf() {
+            if (!window.performance || typeof window.performance.getEntriesByType !== 'function') {
+                return;
+            }
+            var nav = window.performance.getEntriesByType('navigation');
+            if (!nav || !nav.length) {
+                return;
+            }
+            var entry = nav[0];
+            if (!entry) {
+                return;
+            }
+            setPerfMetric(calendarPerf.nav, 'ttfb_ms', entry.responseStart - entry.requestStart);
+            setPerfMetric(calendarPerf.nav, 'dom_content_loaded_ms', entry.domContentLoadedEventEnd - entry.startTime);
+            setPerfMetric(calendarPerf.nav, 'load_event_ms', entry.loadEventEnd - entry.startTime);
+        }
+
+        function publishPerfSnapshot() {
+            window.__calendarPerf = calendarPerf;
+            if (!perfEnabled) {
+                return;
+            }
+            console.groupCollapsed('[calendar-perf] /calendario-colaboradores');
+            console.table({
+                ttfb_ms: calendarPerf.nav.ttfb_ms,
+                dom_content_loaded_ms: calendarPerf.nav.dom_content_loaded_ms,
+                load_event_ms: calendarPerf.nav.load_event_ms,
+                api_fetch_ms: calendarPerf.events.fetch.duration_ms,
+                normalize_ms: calendarPerf.events.normalize.duration_ms,
+                render_enqueue_ms: calendarPerf.events.render.enqueue_ms,
+                render_paint_ms: calendarPerf.events.render.paint_ms,
+                payload_items: calendarPerf.events.payload.items,
+            });
+            console.log('snapshot', calendarPerf);
+            console.groupEnd();
+        }
+
+        captureNavigationPerf();
+        publishPerfSnapshot();
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             fixedWeekCount: false,
@@ -932,171 +993,81 @@
         }
 
         function loadEvents() {
+            var fetchStartedAt = performance.now();
             fetch('/api/calendario-eventos')
-                .then(function(resp) { return resp.json(); })
+                .then(function(resp) {
+                    var fetchFinishedAt = performance.now();
+                    setPerfMetric(
+                        calendarPerf.events.fetch,
+                        'duration_ms',
+                        fetchFinishedAt - fetchStartedAt
+                    );
+                    calendarPerf.events.fetch.status = resp.status;
+                    return resp.json();
+                })
                 .then(function(data) {
-                    calendar.removeAllEvents();
-                    data.sort(function(a, b) {
-                        var keyA = eventPayloadStartKey(a);
-                        var keyB = eventPayloadStartKey(b);
-                        if (keyA.date && keyB.date && keyA.date !== keyB.date) {
-                            return keyA.date < keyB.date ? -1 : 1;
+                    var normalizeStartedAt = performance.now();
+                    var normalized = (data || []).map(function(ev) {
+                        if (!ev || typeof ev !== 'object') {
+                            return ev;
                         }
-                        if (keyA.date && !keyB.date) { return -1; }
-                        if (!keyA.date && keyB.date) { return 1; }
-                        if (keyA.time && keyB.time && keyA.time !== keyB.time) {
-                            return keyA.time < keyB.time ? -1 : 1;
+
+                        var copy = Object.assign({}, ev);
+                        var spanDays = 1;
+                        if (copy.allDay) {
+                            var startDate = parseUTCDate(copy.start_date || copy.start);
+                            var endDate = parseUTCDate(copy.end_date || copy.end);
+                            if (startDate && endDate && endDate >= startDate) {
+                                spanDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / MS_IN_DAY) + 1);
+                            }
                         }
-                        if (keyA.time && !keyB.time) { return 1; }
-                        if (!keyA.time && keyB.time) { return -1; }
-                        var aTadeu = Boolean(
-                            (a.extendedProps && a.extendedProps.is_tadeu_event) || a.is_tadeu_event
-                        );
-                        var bTadeu = Boolean(
-                            (b.extendedProps && b.extendedProps.is_tadeu_event) || b.is_tadeu_event
-                        );
-                        if (aTadeu !== bTadeu) {
-                            return aTadeu ? -1 : 1;
+
+                        if (typeof copy.originalId === 'undefined') {
+                            copy.originalId = copy.id;
                         }
-                        var titleA = (a.title || '').toLocaleLowerCase();
-                        var titleB = (b.title || '').toLocaleLowerCase();
-                        if (titleA < titleB) { return -1; }
-                        if (titleA > titleB) { return 1; }
-                        return 0;
+                        if (!copy.extendedProps || typeof copy.extendedProps !== 'object') {
+                            copy.extendedProps = {};
+                        }
+                        copy.extendedProps.originalId = copy.originalId;
+                        copy.extendedProps.spanDays = spanDays;
+
+                        return copy;
                     });
-                    data.forEach(function(ev) {
-                        if (!ev.extendedProps) {
-                            ev.extendedProps = {};
-                        }
-                        if (typeof ev.is_tadeu_event !== 'undefined') {
-                            ev.extendedProps.is_tadeu_event = ev.is_tadeu_event;
-                        }
-                        if (typeof ev.is_birthday !== 'undefined') {
-                            ev.extendedProps.is_birthday = ev.is_birthday;
-                        }
-                        if (typeof ev.is_vacation !== 'undefined') {
-                            ev.extendedProps.is_vacation = ev.is_vacation;
-                        }
-                        if (typeof ev.is_absence !== 'undefined') {
-                            ev.extendedProps.is_absence = ev.is_absence;
-                        }
-                        if (typeof ev.is_vacation_event !== 'undefined') {
-                            ev.extendedProps.is_vacation_event = ev.is_vacation_event;
-                        }
-                        if (typeof ev.is_absence_event !== 'undefined') {
-                            ev.extendedProps.is_absence_event = ev.is_absence_event;
-                        }
-                        if (typeof ev.is_notice !== 'undefined') {
-                            ev.extendedProps.is_notice = ev.is_notice;
-                        }
-                        if (typeof ev.birthday_recurs_annually !== 'undefined') {
-                            ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
-                        }
-                        if (typeof ev.birthday_recurrence_years !== 'undefined') {
-                            ev.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
-                        }
-                        if (typeof ev.birthday_user_id !== 'undefined') {
-                            ev.extendedProps.birthday_user_id = ev.birthday_user_id;
-                        }
-                        if (typeof ev.birthday_user_name !== 'undefined') {
-                            ev.extendedProps.birthday_user_name = ev.birthday_user_name;
-                        }
-                        if (typeof ev.originalId !== 'undefined') {
-                            ev.extendedProps.originalId = ev.originalId;
-                        }
-                        if (ev.allDay) {
-                            var startDate = parseUTCDate(ev.start_date || ev.start);
-                            var endDate = parseUTCDate(ev.end_date || ev.end);
-                            if (!startDate) {
-                                calendar.addEvent(ev);
-                                return;
-                            }
-                            if (!endDate || endDate < startDate) {
-                                endDate = new Date(startDate.getTime());
-                            }
-                            var totalDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / MS_IN_DAY) + 1);
-                            var current = new Date(startDate.getTime());
-                            var segmentIndex = 0;
-                            while (current <= endDate) {
-                                var segmentStart = new Date(current.getTime());
-                                var segmentEnd = new Date(current.getTime());
-                                segmentEnd.setUTCDate(segmentEnd.getUTCDate() + 1);
-                                var segment = cloneEvent(ev);
-                                if (!segment.extendedProps) {
-                                    segment.extendedProps = {};
-                                }
-                                var baseOriginalId = ev.originalId || ev.id;
-                                segment.extendedProps.originalId = baseOriginalId;
-                                segment.extendedProps.spanDays = totalDays;
-                                if (typeof segment.is_tadeu_event !== 'undefined') {
-                                    segment.extendedProps.is_tadeu_event = segment.is_tadeu_event;
-                                }
-                                if (typeof segment.is_birthday !== 'undefined') {
-                                    segment.extendedProps.is_birthday = segment.is_birthday;
-                                }
-                                if (typeof segment.is_notice !== 'undefined') {
-                                    segment.extendedProps.is_notice = segment.is_notice;
-                                }
-                                if (typeof ev.is_notice !== 'undefined') {
-                                    segment.extendedProps.is_notice = ev.is_notice;
-                                }
-                                if (typeof ev.birthday_recurs_annually !== 'undefined') {
-                                    segment.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
-                                }
-                                if (typeof ev.birthday_recurrence_years !== 'undefined') {
-                                    segment.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
-                                }
-                                if (typeof ev.birthday_user_id !== 'undefined') {
-                                    segment.extendedProps.birthday_user_id = ev.birthday_user_id;
-                                }
-                                if (typeof ev.birthday_user_name !== 'undefined') {
-                                    segment.extendedProps.birthday_user_name = ev.birthday_user_name;
-                                }
-                                segment.originalId = baseOriginalId;
-                                if (segmentIndex === 0) {
-                                    segment.id = ev.id;
-                                } else {
-                                    segment.id = ev.id + '-seg-' + segmentIndex;
-                                }
-                                segment.start = formatUTCDate(segmentStart);
-                                segment.end = formatUTCDate(segmentEnd);
-                                segment.display = 'block';
-                                if (typeof ev.is_tadeu_event !== 'undefined') {
-                                    segment.is_tadeu_event = ev.is_tadeu_event;
-                                }
-                                if (typeof ev.is_birthday !== 'undefined') {
-                                    segment.is_birthday = ev.is_birthday;
-                                }
-                                calendar.addEvent(segment);
-                                segmentIndex += 1;
-                                current.setUTCDate(current.getUTCDate() + 1);
-                            }
-                        } else {
-                            if (!ev.extendedProps) {
-                                ev.extendedProps = {};
-                            }
-                            ev.extendedProps.spanDays = 1;
-                            if (typeof ev.is_tadeu_event !== 'undefined') {
-                                ev.extendedProps.is_tadeu_event = ev.is_tadeu_event;
-                            }
-                            if (typeof ev.is_birthday !== 'undefined') {
-                                ev.extendedProps.is_birthday = ev.is_birthday;
-                            }
-                            if (typeof ev.birthday_recurs_annually !== 'undefined') {
-                                ev.extendedProps.birthday_recurs_annually = ev.birthday_recurs_annually;
-                            }
-                            if (typeof ev.birthday_recurrence_years !== 'undefined') {
-                                ev.extendedProps.birthday_recurrence_years = ev.birthday_recurrence_years;
-                            }
-                            if (typeof ev.originalId !== 'undefined') {
-                                ev.extendedProps.originalId = ev.originalId;
-                            }
-                            calendar.addEvent(ev);
-                        }
+                    var normalizeFinishedAt = performance.now();
+                    setPerfMetric(
+                        calendarPerf.events.normalize,
+                        'duration_ms',
+                        normalizeFinishedAt - normalizeStartedAt
+                    );
+                    calendarPerf.events.payload.items = normalized.length;
+
+                    var renderStartedAt = performance.now();
+                    calendar.batchRendering(function() {
+                        calendar.removeAllEvents();
+                        calendar.addEventSource(normalized);
                     });
+                    var renderQueuedAt = performance.now();
+                    setPerfMetric(
+                        calendarPerf.events.render,
+                        'enqueue_ms',
+                        renderQueuedAt - renderStartedAt
+                    );
+
+                    requestAnimationFrame(function() {
+                        requestAnimationFrame(function() {
+                            setPerfMetric(
+                                calendarPerf.events.render,
+                                'paint_ms',
+                                performance.now() - renderStartedAt
+                            );
+                            publishPerfSnapshot();
+                        });
+                    });
+                })
+                .catch(function() {
+                    showFlashMessage('Não foi possível carregar os eventos do calendário.', 'danger');
                 });
         }
-
         function openNewEvent(dateStr) {
             var form = document.querySelector('#calendarEventModal form');
             form.reset();
