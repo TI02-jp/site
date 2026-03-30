@@ -418,19 +418,19 @@ def _build_inventario_base_query(
 @empresas_bp.route("/api/cnpj/<cnpj>")
 @login_required
 def api_cnpj(cnpj):
-    """Provide a JSON API for CNPJ lookups."""
+    """Provide a JSON API for CPF/CNPJ lookups."""
     try:
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
         msg = str(e)
         status = 400 if "inválido" in msg.lower() or "invalido" in msg.lower() else 404
         if status == 404:
-            msg = "CNPJ não está cadastrado"
+            msg = "CPF/CNPJ nao esta cadastrado"
         return jsonify({"error": msg}), status
     except Exception:
-        return jsonify({"error": "Erro ao consultar CNPJ"}), 500
+        return jsonify({"error": "Erro ao consultar CPF/CNPJ"}), 500
     if not dados:
-        return jsonify({"error": "CNPJ não está cadastrado"}), 404
+        return jsonify({"error": "CPF/CNPJ nao esta cadastrado"}), 404
     return jsonify(dados)
 
 
@@ -492,6 +492,7 @@ def api_general_calendar_events():
 def cadastrar_empresa():
     """Create a new company record."""
     form = EmpresaForm()
+    form.tipo_empresa.choices = [choice for choice in EMPRESA_TAG_CHOICES if choice[0] != "MEI"]
     if request.method == "GET":
         form.sistemas_consultorias.data = form.sistemas_consultorias.data or []
         form.regime_lancamento.data = form.regime_lancamento.data or []
@@ -504,6 +505,11 @@ def cadastrar_empresa():
                 acessos = json.loads(acessos_json) if acessos_json else []
             except Exception:
                 acessos = []
+            tributacao = (form.tributacao.data or "").strip()
+            is_mei = tributacao.upper() == "MEI"
+            sistemas_consultorias = [] if is_mei else (form.sistemas_consultorias.data or [])
+            sistema_utilizado = None if is_mei else (form.sistema_utilizado.data or None)
+
             nova_empresa = Empresa(
                 codigo_empresa=form.codigo_empresa.data,
                 nome_empresa=form.nome_empresa.data,
@@ -511,11 +517,11 @@ def cadastrar_empresa():
                 data_abertura=form.data_abertura.data,
                 tipo_empresa=form.tipo_empresa.data or "Matriz",
                 socio_administrador=form.socio_administrador.data,
-                tributacao=form.tributacao.data,
+                tributacao=tributacao,
                 regime_lancamento=form.regime_lancamento.data,
                 atividade_principal=form.atividade_principal.data,
-                sistemas_consultorias=form.sistemas_consultorias.data,
-                sistema_utilizado=form.sistema_utilizado.data,
+                sistemas_consultorias=sistemas_consultorias,
+                sistema_utilizado=sistema_utilizado,
                 acessos=acessos,
             )
             db.session.add(nova_empresa)
@@ -558,7 +564,7 @@ def listar_empresas():
         page = page_arg
     per_page = 20
     show_inactive = request.args.get("show_inactive") in ("1", "on", "true", "True")
-    allowed_tributacoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"]
+    allowed_tributacoes = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"]
     allowed_tag_filters = [value for value, _ in EMPRESA_TAG_CHOICES]
     sort_arg = request.args.get("sort")
     order_arg = request.args.get("order")
@@ -753,16 +759,24 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
     empresa.regime_lancamento_display = empresa.regime_lancamento or []
 
     can_access_financeiro = user_has_tag("financeiro")
+    is_mei_empresa = (empresa.tributacao or "").strip().upper() == "MEI"
 
-    dept_tipos = [
-        "Departamento Fiscal",
-        "Departamento Contábil",
-        "Departamento Pessoal",
-        "Departamento Administrativo",
-        "Departamento Notas Fiscais",
-    ]
-    if can_access_financeiro:
-        dept_tipos.append("Departamento Financeiro")
+    if is_mei_empresa:
+        dept_tipos = [
+            "Departamento Pessoal",
+            "Departamento Administrativo",
+            "Departamento Notas Fiscais",
+        ]
+    else:
+        dept_tipos = [
+            "Departamento Fiscal",
+            "Departamento Cont\u00e1bil",
+            "Departamento Pessoal",
+            "Departamento Administrativo",
+            "Departamento Notas Fiscais",
+        ]
+        if can_access_financeiro:
+            dept_tipos.append("Departamento Financeiro")
 
     departamentos = Departamento.query.filter(
         Departamento.empresa_id == resolved_empresa_id, Departamento.tipo.in_(dept_tipos)
@@ -770,7 +784,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento Contábil")
+    contabil = dept_map.get("Departamento Cont\u00e1bil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -865,6 +879,7 @@ def visualizar_empresa(empresa_id: str | None = None, id: int | None = None):
         responsaveis_map=responsaveis_map,
         empresa_token=empresa_token,
         embed_mode=embed_mode,
+        is_mei_empresa=is_mei_empresa,
     )
 
 
@@ -931,16 +946,24 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     can_access_financeiro = user_has_tag("financeiro")
     responsavel_value = (request.form.get("responsavel") or "").strip() if request.method == "POST" else None
+    is_mei_empresa = (empresa.tributacao or "").strip().upper() == "MEI"
 
-    dept_tipos = [
-        "Departamento Fiscal",
-        "Departamento Contábil",
-        "Departamento Pessoal",
-        "Departamento Administrativo",
-        "Departamento Notas Fiscais",
-    ]
-    if can_access_financeiro:
-        dept_tipos.append("Departamento Financeiro")
+    if is_mei_empresa:
+        dept_tipos = [
+            "Departamento Pessoal",
+            "Departamento Administrativo",
+            "Departamento Notas Fiscais",
+        ]
+    else:
+        dept_tipos = [
+            "Departamento Fiscal",
+            "Departamento Cont\u00e1bil",
+            "Departamento Pessoal",
+            "Departamento Administrativo",
+            "Departamento Notas Fiscais",
+        ]
+        if can_access_financeiro:
+            dept_tipos.append("Departamento Financeiro")
 
     departamentos = Departamento.query.filter(
         Departamento.empresa_id == empresa_id_int, Departamento.tipo.in_(dept_tipos)
@@ -948,7 +971,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
 
     dept_map = {dept.tipo: dept for dept in departamentos}
     fiscal = dept_map.get("Departamento Fiscal")
-    contabil = dept_map.get("Departamento Contábil")
+    contabil = dept_map.get("Departamento Cont\u00e1bil")
     pessoal = dept_map.get("Departamento Pessoal")
     administrativo = dept_map.get("Departamento Administrativo")
     financeiro = dept_map.get("Departamento Financeiro") if can_access_financeiro else None
@@ -1021,6 +1044,10 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
         form_processed_successfully = False
         old_department_snapshot: dict[str, object] | None = None
 
+        if is_mei_empresa and form_type in {"fiscal", "contabil", "financeiro"}:
+            flash("Para empresas MEI, apenas os departamentos Pessoal, Administrativo e Notas Fiscais ficam disponiveis.", "warning")
+            return redirect(url_for("empresas.gerenciar_departamentos", empresa_id=empresa_token))
+
         def _set_responsavel(departamento_obj):
             if departamento_obj is not None:
                 departamento_obj.responsavel = responsavel_value or None
@@ -1049,7 +1076,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             if contabil:
                 old_department_snapshot = _departamento_snapshot(contabil)
             if not contabil:
-                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento Contábil")
+                contabil = Departamento(empresa_id=empresa_id_int, tipo="Departamento Cont\u00e1bil")
                 db.session.add(contabil)
 
             contabil_form.populate_obj(contabil)
@@ -1064,7 +1091,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
             contabil.envio_fisico = contabil_form.envio_fisico.data or []
             contabil.controle_relatorios = contabil_form.controle_relatorios.data or []
 
-            flash("Departamento Contábil salvo com sucesso!", "success")
+            flash("Departamento Cont\u00e1bil salvo com sucesso!", "success")
             form_processed_successfully = True
 
         elif form_type == "pessoal" and pessoal_form.validate():
@@ -1222,6 +1249,7 @@ def gerenciar_departamentos(empresa_id: str | None = None, id: int | None = None
         reunioes_participantes_map=reunioes_participantes_map,
         usuarios_responsaveis=usuarios_responsaveis,
         usuarios_responsaveis_ids=usuarios_responsaveis_ids,
+        is_mei_empresa=is_mei_empresa,
     )
 
 
@@ -3383,3 +3411,4 @@ def api_inventario_delete_cliente_file_v2(empresa_id):
         db.session.rollback()
         current_app.logger.exception("Erro ao deletar arquivo do cliente: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
+
