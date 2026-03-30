@@ -245,15 +245,16 @@
                     </div>
                 </div>
 
-                <div class="row mb-4">
+                <div class="row mb-4" id="sistemas-consultorias-section">
                     <div class="col-12">
                         <h5 class="text-primary border-bottom pb-2 mb-3">
                             <i class="bi bi-gear me-2"></i>Sistemas e Consultorias
                         </h5>
+                        <p class="text-muted small mb-0" id="sistemas-consultorias-help">Para tributacao MEI, este bloco e desativado automaticamente.</p>
                     </div>
                 </div>
 
-                <div class="row g-4 mb-4">
+                <div class="row g-4 mb-4" id="sistemas-consultorias-fields">
                     <div class="col-12">
                         <label class="form-label fw-semibold">{{ form.sistemas_consultorias.label.text }}</label>
                         <div class="border rounded p-3 bg-light checkbox-group-container">
@@ -336,6 +337,39 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     document.querySelectorAll('.alert-dismissible').forEach(autoDismiss);
 
+    const sistemasSection = document.getElementById('sistemas-consultorias-section');
+    const sistemasFieldsSection = document.getElementById('sistemas-consultorias-fields');
+    const sistemasCheckboxes = Array.from(document.querySelectorAll('input[name="{{ form.sistemas_consultorias.name }}"]'));
+    const sistemaUtilizadoInput = document.getElementById('sistema_utilizado');
+
+    function getSelectedTributacao() {
+        const selected = document.querySelector('input[name="tributacao"]:checked');
+        return selected ? selected.value : '';
+    }
+
+    function toggleMeiSystemsSection() {
+        const isMei = getSelectedTributacao() === 'MEI';
+
+        if (sistemasSection) {
+            sistemasSection.classList.toggle('opacity-50', isMei);
+            sistemasSection.setAttribute('aria-disabled', isMei ? 'true' : 'false');
+        }
+        if (sistemasFieldsSection) {
+            sistemasFieldsSection.classList.toggle('opacity-50', isMei);
+            sistemasFieldsSection.setAttribute('aria-disabled', isMei ? 'true' : 'false');
+        }
+
+        sistemasCheckboxes.forEach((checkbox) => {
+            if (isMei) checkbox.checked = false;
+            checkbox.disabled = isMei;
+        });
+
+        if (sistemaUtilizadoInput) {
+            if (isMei) sistemaUtilizadoInput.value = '';
+            sistemaUtilizadoInput.disabled = isMei;
+        }
+    }
+
     function showFlashMessage(message, category = 'danger') {
         const container = document.querySelector('.flash-messages-container');
         if (!container) return;
@@ -403,14 +437,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             });
             document.querySelectorAll('input[name="tributacao"]').forEach(r => { r.checked = false; });
+            toggleMeiSystemsSection();
         }
 
         if (buscarCnpjBtn) {
             const cnpjApi = '{{ url_for("api_cnpj", cnpj="") }}';
             buscarCnpjBtn.addEventListener('click', function () {
                 const cnpj = cnpjField.value.replace(/\D/g, '');
-                if (cnpj.length !== 14) {
-                    showFlashMessage('Informe um CNPJ válido (apenas CNPJ para consulta).');
+                if (![11, 14].includes(cnpj.length)) {
+                    showFlashMessage('Informe um CPF/CNPJ valido para consulta.');
                     clearCnpjFields();
                     return;
                 }
@@ -442,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         }
                     })
                     .catch(() => {
-                        showFlashMessage('Erro ao consultar CNPJ');
+                        showFlashMessage('Erro ao consultar CPF/CNPJ');
                         clearCnpjFields();
                     });
             });
@@ -512,6 +547,11 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Feedback visual para radio buttons
+    document.querySelectorAll('input[name="tributacao"]').forEach((radio) => {
+        radio.addEventListener('change', toggleMeiSystemsSection);
+    });
+    toggleMeiSystemsSection();
+
     document.querySelectorAll('.radio-group-container input[type="radio"]').forEach(function(radio) {
         // Função para atualizar o estilo do container
         const updateRadioContainerStyle = (r) => {

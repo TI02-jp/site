@@ -9,11 +9,11 @@ ACESSORIAS_BASE = "https://api.acessorias.com"
 ACESSORIAS_TOKEN = os.getenv("ACESSORIAS_TOKEN")
 
 
-def get_acessorias_company(cnpj: str) -> dict | bool | None:
-    """Fetch company information from the Acessórias API."""
+def get_acessorias_company(documento: str) -> dict | bool | None:
+    """Fetch company information from the Acessorias API using CPF/CNPJ."""
     if not ACESSORIAS_TOKEN:
         return None
-    url = f"{ACESSORIAS_BASE}/companies/{cnpj}"
+    url = f"{ACESSORIAS_BASE}/companies/{documento}"
     headers = {"Authorization": f"Bearer {ACESSORIAS_TOKEN}", "Accept": "application/json"}
     r = requests.get(url, headers=headers, timeout=20, proxies={"http": None, "https": None})
     if r.status_code == 200:
@@ -228,10 +228,57 @@ def mapear_para_form(d: dict) -> dict:
 
 
 def consultar_cnpj(cnpj_input: str) -> dict | None:
-    """Combine external API data and Acessórias records for a given CNPJ."""
-    cnpj = somente_numeros(cnpj_input)
-    if len(cnpj) != 14:
-        raise ValueError("CNPJ inválido")
+    """Combine external data and Acessorias records for CPF/CNPJ lookups."""
+    documento = somente_numeros(cnpj_input)
+    if len(documento) not in (11, 14):
+        raise ValueError("CPF/CNPJ invalido")
+
+    # CPF: consulta somente na base Acessorias.
+    if len(documento) == 11:
+        base = get_acessorias_company(documento)
+        if base in (None, False):
+            raise ValueError("CPF nao esta cadastrado")
+
+        payload: dict[str, str] = {}
+        keys = {
+            "id",
+            "codigo",
+            "cod",
+            "code",
+            "empresa_id",
+            "empresaId",
+            "empresaID",
+            "id_empresa",
+            "company_id",
+        }
+        codigo = deep_pick(base, {k.lower() for k in keys})
+        if codigo:
+            payload["codigo_empresa"] = str(codigo)
+
+        nome = deep_pick(base, {"razao_social", "nome", "razao", "nome_fantasia"})
+        if nome:
+            payload["nome_empresa"] = str(nome)
+
+        abertura = ymd(str(deep_pick(base, {"data_inicio_atividade", "abertura", "data_abertura"}) or ""))
+        if abertura:
+            payload["data_abertura"] = abertura
+
+        atividade = deep_pick(base, {"atividade_principal", "descricao_atividade_principal"})
+        if atividade:
+            payload["atividade_principal"] = str(atividade)[:200]
+
+        socio = deep_pick(base, {"socio_administrador", "nome_socio", "nome_rep_legal"})
+        if socio:
+            payload["socio_administrador"] = str(socio)
+
+        trib = regime_to_tributacao(deep_pick(base, {"regime", "regime_tributario", "tributacao"}))
+        if trib:
+            payload["tributacao"] = trib
+
+        return payload or None
+
+    # CNPJ: consulta APIs externas + complemento de dados via Acessorias.
+    cnpj = documento
     dados = get_brasilapi_cnpj(cnpj)
     if not dados:
         dados = get_receitaws_cnpj(cnpj)
@@ -243,7 +290,7 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     if base is False and ACESSORIAS_TOKEN:
         base = upsert_acessorias_company(mapear_para_acessorias(dados))
         if not base:
-            raise ValueError("CNPJ não está cadastrado")
+            raise ValueError("CNPJ nao esta cadastrado")
 
     if base:
         keys = {

@@ -80,13 +80,17 @@
             </div>
             <div class="company-nav company-quick-switch__nav d-flex flex-wrap gap-2">
                 <a href="#dados-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-building me-1"></i>Dados do Cliente</a>
+                {% if not is_mei_empresa %}
                 <a href="#fiscal" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt me-1"></i>Fiscal</a>
                 <a href="#contabil" class="btn btn-company-nav btn-sm"><i class="bi bi-calculator me-1"></i>Contabil</a>
+                {% endif %}
                 <a href="#pessoal" class="btn btn-company-nav btn-sm"><i class="bi bi-people me-1"></i>Pessoal</a>
                 <a href="#administrativo" class="btn btn-company-nav btn-sm"><i class="bi bi-gear me-1"></i>Administrativo</a>
                 <a href="#notas-fiscais" class="btn btn-company-nav btn-sm"><i class="bi bi-receipt-cutoff me-1"></i>Notas Fiscais</a>
+                {% if not is_mei_empresa %}
                 <a href="#reunioes-cliente" class="btn btn-company-nav btn-sm"><i class="bi bi-people-fill me-1"></i>Reunioes</a>
-                {% if can_access_financeiro %}
+                {% endif %}
+                {% if can_access_financeiro and not is_mei_empresa %}
                 <a href="#financeiro" class="btn btn-company-nav btn-sm"><i class="bi bi-cash-stack me-1"></i>Financeiro</a>
                 {% endif %}
             </div>
@@ -249,6 +253,7 @@
         </div>
     </div>
 
+    {% if not is_mei_empresa %}
     <div id="fiscal" class="section-anchor">
     {% if fiscal %}
         <div class="card shadow-lg mb-5">
@@ -537,6 +542,8 @@
     {% endif %}
     </div>
 
+    {% endif %}
+
     <div id="pessoal" class="section-anchor">
         {% if pessoal %}
             <div class="card shadow-lg mb-5">
@@ -751,6 +758,7 @@
     {% endif %}
     </div>
 
+    {% if not is_mei_empresa %}
     <div id="reunioes-cliente" class="section-anchor">
         <div class="card shadow-lg mb-5">
             <div class="card-header bg-dept-orange text-white py-3">
@@ -855,7 +863,9 @@
         </div>
     </div>
 
-    {% if can_access_financeiro %}
+    {% endif %}
+
+    {% if can_access_financeiro and not is_mei_empresa %}
     <div id="financeiro" class="section-anchor">
     {% if financeiro %}
         <div class="card shadow-lg mb-5">
