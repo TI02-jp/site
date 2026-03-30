@@ -89,6 +89,8 @@ def regime_to_tributacao(value) -> str:
         if "real" in sl:
             return "Lucro Real"
         return ""
+    if i == 6:
+        return "MEI"
     if i in (1, 2):
         return "Simples Nacional"
     if i in (3, 4):
@@ -197,10 +199,13 @@ def mapear_para_form(d: dict) -> dict:
         "socio_administrador": socio,
     }
 
-    # Tributação
+    # Tributação — MEI deve ser verificado antes de Simples Nacional porque
+    # empresas MEI retornam opcao_pelo_simples=True E opcao_pelo_mei=True na BrasilAPI.
     tributacao = regime_to_tributacao(pick(d, "regime", "regime_tributario", "tributacao"))
     if not tributacao:
-        if pick(d, "opcao_pelo_simples") in (True, "SIM", "Sim", "S"):
+        if pick(d, "opcao_pelo_mei") in (True, "SIM", "Sim", "S"):
+            tributacao = "MEI"
+        elif pick(d, "opcao_pelo_simples") in (True, "SIM", "Sim", "S"):
             tributacao = "Simples Nacional"
         else:
             simples = pick(d, "simples") or {}
@@ -236,7 +241,9 @@ def consultar_cnpj(cnpj_input: str) -> dict | None:
     # CPF: consulta somente na base Acessorias.
     if len(documento) == 11:
         base = get_acessorias_company(documento)
-        if base in (None, False):
+        if base is None:
+            raise ValueError("Servico de consulta indisponivel")
+        if base is False:
             raise ValueError("CPF nao esta cadastrado")
 
         payload: dict[str, str] = {}
