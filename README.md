@@ -2,6 +2,8 @@
 
 Aplicacao web interna para operacao e gestao de processos da JP Contabil.
 
+![Tela de login](app/static/images/login.png)
+
 ## O que e este projeto
 
 O portal centraliza fluxos internos como tarefas, usuarios, empresas, reunioes, notificacoes, comunicados, cursos, procedimentos operacionais e modulos administrativos.

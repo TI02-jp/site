@@ -423,10 +423,11 @@ def api_cnpj(cnpj):
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
         msg = str(e)
-        status = 400 if "inválido" in msg.lower() or "invalido" in msg.lower() else 404
-        if status == 404:
-            msg = "CPF/CNPJ nao esta cadastrado"
-        return jsonify({"error": msg}), status
+        if "invalido" in msg.lower() or "inválido" in msg.lower():
+            return jsonify({"error": msg}), 400
+        if "indisponivel" in msg.lower():
+            return jsonify({"error": msg}), 503
+        return jsonify({"error": "CPF/CNPJ nao esta cadastrado"}), 404
     except Exception:
         return jsonify({"error": "Erro ao consultar CPF/CNPJ"}), 500
     if not dados:
@@ -534,10 +535,12 @@ def cadastrar_empresa():
                 new_values=_empresa_snapshot(nova_empresa),
             )
             flash("Empresa cadastrada com sucesso!", "success")
-            return redirect(url_for("empresas.gerenciar_departamentos", empresa_id=nova_empresa.id))
-        except Exception as e:
+            empresa_token = encode_id(nova_empresa.id, namespace="empresa")
+            return redirect(url_for("empresas.gerenciar_departamentos", empresa_id=empresa_token))
+        except Exception:
             db.session.rollback()
-            flash(f"Erro ao cadastrar empresa: {e}", "danger")
+            current_app.logger.exception("Erro ao cadastrar empresa")
+            flash("Erro interno ao cadastrar empresa. Tente novamente.", "danger")
     else:
         current_app.logger.debug("Formulário não validado: %s", form.errors)
 

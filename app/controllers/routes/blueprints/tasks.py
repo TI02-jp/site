@@ -1456,6 +1456,8 @@ def tasks_new():
     """Form to create a new task or subtask."""
     parent_id = request.args.get("parent_id", type=int)
     return_url = request.args.get("return_url")  # Não usar request.referrer - queremos ir para a Central de Tarefas
+    if request.method == "POST" and not return_url:
+        return_url = request.form.get("return_url") or None
     form = TaskForm()
 
     if request.method == "POST" and not parent_id:
@@ -1494,7 +1496,7 @@ def tasks_new():
         choices = [(t.id, t.nome) for t in filtered_tags]
         choices = _sort_choice_pairs(choices)
         form.tag_id.choices = choices
-        selected_tag_id = form.tag_id.data
+        selected_tag_id = form.tag_id.data if request.method == "POST" else None
         if not selected_tag_id and requested_tag_id:
             selected_tag_id = requested_tag_id
             if request.method == "GET":
@@ -1505,7 +1507,17 @@ def tasks_new():
                 form.tag_id.data = selected_tag_id
         if selected_tag_id:
             tag = Tag.query.get(selected_tag_id)
-        form.assigned_to.choices = _build_task_user_choices(tag)
+        assignee_choices = _build_task_user_choices(tag)
+        selected_assignee_id = form.assigned_to.data if request.method == "POST" else None
+        if (
+            selected_assignee_id
+            and all(choice[0] != selected_assignee_id for choice in assignee_choices)
+        ):
+            assignee = User.query.get(selected_assignee_id)
+            if assignee:
+                assignee_label = (assignee.name or assignee.username or "").strip()
+                assignee_choices.append((assignee.id, assignee_label))
+        form.assigned_to.choices = _sort_choice_pairs(assignee_choices, keep_first=True)
 
     form.follow_up_users.choices = _build_follow_up_user_choices()
 
