@@ -184,16 +184,6 @@
     padding: 0.2rem 0.5rem;
   }
 
-  .mark-announcement-read {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    white-space: nowrap;
-  }
-
-  .mark-announcement-read.is-loading {
-    pointer-events: none;
-  }
 
   .announcement-preview {
     background: #f8f9fa;
@@ -879,10 +869,6 @@
                 <h2 class="h6 mb-0">{{ announcement.subject }}</h2>
               </div>
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm {% if is_read %}btn-success{% else %}btn-outline-primary{% endif %} mark-announcement-read" data-announcement-mark-read="true" data-announcement-id="{{ announcement.id }}" data-announcement-read="{{ 'true' if is_read else 'false' }}"{% if is_read %} disabled{% endif %}>
-                  <i class="bi {% if is_read %}bi-check2-circle{% else %}bi-envelope-open{% endif %}"></i>
-                  <span>{% if is_read %}Lido{% else %}Marcar como lido{% endif %}</span>
-                </button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
               </div>
             </div>
@@ -2411,22 +2397,47 @@
       trackMuralEvent('mural_view');
     }
 
+    // When an announcement modal opens: log the view and mark as read automatically.
+    // Using 'show.bs.modal' is more accurate than a card click listener — it only fires
+    // when the announcement content modal opens, not when admin buttons (Log/Edit/Delete)
+    // are clicked (those open different modals).
+    document.querySelectorAll('[id^="announcementModal-"]').forEach((modal) => {
+      const announcementId = Number.parseInt(modal.id.replace('announcementModal-', ''), 10);
+      if (Number.isNaN(announcementId) || announcementId <= 0) {
+        return;
+      }
+
+      modal.addEventListener('show.bs.modal', () => {
+        trackMuralEvent('mural_card_click', announcementId);
+
+        fetch(`/announcements/${announcementId}/read`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: JSON.stringify({}),
+        }).then((response) => {
+          if (response.ok) {
+            const card = document.getElementById(`announcement-${announcementId}`);
+            if (card) {
+              card.classList.remove('is-unread');
+              card.classList.add('is-read');
+            }
+          }
+        }).catch(() => {});
+      });
+    });
+
+    // Space key on announcement cards: Enter already synthesises a click (handled by
+    // Bootstrap), but Space does not on non-<button> elements, so we trigger manually.
     const interactiveCards = document.querySelectorAll('.announcement-card[data-bs-target]');
     interactiveCards.forEach((card) => {
-      const announcementId = Number.parseInt(card.dataset.announcementId || '', 10);
-
-      card.addEventListener('click', () => {
-        if (!Number.isNaN(announcementId)) {
-          trackMuralEvent('mural_card_click', announcementId);
-        }
-      });
-
       card.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
+        if (event.key === ' ') {
           event.preventDefault();
-          if (!Number.isNaN(announcementId)) {
-            trackMuralEvent('mural_card_click', announcementId);
-          }
           const target = card.getAttribute('data-bs-target');
           if (!target) {
             return;
@@ -2435,81 +2446,7 @@
           if (!modalElement) {
             return;
           }
-          const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-          modalInstance.show();
-        }
-      });
-    });
-
-    const markReadButtons = document.querySelectorAll('[data-announcement-mark-read]');
-
-    const renderSuccessState = (button) => {
-      button.innerHTML = '<i class="bi bi-check2-circle"></i><span>Lido</span>';
-      button.classList.remove('btn-outline-primary');
-      button.classList.add('btn-success');
-      button.classList.remove('is-loading');
-      button.disabled = true;
-      button.dataset.announcementRead = 'true';
-    };
-
-    const renderIdleState = (button, idleHtml) => {
-      button.innerHTML = idleHtml;
-      button.classList.remove('btn-success');
-      if (!button.classList.contains('btn-outline-primary')) {
-        button.classList.add('btn-outline-primary');
-      }
-      button.classList.remove('is-loading');
-      button.disabled = false;
-      button.dataset.announcementRead = 'false';
-    };
-
-    markReadButtons.forEach((button) => {
-      const announcementId = button.dataset.announcementId;
-      if (!announcementId) {
-        return;
-      }
-
-      const idleHtml = button.innerHTML;
-
-      if (button.dataset.announcementRead === 'true') {
-        renderSuccessState(button);
-        return;
-      }
-
-      button.addEventListener('click', async () => {
-        if (button.dataset.announcementRead === 'true') {
-          return;
-        }
-
-        button.disabled = true;
-        button.classList.add('is-loading');
-        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span>Marcando...</span>';
-
-        try {
-          const response = await fetch(`/announcements/${announcementId}/read`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': csrfToken,
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({}),
-          });
-
-          if (!response.ok) {
-            throw new Error('Falha ao marcar comunicado como lido.');
-          }
-
-          renderSuccessState(button);
-
-          const card = document.getElementById(`announcement-${announcementId}`);
-          if (card) {
-            card.classList.remove('is-unread');
-            card.classList.add('is-read');
-          }
-        } catch (error) {
-          console.error(error);
-          renderIdleState(button, idleHtml);
+          bootstrap.Modal.getOrCreateInstance(modalElement).show();
         }
       });
     });
