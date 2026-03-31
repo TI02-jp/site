@@ -1949,16 +1949,23 @@ def tasks_edit(task_id: int):
 
             flash("Tarefa atualizada com sucesso!", "success")
 
-            # Redirecionar de volta para a pagina original quando apropriado
-            if return_url and not task.is_private and return_url != request.url:
-                current_app.logger.info("Redirecionando para return_url: %s com highlight", return_url)
-                # Adicionar parâmetro highlight_task para destacar a tarefa editada
-                separator = '&' if '?' in return_url else '?'
-                return redirect(f"{return_url}{separator}highlight_task={task.id}")
+            if task.is_private:
+                destination = (
+                    "tasks.tasks_overview"
+                    if current_user.role == "admin"
+                    else "tasks.tasks_overview_mine"
+                )
+                current_app.logger.info(
+                    "Task privada editada. Redirecionando para %s com highlight",
+                    destination,
+                )
+                return redirect(url_for(destination, highlight_task=task.id))
 
-            destination = "tasks.tasks_overview" if current_user.role == "admin" else "tasks.tasks_overview_mine"
-            current_app.logger.info("Redirecionando para %s com highlight", destination)
-            return redirect(url_for(destination, highlight_task=task.id))
+            current_app.logger.info(
+                "Task editada. Redirecionando para Kanban do setor %s com highlight",
+                task.tag_id,
+            )
+            return redirect(url_for("tasks.tasks_sector", tag_id=task.tag_id, highlight_task=task.id))
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("Erro ao atualizar tarefa", exc_info=exc)
