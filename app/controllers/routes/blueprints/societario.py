@@ -174,6 +174,17 @@ def _status_choices_for_context(*, is_acompanhamento: bool, is_onboarding: bool,
         return list(SUCESSO_CLIENTE_STATUS_CHOICES)
     return list(SOCIETARIO_STATUS_CHOICES)
 
+def _status_dropdown_choices_for_context(*, is_acompanhamento: bool, is_onboarding: bool, onboarding_tipo_value: str | None):
+    if is_acompanhamento:
+        return list(ACOMPANHAMENTO_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.BRIEFING.value:
+        return list(BRIEFING_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.ONBOARDING.value:
+        return list(ONBOARDING_STATUS_CHOICES)
+    if is_onboarding and onboarding_tipo_value == ProcessoSocietarioTipo.SUCESSO_CLIENTE.value:
+        return list(SUCESSO_CLIENTE_STATUS_CHOICES)
+    return [(value, label) for value, label in STATUS_PROCESSO_CHOICES if value in CORE_STATUS_VALUES]
+
 def _allowed_status_values_for_tipo(tipo_value: str | None) -> set[str]:
     if tipo_value == ProcessoSocietarioTipo.BRIEFING.value:
         return set(BRIEFING_STATUS_VALUES)
@@ -529,6 +540,11 @@ def _render_societario_page(*, is_acompanhamento: bool, is_onboarding: bool, onb
         is_onboarding=is_onboarding,
         onboarding_tipo_value=onboarding_tipo_value,
     )
+    status_dropdown_choices = _status_dropdown_choices_for_context(
+        is_acompanhamento=is_acompanhamento,
+        is_onboarding=is_onboarding,
+        onboarding_tipo_value=onboarding_tipo_value,
+    )
     status_values = {value for value, _ in status_choices}
     active_status = status_arg if status_arg in status_values else ""
     base_query = processos_query
@@ -656,11 +672,12 @@ def _render_societario_page(*, is_acompanhamento: bool, is_onboarding: bool, onb
         empresas=empresas,
         tipo_choices=tipo_choices,
         status_choices=status_choices,
+        status_dropdown_choices=status_dropdown_choices,
         status_counts=status_counts,
         active_status=active_status,
         active_tipo=active_tipo,
         total_processos=total_processos,
-        default_status_value=(status_choices[0][0] if status_choices else ProcessoSocietarioStatus.VIABILIDADE.value),
+        default_status_value=(status_dropdown_choices[0][0] if status_dropdown_choices else ProcessoSocietarioStatus.VIABILIDADE.value),
         is_acompanhamento=is_acompanhamento,
         is_onboarding=is_onboarding,
         onboarding_tab=onboarding_tab,
