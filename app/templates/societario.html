@@ -545,11 +545,6 @@
                 Acompanhamento
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link{% if is_onboarding %} active{% endif %}" href="{{ url_for('societario.societario_onboarding') }}">
-                Onboarding
-            </a>
-        </li>
     </ul>
 
     {% if is_onboarding %}
@@ -652,7 +647,7 @@
                 <div class="new-process-field">
                     <label class="form-label mb-1">Status</label>
                     <select name="status" class="form-select" required>
-                        {% for value, label in status_choices %}
+                        {% for value, label in status_dropdown_choices %}
                         <option value="{{ value }}" {% if value == default_status_value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
@@ -719,7 +714,7 @@
                                 </td>
                                 <td class="col-status">
                                     <select class="form-select form-select-sm" data-field="status" data-id="{{ processo.id }}">
-                                        {% for value, label in status_choices %}
+                                        {% for value, label in status_dropdown_choices %}
                                         <option value="{{ value }}" {% if processo.status.value == value %}selected{% endif %}>{{ label }}</option>
                                         {% endfor %}
                                     </select>
