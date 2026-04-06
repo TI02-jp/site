@@ -1,7 +1,9 @@
 import logging
 import os
+from typing import Any, AbstractSet
 
 from waitress import serve
+from waitress.adjustments import Adjustments
 
 from app import app
 
@@ -57,8 +59,8 @@ if __name__ == "__main__":
     else:
         trusted_proxy = trusted_proxy.split(",", 1)[0].strip() or None
 
-    trusted_proxy_count = None
-    trusted_proxy_headers = None
+    trusted_proxy_count: int | None = None
+    trusted_proxy_headers: AbstractSet[str] | None = None
     if trusted_proxy:
         trusted_proxy_count = _get_int_env("WAITRESS_TRUSTED_PROXY_COUNT", 1)
         trusted_proxy_headers = {
@@ -76,21 +78,28 @@ if __name__ == "__main__":
         channel_timeout,
     )
 
-    serve_kwargs = dict(
+    serve_kwargs: dict[str, Any] = dict(
         host=host,
         port=port,
         threads=threads,
         channel_timeout=channel_timeout,
         connection_limit=connection_limit,
         backlog=backlog,
-        asyncore_use_poll=True,  # Use poll() instead of select() for speed
         clear_untrusted_proxy_headers=True,
-        max_request_body_size=app.config.get("MAX_CONTENT_LENGTH"),  # Align upload cap with Flask config
         inbuf_overflow=inbuf_overflow,
         recv_bytes=recv_bytes,
         send_bytes=send_bytes,
         expose_tracebacks=app.debug or expose_tracebacks,
     )
+
+    # Waitress 3.x removed asyncore-related settings; keep compatibility with older versions.
+    if "asyncore_use_poll" in Adjustments.__init__.__code__.co_varnames:
+        serve_kwargs["asyncore_use_poll"] = True
+
+    # Align upload cap with Flask config only when it is a valid positive integer.
+    max_content_length = app.config.get("MAX_CONTENT_LENGTH")
+    if isinstance(max_content_length, int) and max_content_length > 0:
+        serve_kwargs["max_request_body_size"] = max_content_length
 
     if trusted_proxy:
         serve_kwargs["trusted_proxy"] = trusted_proxy
