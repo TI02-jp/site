@@ -85,12 +85,16 @@ if __name__ == "__main__":
         backlog=backlog,
         asyncore_use_poll=True,  # Use poll() instead of select() for speed
         clear_untrusted_proxy_headers=True,
-        max_request_body_size=app.config.get("MAX_CONTENT_LENGTH"),  # Align upload cap with Flask config
         inbuf_overflow=inbuf_overflow,
         recv_bytes=recv_bytes,
         send_bytes=send_bytes,
         expose_tracebacks=app.debug or expose_tracebacks,
     )
+
+    # Waitress expects an integer body-size limit; Flask may leave it unset (None).
+    max_content_length = app.config.get("MAX_CONTENT_LENGTH")
+    if max_content_length is not None:
+        serve_kwargs["max_request_body_size"] = int(max_content_length)
 
     if trusted_proxy:
         serve_kwargs["trusted_proxy"] = trusted_proxy
@@ -98,4 +102,3 @@ if __name__ == "__main__":
         serve_kwargs["trusted_proxy_headers"] = trusted_proxy_headers
 
     serve(app, **serve_kwargs)
-

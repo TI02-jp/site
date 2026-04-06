@@ -22,8 +22,6 @@ Dependencias:
     - forms: ManualCategoryForm, ManualVideoForm
     - validators: validate_video_upload, validate_image_upload
 
-Autor: Claude Code
-Data: 2025-12-18
 """
 
 import os
