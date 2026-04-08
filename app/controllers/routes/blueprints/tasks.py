@@ -1684,20 +1684,22 @@ def tasks_new():
 
             flash("Tarefa criada com sucesso!", "success")
             current_app.logger.info(
-                "Task criada com sucesso (ID: %s). return_url: %s, current_user.role: %s",
-                task.id, return_url, current_user.role
+                "Task criada com sucesso (ID: %s). tag_id: %s, is_private: %s",
+                task.id, task.tag_id, task.is_private
             )
 
-            # Redirecionar de volta para a pagina original quando apropriado
-            if return_url and not task.is_private and return_url != request.url:
-                current_app.logger.info("Redirecionando para return_url: %s com highlight", return_url)
-                # Adicionar parâmetro highlight_task para destacar a tarefa criada
-                separator = '&' if '?' in return_url else '?'
-                return redirect(f"{return_url}{separator}highlight_task={task.id}")
+            # Redirecionar para o kanban onde a tarefa foi criada
+            if task.is_private:
+                destination = "tasks.tasks_overview" if current_user.role == "admin" else "tasks.tasks_overview_mine"
+                current_app.logger.info(
+                    "Task privada criada. Redirecionando para %s com highlight", destination
+                )
+                return redirect(url_for(destination, highlight_task=task.id))
 
-            destination = "tasks.tasks_overview" if current_user.role == "admin" else "tasks.tasks_overview_mine"
-            current_app.logger.info("Redirecionando para %s com highlight", destination)
-            return redirect(url_for(destination, highlight_task=task.id))
+            current_app.logger.info(
+                "Task criada. Redirecionando para Kanban do setor %s com highlight", task.tag_id
+            )
+            return redirect(url_for("tasks.tasks_sector", tag_id=task.tag_id, highlight_task=task.id))
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("Erro ao criar tarefa", exc_info=exc)
@@ -2692,15 +2694,16 @@ def tasks_delete(task_id):
     if current_user.role != "admin" and not _user_has_task_privileges(task, current_user):
         abort(403)
 
-    # Store task ID before deletion for broadcasting
+    # Store values before deletion (object becomes invalid after commit)
     deleted_task_id = task.id
+    task_is_private = task.is_private
 
     _delete_task_recursive(task)
     db.session.commit()
 
     # Broadcast task deletion
     from app.services.realtime import broadcast_task_deleted
-    if not task.is_private:
+    if not task_is_private:
         broadcast_task_deleted(deleted_task_id, exclude_user=current_user.id)
 
     return jsonify({"success": True})
