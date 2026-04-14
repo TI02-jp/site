@@ -46,6 +46,7 @@ from werkzeug.exceptions import NotFound
 from app import csrf, db, limiter
 from app.constants import EMPRESA_TAG_CHOICES, INVENTARIO_UPLOAD_SUBDIR
 from app.controllers.routes import decode_id, encode_id, user_has_tag
+from app.controllers.routes._base import normalize_contatos
 from app.controllers.routes._decorators import meeting_only_access_check
 from app.extensions.task_queue import submit_io_task
 from app.extensions.cache import cache, get_cache_timeout
@@ -1666,23 +1667,7 @@ def excluir_reuniao_cliente(empresa_id: str | None = None, reuniao_id: str | Non
     return redirect(url_for("empresas.visualizar_empresa", empresa_id=empresa_token) + "#reunioes-cliente")
 
 
-def normalize_contatos(contatos: Iterable[dict] | None) -> list[dict]:
-    """Normalize contatos payload to avoid template errors."""
-    if not contatos:
-        return []
-    normalized = []
-    for contato in contatos:
-        if not isinstance(contato, dict):
-            continue
-        normalized.append(
-            {
-                "nome": contato.get("nome", ""),
-                "telefone": contato.get("telefone", ""),
-                "email": contato.get("email", ""),
-                "cargo": contato.get("cargo", ""),
-            }
-        )
-    return normalized
+
 
 
 # =============================================================================
