@@ -1000,7 +1000,7 @@ def tasks_overview():
             joinedload(Task.children).joinedload(Task.creator),
         )
         .order_by(Task.due_date)
-        .limit(200)
+        .limit(None if current_user.role == "admin" else 200)
         .all()
     )
     tasks = _filter_tasks_for_user(tasks, current_user)
@@ -1184,7 +1184,7 @@ def tasks_overview_mine():
             joinedload(Task.children).joinedload(Task.creator),
         )
         .order_by(Task.due_date)
-        .limit(200)
+        .limit(None)
         .all()
     )
     # Otimizado: usa cache e eager loading de tags
