@@ -889,12 +889,15 @@ def tasks_overview():
             return None
 
     query = (
-        Task.query.join(Tag)
+        Task.query.outerjoin(Tag)
         .filter(Task.parent_id.is_(None))
         .filter(Task.is_private.is_(False))
-        .filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
-        .filter(_user_task_access_filter(current_user))
+        .filter(sa.or_(Tag.nome.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS)))
     )
+
+    # Admin vê todas as tasks; non-admin vê apenas as que acessa
+    if current_user.role != "admin":
+        query = query.filter(_user_task_access_filter(current_user))
 
     if current_user.role != "admin":
         accessible_ids = _get_accessible_tag_ids(current_user)
@@ -1098,10 +1101,10 @@ def tasks_overview_mine():
         participation_filters.append(Task.tag_id.in_(owned_sector_tag_ids))
 
     query = (
-        Task.query.join(Tag)
+        Task.query.outerjoin(Tag)
         .filter(Task.parent_id.is_(None))
         .filter(Task.is_private.is_(False))
-        .filter(~Tag.nome.in_(EXCLUDED_TASK_TAGS))
+        .filter(sa.or_(Tag.nome.is_(None), ~Tag.nome.in_(EXCLUDED_TASK_TAGS)))
         .filter(sa.or_(*participation_filters))
     )
 
