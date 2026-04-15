@@ -480,28 +480,39 @@ def notifications_stream():
         Response: Stream SSE
     """
     from app.services.realtime import get_broadcaster
+    from app.utils.logging_config import log_exception
 
-    since_id = request.args.get("since", type=int) or 0
+    try:
+        since_id = request.args.get("since", type=int) or 0
+    except Exception as e:
+        log_exception(e, request)
+        return jsonify({"error": "Invalid since parameter"}), 400
     batch_limit = current_app.config.get("NOTIFICATIONS_STREAM_BATCH", 50)
     user_id = current_user.id
 
-    # Query DB once to get the initial last_sent_id, then release connection
-    if not since_id:
-        last_existing = (
-            TaskNotification.query.filter(TaskNotification.user_id == user_id)
-            .order_by(TaskNotification.id.desc())
-            .with_entities(TaskNotification.id)
-            .limit(1)
-            .scalar()
-        )
-        since_id = last_existing or 0
+    try:
+        # Query DB once to get the initial last_sent_id, then release connection
+        if not since_id:
+            last_existing = (
+                TaskNotification.query.filter(TaskNotification.user_id == user_id)
+                .order_by(TaskNotification.id.desc())
+                .with_entities(TaskNotification.id)
+                .limit(1)
+                .scalar()
+            )
+            since_id = last_existing or 0
 
-    # CRITICAL: Release database connection before entering streaming loop
-    # This prevents connection pool exhaustion from long-running SSE connections
-    db.session.remove()
+        # CRITICAL: Release database connection before entering streaming loop
+        # This prevents connection pool exhaustion from long-running SSE connections
+        db.session.remove()
 
-    broadcaster = get_broadcaster()
-    client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
+        broadcaster = get_broadcaster()
+        client_id = broadcaster.register_client(user_id, subscribed_scopes={"notifications", "all"})
+    except Exception as e:
+        from app.utils.logging_config import log_exception
+        log_exception(e, request)
+        db.session.remove()
+        return jsonify({"error": "Failed to initialize notification stream"}), 500
     # Reduced heartbeat to 15s to prevent worker exhaustion (was 45s)
     heartbeat_interval = current_app.config.get("NOTIFICATIONS_HEARTBEAT_INTERVAL", 15)
 
