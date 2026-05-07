@@ -1850,11 +1850,11 @@ def _build_assignment_message(title: str, tag_name: str | None, assignee_id: int
     """Return a human-friendly notification message for a task assignment."""
 
     if assignee_id:
-        return f'Tarefa "{title}" atribuÃ­da a vocÃª.'
+        return f'Tarefa "{title}" atribuída a você.'
     if tag_name:
         display = "Para Mim" if tag_name.startswith("__personal__") else tag_name
-        return f'Tarefa "{title}" atribuÃ­da no setor {display}.'
-    return f'Tarefa "{title}" atribuÃ­da.'
+        return f'Tarefa "{title}" atribuída no setor {display}.'
+    return f'Tarefa "{title}" atribuída.'
 
 
 def _create_task_assignment_notification(connection, task: Task, assignee_id: int) -> None:
@@ -1887,8 +1887,8 @@ def _create_task_assignment_notification(connection, task: Task, assignee_id: in
 
     task._pending_push_notifications.append({
         "user_id": assignee_id,
-        "title": "JP ContÃ¡bil",
-        "body": message[:255] if message else "Nova tarefa atribuÃ­da",
+        "title": "JP Contábil",
+        "body": message[:255] if message else "Nova tarefa atribuída",
         "url": f"/tasks/view/{task.id}" if task.id else "/",
         "notification_id": result.inserted_primary_key[0] if hasattr(result, 'inserted_primary_key') else None,
     })
@@ -1953,8 +1953,8 @@ def _build_completion_message(title: str, completer_name: str, tag_name: str | N
     """Return a human-friendly notification message for task completion."""
 
     if tag_name:
-        return f'Tarefa "{title}" concluÃ­da por {completer_name} no setor {tag_name}.'
-    return f'Tarefa "{title}" concluÃ­da por {completer_name}.'
+        return f'Tarefa "{title}" concluída por {completer_name} no setor {tag_name}.'
+    return f'Tarefa "{title}" concluída por {completer_name}.'
 
 
 def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> None:
@@ -1980,7 +1980,7 @@ def _notify_creator_on_completion(connection, task: Task, completer_id: int) -> 
         ).scalar_one_or_none()
 
     # Build message
-    completer_name = completer or "UsuÃ¡rio"
+    completer_name = completer or "Usuário"
     message = _build_completion_message(title, completer_name, tag_name)
 
     # Create notification
@@ -2053,7 +2053,7 @@ def _format_value_for_history(value) -> str | None:
 # =============================================================================
 
 class ManualCategory(db.Model):
-    """Categoria de vÃ­deos do manual."""
+    """Categoria de vídeos do manual."""
 
     __tablename__ = "manual_categories"
 
@@ -2081,7 +2081,7 @@ class ManualCategory(db.Model):
 
 
 class ManualVideo(db.Model):
-    """VÃ­deo de treinamento do manual."""
+    """Vídeo de treinamento do manual."""
 
     __tablename__ = "manual_videos"
 
@@ -2101,11 +2101,11 @@ class ManualVideo(db.Model):
     mime_type = db.Column(db.String(128), nullable=False)
     file_size = db.Column(db.BigInteger, nullable=False)
 
-    # Metadados do vÃ­deo
+    # Metadados do vídeo
     duration_seconds = db.Column(db.Integer, nullable=True)
     duration_formatted = db.Column(db.String(20), nullable=True)  # "HH:MM:SS"
 
-    # OrdenaÃ§Ã£o e controle
+    # Ordenação e controle
     display_order = db.Column(db.Integer, nullable=False, default=0)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
@@ -2142,13 +2142,13 @@ class ManualVideo(db.Model):
 
 
 class Inventario(db.Model):
-    """InventÃ¡rio anual 2026 vinculado Ã s empresas."""
+    """Inventário anual 2026 vinculado às empresas."""
     __tablename__ = 'tbl_inventario'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('tbl_empresas.id'), nullable=False, unique=True)
 
-    # Campos editÃ¡veis da planilha
+    # Campos editáveis da planilha
     encerramento_fiscal = db.Column(db.Boolean, nullable=True, default=False)
     dief_2024 = db.Column(db.Numeric(12, 2), nullable=True)
     balanco_2025_cliente = db.Column(db.Numeric(12, 2), nullable=True)
@@ -2193,7 +2193,7 @@ class Inventario(db.Model):
 
     @property
     def balanco_2025_cliente_formatado(self):
-        """Retorna balanÃ§o cliente formatado como moeda."""
+        """Retorna balanço cliente formatado como moeda."""
         return _format_brl(self.balanco_2025_cliente)
 
     @property
@@ -2371,7 +2371,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 7,
         'width': 150,
-        'label': 'BalanÃ§o Cliente 2025',
+        'label': 'Balanço Cliente 2025',
         'hideable': True,
         'resizable': True
     },
@@ -2387,7 +2387,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 9,
         'width': 175,
-        'label': 'ObservaÃ§Ã£o Tadeu',
+        'label': 'Observação Tadeu',
         'hideable': True,
         'resizable': True
     },
@@ -2435,7 +2435,7 @@ INVENTARIO_DEFAULT_COLUMNS = {
         'visible': True,
         'order': 15,
         'width': 175,
-        'label': 'UsuÃ¡rio Encerramento',
+        'label': 'Usuário Encerramento',
         'hideable': True,
         'resizable': True
     }
