@@ -67,6 +67,26 @@ def user_has_tag(tag_name: str) -> bool:
     return any(tag.nome == tag_name for tag in tags)
 
 
+def is_gabrieli_user() -> bool:
+    """Return True for Gabrieli's user account."""
+    identifiers = {
+        str(getattr(current_user, "name", "") or "").strip().casefold(),
+        str(getattr(current_user, "username", "") or "").strip().casefold(),
+        str(getattr(current_user, "email", "") or "").strip().casefold(),
+    }
+    return "gabrieli" in identifiers or any(value.startswith("gabrieli@") for value in identifiers)
+
+
+def can_manage_collaborator_calendar() -> bool:
+    """Return True if current user can manage collaborator calendar events."""
+    return (
+        is_user_admin(current_user)
+        or user_has_tag("Gestão")
+        or user_has_tag("Coord.")
+        or is_gabrieli_user()
+    )
+
+
 # =============================================================================
 # ROTAS
 # =============================================================================
@@ -83,9 +103,7 @@ def calendario_colaboradores():
     """
     form = GeneralCalendarEventForm()
     populate_event_participants(form)
-    can_manage = (
-        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
-    )
+    can_manage = can_manage_collaborator_calendar()
     show_modal = False
 
     if form.validate_on_submit():
@@ -130,9 +148,7 @@ def calendario_colaboradores():
 def delete_calendario_evento(event_id):
     """Exclui um evento do calendario de colaboradores."""
     event = GeneralCalendarEvent.query.get_or_404(event_id)
-    can_manage = (
-        is_user_admin(current_user) or user_has_tag("Gestão") or user_has_tag("Coord.")
-    )
+    can_manage = can_manage_collaborator_calendar()
 
     if not can_manage:
         abort(403)
