@@ -168,25 +168,36 @@ def list_users():
                     if form.tags.data:
                         user.tags = Tag.query.filter(Tag.id.in_(form.tags.data)).all()
                     db.session.add(user)
-                    db.session.commit()
+                    try:
+                        db.session.commit()
+                    except IntegrityError:
+                        # Rede de seguranca contra condicao de corrida: o
+                        # pre-check acima pode nao pegar um cadastro concorrente.
+                        db.session.rollback()
+                        form.username.errors.append("Usuário já cadastrado.")
+                        form.email.errors.append("Email já cadastrado.")
+                        flash(
+                            "Não foi possível salvar: usuário ou email já cadastrado.",
+                            "warning",
+                        )
+                    else:
+                        # Log user creation
+                        log_user_action(
+                            action_type=ActionType.CREATE,
+                            resource_type=ResourceType.USER,
+                            action_description=f'Criou usuario {user.username}',
+                            resource_id=user.id,
+                            new_values={
+                                'username': user.username,
+                                'email': user.email,
+                                'name': user.name,
+                                'role': user.role,
+                                'tags': [tag.nome for tag in user.tags] if user.tags else [],
+                            }
+                        )
 
-                    # Log user creation
-                    log_user_action(
-                        action_type=ActionType.CREATE,
-                        resource_type=ResourceType.USER,
-                        action_description=f'Criou usuario {user.username}',
-                        resource_id=user.id,
-                        new_values={
-                            'username': user.username,
-                            'email': user.email,
-                            'name': user.name,
-                            'role': user.role,
-                            'tags': [tag.nome for tag in user.tags] if user.tags else [],
-                        }
-                    )
-
-                    flash("Novo usuário cadastrado com sucesso!", "success")
-                    return redirect(url_for("users.list_users"))
+                        flash("Novo usuário cadastrado com sucesso!", "success")
+                        return redirect(url_for("users.list_users"))
 
         if form_name == "user_edit":
             open_edit_modal = True
@@ -205,7 +216,27 @@ def list_users():
             else:
                 if editing_user.is_master and current_user.id != editing_user.id:
                     abort(403)
+                # Valida duplicidade de username/email contra OUTROS usuarios
+                # antes de gravar, evitando IntegrityError generico. Sem isso,
+                # o conflito caia no handler de SQLAlchemyError com a mensagem
+                # generica "Erro ao processar sua solicitacao".
+                duplicate_user = None
                 if edit_form.validate_on_submit():
+                    duplicate_user = User.query.filter(
+                        User.id != editing_user.id,
+                        (
+                            (User.username == edit_form.username.data)
+                            | (User.email == edit_form.email.data)
+                        ),
+                    ).first()
+                    if duplicate_user:
+                        if duplicate_user.username == edit_form.username.data:
+                            edit_form.username.errors.append("Usuário já cadastrado.")
+                        if duplicate_user.email == edit_form.email.data:
+                            edit_form.email.errors.append("Email já cadastrado.")
+                        flash("Usuário ou email já cadastrado.", "warning")
+
+                if edit_form.validate_on_submit() and not duplicate_user:
                     from app.utils.audit import log_user_action, ActionType, ResourceType
 
                     # Capture old values before changes
@@ -246,39 +277,55 @@ def list_users():
                     if edit_password_error:
                         flash(edit_password_error, "danger")
                     else:
-                        db.session.commit()
+                        commit_ok = True
+                        try:
+                            db.session.commit()
+                        except IntegrityError:
+                            commit_ok = False
+                            db.session.rollback()
+                            edit_form.username.errors.append("Usuário já cadastrado.")
+                            edit_form.email.errors.append("Email já cadastrado.")
+                            flash(
+                                "Não foi possível salvar: usuário ou email já cadastrado.",
+                                "warning",
+                            )
+                            open_edit_modal = True
+                            editing_user = User.query.options(
+                                joinedload(User.tags)
+                            ).get(editing_user_id)
 
-                        # Capture new values after changes
-                        new_values = {
-                            'username': editing_user.username,
-                            'email': editing_user.email,
-                            'name': editing_user.name,
-                            'role': editing_user.role,
-                            'ativo': editing_user.ativo,
-                            'tags': [tag.nome for tag in editing_user.tags] if editing_user.tags else [],
-                        }
+                        if commit_ok:
+                            # Capture new values after changes
+                            new_values = {
+                                'username': editing_user.username,
+                                'email': editing_user.email,
+                                'name': editing_user.name,
+                                'role': editing_user.role,
+                                'ativo': editing_user.ativo,
+                                'tags': [tag.nome for tag in editing_user.tags] if editing_user.tags else [],
+                            }
 
-                        # Log user update
-                        log_user_action(
-                            action_type=ActionType.UPDATE,
-                            resource_type=ResourceType.USER,
-                            action_description=f'Atualizou usuario {editing_user.username}',
-                            resource_id=editing_user.id,
-                            old_values=old_values,
-                            new_values=new_values,
-                        )
-
-                        # Log password change separately if applicable
-                        if password_changed:
+                            # Log user update
                             log_user_action(
-                                action_type=ActionType.CHANGE_PASSWORD,
+                                action_type=ActionType.UPDATE,
                                 resource_type=ResourceType.USER,
-                                action_description=f'Trocou senha do usuario {editing_user.username}',
+                                action_description=f'Atualizou usuario {editing_user.username}',
                                 resource_id=editing_user.id,
+                                old_values=old_values,
+                                new_values=new_values,
                             )
 
-                        flash("Usuário atualizado com sucesso!", "success")
-                        return redirect(url_for("users.list_users"))
+                            # Log password change separately if applicable
+                            if password_changed:
+                                log_user_action(
+                                    action_type=ActionType.CHANGE_PASSWORD,
+                                    resource_type=ResourceType.USER,
+                                    action_description=f'Trocou senha do usuario {editing_user.username}',
+                                    resource_id=editing_user.id,
+                                )
+
+                            flash("Usuário atualizado com sucesso!", "success")
+                            return redirect(url_for("users.list_users"))
 
         if form_name == "tag_create":
             open_tag_modal = True
