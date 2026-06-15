@@ -77,6 +77,16 @@ def is_gabrieli_user() -> bool:
     return "gabrieli" in identifiers or any(value.startswith("gabrieli@") for value in identifiers)
 
 
+def is_ana_carolina_user() -> bool:
+    """Return True for Ana Carolina's user account."""
+    identifiers = {
+        str(getattr(current_user, "name", "") or "").strip().casefold(),
+        str(getattr(current_user, "username", "") or "").strip().casefold(),
+        str(getattr(current_user, "email", "") or "").strip().casefold(),
+    }
+    return "ana carolina" in identifiers or any(value.startswith("ana.carolina@") or value.startswith("ana_carolina") for value in identifiers)
+
+
 def can_manage_collaborator_calendar() -> bool:
     """Return True if current user can manage collaborator calendar events."""
     return (
@@ -84,6 +94,7 @@ def can_manage_collaborator_calendar() -> bool:
         or user_has_tag("Gestão")
         or user_has_tag("Coord.")
         or is_gabrieli_user()
+        or is_ana_carolina_user()
     )
 
 
