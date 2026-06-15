@@ -68,7 +68,7 @@ from app.models.tables import ClienteReuniao, Departamento, Empresa, Inventario,
 from app.services.calendar_cache import calendar_cache
 from app.services.cnpj import consultar_cnpj
 from app.services.reuniao_export import export_reuniao_decisoes_pdf
-from app.services.general_calendar import serialize_events_for_calendar
+from app.services.general_calendar import serialize_events_for_calendar, is_ana_carolina_user
 from app.services.google_calendar import get_calendar_timezone
 from app.services.meeting_room import (
     combine_events,
@@ -481,7 +481,8 @@ def api_general_calendar_events():
     """Return collaborator calendar events as JSON."""
 
     can_manage = is_user_admin(current_user) or user_has_tag("Gestáo") or user_has_tag("Coord.")
-    events = serialize_events_for_calendar(current_user.id, can_manage, is_user_admin(current_user))
+    can_delete_all = can_manage and is_ana_carolina_user(current_user)
+    events = serialize_events_for_calendar(current_user.id, can_manage, is_user_admin(current_user), can_delete_all_events=can_delete_all)
     return jsonify(events)
 
 

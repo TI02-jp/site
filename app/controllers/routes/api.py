@@ -46,7 +46,7 @@ from app.models.tables import (
 from app.utils.permissions import is_user_admin
 from app.services.meeting_room import fetch_raw_events, combine_events
 from app.services.google_calendar import get_calendar_timezone
-from app.services.general_calendar import serialize_events_for_calendar
+from app.services.general_calendar import serialize_events_for_calendar, is_ana_carolina_user
 from app.services.calendar_cache import calendar_cache
 
 api_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
@@ -1303,8 +1303,9 @@ def api_general_calendar_events():
     can_manage = (
         is_user_admin(g.api_user) or _user_has_tag(g.api_user, "Gestão") or _user_has_tag(g.api_user, "Coord.")
     )
+    can_delete_all = can_manage and is_ana_carolina_user(g.api_user)
     events = serialize_events_for_calendar(
-        g.api_user.id, can_manage, is_user_admin(g.api_user)
+        g.api_user.id, can_manage, is_user_admin(g.api_user), can_delete_all_events=can_delete_all
     )
     return jsonify(events)
 

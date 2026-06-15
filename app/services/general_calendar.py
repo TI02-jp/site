@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Iterable
 import threading
 
-from flask import current_app, flash
+from flask import current_app, flash, current_user
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
@@ -45,6 +45,21 @@ def invalidate_general_calendar_cache() -> None:
     global _GENERAL_EVENTS_CACHE_VERSION
     with _GENERAL_EVENTS_CACHE_VERSION_LOCK:
         _GENERAL_EVENTS_CACHE_VERSION += 1
+
+
+def is_ana_carolina_user(user: User) -> bool:
+    """Return True for Ana Carolina's user account."""
+    if not user:
+        return False
+    identifiers = {
+        str(getattr(user, "name", "") or "").strip().casefold(),
+        str(getattr(user, "username", "") or "").strip().casefold(),
+        str(getattr(user, "email", "") or "").strip().casefold(),
+    }
+    return "ana carolina" in identifiers or any(
+        value.startswith("ana.carolina@") or value.startswith("ana_carolina")
+        for value in identifiers
+    )
 
 
 def _ensure_time_columns() -> None:
@@ -313,8 +328,16 @@ def serialize_events_for_calendar(
     current_user_id: int,
     can_manage_all: bool,
     is_admin: bool,
+    can_delete_all_events: bool = False,
 ) -> list[dict]:
-    """Return events formatted for FullCalendar consumption."""
+    """Return events formatted for FullCalendar consumption.
+
+    Args:
+        current_user_id: ID of the current user
+        can_manage_all: Whether user can manage calendar (create/edit events)
+        is_admin: Whether user is admin
+        can_delete_all_events: Whether user can delete events created by others
+    """
 
     _ensure_time_columns()
     _, cache_key = _get_general_events_cache_metadata(
@@ -341,7 +364,7 @@ def serialize_events_for_calendar(
     )
     for event in query.all():
         can_edit = can_manage_all and (is_admin or event.created_by_id == current_user_id)
-        can_delete = can_edit or is_admin
+        can_delete = can_edit or is_admin or (can_manage_all and can_delete_all_events)
         start_iso = event.start_date.isoformat()
         end_iso = (event.end_date + timedelta(days=1)).isoformat()
         all_day = True
