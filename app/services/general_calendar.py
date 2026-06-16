@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from typing import Iterable
 import threading
 
-from flask import current_app, flash, current_user
+from flask import current_app, flash
+from flask_login import current_user
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload

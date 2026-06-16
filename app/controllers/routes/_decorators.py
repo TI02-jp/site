@@ -195,6 +195,9 @@ def is_meeting_only_user() -> bool:
     }
     if "gabrieli" in user_identifiers or any(value.startswith("gabrieli@") for value in user_identifiers):
         return False
+    
+    if "ana carolina" in user_identifiers or any(value.startswith("ana.carolina@") for value in user_identifiers):
+        return False
 
     user_tags = getattr(current_user, 'tags', []) or []
     if not user_tags:
