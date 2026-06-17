@@ -214,6 +214,11 @@ ACESSOS_CATEGORIES: dict[str, dict[str, Any]] = {
         "description": "Portais e ferramentas de apoio às rotinas de Departamento Pessoal e RH.",
         "icon": "bi bi-people",
     },
+    "administrativo": {
+        "title": "Administrativo",
+        "description": "Sistemas e ferramentas de apoio às rotinas administrativas do escritório.",
+        "icon": "bi bi-briefcase",
+    },
 }
 
 
