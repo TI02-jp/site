@@ -114,7 +114,6 @@ ONBOARDING_TYPE_TAB_MAP = {value: key for key, value in ONBOARDING_TAB_TYPE_MAP.
 ACOMPANHAMENTO_STATUS_CHOICES = [
     (ProcessoSocietarioStatus.REGISTRADA.value, "REGISTRADA"),
     (ProcessoSocietarioStatus.EM_ANDAMENTO.value, "EM ANDAMENTO"),
-    (ProcessoSocietarioStatus.AGUARDANDO_RETORNO.value, "AGUARDANDO RETORNO"),
     (ProcessoSocietarioStatus.FINALIZADA.value, "FINALIZADA"),
 ]
 ACOMPANHAMENTO_STATUS_VALUES = {value for value, _ in ACOMPANHAMENTO_STATUS_CHOICES}
@@ -511,7 +510,6 @@ def _render_societario_page(*, is_acompanhamento: bool, is_onboarding: bool, onb
     acompanhamento_status_enum_values = [
         ProcessoSocietarioStatus.REGISTRADA,
         ProcessoSocietarioStatus.EM_ANDAMENTO,
-        ProcessoSocietarioStatus.AGUARDANDO_RETORNO,
         ProcessoSocietarioStatus.FINALIZADA,
     ]
     acompanhamento_status_values = {item.value for item in acompanhamento_status_enum_values}
@@ -561,7 +559,6 @@ def _render_societario_page(*, is_acompanhamento: bool, is_onboarding: bool, onb
                     [
                         ProcessoSocietarioStatus.REGISTRADA,
                         ProcessoSocietarioStatus.EM_ANDAMENTO,
-                        ProcessoSocietarioStatus.AGUARDANDO_RETORNO,
                     ]
                 )
             )
