@@ -1940,6 +1940,8 @@
         var meetingModal = new bootstrap.Modal(document.getElementById('meetingModal'));
         meetingModal.show();
     }
+    // Faixa de datas atualmente visivel no calendario (paginacao por mes visivel)
+    var currentRange = null;
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         fixedWeekCount: false,
@@ -1979,6 +1981,11 @@
         },
         dateClick: function(info) {
             openNewMeeting(info.dateStr);
+        },
+        datesSet: function(info) {
+            // Ao navegar/trocar de visao, carrega apenas os eventos da faixa visivel
+            currentRange = { start: info.startStr, end: info.endStr };
+            refreshStatuses();
         },
         eventDidMount: function(info) {
             var time = info.event.allDay ? '' : info.event.startStr.substring(11,16);
@@ -2030,8 +2037,23 @@
             eventDetailsModalInstance = bootstrap.Modal.getInstance(eventDetailsModalEl) || null;
         });
     }
+    function setExtendedPropIfChanged(event, key, value) {
+        if (JSON.stringify(event.extendedProps[key]) !== JSON.stringify(value)) {
+            event.setExtendedProp(key, value);
+        }
+    }
     function refreshStatuses() {
-        fetch('/api/reunioes')
+        // Evita re-render pesado do calendario enquanto o usuario interage com um modal
+        // (digitar assunto, selecionar participantes, etc.)
+        if (document.querySelector('.modal.show')) {
+            return;
+        }
+        var url = '/api/reunioes';
+        if (currentRange && currentRange.start && currentRange.end) {
+            url += '?start=' + encodeURIComponent(currentRange.start) +
+                   '&end=' + encodeURIComponent(currentRange.end);
+        }
+        fetch(url)
             .then(function(resp) { return resp.json(); })
             .then(function(data) {
                 var newIds = new Set();
@@ -2040,11 +2062,14 @@
                     newIds.add(id);
                     var existing = calendar.getEventById(id);
                     if (existing) {
+                        var visibleChanged = false;
                         if (existing.startStr !== evData.start || existing.endStr !== evData.end) {
                             existing.setDates(evData.start, evData.end);
+                            visibleChanged = true;
                         }
                         if (existing.title !== evData.title) {
                             existing.setProp('title', evData.title);
+                            visibleChanged = true;
                         }
                         if (existing.extendedProps.status !== evData.status) {
                             existing.setExtendedProp('status', evData.status);
@@ -2076,19 +2101,28 @@
                         if (existing.extendedProps.creator_username !== evData.creator_username) {
                             existing.setExtendedProp('creator_username', evData.creator_username);
                         }
-                        existing.setExtendedProp('participants', evData.participants || []);
-                        existing.setExtendedProp('participant_ids', evData.participant_ids || []);
-                        existing.setExtendedProp('participant_details', evData.participant_details || []);
-                        existing.setExtendedProp('host_candidates', evData.host_candidates || []);
-                        existing.setExtendedProp('meet_settings', evData.meet_settings || {});
+                        setExtendedPropIfChanged(existing, 'participants', evData.participants || []);
+                        setExtendedPropIfChanged(existing, 'participant_ids', evData.participant_ids || []);
+                        setExtendedPropIfChanged(existing, 'participant_details', evData.participant_details || []);
+                        setExtendedPropIfChanged(existing, 'host_candidates', evData.host_candidates || []);
+                        setExtendedPropIfChanged(existing, 'meet_settings', evData.meet_settings || {});
                         var updatedHostId = Object.prototype.hasOwnProperty.call(evData, 'meet_host_id') ? evData.meet_host_id : null;
-                        existing.setExtendedProp('meet_host_id', updatedHostId);
-                        existing.setExtendedProp('meet_host_name', evData.meet_host_name || '');
-                        existing.setExtendedProp('pautas', evData.pautas || '');
-                        existing.setExtendedProp('can_edit_pautas', !!evData.can_edit_pautas);
+                        if (existing.extendedProps.meet_host_id !== updatedHostId) {
+                            existing.setExtendedProp('meet_host_id', updatedHostId);
+                        }
+                        if (existing.extendedProps.meet_host_name !== (evData.meet_host_name || '')) {
+                            existing.setExtendedProp('meet_host_name', evData.meet_host_name || '');
+                        }
+                        if (existing.extendedProps.pautas !== (evData.pautas || '')) {
+                            existing.setExtendedProp('pautas', evData.pautas || '');
+                        }
+                        if (existing.extendedProps.can_edit_pautas !== !!evData.can_edit_pautas) {
+                            existing.setExtendedProp('can_edit_pautas', !!evData.can_edit_pautas);
+                        }
                         if (existing.backgroundColor !== evData.color) {
                             existing.setProp('backgroundColor', evData.color);
                             existing.setProp('borderColor', evData.color);
+                            visibleChanged = true;
                         }
                         if (currentEvent && currentEvent.id === existing.id) {
                             renderEventDetails(currentEvent);
@@ -2097,19 +2131,21 @@
                             updateConfigureButton(currentEvent);
                             updateActionButtons(currentEvent);
                         }
-                        var el = existing.el;
-                        if (el) {
-                            var tip = bootstrap.Tooltip.getInstance(el);
-                            if (tip) { tip.dispose(); }
-                            var time = existing.allDay ? '' : existing.startStr.substring(11,16);
-                            var color = existing.backgroundColor || existing.borderColor;
-                            var cls = '';
-                            if (color === '#ffc107') { cls = 'tooltip-warning'; }
-                            else if (color === '#198754') { cls = 'tooltip-success'; }
-                            else if (color === '#dc3545') { cls = 'tooltip-danger'; }
-                            el.setAttribute('data-bs-custom-class', cls);
-                            el.setAttribute('title', time + ' ' + existing.title);
-                            new bootstrap.Tooltip(el);
+                        if (visibleChanged) {
+                            var el = existing.el;
+                            if (el) {
+                                var tip = bootstrap.Tooltip.getInstance(el);
+                                if (tip) { tip.dispose(); }
+                                var time = existing.allDay ? '' : existing.startStr.substring(11,16);
+                                var color = existing.backgroundColor || existing.borderColor;
+                                var cls = '';
+                                if (color === '#ffc107') { cls = 'tooltip-warning'; }
+                                else if (color === '#198754') { cls = 'tooltip-success'; }
+                                else if (color === '#dc3545') { cls = 'tooltip-danger'; }
+                                el.setAttribute('data-bs-custom-class', cls);
+                                el.setAttribute('title', time + ' ' + existing.title);
+                                new bootstrap.Tooltip(el);
+                            }
                         }
                     } else {
                         calendar.addEvent(evData);
@@ -2122,8 +2158,8 @@
                 });
             });
     }
-    refreshStatuses();
-    setInterval(refreshStatuses, 15000);
+    // O carregamento inicial e disparado pelo callback datesSet do calendario.
+    setInterval(refreshStatuses, 60000);
 
     document.getElementById('editEventBtn').addEventListener('click', function() {
         var detailModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));

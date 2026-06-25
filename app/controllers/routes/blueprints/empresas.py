@@ -436,6 +436,32 @@ def api_cnpj(cnpj):
     return jsonify(dados)
 
 
+def _filter_meeting_events_by_range(events, start_str, end_str):
+    """Filtra eventos para a janela visivel do calendario (paginacao por mes visivel).
+
+    Reduz drasticamente o payload enviado ao navegador: em vez de mandar ate 365
+    dias de reunioes, envia apenas as que tocam o intervalo [start, end] recebido
+    do FullCalendar. Comparacao por data (YYYY-MM-DD) evita lidar com timezones.
+    Sem parametros, retorna a lista completa (compatibilidade).
+    """
+    if not start_str or not end_str:
+        return events
+
+    win_start = start_str[:10]
+    win_end = end_str[:10]
+    filtered = []
+    for ev in events:
+        ev_start = (ev.get("start") or "")[:10]
+        if not ev_start:
+            # Evento sem data parseavel: mantem por seguranca
+            filtered.append(ev)
+            continue
+        ev_end = (ev.get("end") or ev.get("start") or "")[:10]
+        if ev_end >= win_start and ev_start <= win_end:
+            filtered.append(ev)
+    return filtered
+
+
 @empresas_bp.route("/api/reunioes")
 @login_required
 @csrf.exempt
@@ -443,10 +469,12 @@ def api_cnpj(cnpj):
 def api_reunioes():
     """Return meetings with up-to-date status as JSON."""
     is_admin = is_user_admin(current_user)
+    range_start = request.args.get("start")
+    range_end = request.args.get("end")
 
     cached_events, _, _ = try_get_cached_combined_events(current_user.id, is_admin)
     if cached_events is not None:
-        response = jsonify(cached_events)
+        response = jsonify(_filter_meeting_events_by_range(cached_events, range_start, range_end))
         response.headers["X-Calendar-Cache"] = "hit"
         return response
 
@@ -468,7 +496,7 @@ def api_reunioes():
     calendar_tz = get_calendar_timezone()
     now = datetime.now(calendar_tz)
     events = combine_events(raw_events, now, current_user.id, is_admin)
-    response = jsonify(events)
+    response = jsonify(_filter_meeting_events_by_range(events, range_start, range_end))
     response.headers["X-Calendar-Cache"] = "miss"
     if fallback:
         response.headers["X-Calendar-Fallback"] = fallback
